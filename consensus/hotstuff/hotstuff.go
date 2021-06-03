@@ -5,7 +5,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/rlp"
 	"io/ioutil"
 	"math/big"
 	"sync"
@@ -15,6 +14,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var (
@@ -28,23 +28,23 @@ var (
 )
 
 type HotStuffService struct {
-	addr        common.Address
-	vs          Validators
-	votes 		map[common.Hash]VoteSet
+	addr  common.Address
+	vs    Validators
+	votes map[common.Hash]VoteSet
 
 	bLeaf,
 	bLock,
-	bExec  *types.Block
+	bExec *types.Block
 
 	vHeight uint64
-	qcHigh *QuorumCert
+	qcHigh  *QuorumCert
 
 	pace *PaceMarker
 
-	mtx *sync.Mutex
-	waitProposal  *sync.Cond
-	chain       consensus.ChainReader
-	broadcaster consensus.Broadcaster
+	mtx          *sync.Mutex
+	waitProposal *sync.Cond
+	chain        consensus.ChainReader
+	broadcaster  consensus.Broadcaster
 
 	msgEvtCh   chan *MessageEvent
 	msgEvtFeed event.Feed
@@ -146,7 +146,7 @@ func (s *HotStuffService) HandleMsg(address common.Address, msg p2p.Msg) (bool, 
 func (s *HotStuffService) handleMessage() {
 	for {
 		select {
-		case msg := <- s.msgEvtCh:
+		case msg := <-s.msgEvtCh:
 			println(msg)
 		}
 	}
@@ -283,7 +283,7 @@ func (s *HotStuffService) extendBlock(ancestor, block *types.Block) bool {
 }
 
 func (s *HotStuffService) fetchParent(block *types.Block) *types.Block {
-	return s.fetchBlock(block.ParentHash(), block.NumberU64() - 1)
+	return s.fetchBlock(block.ParentHash(), block.NumberU64()-1)
 }
 
 // todo: 从chainReader中拿到block，阻塞式等待
