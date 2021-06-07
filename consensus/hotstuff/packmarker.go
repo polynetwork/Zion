@@ -1,10 +1,16 @@
 package hotstuff
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
+)
 
 type PaceMarker struct {
 	core *HotStuffService
-	qc *QuorumCert
+	qc   *QuorumCert
+	istanbulEventMux *event.TypeMux
+	commitCh chan *types.Block
 }
 
 // GetLeader get leader with view number approach round robin
@@ -25,7 +31,7 @@ func (p *PaceMarker) UpdateQCHigh(qc *QuorumCert) {
 
 	if qc.ViewNum > oldQC.NumberU64() {
 		p.core.qcHigh = qc
-		p.core.bLeaf  = block
+		p.core.bLeaf = block
 	}
 }
 

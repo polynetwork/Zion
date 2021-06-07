@@ -3,6 +3,7 @@ package hotstuff
 import (
 	"bufio"
 	"bytes"
+	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -28,7 +29,8 @@ var (
 )
 
 type HotStuffService struct {
-	addr  common.Address
+	privateKey *ecdsa.PrivateKey
+	address  common.Address
 	vs    Validators
 	votes map[common.Hash]VoteSet
 
@@ -134,7 +136,7 @@ func (s *HotStuffService) HandleMsg(address common.Address, msg p2p.Msg) (bool, 
 			}
 			// todo: free comment
 			//newRequestedBlock := request.Block
-			//if newRequestedBlock.Header().MixDigest == types.IstanbulDigest && sb.core.IsCurrentProposal(newRequestedBlock.Hash()) {
+			//if newRequestedBlock.Header().MixDigest == types.HotstuffDigest && sb.core.IsCurrentProposal(newRequestedBlock.Hash()) {
 			//	//log.Debug("Proposer already proposed this block", "hash", newRequestedBlock.Hash(), "sender", addr)
 			//	return true, nil
 			//}

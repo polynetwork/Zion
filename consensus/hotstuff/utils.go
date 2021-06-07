@@ -14,10 +14,12 @@
 // You should have received a copy of the GNU Lesser General Public License
 // along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
 
-package istanbul
+package hotstuff
 
 import (
+	"bytes"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -57,4 +59,37 @@ func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte) (comm
 	}
 
 	return common.Address{}, ErrUnauthorizedAddress
+}
+
+// PrepareCommittedSeal returns a committed seal for the given hash
+// todo: change `MsgTypeCommit` to `MsgTypeDecide`
+func PrepareCommittedSeal(hash common.Hash) []byte {
+	var buf bytes.Buffer
+	buf.Write(hash.Bytes())
+	buf.Write([]byte{byte(MsgTypeCommit)})
+	return buf.Bytes()
+}
+
+// Signers extracts all the addresses who have signed the given header
+// It will extract for each seal who signed it, regardless of if the seal is
+// repeated
+func Signers(header *types.Header) ([]common.Address, error) {
+	extra, err := types.ExtractHotstuffExtra(header)
+	if err != nil {
+		return []common.Address{}, err
+	}
+
+	var addrs []common.Address
+	proposalSeal := PrepareCommittedSeal(header.Hash())
+
+	// 1. Get committed seals from current header
+	for _, seal := range extra.CommittedSeal {
+		// 2. Get the original address by seal and parent block hash
+		addr, err := GetSignatureAddress(proposalSeal, seal)
+		if err != nil {
+			return nil, errInvalidSignature
+		}
+		addrs = append(addrs, addr)
+	}
+	return addrs, nil
 }

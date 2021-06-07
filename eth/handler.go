@@ -147,7 +147,7 @@ func newHandler(config *handlerConfig, engine consensus.Engine) (*handler, error
 		whitelist:  config.Whitelist,
 		txsyncCh:   make(chan *txsync),
 		quitSync:   make(chan struct{}),
-		engine: engine,
+		engine:     engine,
 	}
 	if config.Sync == downloader.FullSync {
 		// The database seems empty as the current block is the genesis. Yet the fast

@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	P2PNewBlockMsg        = 0x07
-	P2PHotstuffMsg 		  = 0x11
+	P2PNewBlockMsg = 0x07
+	P2PHotstuffMsg = 0x11
 )
 
 type MsgType uint8
@@ -211,7 +211,6 @@ func (m *MsgPrepareVote) String() string {
 }
 
 type MsgDecide struct {
-
 }
 
 // MessageEvent is posted for Istanbul engine communication

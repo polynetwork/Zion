@@ -8,7 +8,6 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/istanbul"
 )
 
 type Validator interface {
@@ -78,17 +77,15 @@ func (slice Validators) Swap(i, j int) {
 
 type defaultSet struct {
 	validators Validators
-	policy     istanbul.ProposerPolicy
 
 	proposer    Validator
 	validatorMu sync.RWMutex
 	selector    ProposalSelector //istanbul.ProposalSelector
 }
 
-func newDefaultSet(addrs []common.Address, policy istanbul.ProposerPolicy) *defaultSet {
+func newDefaultSet(addrs []common.Address) *defaultSet {
 	valSet := &defaultSet{}
 
-	valSet.policy = policy
 	// init validators
 	valSet.validators = make([]Validator, len(addrs))
 	for i, addr := range addrs {
@@ -213,21 +210,19 @@ func (valSet *defaultSet) Copy() ValidatorSet {
 	for _, v := range valSet.validators {
 		addresses = append(addresses, v.Address())
 	}
-	return NewSet(addresses, valSet.policy)
+	return NewSet(addresses)
 }
 
 func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
 
-func (valSet *defaultSet) Policy() istanbul.ProposerPolicy { return valSet.policy }
-
-func New(addr common.Address) istanbul.Validator {
+func New(addr common.Address) Validator {
 	return &defaultValidator{
 		address: addr,
 	}
 }
 
-func NewSet(addrs []common.Address, policy istanbul.ProposerPolicy) ValidatorSet {
-	return newDefaultSet(addrs, policy)
+func NewSet(addrs []common.Address) ValidatorSet {
+	return newDefaultSet(addrs)
 }
 
 func ExtractValidators(extraData []byte) []common.Address {
@@ -245,13 +240,13 @@ func ValidExtraData(extraData []byte) bool {
 	return len(extraData)%common.AddressLength == 0
 }
 
-func Subtraction(lstValSet, curValSet istanbul.ValidatorSet) (addList, delList []common.Address) {
+func Subtraction(lstValSet, curValSet ValidatorSet) (addList, delList []common.Address) {
 	addList = make([]common.Address, 0)
 	delList = make([]common.Address, 0)
 	lstList := lstValSet.List()
 	curList := curValSet.List()
 
-	inList := func(val istanbul.Validator, list []istanbul.Validator) bool {
+	inList := func(val Validator, list []Validator) bool {
 		for _, v := range list {
 			if val.Address() == v.Address() {
 				return true
