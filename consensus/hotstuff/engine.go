@@ -29,15 +29,20 @@ var (
 	recentAddresses, _ = lru.NewARC(inmemoryAddresses)
 )
 
-func (s *HotStuffService) Author(header *types.Header) (common.Address, error) {
+// todo
+func NewHotstuffConsensusEngine() {
+
+}
+
+func (s *roundState) Author(header *types.Header) (common.Address, error) {
 	return ecrecover(header)
 }
 
-func (s *HotStuffService) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
+func (s *roundState) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
 	return s.verifyHeader(chain, header, nil)
 }
 
-func (s *HotStuffService) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (s *roundState) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
 	go func() {
@@ -54,14 +59,14 @@ func (s *HotStuffService) VerifyHeaders(chain consensus.ChainHeaderReader, heade
 	return abort, results
 }
 
-func (s *HotStuffService) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
+func (s *roundState) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 	if len(block.Uncles()) > 0 {
 		return errInvalidUncleHash
 	}
 	return nil
 }
 
-func (s *HotStuffService) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
+func (s *roundState) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
 	// unused fields, force to set to empty
 	header.Coinbase = common.Address{}
 	header.Nonce = emptyNonce
@@ -77,7 +82,7 @@ func (s *HotStuffService) Prepare(chain consensus.ChainHeaderReader, header *typ
 	header.Difficulty = defaultDifficulty
 
 	// Assemble the voting snapshot
-	snap, err := s.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := s.snapshot(chain)
 	if err != nil {
 		return err
 	}
@@ -101,13 +106,13 @@ func (s *HotStuffService) Prepare(chain consensus.ChainHeaderReader, header *typ
 	return nil
 }
 
-func (s *HotStuffService) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
+func (s *roundState) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
 	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 }
 
-func (s *HotStuffService) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+func (s *roundState) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	/// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -117,12 +122,12 @@ func (s *HotStuffService) FinalizeAndAssemble(chain consensus.ChainHeaderReader,
 	return types.NewBlock(header, txs, nil, receipts, trie.NewStackTrie(nil)), nil
 }
 
-func (s *HotStuffService) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+func (s *roundState) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
 	number := header.Number.Uint64()
 	// Bail out if we're unauthorized to sign a block
-	snap, err := s.snapshot(chain, number-1, header.ParentHash, nil)
+	snap, err := s.snapshot(chain)
 	if err != nil {
 		return err
 	}
@@ -134,7 +139,7 @@ func (s *HotStuffService) Seal(chain consensus.ChainHeaderReader, block *types.B
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	block, err = s.updateBlock(parent, block)
+	block, err = s.updateBlock(block)
 	if err != nil {
 		return err
 	}
@@ -161,7 +166,8 @@ func (s *HotStuffService) Seal(chain consensus.ChainHeaderReader, block *types.B
 		//}()
 
 		// post block into Istanbul engine
-		go s.pace.istanbulEventMux.Post(RequestEvent{block: block})
+		//go s.pace.istanbulEventMux.Post(RequestEvent{block: block})
+		s.pace.OnRequest(block)
 		for {
 			select {
 			case result := <-s.pace.commitCh:
@@ -180,16 +186,16 @@ func (s *HotStuffService) Seal(chain consensus.ChainHeaderReader, block *types.B
 	return nil
 }
 
-func (s *HotStuffService) SealHash(header *types.Header) common.Hash {
+func (s *roundState) SealHash(header *types.Header) common.Hash {
 	return sigHash(header)
 }
 
 // useless
-func (s *HotStuffService) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
+func (s *roundState) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
 	return new(big.Int)
 }
 
-func (s *HotStuffService) APIs(chain consensus.ChainHeaderReader) []rpc.API {
+func (s *roundState) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	return []rpc.API{{
 		Namespace: "istanbul",
 		Version:   "1.0",
@@ -198,7 +204,7 @@ func (s *HotStuffService) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	}}
 }
 
-func (s *HotStuffService) Close() error {
+func (s *roundState) Close() error {
 	return nil
 }
 
@@ -315,20 +321,23 @@ func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
 	return nil
 }
 
-// snapshot todo: retrieves the authorization snapshot at a given point in time.
-func (s *HotStuffService) snapshot(chain consensus.ChainHeaderReader, number uint64, hash common.Hash, parents []*types.Header) (*Snapshot, error) {
-	genesisHeader := chain.GetHeaderByNumber(0)
-	extra, err := types.ExtractHotstuffExtra(genesisHeader)
-	if err != nil {
-		return nil, err
+// snapshot
+// todo: retrieves the authorization snapshot at a given point in time.
+func (s *roundState) snapshot(chain consensus.ChainHeaderReader) (*Snapshot, error) {
+	if s.snap == nil {
+		genesisHeader := chain.GetHeaderByNumber(0)
+		extra, err := types.ExtractHotstuffExtra(genesisHeader)
+		if err != nil {
+			return nil, err
+		}
+		valset := newDefaultSet(extra.Validators)
+		s.snap = newSnapshot(valset)
 	}
-	valset := newDefaultSet(extra.Validators)
-	snap := newSnapshot(valset)
-	return snap, nil
+	return s.snap.copy(), nil
 }
 
 // verifySigner checks whether the signer is in parent's validator set
-func (s *HotStuffService) verifySigner(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (s *roundState) verifySigner(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -336,7 +345,7 @@ func (s *HotStuffService) verifySigner(chain consensus.ChainHeaderReader, header
 	}
 
 	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := s.snapshot(chain, number-1, header.ParentHash, parents)
+	snap, err := s.snapshot(chain)
 	if err != nil {
 		return err
 	}
@@ -355,7 +364,7 @@ func (s *HotStuffService) verifySigner(chain consensus.ChainHeaderReader, header
 }
 
 // verifyCommittedSeals checks whether every committed seal is signed by one of the parent's validators
-func (s *HotStuffService) verifyCommittedSeals(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (s *roundState) verifyCommittedSeals(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	number := header.Number.Uint64()
 	// We don't need to verify committed seals in the genesis block
 	if number == 0 {
@@ -363,7 +372,7 @@ func (s *HotStuffService) verifyCommittedSeals(chain consensus.ChainHeaderReader
 	}
 
 	// Retrieve the snapshot needed to verify this header and cache it
-	snap, err := s.snapshot(chain, number-1, header.ParentHash, parents)
+	snap, err := s.snapshot(chain)
 	if err != nil {
 		return err
 	}
@@ -377,9 +386,9 @@ func (s *HotStuffService) verifyCommittedSeals(chain consensus.ChainHeaderReader
 		return errEmptyCommittedSeals
 	}
 
-	validators := snap.ValSet.Copy()
 	// Check whether the committed seals are generated by parent's validators
 	validSeal := 0
+	validators := snap.ValSet.Copy()
 	committers, err := Signers(header)
 	if err != nil {
 		return err
@@ -392,8 +401,8 @@ func (s *HotStuffService) verifyCommittedSeals(chain consensus.ChainHeaderReader
 		return errInvalidCommittedSeals
 	}
 
-	// The length of validSeal should be larger than number of faulty node + 1
-	if validSeal <= snap.ValSet.F() {
+	// The length of validSeal should be large than the number of 2F(faulty node)
+	if validSeal < snap.major() {
 		return errInvalidCommittedSeals
 	}
 
@@ -404,7 +413,7 @@ func (s *HotStuffService) verifyCommittedSeals(chain consensus.ChainHeaderReader
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (sb *HotStuffService) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (sb *roundState) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
@@ -421,10 +430,11 @@ func (sb *HotStuffService) verifyHeader(chain consensus.ChainHeaderReader, heade
 		return errInvalidExtraDataFormat
 	}
 
+	// todo: check nonce
 	// Ensure that the coinbase is valid
-	if header.Nonce != (emptyNonce) && !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
-		return errInvalidNonce
-	}
+	//if header.Nonce != (emptyNonce) && !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
+	//	return errInvalidNonce
+	//}
 	// Ensure that the mix digest is zero as we don't have fork protection currently
 	if header.MixDigest != types.HotstuffDigest {
 		return errInvalidMixDigest
@@ -445,7 +455,7 @@ func (sb *HotStuffService) verifyHeader(chain consensus.ChainHeaderReader, heade
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
-func (s *HotStuffService) verifyCascadingFields(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (s *roundState) verifyCascadingFields(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -456,7 +466,8 @@ func (s *HotStuffService) verifyCascadingFields(chain consensus.ChainHeaderReade
 	if len(parents) > 0 {
 		parent = parents[len(parents)-1]
 	} else {
-		parent = chain.GetHeader(header.ParentHash, number-1)
+		// todo
+		parent = s.store.GetHeader(header.ParentHash) //chain.GetHeader(header.ParentHash, number-1)
 	}
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
@@ -468,7 +479,7 @@ func (s *HotStuffService) verifyCascadingFields(chain consensus.ChainHeaderReade
 	//}
 
 	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
-	snap, err := s.snapshot(chain, number-1, header.ParentHash, parents)
+	snap, err := s.snapshot(chain)
 	if err != nil {
 		return err
 	}
@@ -484,10 +495,10 @@ func (s *HotStuffService) verifyCascadingFields(chain consensus.ChainHeaderReade
 }
 
 // update timestamp and signature of the block based on its number of transactions
-func (s *HotStuffService) updateBlock(parent *types.Header, block *types.Block) (*types.Block, error) {
+func (s *roundState) updateBlock(block *types.Block) (*types.Block, error) {
 	header := block.Header()
 	// sign the hash
-	seal, err := s.Sign(sigHash(header).Bytes())
+	seal, err := s.sealHeader(header)
 	if err != nil {
 		return nil, err
 	}
@@ -500,8 +511,12 @@ func (s *HotStuffService) updateBlock(parent *types.Header, block *types.Block) 
 	return block.WithSeal(header), nil
 }
 
+func (s *roundState) sealHeader(header *types.Header) ([]byte, error) {
+	return s.Sign(sigHash(header).Bytes())
+}
+
 // Sign implements istanbul.Backend.Sign
-func (s *HotStuffService) Sign(data []byte) ([]byte, error) {
+func (s *roundState) Sign(data []byte) ([]byte, error) {
 	hashData := crypto.Keccak256(data)
 	return crypto.Sign(hashData, s.privateKey)
 }

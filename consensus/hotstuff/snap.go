@@ -5,6 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// todo: persist validators and candidates votes as snapshot, provider interface for query and verify
 type Snapshot struct {
 	ValSet ValidatorSet
 }
@@ -27,4 +28,17 @@ func (s *Snapshot) validators() []common.Address {
 		}
 	}
 	return validators
+}
+
+// copy creates a deep copy of the snapshot, though not the individual votes.
+func (s *Snapshot) copy() *Snapshot {
+	cpy := &Snapshot{
+		ValSet: s.ValSet.Copy(),
+	}
+
+	return cpy
+}
+
+func (s *Snapshot) major() int {
+	return 2 * s.ValSet.F() + 1
 }

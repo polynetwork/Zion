@@ -18,6 +18,7 @@ package hotstuff
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -58,7 +59,14 @@ func CheckValidatorSignature(valSet ValidatorSet, data []byte, sig []byte) (comm
 		return val.Address(), nil
 	}
 
-	return common.Address{}, ErrUnauthorizedAddress
+	return common.Address{}, errUnauthorizedAddress
+}
+
+func PrepareVoteSeal(hash common.Hash) []byte {
+	var buf bytes.Buffer
+	buf.Write(hash.Bytes())
+	buf.Write([]byte{byte(MsgTypeVote)})
+	return buf.Bytes()
 }
 
 // PrepareCommittedSeal returns a committed seal for the given hash
@@ -92,4 +100,138 @@ func Signers(header *types.Header) ([]common.Address, error) {
 		addrs = append(addrs, addr)
 	}
 	return addrs, nil
+}
+
+func (s *roundState) broadcast(payload []byte) error {
+	// send to others
+	s.gossip(payload)
+
+	// send to self
+	msg := &MessageEvent{
+		Payload: payload,
+	}
+	go s.msgEvtFeed.Send(msg)
+	return nil
+}
+
+// Broadcast implements istanbul.Backend.Gossip
+// todo:
+//  1. record message
+//  3. peer msg lru
+func (s *roundState) gossip(payload []byte) error {
+	targets := make(map[common.Address]bool)
+	for _, v := range s.snap.ValSet.List() {
+		if v.Address() != s.address {
+			targets[v.Address()] = true
+		}
+	}
+	if s.broadcaster != nil && len(targets) > 0 {
+		ps := s.broadcaster.FindPeers(targets)
+		for _, p := range ps {
+			go p.Send(P2PHotstuffMsg, payload)
+		}
+	}
+	return nil
+}
+
+func (s *roundState) unicast(to common.Address, payload []byte) error {
+	if to == s.address {
+		return nil
+	}
+	peer := s.broadcaster.FindPeer(to)
+	if peer == nil {
+		return fmt.Errorf("can't find p2p peer of %s", to.Hex())
+	}
+	go peer.Send(P2PHotstuffMsg, payload)
+	return nil
+}
+
+func (s *roundState) extend(ancestor, block *types.Header) bool {
+	b := block
+	for b = s.fetchParentHeader(b); b != nil; {
+		if b.Hash() == ancestor.Hash() {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *roundState) fetchParentHeader(header *types.Header) *types.Header {
+	return s.fetchHeader(header.ParentHash)
+}
+
+func (s *roundState) fetchHeader(hash common.Hash) *types.Header {
+	return s.store.GetHeader(hash)
+}
+
+func (s *roundState) fetchParentBlockWithHeader(header *types.Header) *types.Block {
+	return s.fetchBlock(header.ParentHash, header.Number.Uint64() - 1)
+}
+
+func (s *roundState) fetchParentBlock(block *types.Block) *types.Block {
+	return s.fetchBlock(block.ParentHash(), block.NumberU64() - 1)
+}
+
+// todo: 从chainReader中拿到block，阻塞式等待
+func (s *roundState) fetchBlock(hash common.Hash, view uint64) *types.Block {
+	return s.store.GetBlock(hash, view)
+	//if block != nil {
+	//	return block, nil
+	//}
+	//
+	//s.waitProposal.Wait()
+	//block = s.chain.GetBlock(hash, view)
+	//if block == nil {
+	//	return nil, fmt.Errorf("block (%s %d) not arrived", hash.Hex(), view)
+	//}
+	//return block, nil
+}
+
+func (s *roundState) finalizeMessage(encoder rlp.Encoder, typ MsgType) ([]byte, error) {
+	var buf bytes.Buffer
+	if err := encoder.EncodeRLP(&buf); err != nil {
+		return nil, err
+	}
+
+	msg := &Message{
+		Code:      typ,
+		Msg:       buf.Bytes(),
+	}
+
+	// Add sender address
+	msg.Address = s.address
+
+	// Sign message
+	data, err := msg.PayloadNoSig()
+	if err != nil {
+		return nil, err
+	}
+	msg.Signature, err = s.Sign(data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to payload
+	payload, err := msg.Payload()
+	if err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+// GetLeader get leader with view number approach round robin
+func (s *roundState) getLeader() common.Address {
+	s.snap.ValSet.CalcProposer(common.Address{}, s.qcHigh.Number.Uint64())
+	return s.snap.ValSet.GetProposer().Address()
+}
+
+func (s *roundState) isLeader() bool {
+	leader := s.getLeader()
+	return leader == s.address
+}
+
+func (s *roundState) isValidator(val common.Address) bool {
+	index, _ := s.snap.ValSet.GetByAddress(val)
+	return index >= 0
 }

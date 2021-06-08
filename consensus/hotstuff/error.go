@@ -39,4 +39,16 @@ var (
 	errEmptyCommittedSeals = errors.New("zero committed seals")
 	// errMismatchTxhashes is returned if the TxHash in header is mismatch.
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
+
+	// errUnauthorizedAddress is returned when given address cannot be found in
+	// current validator set.
+	errUnauthorizedAddress = errors.New("unauthorized address")
+	// errStoppedEngine is returned if the engine is stopped
+	errStoppedEngine = errors.New("stopped engine")
+	// errStartedEngine is returned if the engine is already started
+	errStartedEngine = errors.New("started engine")
+	// errInvalidSigner is returned if the msg is unsigned
+	errInvalidSigner = errors.New("message not signed by the sender")
+	// errDuplicateVote is returned if the signer vote is already sent
+	errDuplicateVote = errors.New("message not signed by the sender")
 )

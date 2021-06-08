@@ -10,7 +10,7 @@ import (
 // API is a user facing RPC API to dump Istanbul state
 type API struct {
 	chain consensus.ChainHeaderReader
-	core  *HotStuffService
+	core  *roundState
 }
 
 // BlockSigners is contains who created and who signed a particular block, denoted by its number and hash
@@ -86,7 +86,7 @@ func (api *API) GetSnapshot(number *rpc.BlockNumber) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.core.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.core.snapshot(api.chain)
 }
 
 // GetSnapshotAtHash retrieves the state snapshot at a given block.
@@ -95,7 +95,7 @@ func (api *API) GetSnapshotAtHash(hash common.Hash) (*Snapshot, error) {
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	return api.core.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	return api.core.snapshot(api.chain)
 }
 
 // GetValidators retrieves the list of authorized validators at the specified block.
@@ -111,7 +111,7 @@ func (api *API) GetValidators(number *rpc.BlockNumber) ([]common.Address, error)
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	snap, err := api.core.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.core.snapshot(api.chain)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +124,7 @@ func (api *API) GetValidatorsAtHash(hash common.Hash) ([]common.Address, error) 
 	if header == nil {
 		return nil, errUnknownBlock
 	}
-	snap, err := api.core.snapshot(api.chain, header.Number.Uint64(), header.Hash(), nil)
+	snap, err := api.core.snapshot(api.chain)
 	if err != nil {
 		return nil, err
 	}

@@ -139,6 +139,14 @@ func (h *Header) EmptyReceipts() bool {
 	return h.ReceiptHash == EmptyRootHash
 }
 
+// todo: check
+func (h *Header) Copy() *Header {
+	header := new(Header)
+	enc, _ := h.MarshalJSON()
+	header.UnmarshalJSON(enc)
+	return header
+}
+
 // Body is a simple (mutable, non-safe) data container for storing and moving
 // a block's data contents (transactions and uncles) together.
 type Body struct {
