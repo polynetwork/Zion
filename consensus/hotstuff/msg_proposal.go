@@ -43,7 +43,11 @@ func (s *roundState) sendPrepareMsg(block *types.Block) error {
 	return s.broadcast(payload)
 }
 
-func (s *roundState) handlePrepareMsg(msg *MsgProposal) error {
+func (s *roundState) handleProposalMsg(m *Message) error {
+	msg := new(MsgProposal)
+	if err := m.Decode(msg); err != nil {
+		return err
+	}
 	block := msg.Proposal
 	header := block.Header()
 

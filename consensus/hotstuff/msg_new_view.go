@@ -45,7 +45,11 @@ func (s *roundState) sendNewViewMsg(qc *types.Header, leader common.Address) err
 	return s.unicast(leader, payload)
 }
 
-func (s *roundState) handleNewViewMsg(msg *MsgNewView) error {
+func (s *roundState) handleNewViewMsg(m *Message) error {
+	msg := new(MsgNewView)
+	if err := m.Decode(msg); err != nil {
+		return err
+	}
 	qc := msg.PrepareQC
 	if err := s.verifyCommittedSeals(s.chain, qc, nil); err != nil {
 		return err

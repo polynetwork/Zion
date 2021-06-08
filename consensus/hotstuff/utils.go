@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/sha3"
 )
@@ -100,6 +101,19 @@ func Signers(header *types.Header) ([]common.Address, error) {
 		addrs = append(addrs, addr)
 	}
 	return addrs, nil
+}
+
+func (s *roundState) decode(msg p2p.Msg) ([]byte, error) {
+	var data []byte
+	if err := msg.Decode(&data); err != nil {
+		return nil, errDecodeFailed
+	}
+	return data, nil
+}
+
+func (c *roundState) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+	valSet := c.snap.ValSet
+	return CheckValidatorSignature(valSet, data, sig)
 }
 
 func (s *roundState) broadcast(payload []byte) error {

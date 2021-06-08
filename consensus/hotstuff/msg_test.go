@@ -26,11 +26,11 @@ func TestMsg(t *testing.T) {
 	err = rlp.Encode(&buf, pig)
 	assert.NoError(t, err)
 
-	s := rlp.NewListStream(&buf, 0)
-	rec1 := new(Pig)
-	rlp.Decode()
-	err = s.Decode(rec1)
-	assert.NoError(t, err)
+	//s := rlp.NewListStream(&buf, 0)
+	//rec1 := new(Pig)
+	//rlp.Decode()
+	//err = s.Decode(rec1)
+	//assert.NoError(t, err)
 
 	//msg := MsgNewView{
 	//	PrepareQC: QuorumCert{

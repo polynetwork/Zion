@@ -45,8 +45,12 @@ func (s *roundState) sendVoteMsg(msg *MsgVote) error {
 	return s.unicast(leader, payload)
 }
 
-func (s *roundState) handleVoteMsg(msg *MsgVote) error {
+func (s *roundState) handleVoteMsg(m *Message) error {
 	// 1. calculate hash with leader's highQC
+	msg := new(MsgVote)
+	if err := m.Decode(msg); err != nil {
+		return err
+	}
 	qc := s.qcHigh.Copy()
 	hash := PrepareVoteSeal(qc.Hash())
 

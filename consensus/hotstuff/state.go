@@ -1,16 +1,14 @@
 package hotstuff
 
 import (
-	"bytes"
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/crypto"
-	"io/ioutil"
-	"math/big"
 	"sync"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
 )
 
@@ -21,12 +19,12 @@ type currentProposal struct {
 
 type roundState struct {
 	privateKey *ecdsa.PrivateKey
-	address  common.Address
+	address    common.Address
 
-	snap *Snapshot
+	snap   *Snapshot
 	curRnd *currentProposal
-	store *Storage
-	chain consensus.ChainReader
+	store  *Storage
+	chain  consensus.ChainReader
 
 	bLeaf,
 	bLock,
@@ -40,9 +38,6 @@ type roundState struct {
 	mtx          *sync.Mutex
 	waitProposal *sync.Cond
 	broadcaster  consensus.Broadcaster
-
-	msgEvtCh   chan *MessageEvent
-	msgEvtFeed event.Feed
 
 	started bool
 }
@@ -60,14 +55,13 @@ func newRoundState(privateKey *ecdsa.PrivateKey, chain consensus.ChainReader) *r
 	s.mtx = new(sync.Mutex)
 	s.waitProposal = sync.NewCond(s.mtx)
 
-	s.msgEvtCh = make(chan *MessageEvent, 100)
-	s.msgEvtFeed.Subscribe(s.msgEvtCh)
-
 	s.store = newStorage(chain)
 
 	// todo: genesis header or persist into snapshot
 	s.vHeight = s.store.CurrentHeader().Number.Uint64()
 	s.qcHigh = s.store.CurrentHeader()
+
+	s.started = false
 	return s
 }
 
@@ -76,12 +70,13 @@ func (s *roundState) SetBroadcaster(bc consensus.Broadcaster) {
 	s.broadcaster = bc
 }
 
-// 在worker中调用，用来启动新的一轮共识
+// 在worker中调用，用来启动新的一轮共识, todo: 无需commit
 func (s *roundState) NewChainHead() error {
-	if !s.started {
-		return errStoppedEngine
-	}
-	go s.msgEvtFeed.Send(MsgDecide{})
+	//if !s.started {
+	//	return errStoppedEngine
+	//}
+	//go s.msgEvtFeed.Send(MsgDecide{})
+	//return nil
 	return nil
 }
 
@@ -93,77 +88,51 @@ func (s *roundState) getHighQC() *types.Header {
 	return s.qcHigh
 }
 
-func (s *roundState) HandleMsg(address common.Address, msg p2p.Msg) (bool, error) {
-	if msg.Code == P2PHotstuffMsg {
-		if !s.started {
-			return true, errStoppedEngine
-		}
-
-		// todo 消息转发过程
-		//data, hash, err := s.decode(msg)
-		//if err != nil {
-		//	return true, errDecodeFailed
-		//}
-		//// Mark peer's message
-		//ms, ok := sb.recentMessages.Get(addr)
-		//var m *lru.ARCCache
-		//if ok {
-		//	m, _ = ms.(*lru.ARCCache)
-		//} else {
-		//	m, _ = lru.NewARC(inmemoryMessages)
-		//	sb.recentMessages.Add(addr, m)
-		//}
-		//m.Add(hash, true)
-		//
-		//// Mark self known message
-		//if _, ok := sb.knownMessages.Get(hash); ok {
-		//	return true, nil
-		//}
-		//sb.knownMessages.Add(hash, true)
-		//
-		//go sb.istanbulEventMux.Post(istanbul.MessageEvent{
-		//	Payload: data,
-		//})
-		//return true, nil
+func (s *roundState) HandleMsg(address common.Address, m p2p.Msg) (bool, error) {
+	if m.Code != P2PHotstuffMsg {
+		return false, errUnknownMsgType
+	}
+	if !s.started {
+		return true, errStoppedEngine
 	}
 
-	if msg.Code == P2PNewBlockMsg && s.vs.IsProposer(s.addr) { // eth.NewBlockMsg: import cycle
-		// this case is to safeguard the race of similar block which gets propagated from other node while this node is proposing
-		// as p2p.Msg can only be decoded once (get EOF for any subsequence read), we need to make sure the payload is restored after we decode it
-		//log.Debug("Proposer received NewBlockMsg", "size", msg.Size, "payload.type", reflect.TypeOf(msg.Payload), "sender", addr)
-		if reader, ok := msg.Payload.(*bytes.Reader); ok {
-			payload, err := ioutil.ReadAll(reader)
-			if err != nil {
-				return true, err
-			}
-			reader.Reset(payload)       // ready to be decoded
-			defer reader.Reset(payload) // restore so main eth/handler can decode
-			var request struct {        // this has to be same as eth/protocol.go#newBlockData as we are reading NewBlockMsg
-				Block *types.Block
-				TD    *big.Int
-			}
-			if err := msg.Decode(&request); err != nil {
-				//log.Debug("Proposer was unable to decode the NewBlockMsg", "error", err)
-				return false, nil
-			}
-			// todo: free comment
-			//newRequestedBlock := request.Block
-			//if newRequestedBlock.Header().MixDigest == types.HotstuffDigest && sb.core.IsCurrentProposal(newRequestedBlock.Hash()) {
-			//	//log.Debug("Proposer already proposed this block", "hash", newRequestedBlock.Hash(), "sender", addr)
-			//	return true, nil
-			//}
-		}
+	payload, err := s.decode(m)
+	if err != nil {
+		return true, errDecodeFailed
 	}
-	return false, nil
+
+	// Decode message and check its signature
+	msg := new(Message)
+	if err := msg.FromPayload(payload, s.checkValidatorSignature); err != nil {
+		log.Error("Failed to decode message from payload", "err", err)
+		return true, err
+	}
+
+	// Only accept message if the address is valid
+	_, src := s.snap.ValSet.GetByAddress(msg.Address)
+	if src == nil {
+		log.Error("Invalid address in message", "msg", msg)
+		return true, errUnauthorizedAddress
+	}
+
+	if err := s.handleCheckedMsg(msg); err != nil {
+		log.Debug("handle msg failed, ", "type", msg.Code.String(), "error", err)
+		return true, err
+	}
+	return true, nil
 }
 
-func (s *roundState) handleMessage() {
-	for {
-		select {
-		case msg := <-s.msgEvtCh:
-			println(msg)
-		}
+func (s *roundState) handleCheckedMsg(msg *Message) error {
+	var err error
+	switch msg.Code {
+	case MsgTypeNewView:
+		err = s.handleNewViewMsg(msg)
+	case MsgTypeProposal:
+		err = s.handleProposalMsg(msg)
+	case MsgTypeVote:
+		err = s.handleVoteMsg(msg)
 	}
+	return err
 }
 
 // block(b*), b'' <- b*.justify.node; b' <- b''.justify.node; b <- b'.justify.node;

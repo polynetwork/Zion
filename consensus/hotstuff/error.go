@@ -51,4 +51,8 @@ var (
 	errInvalidSigner = errors.New("message not signed by the sender")
 	// errDuplicateVote is returned if the signer vote is already sent
 	errDuplicateVote = errors.New("message not signed by the sender")
+	// errDecodeFailed is returned if the message can't be decode
+	errDecodeFailed = errors.New("decode p2p message failed")
+
+	errUnknownMsgType = errors.New("unknown msg type")
 )
