@@ -117,15 +117,8 @@ func (c *roundState) checkValidatorSignature(data []byte, sig []byte) (common.Ad
 }
 
 func (s *roundState) broadcast(payload []byte) error {
-	// send to others
-	s.gossip(payload)
-
-	// send to self
-	msg := &MessageEvent{
-		Payload: payload,
-	}
-	go s.msgEvtFeed.Send(msg)
-	return nil
+	s.msgCh <- &InnerMsg{Payload:payload}
+	return s.gossip(payload)
 }
 
 // Broadcast implements istanbul.Backend.Gossip
@@ -150,6 +143,7 @@ func (s *roundState) gossip(payload []byte) error {
 
 func (s *roundState) unicast(to common.Address, payload []byte) error {
 	if to == s.address {
+		s.msgCh <- &InnerMsg{Payload: payload}
 		return nil
 	}
 	peer := s.broadcaster.FindPeer(to)

@@ -37,6 +37,9 @@ func (m *MsgVote) String() string {
 }
 
 func (s *roundState) sendVoteMsg(msg *MsgVote) error {
+	if s.isLeader() {
+		return nil
+	}
 	leader := s.getLeader()
 	payload, err := s.finalizeMessage(msg, MsgTypeVote)
 	if err != nil {

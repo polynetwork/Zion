@@ -1,6 +1,7 @@
 package hotstuff
 
 import (
+	"context"
 	"crypto/ecdsa"
 	"sync"
 
@@ -25,6 +26,7 @@ type roundState struct {
 	curRnd *currentProposal
 	store  *Storage
 	chain  consensus.ChainReader
+	msgCh chan *InnerMsg
 
 	bLeaf,
 	bLock,
@@ -43,7 +45,7 @@ type roundState struct {
 }
 
 // todo
-func newRoundState(privateKey *ecdsa.PrivateKey, chain consensus.ChainReader) *roundState {
+func newRoundState(ctx context.Context, privateKey *ecdsa.PrivateKey, chain consensus.ChainReader) *roundState {
 	s := new(roundState)
 	s.privateKey = privateKey
 	s.address = crypto.PubkeyToAddress(s.privateKey.PublicKey)
@@ -60,8 +62,10 @@ func newRoundState(privateKey *ecdsa.PrivateKey, chain consensus.ChainReader) *r
 	// todo: genesis header or persist into snapshot
 	s.vHeight = s.store.CurrentHeader().Number.Uint64()
 	s.qcHigh = s.store.CurrentHeader()
+	s.msgCh = make(chan *InnerMsg, 1)
 
-	s.started = false
+	s.started = true
+
 	return s
 }
 
@@ -100,26 +104,44 @@ func (s *roundState) HandleMsg(address common.Address, m p2p.Msg) (bool, error) 
 	if err != nil {
 		return true, errDecodeFailed
 	}
+	if err := s.handlePayload(payload); err != nil {
+		return true, err
+	}
+	return true, nil
+}
 
+func (s *roundState) handleSelfMsg(ctx context.Context) {
+	for {
+		select {
+		case data := <-s.msgCh:
+			s.handlePayload(data.Payload)
+		case <- ctx.Done():
+			break
+		}
+	}
+}
+
+func (s *roundState) handlePayload(payload []byte) error {
 	// Decode message and check its signature
 	msg := new(Message)
 	if err := msg.FromPayload(payload, s.checkValidatorSignature); err != nil {
 		log.Error("Failed to decode message from payload", "err", err)
-		return true, err
+		return err
 	}
 
 	// Only accept message if the address is valid
 	_, src := s.snap.ValSet.GetByAddress(msg.Address)
 	if src == nil {
 		log.Error("Invalid address in message", "msg", msg)
-		return true, errUnauthorizedAddress
+		return errUnauthorizedAddress
 	}
 
 	if err := s.handleCheckedMsg(msg); err != nil {
 		log.Debug("handle msg failed, ", "type", msg.Code.String(), "error", err)
-		return true, err
+		return err
 	}
-	return true, nil
+
+	return nil
 }
 
 func (s *roundState) handleCheckedMsg(msg *Message) error {

@@ -21,13 +21,6 @@ const (
 	MsgTypeProposal MsgType = 2
 	MsgTypeVote     MsgType = 3
 	MsgTypeCommit   MsgType = 4
-	//MsgTypePrepare       MsgType = 2
-	//MsgTypePrepareVote   MsgType = 3
-	//MsgTypePreCommit     MsgType = 4
-	//MsgTypePreCommitVote MsgType = 5
-	//MsgTypeCommit        MsgType = 6
-	//MsgTypeCommitVote    MsgType = 7
-	//MsgTypeDecide        MsgType = 8
 )
 
 func (m MsgType) String() string {
@@ -40,14 +33,6 @@ func (m MsgType) String() string {
 		return "VOTE"
 	case MsgTypeCommit:
 		return "COMMIT"
-	//case MsgTypePreCommit:
-	//	return "PRECOMMIT"
-	//case MsgTypePreCommitVote:
-	//	return "PRECOMMIT_VOTE"
-	//case MsgTypeCommitVote:
-	//	return "COMMIT_VOTE"
-	//case MsgTypeDecide:
-	//	return "DECIDE"
 	default:
 		panic("unknown msg type")
 	}
@@ -134,4 +119,8 @@ func (m *Message) Decode(val interface{}) error {
 
 func (m *Message) String() string {
 	return fmt.Sprintf("{MsgType: %d, Address: %s}", m.Code.String(), m.Address.Hex())
+}
+
+type InnerMsg struct {
+	Payload []byte
 }

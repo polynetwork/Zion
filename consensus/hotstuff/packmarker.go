@@ -1,25 +1,40 @@
 package hotstuff
 
 import (
+	"context"
+	"time"
+
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 )
 
 type PaceMarker struct {
-	core *roundState
-	chain consensus.ChainHeaderReader
-	istanbulEventMux *event.TypeMux
-	commitCh chan *types.Block
+	core                *roundState
+	chain               consensus.ChainHeaderReader
+	requestCh, commitCh chan *types.Block
+	timer               *time.Timer
 }
 
 func newPaceMaker(c consensus.ChainHeaderReader) *PaceMarker {
 	p := new(PaceMarker)
 	p.chain = c
-	p.istanbulEventMux = new(event.TypeMux)
 	p.commitCh = make(chan *types.Block, 1)
-
+	p.requestCh = make(chan *types.Block, 1)
+	p.timer = time.NewTimer(time.Duration(blockPeriod) * time.Second)
 	return p
+}
+
+func (p *PaceMarker) Start(ctx context.Context) {
+	for {
+		select {
+		case <-p.timer.C:
+			p.OnNextSyncView()
+		case sealedBlock := <-p.requestCh:
+			p.core.store.Push(sealedBlock)
+		case <- ctx.Done():
+			break
+		}
+	}
 }
 
 // UpdateQCHigh
@@ -36,24 +51,6 @@ func (p *PaceMarker) UpdateQCHigh(qc *types.Header) {
 		p.core.qcHigh = qc
 		p.core.bLeaf = block
 	}
-}
-
-// OnBeat if u = p.GetLeader then bleaf = onPropose(bleaf, cmd, qchigh)
-// 调用onProposal, 在for循环内实现定时onBeat
-func (p *PaceMarker) OnRequest(sealedBlock *types.Block) {
-	p.core.store.Push(sealedBlock)
-}
-
-func (p *PaceMarker) OnBeat() {
-	block := p.core.store.Pop()
-	if block == nil {
-		return
-	}
-	isLeader := p.core.snap.ValSet.IsProposer(p.core.address)
-	if !isLeader {
-		return
-	}
-	p.core.sendPrepareMsg(block)
 }
 
 // send msg to new leader with view number increase
