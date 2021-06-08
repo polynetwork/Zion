@@ -2,6 +2,8 @@ package hotstuff
 
 import (
 	"bytes"
+	"context"
+	"crypto/ecdsa"
 	"math/big"
 	"time"
 
@@ -29,9 +31,17 @@ var (
 	recentAddresses, _ = lru.NewARC(inmemoryAddresses)
 )
 
-// todo
-func NewHotstuffConsensusEngine() {
+func NewHotstuffConsensusEngine(chainReader consensus.ChainReader, privateKey *ecdsa.PrivateKey) consensus.Engine {
+	paceMaker := newPaceMaker(chainReader)
+	roundState := newRoundState(privateKey, chainReader)
+	paceMaker.core = roundState
+	roundState.pace = paceMaker
 
+	ctx := context.Background()
+	go roundState.handleSelfMsg(ctx)
+	go paceMaker.Start(ctx)
+
+	return roundState
 }
 
 func (s *roundState) Author(header *types.Header) (common.Address, error) {
@@ -167,7 +177,7 @@ func (s *roundState) Seal(chain consensus.ChainHeaderReader, block *types.Block,
 
 		// post block into Istanbul engine
 		//go s.pace.istanbulEventMux.Post(RequestEvent{block: block})
-		s.pace.OnRequest(block)
+		s.pace.requestCh <- block
 		for {
 			select {
 			case result := <-s.pace.commitCh:

@@ -45,7 +45,7 @@ type roundState struct {
 }
 
 // todo
-func newRoundState(ctx context.Context, privateKey *ecdsa.PrivateKey, chain consensus.ChainReader) *roundState {
+func newRoundState(privateKey *ecdsa.PrivateKey, chain consensus.ChainReader) *roundState {
 	s := new(roundState)
 	s.privateKey = privateKey
 	s.address = crypto.PubkeyToAddress(s.privateKey.PublicKey)
