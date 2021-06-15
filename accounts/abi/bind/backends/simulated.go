@@ -706,7 +706,7 @@ func (b *SimulatedBackend) Blockchain() *core.BlockChain {
 	return b.blockchain
 }
 
-// callMsg implements core.Message to allow passing it as a transaction simulator.
+// callMsg implements core.message to allow passing it as a transaction simulator.
 type callMsg struct {
 	ethereum.CallMsg
 }

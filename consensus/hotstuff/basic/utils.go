@@ -2,7 +2,7 @@ package basic
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/sha3"
@@ -27,7 +27,7 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
-func CheckValidatorSignature(valSet validator.ValidatorSet, data []byte, sig []byte) (common.Address, error) {
+func CheckValidatorSignature(valSet hotstuff.ValidatorSet, data []byte, sig []byte) (common.Address, error) {
 	// 1. Get signature address
 	signer, err := GetSignatureAddress(data, sig)
 	if err != nil {
@@ -41,4 +41,3 @@ func CheckValidatorSignature(valSet validator.ValidatorSet, data []byte, sig []b
 
 	return common.Address{}, errUnauthorizedAddress
 }
-

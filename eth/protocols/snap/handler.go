@@ -121,7 +121,7 @@ func MakeProtocols(backend Backend, dnsdisc enode.Iterator) []p2p.Protocol {
 func handle(backend Backend, peer *Peer) error {
 	for {
 		if err := handleMessage(backend, peer); err != nil {
-			peer.Log().Debug("Message handling failed in `snap`", "err", err)
+			peer.Log().Debug("message handling failed in `snap`", "err", err)
 			return err
 		}
 	}
