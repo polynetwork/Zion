@@ -18,7 +18,6 @@ package validator
 
 import (
 	"math"
-	// "math"
 	"reflect"
 	"sort"
 	"sync"
@@ -121,9 +120,9 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 	valSet.proposer = valSet.selector(valSet, lastProposer, round)
 }
 
-func calcSeed(valSet hotstuff.ValidatorSet, speaker common.Address, round uint64) uint64 {
+func calcSeed(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) uint64 {
 	offset := 0
-	if idx, val := valSet.GetByAddress(speaker); val != nil {
+	if idx, val := valSet.GetByAddress(proposer); val != nil {
 		offset = idx
 	}
 	return uint64(offset) + round
@@ -147,22 +146,22 @@ func roundRobinSelector(valSet hotstuff.ValidatorSet, proposer common.Address, r
 	return valSet.GetByIndex(pick)
 }
 
-func stickySelector(valSet hotstuff.ValidatorSet, speaker common.Address, round uint64) hotstuff.Validator {
+func stickySelector(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) hotstuff.Validator {
 	if valSet.Size() == 0 {
 		return nil
 	}
 	seed := uint64(0)
-	if emptyAddress(speaker) {
+	if emptyAddress(proposer) {
 		seed = round
 	} else {
-		seed = calcSeed(valSet, speaker, round)
+		seed = calcSeed(valSet, proposer, round)
 	}
 	pick := seed % uint64(valSet.Size())
 	return valSet.GetByIndex(pick)
 }
 
 // TODO: implement VRF
-func vrfSelector(valSet hotstuff.ValidatorSet, speaker common.Address, round uint64) hotstuff.Validator {
+func vrfSelector(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) hotstuff.Validator {
 	return nil
 }
 

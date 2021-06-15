@@ -224,7 +224,7 @@ func handleMessage(backend Backend, peer *Peer) error {
 	}
 	defer msg.Discard()
 
-	// hotstuff only
+	// mark: hotstuff only
 	if handler, ok := backend.Engine().(consensus.Handler); ok {
 		pubKey := peer.Node().Pubkey()
 		addr := crypto.PubkeyToAddress(*pubKey)

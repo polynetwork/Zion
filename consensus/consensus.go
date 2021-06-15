@@ -135,6 +135,18 @@ type Peer interface {
 	Send(msgcode uint64, data interface{}) error
 }
 
+// HotStuff is a consensus engine to implement the scalable hotstuff consensus
+type HotStuff interface {
+	Engine
+
+	// Authorize(signer common.Address, signFn func(accounts.Account, string, []byte) ([]byte, error))
+	// Start starts the engine
+	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
+
+	// Stop stops the engine
+	Stop() error
+}
+
 // Handler should be implemented is the consensus needs to handle and send peer's message
 type Handler interface {
 	// NewChainHead handles a new head block comes
