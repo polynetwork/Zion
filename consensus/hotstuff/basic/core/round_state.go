@@ -57,6 +57,19 @@ func (r *roundState) SetState(st State) {
 	}
 }
 
+func (r *roundState) SetPendingRequest(req *hotstuff.Request) {
+	r.mtx.Lock()
+	defer r.mtx.Unlock()
+
+	r.pendingRequest = req
+}
+
+func (r *roundState) PendingRequest() *hotstuff.Request {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
+	return r.pendingRequest
+}
+
 func (r *roundState) SetHighQC(qc *QuorumCert) {
 	r.mtx.Lock()
 	defer r.mtx.Unlock()
@@ -120,17 +133,29 @@ func (r *roundState) CommitQC() *QuorumCert {
 }
 
 func (r *roundState) Height() *big.Int {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
 	return r.height
 }
 
 func (r *roundState) Round() *big.Int {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
 	return r.round
+}
+
+func (r *roundState) View() *hotstuff.View {
+	r.mtx.RLock()
+	defer r.mtx.RUnlock()
+	return &hotstuff.View{
+		Round:  r.round,
+		Height: r.height,
+	}
 }
 
 func (r *roundState) Proposal() hotstuff.Proposal {
 	r.mtx.RLock()
 	defer r.mtx.RUnlock()
-
 	if r.lockedQC.Proposal != nil {
 		return r.lockedQC.Proposal
 	}

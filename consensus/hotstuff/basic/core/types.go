@@ -3,11 +3,12 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"io"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	"io"
 )
 
 type CoreEngine interface {
@@ -144,14 +145,17 @@ func (m *message) String() string {
 type State uint64
 
 const (
-	StateNewRound  State = 1 // prepare to accept new view
-	StatePrepared  State = 2
-	StateCommitted State = 3
-	StateDecide    State = 4
+	StateAcceptRequest State = 1
+	StateNewRound      State = 2 // prepare to accept new view
+	StatePrepared      State = 3
+	StateCommitted     State = 4
+	StateDecide        State = 5
 )
 
 func (s State) String() string {
-	if s == StateNewRound {
+	if s == StateAcceptRequest {
+		return "AcceptRequest"
+	} else if s == StateNewRound {
 		return "NewRound"
 	} else if s == StatePrepared {
 		return "Prepared"

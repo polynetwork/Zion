@@ -1,12 +1,15 @@
 package core
 
 import (
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/prque"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"math/big"
-	"time"
 )
 
 type core struct {
@@ -15,11 +18,16 @@ type core struct {
 	state   State
 	logger  log.Logger
 
+	current *roundState
+
 	backend             hotstuff.Backend
 	events              *event.TypeMuxSubscription
 	finalCommittedSub   *event.TypeMuxSubscription
 	timeoutSub          *event.TypeMuxSubscription
 	futureProposalTimer *time.Timer
+
+	pendingRQ   *prque.Prque
+	pendingRQMu *sync.Mutex
 
 	valSet                hotstuff.ValidatorSet
 	waitingForRoundChange bool
@@ -80,7 +88,7 @@ func (c *core) broadcast(msg *message, round *big.Int) {
 		return
 	}
 
-	if msg.Code == MsgTypeNewView {  // todo: judge current proposal is not nil
+	if msg.Code == MsgTypeNewView { // todo: judge current proposal is not nil
 		_, lastProposer := c.backend.LastProposal()
 		proposedNewSet := c.valSet.Copy()
 		proposedNewSet.CalcProposer(lastProposer, round.Uint64())
