@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 	"sync"
 
@@ -9,14 +10,27 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
+// Construct a new message set to accumulate messages for given height/view number.
+func newMessageSet(valSet hotstuff.ValidatorSet) *messageSet {
+	return &messageSet{
+		view: &hotstuff.View{
+			Round:  new(big.Int),
+			Height: new(big.Int),
+		},
+		mtx:  new(sync.Mutex),
+		msgs: make(map[common.Address]*message),
+		vs:   valSet,
+	}
+}
+
 type messageSet struct {
-	view *View
+	view *hotstuff.View
 	vs   hotstuff.ValidatorSet
 	mtx  *sync.Mutex
 	msgs map[common.Address]*message
 }
 
-func (s *messageSet) View() *View {
+func (s *messageSet) View() *hotstuff.View {
 	return s.view
 }
 

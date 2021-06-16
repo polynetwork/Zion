@@ -39,6 +39,10 @@ type Proposal interface {
 	DecodeRLP(s *rlp.Stream) error
 }
 
+type Request struct {
+	Proposal Proposal
+}
+
 // View includes a round number and a block height number.
 // Height is the block height number we'd like to commit.
 

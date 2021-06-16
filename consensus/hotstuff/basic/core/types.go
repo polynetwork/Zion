@@ -3,13 +3,11 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
-	"io"
-	"math/big"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
+	"io"
 )
 
 type CoreEngine interface {
@@ -180,55 +178,8 @@ func (s State) Cmp(y State) int {
 	return 0
 }
 
-// View includes a round number and a block height number.
-// Height is the block height number we'd like to commit.
-
-// If the given block is not accepted by validators, a round change will occur
-// and the validators start a new round with round+1.
-type View struct {
-	Round  *big.Int
-	Height *big.Int
-}
-
-// EncodeRLP serializes b into the Ethereum RLP format.
-func (v *View) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{v.Round, v.Height})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (v *View) DecodeRLP(s *rlp.Stream) error {
-	var view struct {
-		Round  *big.Int
-		Height *big.Int
-	}
-
-	if err := s.Decode(&view); err != nil {
-		return err
-	}
-	v.Round, v.Height = view.Round, view.Height
-	return nil
-}
-
-func (v *View) String() string {
-	return fmt.Sprintf("{Round: %d, Height: %d}", v.Round.Uint64(), v.Height.Uint64())
-}
-
-// Cmp compares v and y and returns:
-//   -1 if v <  y
-//    0 if v == y
-//   +1 if v >  y
-func (v *View) Cmp(y *View) int {
-	if v.Height.Cmp(y.Height) != 0 {
-		return v.Height.Cmp(y.Height)
-	}
-	if v.Round.Cmp(y.Round) != 0 {
-		return v.Round.Cmp(y.Round)
-	}
-	return 0
-}
-
 type MsgNewView struct {
-	View     *View
+	View     *hotstuff.View
 	Proposal hotstuff.Proposal
 }
 
@@ -240,7 +191,7 @@ func (m *MsgNewView) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
 	var msgNewView struct {
-		View     *View
+		View     *hotstuff.View
 		Proposal *types.Block
 	}
 
@@ -252,30 +203,24 @@ func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-type Subject struct {
-	View   *View
-	Digest common.Hash
+type QuorumCert struct {
+	Type     MsgType
+	Proposal hotstuff.Proposal
 }
 
-// EncodeRLP serializes b into the Ethereum RLP format.
-func (b *Subject) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Digest})
+func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{qc.Type, qc.Proposal})
 }
 
-// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (b *Subject) DecodeRLP(s *rlp.Stream) error {
-	var subject struct {
-		View   *View
-		Digest common.Hash
+func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
+	var quorumCert struct {
+		Type     MsgType
+		Proposal hotstuff.Proposal
 	}
 
-	if err := s.Decode(&subject); err != nil {
+	if err := s.Decode(&quorumCert); err != nil {
 		return err
 	}
-	b.View, b.Digest = subject.View, subject.Digest
+	qc.Type, qc.Proposal = quorumCert.Type, quorumCert.Proposal
 	return nil
-}
-
-func (b *Subject) String() string {
-	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
 }
