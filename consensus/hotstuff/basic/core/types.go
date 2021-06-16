@@ -7,7 +7,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -139,7 +138,7 @@ func (m *message) Decode(val interface{}) error {
 }
 
 func (m *message) String() string {
-	return fmt.Sprintf("{MsgType: %d, Address: %s}", m.Code.String(), m.Address.Hex())
+	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
 }
 
 type State uint64
@@ -182,31 +181,6 @@ func (s State) Cmp(y State) int {
 	return 0
 }
 
-type MsgNewView struct {
-	View     *hotstuff.View
-	Proposal hotstuff.Proposal
-}
-
-// EncodeRLP serializes b into the Ethereum RLP format.
-func (m *MsgNewView) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.View, m.Proposal})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
-	var msgNewView struct {
-		View     *hotstuff.View
-		Proposal *types.Block
-	}
-
-	if err := s.Decode(&msgNewView); err != nil {
-		return err
-	}
-	m.View, m.Proposal = msgNewView.View, msgNewView.Proposal
-
-	return nil
-}
-
 type QuorumCert struct {
 	Type     MsgType
 	Proposal hotstuff.Proposal
@@ -227,4 +201,99 @@ func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 	}
 	qc.Type, qc.Proposal = quorumCert.Type, quorumCert.Proposal
 	return nil
+}
+
+func (qc *QuorumCert) String() string {
+	return fmt.Sprintf("{QC Type:%s, Hash: %s}", qc.Type.String(), qc.Proposal.Hash())
+}
+
+type MsgNewView struct {
+	View *hotstuff.View
+	QC   *QuorumCert
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (m *MsgNewView) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.View, m.QC})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
+	var newView struct {
+		View *hotstuff.View
+		QC   *QuorumCert
+	}
+
+	if err := s.Decode(&newView); err != nil {
+		return err
+	}
+	m.View, m.QC = newView.View, newView.QC
+
+	return nil
+}
+
+func (m *MsgNewView) String() string {
+	return fmt.Sprintf("{MsgType: %s, Number:%d, Hash: %s}", MsgTypeNewView.String(), m.QC.Proposal.Number(), m.QC.Proposal.Hash())
+}
+
+type MsgPrepare struct {
+	View     *hotstuff.View
+	Proposal hotstuff.Proposal
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (m *MsgPrepare) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.View, m.Proposal})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (m *MsgPrepare) DecodeRLP(s *rlp.Stream) error {
+	var prepare struct {
+		View     *hotstuff.View
+		Proposal hotstuff.Proposal
+	}
+
+	if err := s.Decode(&prepare); err != nil {
+		return err
+	}
+	m.View, m.Proposal = prepare.View, prepare.Proposal
+
+	return nil
+}
+
+func (m *MsgPrepare) String() string {
+	return fmt.Sprintf("{MsgType: %s, Number:%d, Hash: %s}", MsgTypePrepare.String(), m.Proposal.Number(), m.Proposal.Hash())
+}
+
+type MsgPrepareVote struct {
+	View      *hotstuff.View
+	BlockHash common.Hash
+	Signature []byte
+}
+
+func (m *MsgPrepareVote) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.View, m.BlockHash, m.Signature})
+}
+
+func (m *MsgPrepareVote) DecodeRLP(s *rlp.Stream) error {
+	var vote struct {
+		View      *hotstuff.View
+		BlockHash common.Hash
+		Signature []byte
+	}
+
+	if err := s.Decode(&vote); err != nil {
+		return err
+	}
+	m.View, m.BlockHash, m.Signature = vote.View, vote.BlockHash, vote.Signature
+
+	return nil
+}
+
+func (m *MsgPrepareVote) String() string {
+	return fmt.Sprintf("{MsgType: %s, Number: %d, Hash: %s}", MsgTypePrepareVote, m.View.Height, m.BlockHash)
+}
+
+func Encode(val interface{}) ([]byte, error) {
+	return rlp.EncodeToBytes(val)
 }

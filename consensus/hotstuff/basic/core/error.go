@@ -7,9 +7,12 @@ var (
 	// current subject.
 	errInconsistentSubject = errors.New("inconsistent subjects")
 
-	// errNotFromProposer is returned when received message is supposed to be from
-	// speaker.
-	errNotFromSpeaker = errors.New("message does not come from speaker")
+	// errNotFromProposer is returned when received message is supposed to be from proposer.
+	errNotFromProposer = errors.New("message does not come from proposer")
+
+	errNotToProposer = errors.New("message does not send to proposer")
+
+	errNotToValidator = errors.New("message does not send to repo validator")
 
 	// errIgnored is returned when a message was ignored.
 	errIgnored = errors.New("message is ignored")
@@ -25,24 +28,26 @@ var (
 	// errInvalidMessage is returned when the message is malformed.
 	errInvalidMessage = errors.New("invalid message")
 
-	// errFailedDecodeAnnounce is returned when the ANNOUNCE message is malformed.
-	errFailedDecodeAnnounce = errors.New("failed to decode ANNOUNCE")
+	// errFailedDecodeNewView is returned when the NEWVIEW message is malformed.
+	errFailedDecodeNewView = errors.New("failed to decode NEWVIEW")
 
-	// errFailedDecodeRequest is returned when the RESPONSE message is malformed.
-	errFailedDecodeResponse = errors.New("failed to decode RESPONSE")
+	// errFailedDecodePrepare is returned when the PREPARE message is malformed.
+	errFailedDecodePrepare = errors.New("failed to decode PREPARE")
+	errFailedDecodePrepareVote = errors.New("failed to decode PREPARE_VOTE")
 
-	// // errFailedDecodeCommit is returned when the COMMIT message is malformed.
-	// errFailedDecodeCommit = errors.New("failed to decode COMMIT")
+	// errFailedDecodePreCommit is returned when the PRECOMMIT message is malformed.
+	errFailedDecodePreCommit = errors.New("failed to decode PRECOMMIT")
 
-	// errFailedDecodeSendPub is returned when the SENDPUB message is malformed.
-	errFailedDecodeSendPub = errors.New("failed to decode SENDPUB")
+	errFailedDecodePreCommitVote = errors.New("faild to decode PRECOMMIT_VOTE")
 
+	// errFailedDecodeCommit is returned when the COMMIT message is malformed.
+	errFailedDecodeCommit = errors.New("failed to decode COMMIT")
+
+	errFailedDecodeCommitVote = errors.New("failed to decode COMMIT_VOTE")
+	
 	// errFailedDecodeMessageSet is returned when the message set is malformed.
-	// errFailedDecodeMessageSet = errors.New("failed to decode message set")
+	errFailedDecodeMessageSet = errors.New("failed to decode message set")
 
 	// errInvalidSigner is returned when the message is signed by a validator different than message sender
 	errInvalidSigner = errors.New("message not signed by the sender")
-
-	// errInsufficientPub is returned when the local node has no enough aggregated public key collection
-	errInsufficientPub = errors.New("not enough aggregated public key collection")
 )

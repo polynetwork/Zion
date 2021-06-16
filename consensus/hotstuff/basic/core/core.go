@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/consensus"
 	"math/big"
 	"sync"
 	"time"
@@ -19,6 +20,8 @@ type core struct {
 	logger  log.Logger
 
 	current *roundState
+
+	chain consensus.ChainReader
 
 	backend             hotstuff.Backend
 	events              *event.TypeMuxSubscription
@@ -47,11 +50,28 @@ func (c *core) Stop() error {
 }
 
 func (c *core) IsProposer() bool {
-	return false
+	return c.valSet.IsProposer(c.backend.Address())
 }
 
 func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 	return false
+}
+
+func (c *core) startNewRound(round *big.Int) {
+
+}
+
+func (c *core) currentView() *hotstuff.View {
+	return &hotstuff.View{
+		Height: new(big.Int).Set(c.current.Height()),
+		Round:  new(big.Int).Set(c.current.Round()),
+	}
+}
+
+func (c *core) setState(st State) {
+	if st != c.state {
+		c.state = st
+	}
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
@@ -112,4 +132,8 @@ func (c *core) broadcast(msg *message, round *big.Int) {
 			return
 		}
 	}
+}
+
+func (c *core) catchUpRound(view *hotstuff.View) {
+
 }
