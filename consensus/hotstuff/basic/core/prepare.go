@@ -4,14 +4,15 @@ import (
 	"math/big"
 )
 
-func (c *core) sendPrepare(msg *MsgPrepare) {
+func (c *core) sendPrepare() {
 	logger := c.logger.New("state", c.state)
 
-	if c.current.Height().Cmp(msg.Proposal.Number()) == 0 && c.IsProposer() {
-		curView := c.currentView()
+	curView := c.currentView()
+	highQC := c.current.HighQC()
+	if highQC != nil && highQC.Proposal.Number().Cmp(curView.Height) == 0 && c.IsProposer() {
 		payload, err := Encode(&MsgPrepare{
 			View:     curView,
-			Proposal: msg.Proposal,
+			Proposal: highQC.Proposal,
 		})
 		if err != nil {
 			logger.Error("Failed to encode", "view", curView)
@@ -44,7 +45,7 @@ func (c *core) handlePrepare(msg *message) error {
 	c.setState(StatePrepared)
 
 	if !c.IsProposer() {
-
+		c.sendPrepareVote()
 	}
 	return nil
 }

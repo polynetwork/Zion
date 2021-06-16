@@ -16,7 +16,7 @@ func (c *core) handleRequest(req *hotstuff.Request) error {
 
 	logger.Trace("handle request", "number", req.Proposal.Number(), "hash", req.Proposal.Hash())
 	if c.state == StateAcceptRequest {
-		c.sendPrepare(req)
+		c.sendPrepare()
 	}
 	return nil
 }

@@ -147,8 +147,9 @@ const (
 	StateAcceptRequest State = 1
 	StateNewRound      State = 2 // prepare to accept new view
 	StatePrepared      State = 3
-	StateCommitted     State = 4
-	StateDecide        State = 5
+	StateLocked State = 4
+	StateCommitted     State = 5
+	StateDecide        State = 6
 )
 
 func (s State) String() string {
@@ -158,6 +159,8 @@ func (s State) String() string {
 		return "NewRound"
 	} else if s == StatePrepared {
 		return "Prepared"
+	} else if s == StateLocked {
+		return "Locked"
 	} else if s == StateCommitted {
 		return "Committed"
 	} else if s == StateDecide {
@@ -292,6 +295,64 @@ func (m *MsgPrepareVote) DecodeRLP(s *rlp.Stream) error {
 
 func (m *MsgPrepareVote) String() string {
 	return fmt.Sprintf("{MsgType: %s, Number: %d, Hash: %s}", MsgTypePrepareVote, m.View.Height, m.BlockHash)
+}
+
+type MsgPreCommit struct {
+	View     *hotstuff.View
+	Proposal hotstuff.Proposal
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (m *MsgPreCommit) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.View, m.Proposal})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (m *MsgPreCommit) DecodeRLP(s *rlp.Stream) error {
+	var prepare struct {
+		View     *hotstuff.View
+		Proposal hotstuff.Proposal
+	}
+
+	if err := s.Decode(&prepare); err != nil {
+		return err
+	}
+	m.View, m.Proposal = prepare.View, prepare.Proposal
+
+	return nil
+}
+
+func (m *MsgPreCommit) String() string {
+	return fmt.Sprintf("{MsgType: %s, Number:%d, Hash: %s}", MsgTypePreCommit.String(), m.Proposal.Number(), m.Proposal.Hash())
+}
+
+type MsgPreCommitVote struct {
+	View      *hotstuff.View
+	BlockHash common.Hash
+	Signature []byte
+}
+
+func (m *MsgPreCommitVote) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.View, m.BlockHash, m.Signature})
+}
+
+func (m *MsgPreCommitVote) DecodeRLP(s *rlp.Stream) error {
+	var vote struct {
+		View      *hotstuff.View
+		BlockHash common.Hash
+		Signature []byte
+	}
+
+	if err := s.Decode(&vote); err != nil {
+		return err
+	}
+	m.View, m.BlockHash, m.Signature = vote.View, vote.BlockHash, vote.Signature
+
+	return nil
+}
+
+func (m *MsgPreCommitVote) String() string {
+	return fmt.Sprintf("{MsgType: %s, Number: %d, Hash: %s}", MsgTypePreCommitVote, m.View.Height, m.BlockHash)
 }
 
 func Encode(val interface{}) ([]byte, error) {

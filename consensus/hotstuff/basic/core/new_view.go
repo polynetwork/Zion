@@ -79,14 +79,6 @@ func (c *core) handleNewView(msg *message, src hotstuff.Validator) error {
 		return err
 	}
 
-	return nil
-}
-
-func (c *core) acceptNewView(msg *message, round *big.Int) error {
-	if err := c.current.AddNewView(msg); err != nil {
-		return err
-	}
-
 	if c.current.NewViewSize() == c.valSet.Q() {
 		list := c.current.newViews.Values()
 		var maxView *MsgNewView
@@ -97,10 +89,16 @@ func (c *core) acceptNewView(msg *message, round *big.Int) error {
 				maxView = nv
 			}
 		}
-		c.sendPrepare(&MsgPrepare{
-			View:     maxView.View,
-			Proposal: maxView.QC.Proposal,
-		})
+		// todo: round state high qc
+		c.current.SetHighQC(maxView.QC)
+	}
+
+	return nil
+}
+
+func (c *core) acceptNewView(msg *message, round *big.Int) error {
+	if err := c.current.AddNewView(msg); err != nil {
+		return err
 	}
 	return nil
 }

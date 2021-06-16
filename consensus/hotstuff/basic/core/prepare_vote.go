@@ -4,15 +4,16 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) sendPrepareVote(msg *MsgPrepareVote) {
+func (c *core) sendPrepareVote() {
 	logger := c.logger.New("state", c.state)
 
 	// allow leader to send prepareVote to itself
-	if c.current.View().Cmp(msg.View) == 0 {
-		curView := c.currentView()
+	qc := c.current.prepareQC
+	curView := c.currentView()
+	if curView.Height.Cmp(qc.Proposal.Number()) == 0 {
 		vote := &MsgPrepareVote{
 			View:     curView,
-			BlockHash: c.current.Proposal().Hash(),
+			BlockHash: qc.Proposal.Hash(),
 		}
 		if sig, err := c.backend.Sign(vote.BlockHash[:]); err != nil {
 			logger.Error("Failed to sign prepare vote", "view", curView, "err", err)
@@ -42,10 +43,6 @@ func (c *core) handlePrepareVote(msg *message, src hotstuff.Validator) error {
 	// todo check message
 	if vote.View.Cmp(c.currentView()) != 0 {
 		return errInvalidMessage
-	}
-
-	if !c.IsProposer() {
-		return errNotToProposer
 	}
 
 	if c.current.PrepareQC().Proposal.Hash() != vote.BlockHash {
