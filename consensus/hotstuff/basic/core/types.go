@@ -10,6 +10,8 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+var EmptyHash = common.Hash{}
+
 type CoreEngine interface {
 	Start() error
 
@@ -31,31 +33,38 @@ type CoreEngine interface {
 type MsgType uint64
 
 const (
-	MsgTypeNewView       MsgType = 1 // newView or roundChange
+	MsgTypeRoundChange   MsgType = 1
 	MsgTypePrepare       MsgType = 2
 	MsgTypePrepareVote   MsgType = 3
 	MsgTypePreCommit     MsgType = 4
 	MsgTypePreCommitVote MsgType = 5
 	MsgTypeCommit        MsgType = 6
+	MsgTypeCommitVote    MsgType = 7
 )
 
 func (m MsgType) String() string {
 	switch m {
-	case MsgTypeNewView:
-		return "NEWVIEW"
+	case MsgTypeRoundChange:
+		return "ROUND_CHANGE"
 	case MsgTypePrepare:
 		return "PREPARE"
 	case MsgTypePrepareVote:
-		return "PREPAREVOTE"
+		return "PREPARE_VOTE"
 	case MsgTypePreCommit:
 		return "PRECOMMIT"
 	case MsgTypePreCommitVote:
-		return "PRECOMMITVOTE"
+		return "PRECOMMIT_VOTE"
 	case MsgTypeCommit:
 		return "COMMIT"
+	case MsgTypeCommitVote:
+		return "COMMIT_VOTE"
 	default:
 		panic("unknown msg type")
 	}
+}
+
+func (m MsgType) Value() uint64 {
+	return uint64(m)
 }
 
 type message struct {
@@ -63,6 +72,7 @@ type message struct {
 	Msg       []byte
 	Address   common.Address
 	Signature []byte
+	CommittedSeal []byte
 }
 
 // ==============================================
@@ -71,7 +81,7 @@ type message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Address, m.Signature})
+	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
@@ -81,12 +91,13 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 		Msg       []byte
 		Address   common.Address
 		Signature []byte
+		CommittedSeal []byte
 	}
 
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
-	m.Code, m.Msg, m.Address, m.Signature = msg.Code, msg.Msg, msg.Address, msg.Signature
+	m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
 	return nil
 }
 
@@ -147,7 +158,7 @@ const (
 	StateAcceptRequest State = 1
 	StateNewRound      State = 2 // prepare to accept new view
 	StatePrepared      State = 3
-	StateLocked State = 4
+	StateLocked        State = 4
 	StateCommitted     State = 5
 	StateDecide        State = 6
 )
@@ -236,7 +247,7 @@ func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (m *MsgNewView) String() string {
-	return fmt.Sprintf("{MsgType: %s, Number:%d, Hash: %s}", MsgTypeNewView.String(), m.QC.Proposal.Number(), m.QC.Proposal.Hash())
+	return fmt.Sprintf("{MsgType: %s, Number:%d, Hash: %s}", MsgTypeRoundChange.String(), m.QC.Proposal.Number(), m.QC.Proposal.Hash())
 }
 
 type MsgPrepare struct {
@@ -309,15 +320,15 @@ func (m *MsgPreCommit) EncodeRLP(w io.Writer) error {
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (m *MsgPreCommit) DecodeRLP(s *rlp.Stream) error {
-	var prepare struct {
+	var precommit struct {
 		View     *hotstuff.View
 		Proposal hotstuff.Proposal
 	}
 
-	if err := s.Decode(&prepare); err != nil {
+	if err := s.Decode(&precommit); err != nil {
 		return err
 	}
-	m.View, m.Proposal = prepare.View, prepare.Proposal
+	m.View, m.Proposal = precommit.View, precommit.Proposal
 
 	return nil
 }
@@ -352,6 +363,65 @@ func (m *MsgPreCommitVote) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (m *MsgPreCommitVote) String() string {
+	return fmt.Sprintf("{MsgType: %s, Number: %d, Hash: %s}", MsgTypePreCommitVote, m.View.Height, m.BlockHash)
+}
+
+//
+type MsgCommit struct {
+	View     *hotstuff.View
+	Proposal hotstuff.Proposal
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (m *MsgCommit) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.View, m.Proposal})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (m *MsgCommit) DecodeRLP(s *rlp.Stream) error {
+	var commit struct {
+		View     *hotstuff.View
+		Proposal hotstuff.Proposal
+	}
+
+	if err := s.Decode(&commit); err != nil {
+		return err
+	}
+	m.View, m.Proposal = commit.View, commit.Proposal
+
+	return nil
+}
+
+func (m *MsgCommit) String() string {
+	return fmt.Sprintf("{MsgType: %s, Number:%d, Hash: %s}", MsgTypeCommit.String(), m.Proposal.Number(), m.Proposal.Hash())
+}
+
+type MsgCommitVote struct {
+	View      *hotstuff.View
+	BlockHash common.Hash
+	Signature []byte
+}
+
+func (m *MsgCommitVote) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.View, m.BlockHash, m.Signature})
+}
+
+func (m *MsgCommitVote) DecodeRLP(s *rlp.Stream) error {
+	var vote struct {
+		View      *hotstuff.View
+		BlockHash common.Hash
+		Signature []byte
+	}
+
+	if err := s.Decode(&vote); err != nil {
+		return err
+	}
+	m.View, m.BlockHash, m.Signature = vote.View, vote.BlockHash, vote.Signature
+
+	return nil
+}
+
+func (m *MsgCommitVote) String() string {
 	return fmt.Sprintf("{MsgType: %s, Number: %d, Hash: %s}", MsgTypePreCommitVote, m.View.Height, m.BlockHash)
 }
 

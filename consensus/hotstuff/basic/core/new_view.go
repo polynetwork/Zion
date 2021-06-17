@@ -1,9 +1,10 @@
 package core
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"math/big"
 )
 
 // sendNextRoundChange sends the ROUND CHANGE message with current round + 1
@@ -35,8 +36,8 @@ func (c *core) sendRoundChange(round *big.Int) {
 	// Now we have the new round number and block height number
 	cv = c.currentView()
 	payload, err := Encode(&MsgNewView{
-		View:     c.currentView(),
-		QC: 	  c.current.PrepareQC(),
+		View: c.currentView(),
+		QC:   c.current.PrepareQC(),
 	})
 	if err != nil {
 		logger.Error("Failed to encode ROUND CHANGE", "rc", rc, "err", err)
@@ -44,7 +45,7 @@ func (c *core) sendRoundChange(round *big.Int) {
 	}
 
 	c.broadcast(&message{
-		Code: MsgTypeNewView,
+		Code: MsgTypeRoundChange,
 		Msg:  payload,
 	}, round)
 }

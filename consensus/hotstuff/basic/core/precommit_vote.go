@@ -1,79 +1,75 @@
 package core
 
-import "github.com/ethereum/go-ethereum/consensus/hotstuff"
+import (
+	"reflect"
+
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+)
 
 func (c *core) sendPreCommitVote() {
 	logger := c.logger.New("state", c.state)
 
-	// allow leader to send prepareVote to itself
-	qc := c.current.preCommitQC
-	curView := c.currentView()
-	if curView.Height.Cmp(qc.Proposal.Number()) == 0 {
-		vote := &MsgPreCommitVote{
-			View:     curView,
-			BlockHash: qc.Proposal.Hash(),
-		}
-		if sig, err := c.backend.Sign(vote.BlockHash[:]); err != nil {
-			logger.Error("Failed to sign prepare vote", "view", curView, "err", err)
-			return
-		} else {
-			vote.Signature = sig
-		}
-
-		payload, err := Encode(vote)
-		if err != nil {
-			logger.Error("Failed to encode", "view", curView)
-			return
-		}
-		c.broadcast(&message{
-			Code: MsgTypePreCommitVote,
-			Msg:  payload,
-		}, curView.Round)
+	sub := c.current.Subject()
+	payload, err := Encode(sub)
+	if err != nil {
+		logger.Error("Failed to encode", MsgTypePreCommitVote.String(), sub)
+		return
 	}
+
+	c.broadcast(&message{
+		Code: MsgTypePreCommitVote,
+		Msg:  payload,
+	})
 }
 
-
 func (c *core) handlePreCommitVote(msg *message, src hotstuff.Validator) error {
-	var vote *MsgPreCommitVote
+	var vote *hotstuff.Subject
 	if err := msg.Decode(&vote); err != nil {
 		return errFailedDecodePreCommitVote
 	}
 
-	// todo check message
-	if vote.View.Cmp(c.currentView()) != 0 {
-		return errInvalidMessage
-	}
-
-	if c.current.PrepareQC().Proposal.Hash() != vote.BlockHash {
-		return errInvalidMessage
-	}
-
-	if err := c.backend.CheckSignature(vote.BlockHash[:], src.Address(), vote.Signature); err != nil {
+	if err := c.checkMessage(MsgTypePreCommitVote, vote.View); err != nil {
 		return err
 	}
 
-	if err := c.acceptPreCommitVote(msg, src); err != nil {
+	if err := c.verifyPrepareVote(vote, src); err != nil {
 		return err
 	}
 
-	if c.current.PreCommitVoteSize() == c.valSet.Q() {
-		c.setState(StateCommitted)
-		// todo: copy prepare qc and set preCommitType
-		c.current.SetCommitQC(c.current.preCommitQC)
+	c.acceptPrepareVote(msg, src)
+
+	isHashLocked := c.current.IsHashLocked() && vote.Digest == c.current.GetLockedHash()
+	isQuorum := c.current.PreCommitVoteSize() > c.valSet.Q()
+	if (isHashLocked || isQuorum) && c.state.Cmp(StateLocked) < 0 {
+		c.current.LockHash()
+		c.setState(StateLocked)
 		c.sendCommit()
+	}
+
+	return nil
+}
+
+func (c *core) verifyPreCommitVote(vote *hotstuff.Subject, src hotstuff.Validator) error {
+	logger := c.logger.New("from", src, "state", c.state)
+
+	if !c.IsProposer() {
+		return errNotToProposer
+	}
+
+	sub := c.current.Subject()
+	if !reflect.DeepEqual(sub, vote) {
+		logger.Warn("Inconsistent votes between PREPARE and vote", "expected", sub, "got", vote)
+		return errInconsistentSubject
 	}
 	return nil
 }
 
 func (c *core) acceptPreCommitVote(msg *message, src hotstuff.Validator) error {
 	logger := c.logger.New("from", src, "state", c.state)
-
 	// Add the PREPARE message to current round state
 	if err := c.current.AddPreCommitVote(msg); err != nil {
 		logger.Error("Failed to add PREPARE vote message to round state", "msg", msg, "err", err)
 		return err
 	}
-
 	return nil
 }
-
