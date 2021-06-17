@@ -16,23 +16,24 @@ import (
 type core struct {
 	config  *hotstuff.Config
 	address common.Address
-	state   State
 	logger  log.Logger
 
-	current *roundState
+	state         State
+	current       *roundState
+	changeViewSet *changeViewSet
+	backend       hotstuff.Backend
+	valSet        hotstuff.ValidatorSet
+	chain         consensus.ChainReader
 
-	chain consensus.ChainReader
+	events            *event.TypeMuxSubscription
+	finalCommittedSub *event.TypeMuxSubscription
+	timeoutSub        *event.TypeMuxSubscription
 
-	backend             hotstuff.Backend
-	events              *event.TypeMuxSubscription
-	finalCommittedSub   *event.TypeMuxSubscription
-	timeoutSub          *event.TypeMuxSubscription
 	futureProposalTimer *time.Timer
 
 	pendingRQ   *prque.Prque
 	pendingRQMu *sync.Mutex
 
-	valSet                hotstuff.ValidatorSet
 	waitingForRoundChange bool
 	validateFn            func([]byte, []byte) (common.Address, error) // == c.checkValidatorSignature
 }
@@ -119,7 +120,7 @@ func (c *core) broadcast(msg *message) {
 		return
 	}
 
-	if msg.Code == MsgTypeRoundChange { // todo: judge current proposal is not nil
+	if msg.Code == MsgTypeChangeView { // todo: judge current proposal is not nil
 		_, lastProposer := c.backend.LastProposal()
 		proposedNewSet := c.valSet.Copy()
 		newRound := new(big.Int).Add(c.currentView().Round, common.Big1)

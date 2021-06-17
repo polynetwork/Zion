@@ -11,7 +11,7 @@ func (c *core) checkMessage(msgCode MsgType, view *hotstuff.View) error {
 		return errInvalidMessage
 	}
 
-	if msgCode == MsgTypeRoundChange {
+	if msgCode == MsgTypeChangeView {
 		if view.Height.Cmp(c.currentView().Height) > 0 {
 			return errFutureMessage
 		} else if view.Cmp(c.currentView()) < 0 {

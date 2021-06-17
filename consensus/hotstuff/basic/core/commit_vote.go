@@ -80,7 +80,7 @@ func (c *core) decide() {
 
 		if err := c.backend.Commit(proposal, committedSeals); err != nil {
 			c.current.UnlockHash() //Unlock block when insertion fails
-			c.sendNextRoundChange()
+			c.sendNextChangeView()
 			return
 		}
 	}

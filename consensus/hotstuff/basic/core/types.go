@@ -33,7 +33,7 @@ type CoreEngine interface {
 type MsgType uint64
 
 const (
-	MsgTypeRoundChange   MsgType = 1
+	MsgTypeChangeView    MsgType = 1
 	MsgTypePrepare       MsgType = 2
 	MsgTypePrepareVote   MsgType = 3
 	MsgTypePreCommit     MsgType = 4
@@ -44,8 +44,8 @@ const (
 
 func (m MsgType) String() string {
 	switch m {
-	case MsgTypeRoundChange:
-		return "ROUND_CHANGE"
+	case MsgTypeChangeView:
+		return "CHANGE_VIEW"
 	case MsgTypePrepare:
 		return "PREPARE"
 	case MsgTypePrepareVote:
@@ -241,7 +241,7 @@ func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (m *MsgNewView) String() string {
-	return fmt.Sprintf("{MsgType: %s, Number:%d, Hash: %s}", MsgTypeRoundChange.String(), m.QC.Proposal.Number(), m.QC.Proposal.Hash())
+	return fmt.Sprintf("{MsgType: %s, Number:%d, Hash: %s}", MsgTypeChangeView.String(), m.QC.Proposal.Number(), m.QC.Proposal.Hash())
 }
 
 type MsgPrepare struct {
