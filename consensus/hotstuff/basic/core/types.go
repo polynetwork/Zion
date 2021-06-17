@@ -67,11 +67,48 @@ func (m MsgType) Value() uint64 {
 	return uint64(m)
 }
 
+type State uint64
+
+const (
+	StateAcceptRequest State = 1
+	StatePrepared      State = 2
+	StatePreCommitted  State = 3
+	StateCommitted     State = 4
+)
+
+func (s State) String() string {
+	if s == StateAcceptRequest {
+		return "AcceptRequest"
+	} else if s == StatePrepared {
+		return "Prepared"
+	} else if s == StatePreCommitted {
+		return "StatePreCommitted"
+	} else if s == StateCommitted {
+		return "Committed"
+	} else {
+		return "Unknown"
+	}
+}
+
+// Cmp compares s and y and returns:
+//   -1 if s is the previous state of y
+//    0 if s and y are the same state
+//   +1 if s is the next state of y
+func (s State) Cmp(y State) int {
+	if uint64(s) < uint64(y) {
+		return -1
+	}
+	if uint64(s) > uint64(y) {
+		return 1
+	}
+	return 0
+}
+
 type message struct {
-	Code      MsgType
-	Msg       []byte
-	Address   common.Address
-	Signature []byte
+	Code          MsgType
+	Msg           []byte
+	Address       common.Address
+	Signature     []byte
 	CommittedSeal []byte
 }
 
@@ -87,10 +124,10 @@ func (m *message) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (m *message) DecodeRLP(s *rlp.Stream) error {
 	var msg struct {
-		Code      MsgType
-		Msg       []byte
-		Address   common.Address
-		Signature []byte
+		Code          MsgType
+		Msg           []byte
+		Address       common.Address
+		Signature     []byte
 		CommittedSeal []byte
 	}
 
@@ -150,49 +187,6 @@ func (m *message) Decode(val interface{}) error {
 
 func (m *message) String() string {
 	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
-}
-
-type State uint64
-
-const (
-	StateAcceptRequest State = 1
-	StateNewRound      State = 2 // prepare to accept new view
-	StatePrepared      State = 3
-	StateLocked        State = 4
-	StateCommitted     State = 5
-	StateDecide        State = 6
-)
-
-func (s State) String() string {
-	if s == StateAcceptRequest {
-		return "AcceptRequest"
-	} else if s == StateNewRound {
-		return "NewRound"
-	} else if s == StatePrepared {
-		return "Prepared"
-	} else if s == StateLocked {
-		return "Locked"
-	} else if s == StateCommitted {
-		return "Committed"
-	} else if s == StateDecide {
-		return "Decide"
-	} else {
-		return "Unknown"
-	}
-}
-
-// Cmp compares s and y and returns:
-//   -1 if s is the previous state of y
-//    0 if s and y are the same state
-//   +1 if s is the next state of y
-func (s State) Cmp(y State) int {
-	if uint64(s) < uint64(y) {
-		return -1
-	}
-	if uint64(s) > uint64(y) {
-		return 1
-	}
-	return 0
 }
 
 type QuorumCert struct {

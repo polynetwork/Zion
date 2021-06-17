@@ -56,4 +56,3 @@ var (
 
 	errUnknownMsgType = errors.New("unknown msg type")
 )
-

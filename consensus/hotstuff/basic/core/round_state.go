@@ -33,7 +33,7 @@ type roundState struct {
 
 	pendingRequest *hotstuff.Request
 
-	prepare *MsgPrepare
+	prepare    *MsgPrepare
 	lockedHash common.Hash
 
 	prepareVotes   *messageSet
@@ -69,7 +69,7 @@ func (s *roundState) Subject() *hotstuff.Subject {
 
 	return &hotstuff.Subject{
 		View: &hotstuff.View{
-			Round:    new(big.Int).Set(s.round),
+			Round:  new(big.Int).Set(s.round),
 			Height: new(big.Int).Set(s.height),
 		},
 		Digest: s.prepare.Proposal.Hash(),
@@ -211,7 +211,6 @@ func (s *roundState) View() *hotstuff.View {
 //	defer r.mtx.RUnlock()
 //	return r.newViews.Size()
 //}
-
 
 func (s *roundState) LockHash() {
 	s.mtx.Lock()

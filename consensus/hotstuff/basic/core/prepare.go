@@ -20,8 +20,8 @@ func (c *core) sendPrepare(request *hotstuff.Request) {
 		return
 	}
 	c.broadcast(&message{
-		Code:      MsgTypePrepare,
-		Msg:       prepare,
+		Code: MsgTypePrepare,
+		Msg:  prepare,
 	})
 }
 
@@ -53,7 +53,7 @@ func (c *core) verifyPrepare(msg *MsgPrepare, src hotstuff.Validator) error {
 		return errNotFromProposer
 	}
 	if c.current.IsHashLocked() {
-		return errHashAlreayLocked
+		return errHashAlreadyLocked
 	}
 	if _, err := c.backend.Verify(msg.Proposal); err != nil {
 		return err
@@ -64,4 +64,7 @@ func (c *core) verifyPrepare(msg *MsgPrepare, src hotstuff.Validator) error {
 func (c *core) acceptPrepare(prepare *MsgPrepare) {
 	//c.consensusTimestamp = time.Now()
 	c.current.SetPrepare(prepare)
+	if !c.IsProposer() {
+		c.setState(StatePrepared)
+	}
 }

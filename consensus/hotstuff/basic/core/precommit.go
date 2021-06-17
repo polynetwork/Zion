@@ -41,7 +41,7 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 	// validator lock proposal hash and set state as locked
 	if !c.IsProposer() {
 		c.current.LockHash()
-		c.setState(StateLocked)
+		c.setState(StatePreCommitted)
 	}
 
 	// allow leader or validator send vote

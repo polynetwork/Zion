@@ -32,7 +32,7 @@ var (
 	errFailedDecodeNewView = errors.New("failed to decode NEWVIEW")
 
 	// errFailedDecodePrepare is returned when the PREPARE message is malformed.
-	errFailedDecodePrepare = errors.New("failed to decode PREPARE")
+	errFailedDecodePrepare     = errors.New("failed to decode PREPARE")
 	errFailedDecodePrepareVote = errors.New("failed to decode PREPARE_VOTE")
 
 	// errFailedDecodePreCommit is returned when the PRECOMMIT message is malformed.
@@ -51,5 +51,7 @@ var (
 	// errInvalidSigner is returned when the message is signed by a validator different than message sender
 	errInvalidSigner = errors.New("message not signed by the sender")
 
-	errHashAlreayLocked = errors.New("proposal hash already locked")
+	errHashAlreadyLocked = errors.New("proposal hash already locked")
+
+	errState = errors.New("error state")
 )

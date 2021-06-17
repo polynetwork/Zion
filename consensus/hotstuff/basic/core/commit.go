@@ -18,8 +18,8 @@ func (c *core) sendCommit() {
 		return
 	}
 	c.broadcast(&message{
-		Code:      MsgTypeCommit,
-		Msg:       payload,
+		Code: MsgTypeCommit,
+		Msg:  payload,
 	})
 }
 
@@ -35,6 +35,10 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 
 	if err := c.verifyCommit(msg, src); err != nil {
 		return err
+	}
+
+	if !c.IsProposer() {
+		c.setState(StateCommitted)
 	}
 
 	c.sendCommitVote()

@@ -40,9 +40,9 @@ func (c *core) handlePreCommitVote(msg *message, src hotstuff.Validator) error {
 
 	isHashLocked := c.current.IsHashLocked() && vote.Digest == c.current.GetLockedHash()
 	isQuorum := c.current.PreCommitVoteSize() > c.valSet.Q()
-	if (isHashLocked || isQuorum) && c.state.Cmp(StateLocked) < 0 {
+	if (isHashLocked || isQuorum) && c.state.Cmp(StatePreCommitted) < 0 {
 		c.current.LockHash()
-		c.setState(StateLocked)
+		c.setState(StatePreCommitted)
 		c.sendCommit()
 	}
 

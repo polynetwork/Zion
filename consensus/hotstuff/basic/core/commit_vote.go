@@ -1,10 +1,11 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"reflect"
-)
 
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
+)
 
 func (c *core) sendCommitVote() {
 	logger := c.logger.New("state", c.state)
@@ -16,8 +17,8 @@ func (c *core) sendCommitVote() {
 		return
 	}
 	c.broadcast(&message{
-		Code:      MsgTypeCommitVote,
-		Msg:       payload,
+		Code: MsgTypeCommitVote,
+		Msg:  payload,
 	})
 }
 
@@ -39,9 +40,9 @@ func (c *core) handleCommitVote(msg *message, src hotstuff.Validator) error {
 
 	isHashLocked := c.current.IsHashLocked() && vote.Digest == c.current.GetLockedHash()
 	isQuorum := c.current.PreCommitVoteSize() >= c.valSet.Q()
-	if isHashLocked && isQuorum && c.state < StateCommitted {
+	if isHashLocked && isQuorum && c.state.Cmp(StateCommitted) < 0 {
 		c.setState(StateCommitted)
-		c.sendDecide()
+		c.decide()
 	}
 	return nil
 }
@@ -67,4 +68,20 @@ func (c *core) acceptCommitVote(msg *message, src hotstuff.Validator) error {
 		return err
 	}
 	return nil
+}
+
+func (c *core) decide() {
+	if proposal := c.current.Proposal(); proposal != nil {
+		committedSeals := make([][]byte, c.current.CommitVoteSize())
+		for i, v := range c.current.commitVotes.Values() {
+			committedSeals[i] = make([]byte, types.HotstuffExtraSeal)
+			copy(committedSeals[i][:], v.CommittedSeal[:])
+		}
+
+		if err := c.backend.Commit(proposal, committedSeals); err != nil {
+			c.current.UnlockHash() //Unlock block when insertion fails
+			c.sendNextRoundChange()
+			return
+		}
+	}
 }

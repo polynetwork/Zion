@@ -133,7 +133,7 @@ func (c *core) broadcast(msg *message) {
 			logger.Trace("Local is the next proposer", "msg", msg)
 			return
 		}
-	} else if msg.Code == MsgTypePrepareVote || msg.Code == MsgTypePreCommitVote || msg.Code == MsgTypeCommitVote {  // todo: judge current proposal is not nil
+	} else if msg.Code == MsgTypePrepareVote || msg.Code == MsgTypePreCommitVote || msg.Code == MsgTypeCommitVote { // todo: judge current proposal is not nil
 		if err := c.backend.Unicast(c.valSet, payload); err != nil {
 			logger.Error("Failed to unicast message", "msg", msg, "err", err)
 			return

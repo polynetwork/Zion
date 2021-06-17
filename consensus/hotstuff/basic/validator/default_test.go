@@ -134,6 +134,7 @@ func testEmptyValSet(t *testing.T) {
 		t.Errorf("validator set should not be nil")
 	}
 }
+
 //
 //func testAddAndRemoveValidator(t *testing.T) {
 //	valSet := NewSet(ExtractValidators([]byte{}), hotstuff.RoundRobin)

@@ -38,7 +38,7 @@ func (c *core) handlePrepareVote(msg *message, src hotstuff.Validator) error {
 
 	c.acceptPrepareVote(msg, src)
 
-	if c.current.PrepareVoteSize() == c.valSet.Q() {
+	if c.current.PrepareVoteSize() >= c.valSet.Q() && c.state.Cmp(StatePrepared) < 0 {
 		c.setState(StatePrepared)
 		c.sendPreCommit()
 	}
@@ -51,7 +51,6 @@ func (c *core) verifyPrepareVote(vote *hotstuff.Subject, src hotstuff.Validator)
 	if !c.IsProposer() {
 		return errNotToProposer
 	}
-
 	sub := c.current.Subject()
 	if !reflect.DeepEqual(sub, vote) {
 		logger.Warn("Inconsistent votes between PREPARE and vote", "expected", sub, "got", vote)
