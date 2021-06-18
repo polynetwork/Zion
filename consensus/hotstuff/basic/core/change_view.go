@@ -24,7 +24,6 @@ func (c *core) sendChangeView(round *big.Int) {
 
 	c.catchUpRound(&hotstuff.View{
 		Round: new(big.Int).Set(round),
-		// todo: height should be curViewHeight - 1
 		Height: new(big.Int).Set(curView.Height),
 	})
 
@@ -77,14 +76,23 @@ func (c *core) handleChangeView(msg *message, src hotstuff.Validator) error {
 		return err
 	}
 
-	// We've received n-(n-1)/3 ROUND CHANGE messages, start a new round immediately.
-	if num == c.valSet.Q() && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
+	// Once we received f+1 ROUND CHANGE messages, those messages form a weak certificate.
+	// If our round number is smaller than the certificate's round number, we would
+	// try to catch up the round number.
+	if c.waitingForRoundChange && num == c.valSet.F()+1 {
+		if cv.Round.Cmp(roundView.Round) < 0 {
+			c.sendChangeView(roundView.Round)
+		}
+		return nil
+	} else if num == c.valSet.Q() && (c.waitingForRoundChange || cv.Round.Cmp(roundView.Round) < 0) {
+		// We've received 2f+1/Ceil(2N/3) ROUND CHANGE messages, start a new round immediately.
 		c.startNewRound(roundView.Round)
 		return nil
 	} else if cv.Round.Cmp(roundView.Round) < 0 {
 		// Only gossip the message with current round to other validators.
 		return errIgnored
 	}
+
 	return nil
 }
 

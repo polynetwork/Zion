@@ -39,18 +39,18 @@ func (c *core) storeRequestMsg(req *hotstuff.Request) {
 	logger := c.logger.New("state", c.state)
 	logger.Trace("Store future request", "number", req.Proposal.Number(), "hash", req.Proposal.Hash())
 
-	c.pendingRQMu.Lock()
-	defer c.pendingRQMu.Unlock()
+	c.pendingRequestMu.Lock()
+	defer c.pendingRequestMu.Unlock()
 
-	c.pendingRQ.Push(req, float32(-req.Proposal.Number().Int64()))
+	c.pendingRequest.Push(req, float32(-req.Proposal.Number().Int64()))
 }
 
 func (c *core) processPendingRequest() {
-	c.pendingRQMu.Lock()
-	defer c.pendingRQMu.Unlock()
+	c.pendingRequestMu.Lock()
+	defer c.pendingRequestMu.Unlock()
 
-	for !(c.pendingRQ.Empty()) {
-		m, prio := c.pendingRQ.Pop()
+	for !(c.pendingRequest.Empty()) {
+		m, prio := c.pendingRequest.Pop()
 		req, ok := m.(*hotstuff.Request)
 		if !ok {
 			c.logger.Warn("Malformed request, skip", "msg", m)
@@ -61,7 +61,7 @@ func (c *core) processPendingRequest() {
 		if err := c.checkRequest(req); err != nil {
 			if err == errFutureMessage {
 				c.logger.Trace("Stop processing request", "number", req.Proposal.Number(), "hash", req.Proposal.Hash())
-				c.pendingRQ.Push(m, prio)
+				c.pendingRequest.Push(m, prio)
 				break
 			}
 
