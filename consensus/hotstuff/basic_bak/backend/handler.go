@@ -35,7 +35,7 @@ const (
 	hotstuffMsg = 0x11
 )
 
-func (b *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
+func (s *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 	var data []byte
 	if err := msg.Decode(&data); err != nil {
 		return nil, common.Hash{}, errDecodeFailed
@@ -45,44 +45,44 @@ func (b *backend) decode(msg p2p.Msg) ([]byte, common.Hash, error) {
 }
 
 // HandleMsg implements consensus.Handler.HandleMsg
-func (b *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
-	b.coreMu.Lock()
-	defer b.coreMu.Unlock()
+func (s *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
+	s.coreMu.Lock()
+	defer s.coreMu.Unlock()
 	if msg.Code == hotstuffMsg {
-		if !b.coreStarted {
+		if !s.coreStarted {
 			return true, hotstuff.ErrStoppedEngine
 		}
 
-		data, hash, err := b.decode(msg)
+		data, hash, err := s.decode(msg)
 		if err != nil {
 			return true, errDecodeFailed
 		}
 		// Mark peer's message
-		ms, ok := b.recentMessages.Get(addr)
+		ms, ok := s.recentMessages.Get(addr)
 		var m *lru.ARCCache
 		if ok {
 			m, _ = ms.(*lru.ARCCache)
 		} else {
 			m, _ = lru.NewARC(inmemoryMessages)
-			b.recentMessages.Add(addr, m)
+			s.recentMessages.Add(addr, m)
 		}
 		m.Add(hash, true)
 
 		// Mark self known message
-		if _, ok := b.knownMessages.Get(hash); ok {
+		if _, ok := s.knownMessages.Get(hash); ok {
 			return true, nil
 		}
-		b.knownMessages.Add(hash, true)
+		s.knownMessages.Add(hash, true)
 
-		go b.eventMux.Post(hotstuff.MessageEvent{
+		go s.eventMux.Post(hotstuff.MessageEvent{
 			Payload: data,
 		})
 		return true, nil
 	}
-	if msg.Code == NewBlockMsg && b.core.IsProposer() { // eth.NewBlockMsg: import cycle
+	if msg.Code == NewBlockMsg && s.core.IsProposer() { // eth.NewBlockMsg: import cycle
 		// this case is to safeguard the race of similar block which gets propagated from other node while this node is proposing
 		// as p2p.Msg can only be decoded once (get EOF for any subsequence read), we need to make sure the payload is restored after we decode it
-		b.logger.Debug("proposer received NewBlockMsg", "size", msg.Size, "payload.type", reflect.TypeOf(msg.Payload), "sender", addr)
+		s.logger.Debug("proposer received NewBlockMsg", "size", msg.Size, "payload.type", reflect.TypeOf(msg.Payload), "sender", addr)
 		if reader, ok := msg.Payload.(*bytes.Reader); ok {
 			payload, err := ioutil.ReadAll(reader)
 			if err != nil {
@@ -95,12 +95,12 @@ func (b *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 				TD    *big.Int
 			}
 			if err := msg.Decode(&request); err != nil {
-				b.logger.Debug("Proposer was unable to decode the NewBlockMsg", "error", err)
+				s.logger.Debug("Proposer was unable to decode the NewBlockMsg", "error", err)
 				return false, nil
 			}
 			newRequestedBlock := request.Block
-			if newRequestedBlock.Header().MixDigest == types.HotstuffDigest && b.core.IsCurrentProposal(newRequestedBlock.Hash()) {
-				b.logger.Debug("Proposer already proposed this block", "hash", newRequestedBlock.Hash(), "sender", addr)
+			if newRequestedBlock.Header().MixDigest == types.HotstuffDigest && s.core.IsCurrentProposal(newRequestedBlock.Hash()) {
+				s.logger.Debug("Proposer already proposed this block", "hash", newRequestedBlock.Hash(), "sender", addr)
 				return true, nil
 			}
 		}
@@ -109,16 +109,16 @@ func (b *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 }
 
 // SetBroadcaster implements consensus.Handler.SetBroadcaster
-func (b *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
-	b.broadcaster = broadcaster
+func (s *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
+	s.broadcaster = broadcaster
 }
 
-func (b *backend) NewChainHead() error {
-	b.coreMu.RLock()
-	defer b.coreMu.RUnlock()
-	if !b.coreStarted {
+func (s *backend) NewChainHead() error {
+	s.coreMu.RLock()
+	defer s.coreMu.RUnlock()
+	if !s.coreStarted {
 		return hotstuff.ErrStoppedEngine
 	}
-	go b.eventMux.Post(hotstuff.FinalCommittedEvent{})
+	go s.eventMux.Post(hotstuff.FinalCommittedEvent{})
 	return nil
 }

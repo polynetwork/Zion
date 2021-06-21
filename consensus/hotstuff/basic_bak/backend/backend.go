@@ -27,8 +27,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
+	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic_bak/core"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic_bak/validator"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -105,47 +105,47 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 }
 
 // Address implements hotstuff.Backend.Address
-func (b *backend) Address() common.Address {
-	return b.signer
+func (s *backend) Address() common.Address {
+	return s.signer
 }
 
 // Validators implements hotstuff.Backend.Validators
-func (b *backend) Validators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
-	return b.getValidators(proposal.Number().Uint64(), proposal.Hash())
+func (s *backend) Validators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
+	return s.getValidators(proposal.Number().Uint64(), proposal.Hash())
 }
 
 // EventMux implements hotstuff.Backend.EventMux
-func (b *backend) EventMux() *event.TypeMux {
-	return b.eventMux
+func (s *backend) EventMux() *event.TypeMux {
+	return s.eventMux
 }
 
 // Broadcast implements hotstuff.Backend.Broadcast
-func (b *backend) Broadcast(valSet hotstuff.ValidatorSet, payload []byte) error {
+func (s *backend) Broadcast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	// send to others
-	b.Gossip(valSet, payload)
+	s.Gossip(valSet, payload)
 	// send to self
 	msg := hotstuff.MessageEvent{
 		Payload: payload,
 	}
-	go b.EventMux().Post(msg)
+	go s.EventMux().Post(msg)
 	return nil
 }
 
 // Broadcast implements hotstuff.Backend.Gossip
-func (b *backend) Gossip(valSet hotstuff.ValidatorSet, payload []byte) error {
+func (s *backend) Gossip(valSet hotstuff.ValidatorSet, payload []byte) error {
 	hash := hotstuff.RLPHash(payload)
-	b.knownMessages.Add(hash, true)
+	s.knownMessages.Add(hash, true)
 
 	targets := make(map[common.Address]bool)
 	for _, val := range valSet.List() { // hotstuff/validator/default.go - defaultValidator
-		if val.Address() != b.Address() {
+		if val.Address() != s.Address() {
 			targets[val.Address()] = true
 		}
 	}
-	if b.broadcaster != nil && len(targets) > 0 {
-		ps := b.broadcaster.FindPeers(targets)
+	if s.broadcaster != nil && len(targets) > 0 {
+		ps := s.broadcaster.FindPeers(targets)
 		for addr, p := range ps {
-			ms, ok := b.recentMessages.Get(addr)
+			ms, ok := s.recentMessages.Get(addr)
 			var m *lru.ARCCache
 			if ok {
 				m, _ = ms.(*lru.ARCCache)
@@ -158,7 +158,7 @@ func (b *backend) Gossip(valSet hotstuff.ValidatorSet, payload []byte) error {
 			}
 
 			m.Add(hash, true)
-			b.recentMessages.Add(addr, m)
+			s.recentMessages.Add(addr, m)
 			go p.Send(hotstuffMsg, payload)
 		}
 	}
@@ -166,22 +166,22 @@ func (b *backend) Gossip(valSet hotstuff.ValidatorSet, payload []byte) error {
 }
 
 // Broadcast implements hotstuff.Backend.Unicast
-func (b *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
-	if valSet.IsProposer(b.Address()) {
+func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
+	if valSet.IsProposer(s.Address()) {
 		return errInvalidProposal
 	}
 
 	hash := hotstuff.RLPHash(payload)
-	b.knownMessages.Add(hash, true)
+	s.knownMessages.Add(hash, true)
 
 	targets := make(map[common.Address]bool)
 	for _, val := range valSet.List() {
-		if val.Address() != b.Address() {
+		if val.Address() != s.Address() {
 			targets[val.Address()] = true
 		}
 	}
-	if b.broadcaster != nil && len(targets) > 0 {
-		ps := b.broadcaster.FindPeers(targets)
+	if s.broadcaster != nil && len(targets) > 0 {
+		ps := s.broadcaster.FindPeers(targets)
 		if p, exist := ps[valSet.GetProposer().Address()]; !exist {
 			return errInvalidProposal
 		} else {
@@ -192,7 +192,7 @@ func (b *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 }
 
 // Commit implements hotstuff.Backend.Commit
-func (b *backend) Commit(proposal hotstuff.Proposal, seals [][]byte) error {
+func (s *backend) Commit(proposal hotstuff.Proposal, seals [][]byte) error {
 	//// Check if the proposal is a valid block
 	//block := &types.Block{}
 	//block, ok := proposal.(*types.Block)
@@ -259,7 +259,7 @@ func (b *backend) Commit(proposal hotstuff.Proposal, seals [][]byte) error {
 }
 
 // Verify implements hotstuff.Backend.Verify
-func (b *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
+func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 	//// Check if the proposal is a valid block
 	//block := &types.Block{}
 	//block, ok := proposal.(*types.Block)
@@ -297,13 +297,13 @@ func (b *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 }
 
 // Sign implements hotstuff.Backend.Sign
-func (b *backend) Sign(data []byte) ([]byte, error) {
+func (s *backend) Sign(data []byte) ([]byte, error) {
 	hashData := crypto.Keccak256(data)
-	return crypto.Sign(hashData, b.privateKey)
+	return crypto.Sign(hashData, s.privateKey)
 }
 
 // CheckSignature implements hotstuff.Backend.CheckSignature
-func (b *backend) CheckSignature(data []byte, address common.Address, sig []byte) error {
+func (s *backend) CheckSignature(data []byte, address common.Address, sig []byte) error {
 	signer, err := hotstuff.GetSignatureAddress(data, sig)
 	if err != nil {
 		log.Error("Failed to get signer address", "err", err)
@@ -316,15 +316,15 @@ func (b *backend) CheckSignature(data []byte, address common.Address, sig []byte
 	return nil
 }
 
-func (b *backend) LastProposal() (hotstuff.Proposal, common.Address) {
-	block := b.currentBlock()
+func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
+	block := s.currentBlock()
 
 	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
 		var err error
-		proposer, err = b.Author(block.Header())
+		proposer, err = s.Author(block.Header())
 		if err != nil {
-			b.logger.Error("Failed to get block proposer", "err", err)
+			s.logger.Error("Failed to get block proposer", "err", err)
 			return nil, common.Address{}
 		}
 	}
@@ -334,29 +334,29 @@ func (b *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 }
 
 // HasProposal implements hotstuff.Backend.HashBlock
-func (b *backend) HasProposal(hash common.Hash, number *big.Int) bool {
-	return b.chain.GetHeader(hash, number.Uint64()) != nil
+func (s *backend) HasProposal(hash common.Hash, number *big.Int) bool {
+	return s.chain.GetHeader(hash, number.Uint64()) != nil
 }
 
 // GetSpeaker implements hotstuff.Backend.GetProposer
-func (b *backend) GetProposer(number uint64) common.Address {
-	if header := b.chain.GetHeaderByNumber(number); header != nil {
-		a, _ := b.Author(header)
+func (s *backend) GetProposer(number uint64) common.Address {
+	if header := s.chain.GetHeaderByNumber(number); header != nil {
+		a, _ := s.Author(header)
 		return a
 	}
 	return common.Address{}
 }
 
 // ParentValidators implements hotstuff.Backend.GetParentValidators
-func (b *backend) ParentValidators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
+func (s *backend) ParentValidators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
 	if block, ok := proposal.(*types.Block); ok {
-		return b.getValidators(block.Number().Uint64()-1, block.ParentHash())
+		return s.getValidators(block.Number().Uint64()-1, block.ParentHash())
 	}
-	return validator.NewSet(nil, b.config.SpeakerPolicy)
+	return validator.NewSet(nil, s.config.SpeakerPolicy)
 }
 
 // todo
-func (b *backend) getValidators(number uint64, hash common.Hash) hotstuff.ValidatorSet {
+func (s *backend) getValidators(number uint64, hash common.Hash) hotstuff.ValidatorSet {
 	//snap, err := h.snapshot(h.chain, number, hash, nil)
 	//if err != nil {
 	//	return validator.NewSet(nil, h.config.SpeakerPolicy)
@@ -365,9 +365,9 @@ func (b *backend) getValidators(number uint64, hash common.Hash) hotstuff.Valida
 	return nil
 }
 
-func (b *backend) HasBadProposal(hash common.Hash) bool {
-	if b.hasBadBlock == nil {
+func (s *backend) HasBadProposal(hash common.Hash) bool {
+	if s.hasBadBlock == nil {
 		return false
 	}
-	return b.hasBadBlock(hash)
+	return s.hasBadBlock(hash)
 }

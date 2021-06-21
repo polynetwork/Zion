@@ -9,7 +9,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic_bak"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -42,20 +42,20 @@ var (
 	nonceDropVote = hexutil.MustDecode("0x0000000000000000") // Magic nonce number to vote on removing a validator.
 )
 
-func (b *backend) Author(header *types.Header) (common.Address, error) {
-	return ecrecover(header, b.signatures)
+func (s *backend) Author(header *types.Header) (common.Address, error) {
+	return ecrecover(header, s.signatures)
 }
 
-func (b *backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
-	return b.verifyHeader(chain, header, nil)
+func (s *backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
+	return s.verifyHeader(chain, header, nil)
 }
 
-func (b *backend) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
+func (s *backend) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
 	abort := make(chan struct{})
 	results := make(chan error, len(headers))
 	go func() {
 		for i, header := range headers {
-			err := b.verifyHeader(chain, header, headers[:i])
+			err := s.verifyHeader(chain, header, headers[:i])
 
 			select {
 			case <-abort:
@@ -67,14 +67,14 @@ func (b *backend) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*ty
 	return abort, results
 }
 
-func (b *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
+func (s *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) error {
 	if len(block.Uncles()) > 0 {
 		return errInvalidUncleHash
 	}
 	return nil
 }
 
-func (b *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
+func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
 	//// unused fields, force to set to empty
 	//header.Coinbase = common.Address{}
 	//header.Nonce = emptyNonce
@@ -114,13 +114,13 @@ func (b *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 	return nil
 }
 
-func (b *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
+func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) {
 	// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 }
 
-func (b *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
+func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
 	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
 	/// No block rewards in Istanbul, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -130,7 +130,7 @@ func (b *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 	return types.NewBlock(header, txs, nil, receipts, trie.NewStackTrie(nil)), nil
 }
 
-func (b *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
+func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) error {
 	//// update the block header timestamp and signature and propose the block to core engine
 	//header := block.Header()
 	//number := header.Number.Uint64()
@@ -194,16 +194,16 @@ func (b *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	return nil
 }
 
-func (b *backend) SealHash(header *types.Header) common.Hash {
+func (s *backend) SealHash(header *types.Header) common.Hash {
 	return sigHash(header)
 }
 
 // useless
-func (b *backend) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
+func (s *backend) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
 	return new(big.Int)
 }
 
-func (b *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
+func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	//return []rpc.API{{
 	//	Namespace: "istanbul",
 	//	Version:   "1.0",
@@ -213,7 +213,7 @@ func (b *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	return nil
 }
 
-func (b *backend) Close() error {
+func (s *backend) Close() error {
 	return nil
 }
 
@@ -247,7 +247,7 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 		return common.Address{}, err
 	}
 
-	addr, err := basic.GetSignatureAddress(sigHash(header).Bytes(), istanbulExtra.Seal)
+	addr, err := basic_bak.GetSignatureAddress(sigHash(header).Bytes(), istanbulExtra.Seal)
 	if err != nil {
 		return addr, err
 	}
@@ -422,7 +422,7 @@ func writeCommittedSeals(h *types.Header, committedSeals [][]byte) error {
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (b *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
@@ -457,14 +457,14 @@ func (b *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidDifficulty
 	}
 
-	return b.verifyCascadingFields(chain, header, parents)
+	return s.verifyCascadingFields(chain, header, parents)
 }
 
 // verifyCascadingFields verifies all the header fields that are not standalone,
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
-func (b *backend) verifyCascadingFields(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (s *backend) verifyCascadingFields(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
 	//// The genesis block is the always valid dead-end
 	//number := header.Number.Uint64()
 	//if number == 0 {
@@ -505,10 +505,10 @@ func (b *backend) verifyCascadingFields(chain consensus.ChainHeaderReader, heade
 }
 
 // update timestamp and signature of the block based on its number of transactions
-func (b *backend) updateBlock(block *types.Block) (*types.Block, error) {
+func (s *backend) updateBlock(block *types.Block) (*types.Block, error) {
 	header := block.Header()
 	// sign the hash
-	seal, err := b.sealHeader(header)
+	seal, err := s.sealHeader(header)
 	if err != nil {
 		return nil, err
 	}
@@ -521,13 +521,13 @@ func (b *backend) updateBlock(block *types.Block) (*types.Block, error) {
 	return block.WithSeal(header), nil
 }
 
-func (b *backend) sealHeader(header *types.Header) ([]byte, error) {
-	return b.Sign(sigHash(header).Bytes())
+func (s *backend) sealHeader(header *types.Header) ([]byte, error) {
+	return s.Sign(sigHash(header).Bytes())
 }
 
 // Start and Stop invoked in worker.go - start and stop
 // Start implements consensus.HotStuff.Start
-func (b *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
+func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	//h.coreMu.Lock()
 	//defer h.coreMu.Unlock()
 	//if h.coreStarted {
@@ -558,7 +558,7 @@ func (b *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 }
 
 // Stop implements consensus.HotStuff.Stop
-func (b *backend) Stop() error {
+func (s *backend) Stop() error {
 	//h.coreMu.Lock()
 	//defer h.coreMu.Unlock()
 	//if !h.coreStarted {
