@@ -24,7 +24,7 @@ import (
 // API is a user facing RPC API to allow controlling the signer and voting
 // mechanisms of the HotStuff scheme.
 type API struct {
-	chain    consensus.ChainReader
+	chain    consensus.ChainHeaderReader
 	hotstuff *backend
 }
 

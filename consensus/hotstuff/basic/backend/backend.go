@@ -27,13 +27,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic_bak/core"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic_bak/validator"
+	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
 )
 
@@ -48,14 +49,15 @@ const (
 
 // HotStuff is the scalable hotstuff consensus engine
 type backend struct {
-	config       *hotstuff.Config
-	db           ethdb.Database // Database to store and retrieve necessary information
+	config *hotstuff.Config
+	//db           ethdb.Database // Database to store and retrieve necessary information
 	core         hsc.CoreEngine
 	chain        consensus.ChainReader
 	currentBlock func() *types.Block
 	hasBadBlock  func(hash common.Hash) bool
 	logger       log.Logger
 
+	valset         hotstuff.ValidatorSet
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	signatures     *lru.ARCCache // Signatures of recent blocks to speed up mining
 	recentMessages *lru.ARCCache // the cache of peer's messages
@@ -65,6 +67,7 @@ type backend struct {
 	signer     common.Address // Ethereum address of the signing key
 
 	// The channels for hotstuff engine notifications
+	sealMu            sync.Mutex
 	commitCh          chan *types.Block
 	proposedBlockHash common.Hash
 	coreStarted       bool
@@ -80,16 +83,17 @@ type backend struct {
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) consensus.HotStuff {
+func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	signatures, _ := lru.NewARC(inmemorySignatures)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
 	backend := &backend{
-		config:         config,
-		db:             db,
+		config: config,
+		//db:             db,
 		logger:         log.New(),
+		valset:         valset,
 		commitCh:       make(chan *types.Block, 1),
 		coreStarted:    false,
 		eventMux:       new(event.TypeMux),
@@ -100,7 +104,8 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		recents:        recents,
 		proposals:      make(map[common.Address]bool),
 	}
-	//backend.core = hotStuffCore.New(backend, backend.config)
+
+	backend.core = hsc.New(backend, config, valset)
 	return backend
 }
 
@@ -111,7 +116,7 @@ func (s *backend) Address() common.Address {
 
 // Validators implements hotstuff.Backend.Validators
 func (s *backend) Validators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
-	return s.getValidators(proposal.Number().Uint64(), proposal.Hash())
+	return s.getValidators()
 }
 
 // EventMux implements hotstuff.Backend.EventMux
@@ -191,109 +196,122 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	return nil
 }
 
-// Commit implements hotstuff.Backend.Commit
-func (s *backend) Commit(proposal hotstuff.Proposal, seals [][]byte) error {
-	//// Check if the proposal is a valid block
-	//block := &types.Block{}
-	//block, ok := proposal.(*types.Block)
-	//if !ok {
-	//	h.logger.Error("Invalid proposal, %v", proposal)
-	//	return errInvalidProposal
-	//}
-	//
-	//header := block.Header()
-	//
-	//// Aggregate the signature
-	//mask, aggSig, aggKey, err := h.AggregateSignature(valSet, collectionPub, collectionSig)
-	//if err != nil {
-	//	return err
-	//}
-	//hotStuffExtra, err := types.ExtractHotStuffExtra(header)
-	//if err != nil {
-	//	return err
-	//}
-	//copy(hotStuffExtra.Mask, mask)
-	//copy(hotStuffExtra.AggregatedKey, aggKey)
-	//copy(hotStuffExtra.AggregatedSig, aggSig)
-	//
-	//payload, err := rlp.EncodeToBytes(&hotStuffExtra)
-	//if err != nil {
-	//	return nil
-	//}
-	//
-	//header.Extra = append(header.Extra[:types.HotStuffExtraVanity], payload...)
-	//
-	//// Sign all the things (the last 65B Seal)!
-	//sighash, err := h.Sign(HotStuffRLP(header))
-	//if err != nil {
-	//	return err
-	//}
-	//// sighash, err := h.signFn(accounts.Account{Address: h.GetAddress()}, "", HotStuffRLP(header)) // Need to check if the empty string works
-	//// if err != nil {
-	//// 	return err
-	//// }
-	//
-	//copy(header.Extra[len(header.Extra)-extraSeal:], sighash)
-	//
-	//// update block's header
-	//newBlock := block.WithSeal(header)
-	//
-	//h.logger.Info("Committed", "address", h.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
-	//// - if the proposed and committed blocks are the same, send the proposed hash
-	////   to commit channel, which is being watched inside the engine.Seal() function.
-	//// - otherwise, we try to insert the block.
-	//// -- if success, the ChainHeadEvent event will be broadcasted, try to build
-	////    the next block and the previous Seal() will be stopped (need to check this --- saber).
-	//// -- otherwise, an error will be returned and a round change event will be fired.
-	//if h.proposedBlockHash == newBlock.Hash() {
-	//	// feed block hash to Seal() and wait the Seal() result
-	//	h.commitCh <- newBlock
-	//	return nil
-	//}
-	//
-	//if h.broadcaster != nil {
-	//	h.broadcaster.Enqueue(fetcherID, newBlock)
-	//}
+// PreCommit implements hotstuff.Backend.PreCommit
+func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
+	// Check if the proposal is a valid block
+	block := &types.Block{}
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		s.logger.Error("Invalid proposal, %v", proposal)
+		return nil, errInvalidProposal
+	}
 
+	h := block.Header()
+	// Append seals into extra-data
+	if err := writeCommittedSeals(h, seals); err != nil {
+		return nil, err
+	}
+
+	// update block's header
+	block = block.WithSeal(h)
+	return block, nil
+}
+
+func (s *backend) Commit(proposal hotstuff.Proposal) error {
+	// Check if the proposal is a valid block
+	block := &types.Block{}
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		s.logger.Error("Invalid proposal, %v", proposal)
+		return errInvalidProposal
+	}
+
+	s.logger.Info("Committed", "address", s.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
+	// - if the proposed and committed blocks are the same, send the proposed hash
+	//   to commit channel, which is being watched inside the engine.Seal() function.
+	// - otherwise, we try to insert the block.
+	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
+	//    the next block and the previous Seal() will be stopped (need to check this --- saber).
+	// -- otherwise, an error will be returned and a round change event will be fired.
+	if s.proposedBlockHash == block.Hash() {
+		// feed block hash to Seal() and wait the Seal() result
+		s.commitCh <- block
+		return nil
+	}
+
+	if s.broadcaster != nil {
+		s.broadcaster.Enqueue(fetcherID, block)
+	}
 	return nil
 }
 
 // Verify implements hotstuff.Backend.Verify
 func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
-	//// Check if the proposal is a valid block
-	//block := &types.Block{}
-	//block, ok := proposal.(*types.Block)
-	//if !ok {
-	//	h.logger.Error("Invalid proposal, %v", proposal)
-	//	return 0, errInvalidProposal
-	//}
-	//
-	//// check bad block
-	//if h.HasBadProposal(block.Hash()) {
-	//	return 0, core.ErrBlacklistedHash
-	//}
-	//
-	//// check block body
-	//txnHash := types.DeriveSha(block.Transactions())
-	//uncleHash := types.CalcUncleHash(block.Uncles())
-	//if txnHash != block.Header().TxHash {
-	//	return 0, errMismatchTxhashes
-	//}
-	//if uncleHash != nilUncleHash {
-	//	return 0, errInvalidUncleHash
-	//}
-	//
-	//// verify the header of proposed block
-	//err := h.VerifyHeader(h.chain, block.Header(), false)
-	//// ignore errEmptyAggregatedSig error because we don't have the bls-signature yet
-	//// this is verified by verifyAggregatedSig.
-	//if err == nil || err == errEmptyAggregatedSig {
-	//	return 0, nil
-	//} else if err == consensus.ErrFutureBlock {
-	//	return time.Unix(int64(block.Header().Time), 0).Sub(now()), consensus.ErrFutureBlock
-	//}
-	//return 0, err
-	return 0, nil
+	// Check if the proposal is a valid block
+	block := &types.Block{}
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		s.logger.Error("Invalid proposal, %v", proposal)
+		return 0, errInvalidProposal
+	}
+
+	// check bad block
+	if s.HasBadProposal(block.Hash()) {
+		return 0, core.ErrBlacklistedHash
+	}
+
+	// check block body
+	txnHash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil))
+	uncleHash := types.CalcUncleHash(block.Uncles())
+	if txnHash != block.Header().TxHash {
+		return 0, errMismatchTxhashes
+	}
+	if uncleHash != nilUncleHash {
+		return 0, errInvalidUncleHash
+	}
+
+	// verify the header of proposed block
+	err := s.VerifyHeader(s.chain, block.Header(), false)
+	if err == nil {
+		return 0, nil
+	} else if err == consensus.ErrFutureBlock {
+		return time.Unix(int64(block.Header().Time), 0).Sub(now()), consensus.ErrFutureBlock
+	}
+	return 0, err
+}
+
+func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
+	// Check if the proposal is a valid block
+	block := &types.Block{}
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		s.logger.Error("Invalid proposal, %v", proposal)
+		return 0, errInvalidProposal
+	}
+
+	// check bad block
+	if s.HasBadProposal(block.Hash()) {
+		return 0, core.ErrBlacklistedHash
+	}
+
+	// check block body
+	txnHash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil))
+	uncleHash := types.CalcUncleHash(block.Uncles())
+	if txnHash != block.Header().TxHash {
+		return 0, errMismatchTxhashes
+	}
+	if uncleHash != nilUncleHash {
+		return 0, errInvalidUncleHash
+	}
+
+	// verify the header of proposed block
+	err := s.VerifyHeader(s.chain, block.Header(), false)
+	if err == nil {
+		return 0, nil
+	} else if err == consensus.ErrFutureBlock {
+		return time.Unix(int64(block.Header().Time), 0).Sub(now()), consensus.ErrFutureBlock
+	}
+	return 0, err
 }
 
 // Sign implements hotstuff.Backend.Sign
@@ -320,7 +338,7 @@ func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 	block := s.currentBlock()
 
 	var proposer common.Address
-	if block.Number().Cmp(common.Big0) > 0 {
+	if block.Number().Cmp(common.Big0) >= 0 {
 		var err error
 		proposer, err = s.Author(block.Header())
 		if err != nil {
@@ -347,22 +365,24 @@ func (s *backend) GetProposer(number uint64) common.Address {
 	return common.Address{}
 }
 
+// todo:
 // ParentValidators implements hotstuff.Backend.GetParentValidators
 func (s *backend) ParentValidators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
-	if block, ok := proposal.(*types.Block); ok {
-		return s.getValidators(block.Number().Uint64()-1, block.ParentHash())
-	}
-	return validator.NewSet(nil, s.config.SpeakerPolicy)
+	return s.getValidators()
 }
 
-// todo
-func (s *backend) getValidators(number uint64, hash common.Hash) hotstuff.ValidatorSet {
-	//snap, err := h.snapshot(h.chain, number, hash, nil)
-	//if err != nil {
-	//	return validator.NewSet(nil, h.config.SpeakerPolicy)
-	//}
-	//return snap.ValSet
-	return nil
+// todo: use snap or reconfig validators group
+func (s *backend) getValidators() hotstuff.ValidatorSet {
+	return s.valset
+}
+
+func (s *backend) getValidatorsAddress() []common.Address {
+	valset := s.getValidators()
+	list := make([]common.Address, valset.Size())
+	for i, v := range valset.List() {
+		list[i] = v.Address()
+	}
+	return list
 }
 
 func (s *backend) HasBadProposal(hash common.Hash) bool {

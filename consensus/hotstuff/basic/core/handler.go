@@ -38,9 +38,6 @@ func (c *core) Start() error {
 func (c *core) Stop() error {
 	c.stopTimer()
 	c.unsubscribeEvents()
-
-	// Make sure the handler goroutine exits
-	c.handlerWg.Wait()
 	return nil
 }
 
@@ -71,57 +68,42 @@ func (c *core) unsubscribeEvents() {
 }
 
 func (c *core) handleEvents() {
-	// Clear state
-	defer func() {
-		c.current = nil
-		c.handlerWg.Done()
-	}()
+	logger := c.logger.New("handleEvents", "state", c.currentState())
 
-	c.handlerWg.Add(1)
 	for {
 		select {
 		case event, ok := <-c.events.Chan():
 			if !ok {
+				logger.Error("Failed to receive msg event")
 				return
 			}
 			// A real event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case hotstuff.RequestEvent:
-				r := &hotstuff.Request{
+				c.handleRequest(&hotstuff.Request{
 					Proposal: ev.Proposal,
-				}
-				err := c.handleRequest(r)
-				if err == errFutureMessage {
-					c.storeRequestMsg(r)
-				}
+				})
+
 			case hotstuff.MessageEvent:
-				if err := c.handleMsg(ev.Payload); err == nil {
-					c.backend.Gossip(c.valSet, ev.Payload)
-				}
+				c.handleMsg(ev.Payload)
+
 			case backlogEvent:
-				// No need to check signature for internal messages
-				if err := c.handleCheckedMsg(ev.msg, ev.src); err == nil {
-					p, err := ev.msg.Payload()
-					if err != nil {
-						c.logger.Warn("Get message payload failed", "err", err)
-						continue
-					}
-					c.backend.Gossip(c.valSet, p)
-				}
+				c.handleCheckedMsg(ev.msg, ev.src)
 			}
+
 		case _, ok := <-c.timeoutSub.Chan():
 			if !ok {
+				logger.Error("Failed to receive timeout event")
 				return
 			}
 			c.handleTimeoutMsg()
-		case event, ok := <-c.finalCommittedSub.Chan():
+
+		case _, ok := <-c.finalCommittedSub.Chan():
 			if !ok {
+				logger.Error("Failed to receive finalCommitted event")
 				return
 			}
-			switch event.Data.(type) {
-			case hotstuff.FinalCommittedEvent:
-				c.handleFinalCommitted()
-			}
+			c.handleFinalCommitted()
 		}
 	}
 }
@@ -131,77 +113,47 @@ func (c *core) sendEvent(ev interface{}) {
 	c.backend.EventMux().Post(ev)
 }
 
-func (c *core) handleMsg(payload []byte) error {
+func (c *core) handleMsg(payload []byte) {
 	logger := c.logger.New()
 
 	// Decode message and check its signature
 	msg := new(message)
 	if err := msg.FromPayload(payload, c.validateFn); err != nil {
 		logger.Error("Failed to decode message from payload", "err", err)
-		return err
+		return
 	}
 
 	// Only accept message if the address is valid
 	_, src := c.valSet.GetByAddress(msg.Address)
 	if src == nil {
 		logger.Error("Invalid address in message", "msg", msg)
-		return hotstuff.ErrUnauthorizedAddress
+		return
 	}
 
-	return c.handleCheckedMsg(msg, src)
+	c.handleCheckedMsg(msg, src)
 }
 
-func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) error {
-	logger := c.logger.New("address", c.address, "from", src)
-
-	// Store the message if it's a future message
-	testBacklog := func(err error) error {
-		if err == errFutureMessage {
-			// c.storeBacklog(msg, src)
-		}
-
-		return err
-	}
-
+func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) {
 	switch msg.Code {
+	case MsgTypeNewView:
+		c.handleNewView(msg, src)
 	case MsgTypePrepare:
-		return testBacklog(c.handlePrepare(msg, src))
+		c.handlePrepare(msg, src)
 	case MsgTypePrepareVote:
-		return testBacklog(c.handlePrepareVote(msg, src))
+		c.handlePrepareVote(msg, src)
 	case MsgTypePreCommit:
-		return testBacklog(c.handlePreCommit(msg, src))
+		c.handlePreCommit(msg, src)
 	case MsgTypePreCommitVote:
-		return testBacklog(c.handlePreCommitVote(msg, src))
+		c.handlePreCommitVote(msg, src)
 	case MsgTypeCommit:
-		return testBacklog(c.handleCommit(msg, src))
+		c.handleCommit(msg, src)
 	case MsgTypeCommitVote:
-		return testBacklog(c.handleCommitVote(msg, src))
-	case MsgTypeChangeView:
-		return testBacklog(c.handleChangeView(msg, src))
+		c.handleCommitVote(msg, src)
 	default:
-		logger.Error("Invalid message", "msg", msg)
+		c.logger.Error("msg type invalid", "unknown type", msg.Code)
 	}
-
-	return errInvalidMessage
 }
 
 func (c *core) handleTimeoutMsg() {
-	// If we're not waiting for round change yet, we can try to catch up
-	// the max round with F+1 round change message. We only need to catch up
-	// if the max round is larger than current round.
-	if !c.waitingForRoundChange {
-		maxRound := c.changeViewSet.MaxRound(c.valSet.F() + 1)
-		if maxRound != nil && maxRound.Cmp(c.current.Round()) > 0 {
-			c.sendChangeView(maxRound)
-			return
-		}
-	}
-
-	lastProposal, _ := c.backend.LastProposal()
-	if lastProposal != nil && lastProposal.Number().Cmp(c.current.Height()) >= 0 {
-		c.logger.Trace("change view timeout, catch up latest sequence", "number", lastProposal.Number().Uint64())
-		c.startNewRound(common.Big0)
-	} else {
-		c.sendNextChangeView()
-	}
+	c.startNewRound(c.current.NextRound())
 }

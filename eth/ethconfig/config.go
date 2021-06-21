@@ -18,6 +18,7 @@
 package ethconfig
 
 import (
+	"crypto/ecdsa"
 	"math/big"
 	"os"
 	"os/user"
@@ -27,13 +28,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	hsb "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/backend"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
 	"github.com/ethereum/go-ethereum/ethdb"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
@@ -206,32 +208,46 @@ type Config struct {
 }
 
 // CreateConsensusEngine creates a consensus engine for the given chain configuration.
-func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
-	// If proof-of-authority is requested, set it up
-	if chainConfig.Clique != nil {
-		return clique.New(chainConfig.Clique, db)
+//func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+//	// If proof-of-authority is requested, set it up
+//	if chainConfig.Clique != nil {
+//		return clique.New(chainConfig.Clique, db)
+//	}
+//	// Otherwise assume proof-of-work
+//	switch config.PowMode {
+//	case ethash.ModeFake:
+//		log.Warn("Ethash used in fake mode")
+//	case ethash.ModeTest:
+//		log.Warn("Ethash used in test mode")
+//	case ethash.ModeShared:
+//		log.Warn("Ethash used in shared mode")
+//	}
+//	engine := ethash.New(ethash.Config{
+//		PowMode:          config.PowMode,
+//		CacheDir:         stack.ResolvePath(config.CacheDir),
+//		CachesInMem:      config.CachesInMem,
+//		CachesOnDisk:     config.CachesOnDisk,
+//		CachesLockMmap:   config.CachesLockMmap,
+//		DatasetDir:       config.DatasetDir,
+//		DatasetsInMem:    config.DatasetsInMem,
+//		DatasetsOnDisk:   config.DatasetsOnDisk,
+//		DatasetsLockMmap: config.DatasetsLockMmap,
+//		NotifyFull:       config.NotifyFull,
+//	}, notify, noverify)
+//	engine.SetThreads(-1) // Disable CPU mining
+//	return engine
+//}
+
+// CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
+func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
+	// todo: how to get node key
+	var (
+		nodeKey *ecdsa.PrivateKey
+		config  = hotstuff.DefaultConfig
+		valset  = validator.NewSet([]common.Address{}, hotstuff.RoundRobin)
+	)
+	if chainConfig.HotStuff != nil {
+		return hsb.New(config, nodeKey, db, valset)
 	}
-	// Otherwise assume proof-of-work
-	switch config.PowMode {
-	case ethash.ModeFake:
-		log.Warn("Ethash used in fake mode")
-	case ethash.ModeTest:
-		log.Warn("Ethash used in test mode")
-	case ethash.ModeShared:
-		log.Warn("Ethash used in shared mode")
-	}
-	engine := ethash.New(ethash.Config{
-		PowMode:          config.PowMode,
-		CacheDir:         stack.ResolvePath(config.CacheDir),
-		CachesInMem:      config.CachesInMem,
-		CachesOnDisk:     config.CachesOnDisk,
-		CachesLockMmap:   config.CachesLockMmap,
-		DatasetDir:       config.DatasetDir,
-		DatasetsInMem:    config.DatasetsInMem,
-		DatasetsOnDisk:   config.DatasetsOnDisk,
-		DatasetsLockMmap: config.DatasetsLockMmap,
-		NotifyFull:       config.NotifyFull,
-	}, notify, noverify)
-	engine.SetThreads(-1) // Disable CPU mining
-	return engine
+	return nil
 }

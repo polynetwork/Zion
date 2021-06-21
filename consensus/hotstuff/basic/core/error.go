@@ -7,10 +7,14 @@ var (
 	// current subject.
 	errInconsistentSubject = errors.New("inconsistent subjects")
 
+	errInconsistentQC = errors.New("inconsistent qc")
+
 	// errNotFromProposer is returned when received message is supposed to be from proposer.
 	errNotFromProposer = errors.New("message does not come from proposer")
 
 	errNotToProposer = errors.New("message does not send to proposer")
+
+	errSafeNode = errors.New("safeNode check failed")
 
 	errNotToValidator = errors.New("message does not send to repo validator")
 
@@ -24,6 +28,8 @@ var (
 	// errOldMessage is returned when the received message's view is earlier
 	// than current view.
 	errOldMessage = errors.New("old message")
+
+	errOldVote = errors.New("old vote")
 
 	// errInvalidMessage is returned when the message is malformed.
 	errInvalidMessage = errors.New("invalid message")
@@ -54,4 +60,6 @@ var (
 	errHashAlreadyLocked = errors.New("proposal hash already locked")
 
 	errState = errors.New("error state")
+
+	errMsgTypeInvalid = errors.New("message type invalid")
 )
