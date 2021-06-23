@@ -54,6 +54,10 @@ type testCommittedMsgs struct {
 	committedSeals [][]byte
 }
 
+func (m *mockBackend) core() *core {
+	return m.engine.(*core)
+}
+
 // ==============================================
 //
 // define the functions that needs to be provided for Istanbul.

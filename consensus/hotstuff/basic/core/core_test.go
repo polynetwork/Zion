@@ -54,6 +54,13 @@ func makeHash(i int) common.Hash {
 	return common.BytesToHash(num.Bytes())
 }
 
+func makeView(h, r int64) *hotstuff.View {
+	return &hotstuff.View{
+		Height: big.NewInt(h),
+		Round:  big.NewInt(r),
+	}
+}
+
 func TestNewRequest(t *testing.T) {
 	testLogger.SetHandler(elog.StdoutHandler)
 
