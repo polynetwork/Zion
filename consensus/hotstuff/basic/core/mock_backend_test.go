@@ -34,7 +34,7 @@ import (
 
 var testLogger = elog.New()
 
-type testSystemBackend struct {
+type mockBackend struct {
 	id  uint64
 	sys *testSystem
 
@@ -58,20 +58,20 @@ type testCommittedMsgs struct {
 //
 // define the functions that needs to be provided for Istanbul.
 
-func (self *testSystemBackend) Address() common.Address {
+func (self *mockBackend) Address() common.Address {
 	return self.address
 }
 
 // Peers returns all connected peers
-func (self *testSystemBackend) Validators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
+func (self *mockBackend) Validators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
 	return self.peers
 }
 
-func (self *testSystemBackend) EventMux() *event.TypeMux {
+func (self *mockBackend) EventMux() *event.TypeMux {
 	return self.events
 }
 
-func (self *testSystemBackend) Send(message []byte, target common.Address) error {
+func (self *mockBackend) Send(message []byte, target common.Address) error {
 	testLogger.Info("enqueuing a message...", "address", self.Address())
 	self.sentMsgs = append(self.sentMsgs, message)
 	self.sys.queuedMessage <- hotstuff.MessageEvent{
@@ -80,7 +80,7 @@ func (self *testSystemBackend) Send(message []byte, target common.Address) error
 	return nil
 }
 
-func (self *testSystemBackend) Broadcast(valSet hotstuff.ValidatorSet, message []byte) error {
+func (self *mockBackend) Broadcast(valSet hotstuff.ValidatorSet, message []byte) error {
 	testLogger.Info("enqueuing a message...", "address", self.Address())
 	self.sentMsgs = append(self.sentMsgs, message)
 	self.sys.queuedMessage <- hotstuff.MessageEvent{
@@ -89,17 +89,17 @@ func (self *testSystemBackend) Broadcast(valSet hotstuff.ValidatorSet, message [
 	return nil
 }
 
-func (self *testSystemBackend) Gossip(valSet hotstuff.ValidatorSet, message []byte) error {
+func (self *mockBackend) Gossip(valSet hotstuff.ValidatorSet, message []byte) error {
 	testLogger.Warn("not sign any data")
 	return nil
 }
 
-func (self *testSystemBackend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
+func (self *mockBackend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	return nil
 }
 
 // todo:
-func (self *testSystemBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
+func (self *mockBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
 	//testLogger.Info("commit message", "address", self.Address())
 	//self.committedMsgs = append(self.committedMsgs, testCommittedMsgs{
 	//	commitProposal: proposal,
@@ -112,52 +112,52 @@ func (self *testSystemBackend) PreCommit(proposal hotstuff.Proposal, seals [][]b
 	return nil, nil
 }
 
-func (self *testSystemBackend) Commit(proposal hotstuff.Proposal) error {
+func (self *mockBackend) Commit(proposal hotstuff.Proposal) error {
 	return nil
 }
 
-func (self *testSystemBackend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
+func (self *mockBackend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 	return 0, nil
 }
 
-func (self *testSystemBackend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
+func (self *mockBackend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
 	return 0, nil
 }
 
-func (self *testSystemBackend) Sign(data []byte) ([]byte, error) {
+func (self *mockBackend) Sign(data []byte) ([]byte, error) {
 	testLogger.Info("returning current backend address so that CheckValidatorSignature returns the same value")
 	return self.address.Bytes(), nil
 }
 
 // SignTx signs transaction data with backend's private key
-func (self *testSystemBackend) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
+func (self *mockBackend) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
 	return nil, nil
 }
 
-func (self *testSystemBackend) CheckSignature([]byte, common.Address, []byte) error {
+func (self *mockBackend) CheckSignature([]byte, common.Address, []byte) error {
 	return nil
 }
 
 // todo: delete after test
-func (self *testSystemBackend) CheckValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+func (self *mockBackend) CheckValidatorSignature(data []byte, sig []byte) (common.Address, error) {
 	return common.BytesToAddress(sig), nil
 }
 
-func (self *testSystemBackend) Hash(b interface{}) common.Hash {
+func (self *mockBackend) Hash(b interface{}) common.Hash {
 	return common.HexToHash("Test")
 }
 
-func (self *testSystemBackend) NewRequest(request hotstuff.Proposal) {
+func (self *mockBackend) NewRequest(request hotstuff.Proposal) {
 	go self.events.Post(hotstuff.RequestEvent{
 		Proposal: request,
 	})
 }
 
-func (self *testSystemBackend) HasBadProposal(hash common.Hash) bool {
+func (self *mockBackend) HasBadProposal(hash common.Hash) bool {
 	return false
 }
 
-func (self *testSystemBackend) LastProposal() (hotstuff.Proposal, common.Address) {
+func (self *mockBackend) LastProposal() (hotstuff.Proposal, common.Address) {
 	l := len(self.committedMsgs)
 	if l > 0 {
 		return self.committedMsgs[l-1].commitProposal, common.Address{}
@@ -165,24 +165,24 @@ func (self *testSystemBackend) LastProposal() (hotstuff.Proposal, common.Address
 	return makeBlock(0), common.Address{}
 }
 
-func (self *testSystemBackend) CurrentProposer() (*big.Int, common.Address) {
+func (self *mockBackend) CurrentProposer() (*big.Int, common.Address) {
 	return nil, common.Address{}
 }
 
 // Only block height 5 will return true
-func (self *testSystemBackend) HasProposal(hash common.Hash, number *big.Int) bool {
+func (self *mockBackend) HasProposal(hash common.Hash, number *big.Int) bool {
 	return number.Cmp(big.NewInt(5)) == 0
 }
 
-func (self *testSystemBackend) GetProposer(number uint64) common.Address {
+func (self *mockBackend) GetProposer(number uint64) common.Address {
 	return common.Address{}
 }
 
-func (self *testSystemBackend) ParentValidators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
+func (self *mockBackend) ParentValidators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
 	return self.peers
 }
 
-func (sb *testSystemBackend) Close() error {
+func (sb *mockBackend) Close() error {
 	return nil
 }
 
@@ -191,7 +191,7 @@ func (sb *testSystemBackend) Close() error {
 // define the struct that need to be provided for integration tests.
 
 type testSystem struct {
-	backends []*testSystemBackend
+	backends []*mockBackend
 
 	queuedMessage chan hotstuff.MessageEvent
 	quit          chan struct{}
@@ -200,7 +200,7 @@ type testSystem struct {
 func newTestSystem(n uint64) *testSystem {
 	testLogger.SetHandler(elog.StdoutHandler)
 	return &testSystem{
-		backends: make([]*testSystemBackend, n),
+		backends: make([]*mockBackend, n),
 
 		queuedMessage: make(chan hotstuff.MessageEvent),
 		quit:          make(chan struct{}),
@@ -293,10 +293,10 @@ func (t *testSystem) stop(core bool) {
 	}
 }
 
-func (t *testSystem) NewBackend(id uint64) *testSystemBackend {
+func (t *testSystem) NewBackend(id uint64) *mockBackend {
 	// assume always success
 	ethDB := rawdb.NewMemoryDatabase()
-	backend := &testSystemBackend{
+	backend := &mockBackend{
 		id:     id,
 		sys:    t,
 		events: new(event.TypeMux),

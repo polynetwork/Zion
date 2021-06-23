@@ -10,16 +10,16 @@ import (
 func (c *core) handleRequest(req *hotstuff.Request) {
 	logger := c.logger.New("state", c.currentState(), "height", c.current.Height())
 	if err := c.requests.checkRequest(c.currentView(), req); err != nil {
-		if err == errInvalidMessage {
-			logger.Warn("invalid request")
+		if err == errFutureMessage {
+			goto store
+		} else {
+			logger.Warn("receive request", "err", err)
 			return
 		}
-		logger.Warn("unexpected request", "number", req.Proposal.Number(), "hash", req.Proposal.Hash(), "err", err)
-		return
 	}
-
+store:
 	logger.Trace("handle request", "number", req.Proposal.Number(), "hash", req.Proposal.Hash())
-	c.requests.AddRequest(req)
+	c.requests.StoreRequest(req)
 }
 
 type requestSet struct {
@@ -49,7 +49,7 @@ func (s *requestSet) checkRequest(view *hotstuff.View, req *hotstuff.Request) er
 	}
 }
 
-func (s *requestSet) AddRequest(req *hotstuff.Request) {
+func (s *requestSet) StoreRequest(req *hotstuff.Request) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -64,7 +64,6 @@ func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
 		m, prior := s.pendingRequest.Pop()
 		req, ok := m.(*hotstuff.Request)
 		if !ok {
-			// todo: add log
 			continue
 		}
 
@@ -79,4 +78,10 @@ func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
 		return req
 	}
 	return nil
+}
+
+func (s *requestSet) Size() int {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+	return s.pendingRequest.Size()
 }

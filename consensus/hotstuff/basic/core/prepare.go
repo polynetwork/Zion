@@ -80,7 +80,17 @@ func (c *core) createNewProposal() (*MsgNewProposal, error) {
 		return nil, fmt.Errorf("parent hash expect %s, got %s", lastProposal.Hash().Hex(), qc.Proposal.Hash().Hex())
 	}
 
-	req := c.requests.GetRequest(c.currentView())
+	var req *hotstuff.Request
+	if c.current.PendingRequest() != nil && c.current.PendingRequest().Proposal.Number().Cmp(c.current.Height()) == 0 {
+		req = c.current.PendingRequest()
+	} else {
+		if req = c.requests.GetRequest(c.currentView()); req != nil {
+			c.current.SetPendingRequest(req)
+		} else {
+			return nil, errNoRequest
+		}
+	}
+
 	return &MsgNewProposal{
 		View:     c.currentView(),
 		Proposal: req.Proposal,

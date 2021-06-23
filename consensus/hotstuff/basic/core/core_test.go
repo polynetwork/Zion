@@ -17,12 +17,13 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"math/big"
 	"reflect"
 	"testing"
 	"time"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	elog "github.com/ethereum/go-ethereum/log"
 )

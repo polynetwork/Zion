@@ -1,9 +1,10 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common"
 	"math/big"
 	"sync"
+
+	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
@@ -15,7 +16,8 @@ type roundState struct {
 	height *big.Int
 	state  State
 
-	proposal hotstuff.Proposal // leader's pending request
+	pendingRequest *hotstuff.Request // leader's pending request
+	proposal       hotstuff.Proposal // repo's prepare proposal
 
 	newViews       *messageSet
 	prepareVotes   *messageSet
@@ -61,10 +63,21 @@ func (s *roundState) Spawn(view *hotstuff.View) *roundState {
 	nrs.preCommitVotes = newMessageSet(nrs.vs)
 	nrs.commitVotes = newMessageSet(nrs.vs)
 
-	nrs.highQC = s.highQC
-	nrs.prepareQC = s.prepareQC
-	nrs.lockedQC = s.lockedQC
-	nrs.committedQC = s.committedQC
+	if s.pendingRequest != nil {
+		nrs.pendingRequest = s.pendingRequest
+	}
+	if s.highQC != nil {
+		nrs.highQC = s.highQC
+	}
+	if s.prepareQC != nil {
+		nrs.prepareQC = s.prepareQC
+	}
+	if s.lockedQC != nil {
+		nrs.lockedQC = s.lockedQC
+	}
+	if s.committedQC != nil {
+		nrs.committedQC = s.committedQC
+	}
 
 	nrs.mtx = new(sync.RWMutex)
 
@@ -120,6 +133,18 @@ func (s *roundState) Proposal() hotstuff.Proposal {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	return s.proposal
+}
+
+func (s *roundState) SetPendingRequest(req *hotstuff.Request) {
+	s.mtx.Lock()
+	defer s.mtx.Unlock()
+	s.pendingRequest = req
+}
+
+func (s *roundState) PendingRequest() *hotstuff.Request {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+	return s.pendingRequest
 }
 
 func (s *roundState) Subject() *hotstuff.Subject {

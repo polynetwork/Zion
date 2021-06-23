@@ -41,10 +41,9 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, valSet hotstuff.Vali
 		valSet:             valSet,
 		logger:             log.New("address", backend.Address()),
 		backend:            backend,
-		requests:           newRequestSet(),
 		consensusTimestamp: time.Time{},
 	}
-
+	c.requests = newRequestSet()
 	c.validateFn = c.checkValidatorSignature
 	return c
 }
@@ -159,3 +158,11 @@ func (c *core) newRoundChangeTimer() {
 		c.sendEvent(timeoutEvent{})
 	})
 }
+
+//func (c *core) setState(state State) {
+//	c.current.SetState(state)
+//	//if state == StateAcceptRequest {
+//	//	c.GetRequest()
+//	//}
+//	//c.processBacklog()
+//}

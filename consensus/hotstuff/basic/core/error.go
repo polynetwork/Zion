@@ -62,4 +62,6 @@ var (
 	errState = errors.New("error state")
 
 	errMsgTypeInvalid = errors.New("message type invalid")
+
+	errNoRequest = errors.New("no valid request")
 )
