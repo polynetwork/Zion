@@ -14,8 +14,6 @@ var (
 
 	errNotToProposer = errors.New("message does not send to proposer")
 
-	errSafeNode = errors.New("safeNode check failed")
-
 	errNotToValidator = errors.New("message does not send to repo validator")
 
 	// errIgnored is returned when a message was ignored.
@@ -66,4 +64,13 @@ var (
 	errNoRequest = errors.New("no valid request")
 
 	errInvalidProposal = errors.New("invalid proposal")
+
+	errVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
+	errExtend = errors.New("proposal extend relationship error")
+	errVerifyQC = errors.New("verify qc error")
+	errSafeNode = errors.New("safeNode checking failed")
+	errAddNewViews = errors.New("add new view error")
+	errAddPrepareVote = errors.New("add prepare vote error")
+	errAddPreCommitVote = errors.New("add pre commit vote error")
+	errAddCommitVote = errors.New("add commit vote error")
 )

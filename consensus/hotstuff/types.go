@@ -91,20 +91,20 @@ func (v *View) Cmp(y *View) int {
 }
 
 // -------------------------------------------
-// Subject
+// Vote
 
-type Subject struct {
+type Vote struct {
 	View   *View
 	Digest common.Hash // Digest of s.Announce.Proposal.Hash()
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
-func (b *Subject) EncodeRLP(w io.Writer) error {
+func (b *Vote) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{b.View, b.Digest})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (b *Subject) DecodeRLP(s *rlp.Stream) error {
+func (b *Vote) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
 		View   *View
 		Digest common.Hash
@@ -117,7 +117,7 @@ func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (b *Subject) String() string {
+func (b *Vote) String() string {
 	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
 }
 

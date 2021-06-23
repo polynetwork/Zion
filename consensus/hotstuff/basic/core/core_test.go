@@ -49,13 +49,20 @@ func makeAddress(i int) common.Address {
 	return common.BytesToAddress(num.Bytes())
 }
 
+func makeHash(i int) common.Hash {
+	num := new(big.Int).SetUint64(uint64(i))
+	return common.BytesToHash(num.Bytes())
+}
+
 func TestNewRequest(t *testing.T) {
 	testLogger.SetHandler(elog.StdoutHandler)
 
 	N := uint64(4)
 	F := uint64(1)
+	H := uint64(1)
+	R := uint64(0)
 
-	sys := NewTestSystemWithBackend(N, F)
+	sys := NewTestSystemWithBackend(N, F, H, R)
 
 	close := sys.Run(true)
 	defer close()
@@ -86,8 +93,10 @@ func TestNewRequest(t *testing.T) {
 func TestQuorumSize(t *testing.T) {
 	N := uint64(4)
 	F := uint64(1)
+	H := uint64(1)
+	R := uint64(0)
 
-	sys := NewTestSystemWithBackend(N, F)
+	sys := NewTestSystemWithBackend(N, F, H, R)
 	backend := sys.backends[0]
 	c := backend.engine.(*core)
 

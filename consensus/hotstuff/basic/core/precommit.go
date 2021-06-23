@@ -4,40 +4,42 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) {
+func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
-		vote   *hotstuff.Subject
+		vote   *hotstuff.Vote
 		msgTyp = MsgTypePrepareVote
 	)
 	if err := c.decodeAndCheckVote(data, msgTyp, vote); err != nil {
 		logger.Error("Failed to check vote", "type", msgTyp, "err", err)
-		return
+		return errFailedDecodePrepareVote
 	}
 
-	if err := c.current.AddPreCommitVote(data); err != nil {
+	if err := c.current.AddPrepareVote(data); err != nil {
 		logger.Error("Failed to add vote", "type", msgTyp, "err", err)
-		return
+		return errAddPrepareVote
 	}
 
-	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.current.state < StatePrepared {
+	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.current.state < StatePrepared {
 		seal := c.getSeals(size)
 		newProposal, err := c.backend.PreCommit(c.current.Proposal(), seal)
 		if err != nil {
 			logger.Error("Failed to assemble committed seal", "err", err)
-			return
+			return err
 		}
 		c.current.SetProposal(newProposal)
 		prepareQC, err := Proposal2QC(c.currentView(), newProposal)
 		if err != nil {
 			logger.Error("Failed to generate prepareQC with proposal", "err", err)
-			return
+			return err
 		}
 		c.current.SetPrepareQC(prepareQC)
 		c.current.SetState(StatePrepared)
 		c.sendPreCommit()
 	}
+
+	return nil
 }
 
 func (c *core) getSeals(n int) [][]byte {
@@ -62,7 +64,7 @@ func (c *core) sendPreCommit() {
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
 }
 
-func (c *core) handlePreCommit(data *message, src hotstuff.Validator) {
+func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
@@ -71,16 +73,17 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) {
 	)
 	if err := c.decodeAndCheckMessage(data, msgTyp, msg); err != nil {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
-		return
+		return errFailedDecodePreCommit
 	}
 
 	if err := c.backend.VerifyQuorumCert(msg); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
-		return
+		return errVerifyQC
 	}
 
 	c.current.SetPrepareQC(msg)
 	c.current.SetState(StatePrepared)
+	return nil
 }
 
 func (c *core) sendPreCommitVote() {

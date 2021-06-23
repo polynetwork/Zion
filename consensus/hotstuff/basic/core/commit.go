@@ -2,21 +2,21 @@ package core
 
 import "github.com/ethereum/go-ethereum/consensus/hotstuff"
 
-func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) {
+func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
-		msg    *hotstuff.Subject
+		msg    *hotstuff.Vote
 		msgTyp = MsgTypePreCommitVote
 	)
 	if err := c.decodeAndCheckVote(data, msgTyp, msg); err != nil {
 		logger.Error("Failed to check vote", "type", msgTyp, "err", err)
-		return
+		return errFailedDecodePreCommitVote
 	}
 
 	if err := c.current.AddPreCommitVote(data); err != nil {
 		logger.Error("Failed to add vote", "type", msgTyp, "err", err)
-		return
+		return errAddPreCommitVote
 	}
 
 	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StateLocked {
@@ -24,6 +24,7 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) {
 		c.current.SetState(StateLocked)
 		c.sendCommit()
 	}
+	return nil
 }
 
 func (c *core) sendCommit() {
@@ -38,7 +39,7 @@ func (c *core) sendCommit() {
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
 }
 
-func (c *core) handleCommit(data *message, src hotstuff.Validator) {
+func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
@@ -47,11 +48,12 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) {
 	)
 	if err := c.decodeAndCheckMessage(data, msgTyp, msg); err != nil {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
-		return
+		return errFailedDecodeCommit
 	}
 
 	c.current.SetLockedQC(msg)
 	c.current.SetState(StateLocked)
+	return nil
 }
 
 func (c *core) sendCommitVote() {

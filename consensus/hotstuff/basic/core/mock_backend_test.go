@@ -225,7 +225,7 @@ func newTestValidatorSet(n int) hotstuff.ValidatorSet {
 }
 
 // FIXME: int64 is needed for N and F
-func NewTestSystemWithBackend(n, f uint64) *testSystem {
+func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 	testLogger.SetHandler(elog.StdoutHandler)
 
 	addrs := generateValidators(int(n))
@@ -239,13 +239,10 @@ func NewTestSystemWithBackend(n, f uint64) *testSystem {
 		backend.address = vset.GetByIndex(i).Address()
 
 		core := New(backend, config, vset).(*core)
-		//core.state = StateAcceptRequest
-		//core.current = newRoundState(&hotstuff.View{
-		//	Round:    big.NewInt(0),
-		//	Height: big.NewInt(1),
-		//}, vset, common.Hash{}, nil, nil, func(hash common.Hash) bool {
-		//	return false
-		//})
+		core.current = newRoundState(&hotstuff.View{
+			Height: new(big.Int).SetUint64(h),
+			Round:  new(big.Int).SetUint64(r),
+		}, vset, nil)
 		core.valSet = vset
 		core.logger = testLogger
 		core.validateFn = backend.CheckValidatorSignature

@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -29,7 +30,7 @@ func (c *core) sendPrepare() {
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
 }
 
-func (c *core) handlePrepare(data *message, src hotstuff.Validator) {
+func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
@@ -38,26 +39,27 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) {
 	)
 	if err := c.decodeAndCheckProposal(data, msgTyp, msg); err != nil {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
-		return
+		return errFailedDecodePrepare
 	}
 
 	proposal := msg.Proposal
 	highQC := msg.HighQC
 	if _, err := c.backend.VerifyUnsealedProposal(proposal); err != nil {
 		logger.Error("Failed to verify unsealed proposal", "err", err)
-		return
+		return errVerifyUnsealedProposal
 	}
 	if err := c.extend(proposal, highQC); err != nil {
 		logger.Error("Failed to check extend", "err", err)
-		return
+		return errExtend
 	}
 	if err := c.safeNode(proposal, highQC); err != nil {
 		logger.Error("Failed to check safeNode", "err", err)
-		return
+		return errSafeNode
 	}
 
 	c.current.SetProposal(proposal)
 	c.sendPrepareVote()
+	return nil
 }
 
 func (c *core) sendPrepareVote() {

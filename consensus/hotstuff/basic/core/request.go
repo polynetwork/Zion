@@ -7,19 +7,20 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/prque"
 )
 
-func (c *core) handleRequest(req *hotstuff.Request) {
+func (c *core) handleRequest(req *hotstuff.Request) error {
 	logger := c.logger.New("state", c.currentState(), "height", c.current.Height())
 	if err := c.requests.checkRequest(c.currentView(), req); err != nil {
 		if err == errFutureMessage {
 			goto store
 		} else {
 			logger.Warn("receive request", "err", err)
-			return
+			return err
 		}
 	}
 store:
 	logger.Trace("handle request", "number", req.Proposal.Number(), "hash", req.Proposal.Hash())
 	c.requests.StoreRequest(req)
+	return nil
 }
 
 type requestSet struct {

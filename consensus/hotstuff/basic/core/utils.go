@@ -12,7 +12,7 @@ import (
 )
 
 func (c *core) decodeAndCheckProposal(data *message, msgTyp MsgType, msg *MsgNewProposal) error {
-	if err := data.Decode(msg); err != nil {
+	if err := data.Decode(&msg); err != nil {
 		return err
 	}
 
@@ -31,7 +31,7 @@ func (c *core) decodeAndCheckProposal(data *message, msgTyp MsgType, msg *MsgNew
 }
 
 func (c *core) decodeAndCheckMessage(data *message, msgTyp MsgType, msg *hotstuff.QuorumCert) error {
-	if err := data.Decode(msg); err != nil {
+	if err := data.Decode(&msg); err != nil {
 		return err
 	}
 
@@ -49,8 +49,8 @@ func (c *core) decodeAndCheckMessage(data *message, msgTyp MsgType, msg *hotstuf
 	return c.checkMessage(data.Code, msg.View)
 }
 
-func (c *core) decodeAndCheckVote(data *message, msgTyp MsgType, vote *hotstuff.Subject) error {
-	if err := data.Decode(vote); err != nil {
+func (c *core) decodeAndCheckVote(data *message, msgTyp MsgType, vote *hotstuff.Vote) error {
+	if err := data.Decode(&vote); err != nil {
 		return err
 	}
 

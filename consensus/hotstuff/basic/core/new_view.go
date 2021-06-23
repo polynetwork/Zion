@@ -25,7 +25,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 	})
 }
 
-func (c *core) handleNewView(data *message, src hotstuff.Validator) {
+func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
@@ -34,23 +34,25 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) {
 	)
 	if err := c.decodeAndCheckMessage(data, msgTyp, msg); err != nil {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
-		return
+		return errFailedDecodeNewView
 	}
 
 	if err := c.backend.VerifyQuorumCert(msg); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
-		return
+		return errVerifyQC
 	}
 
 	if err := c.current.AddNewViews(data); err != nil {
 		logger.Error("Failed to add new view", "err", err)
-		return
+		return errAddNewViews
 	}
 
 	if c.current.NewViewSize() == c.Q() {
 		highQC := c.getHighQC()
 		c.current.SetHighQC(highQC)
 	}
+
+	return nil
 }
 
 func (c *core) getHighQC() *hotstuff.QuorumCert {

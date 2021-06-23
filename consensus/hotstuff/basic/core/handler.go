@@ -113,45 +113,46 @@ func (c *core) sendEvent(ev interface{}) {
 	c.backend.EventMux().Post(ev)
 }
 
-func (c *core) handleMsg(payload []byte) {
+func (c *core) handleMsg(payload []byte) error {
 	logger := c.logger.New()
 
 	// Decode message and check its signature
 	msg := new(message)
 	if err := msg.FromPayload(payload, c.validateFn); err != nil {
 		logger.Error("Failed to decode message from payload", "err", err)
-		return
+		return err
 	}
 
 	// Only accept message if the address is valid
 	_, src := c.valSet.GetByAddress(msg.Address)
 	if src == nil {
 		logger.Error("Invalid address in message", "msg", msg)
-		return
+		return errInvalidSigner
 	}
 
-	c.handleCheckedMsg(msg, src)
+	return c.handleCheckedMsg(msg, src)
 }
 
-func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) {
+func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) (err error) {
 	switch msg.Code {
 	case MsgTypeNewView:
-		c.handleNewView(msg, src)
+		err = c.handleNewView(msg, src)
 	case MsgTypePrepare:
-		c.handlePrepare(msg, src)
+		err = c.handlePrepare(msg, src)
 	case MsgTypePrepareVote:
-		c.handlePrepareVote(msg, src)
+		err = c.handlePrepareVote(msg, src)
 	case MsgTypePreCommit:
-		c.handlePreCommit(msg, src)
+		err = c.handlePreCommit(msg, src)
 	case MsgTypePreCommitVote:
-		c.handlePreCommitVote(msg, src)
+		err = c.handlePreCommitVote(msg, src)
 	case MsgTypeCommit:
-		c.handleCommit(msg, src)
+		err = c.handleCommit(msg, src)
 	case MsgTypeCommitVote:
-		c.handleCommitVote(msg, src)
+		err = c.handleCommitVote(msg, src)
 	default:
 		c.logger.Error("msg type invalid", "unknown type", msg.Code)
 	}
+	return
 }
 
 func (c *core) handleTimeoutMsg() {
