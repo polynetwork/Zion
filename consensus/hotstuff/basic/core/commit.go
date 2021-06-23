@@ -42,7 +42,7 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
-		msg    *QuorumCert
+		msg    *hotstuff.QuorumCert
 		msgTyp = MsgTypeCommit
 	)
 	if err := c.decodeAndCheckMessage(data, msgTyp, msg); err != nil {

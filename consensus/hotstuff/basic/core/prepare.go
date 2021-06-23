@@ -76,8 +76,8 @@ func (c *core) sendPrepareVote() {
 func (c *core) createNewProposal() (*MsgNewProposal, error) {
 	qc := c.current.PrepareQC()
 	lastProposal, _ := c.backend.LastProposal()
-	if lastProposal.Hash() != qc.Proposal.Hash() {
-		return nil, fmt.Errorf("parent hash expect %s, got %s", lastProposal.Hash().Hex(), qc.Proposal.Hash().Hex())
+	if lastProposal.Hash() != qc.Hash {
+		return nil, fmt.Errorf("parent hash expect %s, got %s", lastProposal.Hash().Hex(), qc.Hash.Hex())
 	}
 
 	var req *hotstuff.Request
@@ -98,26 +98,22 @@ func (c *core) createNewProposal() (*MsgNewProposal, error) {
 	}, nil
 }
 
-func (c *core) extend(proposal hotstuff.Proposal, highQC *QuorumCert) error {
-	if _, err := c.backend.Verify(highQC.Proposal); err != nil {
+func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
+	if err := c.backend.VerifyQuorumCert(highQC); err != nil {
 		return err
 	}
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		return fmt.Errorf("invalid proposal: hash %s", proposal.Hash())
 	}
-	targetBlock, ok := highQC.Proposal.(*types.Block)
-	if !ok {
-		return fmt.Errorf("invalid highQC proposal: hash %s", highQC.Proposal.Hash())
-	}
-	if targetBlock.Hash() != block.ParentHash() {
-		return fmt.Errorf("block %s not extend hiqhQC %s", block.Hash().String(), targetBlock.Hash().String())
+	if highQC.Hash != block.ParentHash() {
+		return fmt.Errorf("block %s not extend hiqhQC %s", block.Hash().String(), highQC.Hash)
 	}
 	return nil
 }
 
 // proposal extend lockedQC `OR` hiqhQC.view > lockedQC.view
-func (c *core) safeNode(proposal hotstuff.Proposal, highQC *QuorumCert) error {
+func (c *core) safeNode(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
 	safety := false
 	liveness := false
 	if err := c.extend(proposal, c.current.LockedQC()); err == nil {

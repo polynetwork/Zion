@@ -20,6 +20,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic"
 	"math/big"
 	"sync"
 	"time"
@@ -312,6 +313,28 @@ func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Durat
 		return time.Unix(int64(block.Header().Time), 0).Sub(now()), consensus.ErrFutureBlock
 	}
 	return 0, err
+}
+
+func (s *backend) VerifyQuorumCert(qc *hotstuff.QuorumCert) error {
+	addr, err := basic.GetSignatureAddress(qc.Hash.Bytes(), qc.Seal)
+	if err != nil {
+		return err
+	}
+	if addr != qc.Proposer {
+		return errInvalidSigner
+	}
+
+	snap := s.getValidators()
+	if idx, _ := snap.GetByAddress(addr); idx < 0 {
+		return errInvalidSigner
+	}
+
+	commiters, err := s.signersFromCommittedSeals(qc.Hash, qc.CommittedSeal)
+	if err != nil {
+		return err
+	}
+
+	return s.checkValidatorQuorum(commiters, snap)
 }
 
 // Sign implements hotstuff.Backend.Sign

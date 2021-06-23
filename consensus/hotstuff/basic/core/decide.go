@@ -20,7 +20,7 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) {
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
 		c.current.SetState(StateCommitted)
 		c.current.SetCommittedQC(c.current.LockedQC())
-		if err := c.backend.Commit(c.current.CommittedQC().Proposal); err != nil {
+		if err := c.backend.Commit(c.current.Proposal()); err != nil {
 			logger.Error("Failed to commit proposal", "err", err)
 			return
 		}

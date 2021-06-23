@@ -40,8 +40,8 @@ func makeBlock(number int64) *types.Block {
 	return block.WithSeal(header)
 }
 
-func newTestProposal() hotstuff.Proposal {
-	return makeBlock(1)
+func makeProposal(number int64) hotstuff.Proposal {
+	return makeBlock(number)
 }
 
 func makeAddress(i int) common.Address {

@@ -5,7 +5,6 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -24,16 +23,16 @@ type roundState struct {
 	preCommitVotes *messageSet
 	commitVotes    *messageSet
 
-	highQC      *QuorumCert // leader highQC
-	prepareQC   *QuorumCert // repo and leader's prepareQC
-	lockedQC    *QuorumCert // repo's lockedQC or leader's pre-committed QC
-	committedQC *QuorumCert // repo and leader's committedQC
+	highQC      *hotstuff.QuorumCert // leader highQC
+	prepareQC   *hotstuff.QuorumCert // repo and leader's prepareQC
+	lockedQC    *hotstuff.QuorumCert // repo's lockedQC or leader's pre-committed QC
+	committedQC *hotstuff.QuorumCert // repo and leader's committedQC
 
 	mtx *sync.RWMutex
 }
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
-func newRoundState(view *hotstuff.View, validatorSet hotstuff.ValidatorSet, prepareQC *QuorumCert) *roundState {
+func newRoundState(view *hotstuff.View, validatorSet hotstuff.ValidatorSet, prepareQC *hotstuff.QuorumCert) *roundState {
 	return &roundState{
 		vs:             validatorSet,
 		round:          view.Round,
@@ -224,49 +223,49 @@ func (s *roundState) CommitVoteSize() int {
 	return s.commitVotes.Size()
 }
 
-func (s *roundState) SetHighQC(qc *QuorumCert) {
+func (s *roundState) SetHighQC(qc *hotstuff.QuorumCert) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.highQC = qc
 }
 
-func (s *roundState) HighQC() *QuorumCert {
+func (s *roundState) HighQC() *hotstuff.QuorumCert {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	return s.highQC
 }
 
-func (s *roundState) SetPrepareQC(qc *QuorumCert) {
+func (s *roundState) SetPrepareQC(qc *hotstuff.QuorumCert) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.prepareQC = qc
 }
 
-func (s *roundState) PrepareQC() *QuorumCert {
+func (s *roundState) PrepareQC() *hotstuff.QuorumCert {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	return s.prepareQC
 }
 
-func (s *roundState) SetLockedQC(qc *QuorumCert) {
+func (s *roundState) SetLockedQC(qc *hotstuff.QuorumCert) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.lockedQC = qc
 }
 
-func (s *roundState) LockedQC() *QuorumCert {
+func (s *roundState) LockedQC() *hotstuff.QuorumCert {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	return s.lockedQC
 }
 
-func (s *roundState) SetCommittedQC(qc *QuorumCert) {
+func (s *roundState) SetCommittedQC(qc *hotstuff.QuorumCert) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.committedQC = qc
 }
 
-func (s *roundState) CommittedQC() *QuorumCert {
+func (s *roundState) CommittedQC() *hotstuff.QuorumCert {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	return s.committedQC

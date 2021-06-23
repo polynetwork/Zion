@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"reflect"
@@ -29,7 +30,7 @@ func (c *core) decodeAndCheckProposal(data *message, msgTyp MsgType, msg *MsgNew
 	return c.checkMessage(data.Code, msg.View)
 }
 
-func (c *core) decodeAndCheckMessage(data *message, msgTyp MsgType, msg *QuorumCert) error {
+func (c *core) decodeAndCheckMessage(data *message, msgTyp MsgType, msg *hotstuff.QuorumCert) error {
 	if err := data.Decode(msg); err != nil {
 		return err
 	}
@@ -237,4 +238,23 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+func Proposal2QC(view *hotstuff.View, proposal hotstuff.Proposal) (*hotstuff.QuorumCert, error) {
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		return nil, errInvalidProposal
+	}
+
+	qc := new(hotstuff.QuorumCert)
+	qc.View = view
+	qc.Hash = block.Hash()
+	qc.Proposer = block.Coinbase()
+	header, err := types.ExtractHotstuffExtra(block.Header())
+	if err != nil {
+		return nil, errInvalidProposal
+	}
+	qc.Seal = header.Seal
+	qc.CommittedSeal = header.CommittedSeal
+	return qc, nil
 }

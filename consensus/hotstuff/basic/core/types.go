@@ -3,6 +3,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
 	"io"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -192,59 +193,25 @@ func (m *message) String() string {
 	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
 }
 
-type QuorumCert struct {
-	View     *hotstuff.View
-	Proposal hotstuff.Proposal
-}
-
-func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{qc.View, qc.Proposal})
-}
-
-func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
-	var quorumCert struct {
-		View     *hotstuff.View
-		Proposal hotstuff.Proposal
-	}
-
-	if err := s.Decode(&quorumCert); err != nil {
-		return err
-	}
-	qc.View, qc.Proposal = quorumCert.View, quorumCert.Proposal
-	return nil
-}
-
-func (qc *QuorumCert) String() string {
-	return fmt.Sprintf("{QC Height: %d Round: %d Hash: %s}", qc.View.Height, qc.View.Round, qc.Proposal.Hash())
-}
-
-func (qc *QuorumCert) Copy() *QuorumCert {
-	enc, err := Encode(qc)
-	if err != nil {
-		return nil
-	}
-	var newQC *QuorumCert
-	if err := rlp.DecodeBytes(enc, &newQC); err != nil {
-		return nil
-	}
-	return newQC
-}
-
 type MsgNewProposal struct {
 	View     *hotstuff.View
 	Proposal hotstuff.Proposal
-	HighQC   *QuorumCert
+	HighQC   *hotstuff.QuorumCert
 }
 
 func (m *MsgNewProposal) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.View, m.Proposal, m.HighQC})
+	block, ok := m.Proposal.(*types.Block)
+	if !ok {
+		return errInvalidProposal
+	}
+	return rlp.Encode(w, []interface{}{m.View, block, m.HighQC})
 }
 
 func (m *MsgNewProposal) DecodeRLP(s *rlp.Stream) error {
 	var proposal struct {
 		View     *hotstuff.View
-		Proposal hotstuff.Proposal
-		HighQC   *QuorumCert
+		Proposal *types.Block
+		HighQC   *hotstuff.QuorumCert
 	}
 
 	if err := s.Decode(&proposal); err != nil {

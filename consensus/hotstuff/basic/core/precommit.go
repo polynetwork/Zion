@@ -25,13 +25,16 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) {
 		seal := c.getSeals(size)
 		newProposal, err := c.backend.PreCommit(c.current.Proposal(), seal)
 		if err != nil {
-			logger.Error("Failed to pre-commit", "err", err)
+			logger.Error("Failed to assemble committed seal", "err", err)
 			return
 		}
-		c.current.SetPrepareQC(&QuorumCert{
-			View:     c.currentView(),
-			Proposal: newProposal,
-		})
+		c.current.SetProposal(newProposal)
+		prepareQC, err := Proposal2QC(c.currentView(), newProposal)
+		if err != nil {
+			logger.Error("Failed to generate prepareQC with proposal", "err", err)
+			return
+		}
+		c.current.SetPrepareQC(prepareQC)
 		c.current.SetState(StatePrepared)
 		c.sendPreCommit()
 	}
@@ -63,7 +66,7 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
-		msg    *QuorumCert
+		msg    *hotstuff.QuorumCert
 		msgTyp = MsgTypePreCommit
 	)
 	if err := c.decodeAndCheckMessage(data, msgTyp, msg); err != nil {
@@ -71,7 +74,7 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) {
 		return
 	}
 
-	if _, err := c.backend.Verify(msg.Proposal); err != nil {
+	if err := c.backend.VerifyQuorumCert(msg); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
 		return
 	}

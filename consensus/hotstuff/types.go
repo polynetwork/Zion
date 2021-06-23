@@ -120,3 +120,49 @@ func (b *Subject) DecodeRLP(s *rlp.Stream) error {
 func (b *Subject) String() string {
 	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
 }
+
+type QuorumCert struct {
+	View          *View
+	Hash          common.Hash
+	Proposer      common.Address
+	Seal          []byte
+	CommittedSeal [][]byte
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{qc.View, qc.Hash, qc.Proposer, qc.Seal, qc.CommittedSeal})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
+	var cert struct {
+		View          *View
+		Hash          common.Hash
+		Proposer      common.Address
+		Seal          []byte
+		CommittedSeal [][]byte
+	}
+
+	if err := s.Decode(&cert); err != nil {
+		return err
+	}
+	qc.View, qc.Hash, qc.Proposer, qc.Seal, qc.CommittedSeal = cert.View, cert.Hash, cert.Proposer, cert.Seal, cert.CommittedSeal
+	return nil
+}
+
+func (qc *QuorumCert) String() string {
+	return fmt.Sprintf("{QuorumCert View: %v, Hash: %v, Proposer: %v}", qc.View, qc.Hash.String(), qc.Proposer.Hex())
+}
+
+func (qc *QuorumCert) Copy() *QuorumCert {
+	enc, err := rlp.EncodeToBytes(qc)
+	if err != nil {
+		return nil
+	}
+	newQC := new(QuorumCert)
+	if err := rlp.DecodeBytes(enc, &newQC); err != nil {
+		return nil
+	}
+	return newQC
+}

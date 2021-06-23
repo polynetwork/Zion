@@ -29,7 +29,7 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
-		msg    *QuorumCert
+		msg    *hotstuff.QuorumCert
 		msgTyp = MsgTypeNewView
 	)
 	if err := c.decodeAndCheckMessage(data, msgTyp, msg); err != nil {
@@ -37,7 +37,7 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) {
 		return
 	}
 
-	if _, err := c.backend.Verify(msg.Proposal); err != nil {
+	if err := c.backend.VerifyQuorumCert(msg); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
 		return
 	}
@@ -53,10 +53,10 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) {
 	}
 }
 
-func (c *core) getHighQC() *QuorumCert {
-	var maxView *QuorumCert
+func (c *core) getHighQC() *hotstuff.QuorumCert {
+	var maxView *hotstuff.QuorumCert
 	for _, data := range c.current.NewViews() {
-		var msg *QuorumCert
+		var msg *hotstuff.QuorumCert
 		data.Decode(&msg)
 		if maxView == nil || maxView.View.Cmp(msg.View) < 0 {
 			maxView = msg

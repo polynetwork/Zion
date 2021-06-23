@@ -58,6 +58,8 @@ type Backend interface {
 	// the time difference of the proposal and current time is also returned.
 	VerifyUnsealedProposal(Proposal) (time.Duration, error)
 
+	VerifyQuorumCert(*QuorumCert) error
+
 	// Sign signs input data with the backend's private key
 	Sign([]byte) ([]byte, error)
 

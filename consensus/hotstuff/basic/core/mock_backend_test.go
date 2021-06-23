@@ -124,6 +124,10 @@ func (m *mockBackend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.D
 	return 0, nil
 }
 
+func (s *mockBackend) VerifyQuorumCert(qc *hotstuff.QuorumCert) error {
+	return nil
+}
+
 func (m *mockBackend) Sign(data []byte) ([]byte, error) {
 	testLogger.Info("returning current backend address so that CheckValidatorSignature returns the same value")
 	return m.address.Bytes(), nil

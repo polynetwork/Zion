@@ -64,4 +64,6 @@ var (
 	errMsgTypeInvalid = errors.New("message type invalid")
 
 	errNoRequest = errors.New("no valid request")
+
+	errInvalidProposal = errors.New("invalid proposal")
 )
