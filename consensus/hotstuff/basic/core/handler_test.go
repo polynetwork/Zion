@@ -70,14 +70,12 @@ func TestHandleMsg(t *testing.T) {
 	{
 		qc := makeBlock(4)
 		lastProposer := v0.Validators(nil).GetByIndex(1)
-		block := makeBlock(5)
-		payload, _ := Encode(&MsgNewProposal{
+		payload, _ := Encode(&MsgNewView{
 			View: &hotstuff.View{
 				Height: big.NewInt(5),
 				Round:  big.NewInt(0),
 			},
-			Proposal: block,
-			HighQC: &hotstuff.QuorumCert{
+			PrepareQC: &hotstuff.QuorumCert{
 				View: &hotstuff.View{
 					Round:  big.NewInt(0),
 					Height: big.NewInt(0),

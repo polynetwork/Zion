@@ -11,7 +11,19 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) decodeAndCheckProposal(data *message, msgTyp MsgType, msg *MsgNewProposal) error {
+func (c *core) decodeAndCheckPrepare(data *message, msgTyp MsgType, msg *MsgPrepare) error {
+	if err := data.Decode(&msg); err != nil {
+		return err
+	}
+
+	if data.Code != msgTyp {
+		return errMsgTypeInvalid
+	}
+
+	return c.checkMessage(data.Code, msg.View)
+}
+
+func (c *core) decodeAndCheckProposal(data *message, msgTyp MsgType, msg *MsgNewView) error {
 	if err := data.Decode(&msg); err != nil {
 		return err
 	}

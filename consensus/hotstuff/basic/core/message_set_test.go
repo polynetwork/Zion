@@ -33,9 +33,8 @@ func TestMessageSetWithNewView(t *testing.T) {
 		Round:  new(big.Int),
 		Height: new(big.Int),
 	}
-	pp := &MsgNewProposal{
+	pp := &MsgNewView{
 		View:     view,
-		Proposal: makeBlock(1),
 	}
 	payload, err := Encode(pp)
 	if err != nil {

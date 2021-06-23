@@ -193,13 +193,39 @@ func (m *message) String() string {
 	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
 }
 
-type MsgNewProposal struct {
+type MsgNewView struct {
+	View      *hotstuff.View
+	PrepareQC *hotstuff.QuorumCert
+}
+
+func (m *MsgNewView) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.View, m.PrepareQC})
+}
+
+func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
+	var proposal struct {
+		View     *hotstuff.View
+		PrepareQC   *hotstuff.QuorumCert
+	}
+
+	if err := s.Decode(&proposal); err != nil {
+		return err
+	}
+	m.View, m.PrepareQC = proposal.View, proposal.PrepareQC
+	return nil
+}
+
+func (m *MsgNewView) String() string {
+	return fmt.Sprintf("{NewView Height: %d Round: %d}", m.View.Height, m.View.Round)
+}
+
+type MsgPrepare struct {
 	View     *hotstuff.View
 	Proposal hotstuff.Proposal
 	HighQC   *hotstuff.QuorumCert
 }
 
-func (m *MsgNewProposal) EncodeRLP(w io.Writer) error {
+func (m *MsgPrepare) EncodeRLP(w io.Writer) error {
 	block, ok := m.Proposal.(*types.Block)
 	if !ok {
 		return errInvalidProposal
@@ -207,7 +233,7 @@ func (m *MsgNewProposal) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.View, block, m.HighQC})
 }
 
-func (m *MsgNewProposal) DecodeRLP(s *rlp.Stream) error {
+func (m *MsgPrepare) DecodeRLP(s *rlp.Stream) error {
 	var proposal struct {
 		View     *hotstuff.View
 		Proposal *types.Block
@@ -221,7 +247,7 @@ func (m *MsgNewProposal) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (m *MsgNewProposal) String() string {
+func (m *MsgPrepare) String() string {
 	return fmt.Sprintf("{NewProposal Height: %d Round: %d Hash: %s}", m.View.Height, m.View.Round, m.Proposal.Hash())
 }
 

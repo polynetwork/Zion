@@ -54,10 +54,10 @@ func makeHash(i int) common.Hash {
 	return common.BytesToHash(num.Bytes())
 }
 
-func makeView(h, r int64) *hotstuff.View {
+func makeView(h, r uint64) *hotstuff.View {
 	return &hotstuff.View{
-		Height: big.NewInt(h),
-		Round:  big.NewInt(r),
+		Height: new(big.Int).SetUint64(h),
+		Round:  new(big.Int).SetUint64(r),
 	}
 }
 

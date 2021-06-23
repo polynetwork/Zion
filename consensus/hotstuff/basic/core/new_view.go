@@ -13,7 +13,11 @@ func (c *core) sendNewView(view *hotstuff.View) {
 		return
 	}
 
-	newViewMsg := c.current.PrepareQC().Copy()
+	prepareQC := c.current.PrepareQC().Copy()
+	newViewMsg := &MsgNewView{
+		View:      curView,
+		PrepareQC: prepareQC,
+	}
 	payload, err := Encode(newViewMsg)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", MsgTypeNewView, "err", err)
@@ -29,15 +33,18 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
-		msg    *hotstuff.QuorumCert
+		msg    *MsgNewView
 		msgTyp = MsgTypeNewView
 	)
-	if err := c.decodeAndCheckMessage(data, msgTyp, msg); err != nil {
-		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
+
+	if err := data.Decode(&msg); err != nil {
 		return errFailedDecodeNewView
 	}
+	if err := c.checkMessage(msgTyp, msg.View); err != nil {
+		return err
+	}
 
-	if err := c.backend.VerifyQuorumCert(msg); err != nil {
+	if err := c.backend.VerifyQuorumCert(msg.PrepareQC); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
 		return errVerifyQC
 	}
@@ -58,10 +65,10 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 func (c *core) getHighQC() *hotstuff.QuorumCert {
 	var maxView *hotstuff.QuorumCert
 	for _, data := range c.current.NewViews() {
-		var msg *hotstuff.QuorumCert
+		var msg *MsgNewView
 		data.Decode(&msg)
-		if maxView == nil || maxView.View.Cmp(msg.View) < 0 {
-			maxView = msg
+		if maxView == nil || maxView.View.Cmp(msg.PrepareQC.View) < 0 {
+			maxView = msg.PrepareQC
 		}
 	}
 	return maxView

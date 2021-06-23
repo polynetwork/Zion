@@ -17,25 +17,35 @@
 package core
 
 import (
-	"testing"
-
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
 	"github.com/stretchr/testify/assert"
+	"testing"
 )
 
-func newViewMsg(c *core, index, h, r int64) *message {
+func newTestQC(c *core, h, r uint64) *hotstuff.QuorumCert {
 	view := makeView(h, r)
-	lastProposalHeight := h - 1
-	block := makeBlock(lastProposalHeight)
+	block := makeBlock(int64(h))
 	N := c.valSet.Size()
-	coinbase := c.valSet.GetByIndex(uint64(lastProposalHeight) % uint64(N))
-	val := c.valSet.GetByIndex(uint64(index))
-	qc := &hotstuff.QuorumCert{
+	coinbase := c.valSet.GetByIndex(h % uint64(N))
+	return &hotstuff.QuorumCert{
 		View:     view,
 		Hash:     block.Hash(),
 		Proposer: coinbase.Address(),
 	}
-	payload, _ := Encode(qc)
+}
+
+func newTestNewViewMsg(c *core, index int, h, r uint64, prepareQC *hotstuff.QuorumCert) *message {
+	curView := makeView(h, r)
+	val := c.valSet.GetByIndex(uint64(index))
+	newViewMsg := &MsgNewView{
+		View:      curView,
+		PrepareQC: prepareQC,
+	}
+	payload, err := Encode(newViewMsg)
+	if err != nil {
+		panic(err)
+	}
 	msg := &message{
 		Code:    MsgTypeNewView,
 		Msg:     payload,
@@ -53,31 +63,57 @@ func TestMaxView(t *testing.T) {
 	sys := NewTestSystemWithBackend(N, F, H, R)
 	c := sys.backends[0].core()
 
-	addQC := func(index, h, r int64) {
-		msg := newViewMsg(c, index, h, r)
+	addQC := func(index int, h, r uint64) {
+		prepareQC := newTestQC(c, h - 1, r)
+		msg := newTestNewViewMsg(c, index, h, r, prepareQC)
 		assert.NoError(t, c.current.AddNewViews(msg))
 	}
 
-	maxHeight := int64(10)
-	addQC(0, int64(H), int64(R))
-	addQC(1, int64(H), int64(R))
-	addQC(2, int64(H), int64(R))
+	maxHeight := uint64(10)
+	addQC(0, H, R)
+	addQC(1, H, R)
+	addQC(2, H, R)
 	addQC(3, maxHeight, 0)
 
 	highQC := c.getHighQC()
-	assert.Equal(t, uint64(maxHeight), highQC.View.Height.Uint64())
+	assert.Equal(t, maxHeight - 1, highQC.View.Height.Uint64())
 }
 
-//
-//func newTestNewView(v *hotstuff.View) *hotstuff.QuorumCert {
-//	block := makeBlock(1)
-//	return &hotstuff.QuorumCert{
-//		View:     v,
-//		Hash: block.Hash(),
-//		Proposer:
-//	}
-//}
-//
+func TestHandleNewView(t *testing.T) {
+	N := uint64(4)
+	F := uint64(1)
+	H := uint64(1)
+	R := uint64(0)
+
+	sys := NewTestSystemWithBackend(N, F, H, R)
+	msgList := make([]*message, N)
+	for index, node := range sys.backends {
+		c := node.core()
+		prepareQC := newTestQC(c, H - 1, R)
+		c.current.SetPrepareQC(prepareQC)
+		msg := newTestNewViewMsg(c, index, H, R, prepareQC)
+		msgList[index] = msg
+	}
+
+	// leader := sys.backends[0].core().valSet.GetProposer()
+	var leader *core
+	for _, node := range sys.backends {
+		c := node.core()
+		if c.IsProposer() {
+			leader = node.core()
+			break
+		}
+	}
+
+	for _, msg := range msgList {
+		val := validator.New(msg.Address)
+		assert.NoError(t, leader.handleNewView(msg, val))
+	}
+
+	highQC := leader.getHighQC()
+	t.Log(highQC.View.Height.Uint64())
+}
+
 //func TestHandlePreprepare(t *testing.T) {
 //	N := uint64(4) // replica 0 is the proposer, it will send messages to others
 //	F := uint64(1) // F does not affect tests

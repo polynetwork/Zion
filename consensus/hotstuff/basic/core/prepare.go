@@ -15,13 +15,13 @@ func (c *core) sendPrepare() {
 	}
 	msgTyp := MsgTypePrepare
 
-	proposal, err := c.createNewProposal()
+	prepare, err := c.createNewProposal()
 	if err != nil {
 		logger.Error("Failed to creat leaf", "err", err)
 		return
 	}
 
-	payload, err := Encode(proposal)
+	payload, err := Encode(prepare)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
@@ -34,10 +34,10 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
-		msg    *MsgNewProposal
+		msg    *MsgPrepare
 		msgTyp = MsgTypePrepare
 	)
-	if err := c.decodeAndCheckProposal(data, msgTyp, msg); err != nil {
+	if err := c.decodeAndCheckPrepare(data, msgTyp, msg); err != nil {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
 		return errFailedDecodePrepare
 	}
@@ -75,7 +75,7 @@ func (c *core) sendPrepareVote() {
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
 }
 
-func (c *core) createNewProposal() (*MsgNewProposal, error) {
+func (c *core) createNewProposal() (*MsgPrepare, error) {
 	qc := c.current.PrepareQC()
 	lastProposal, _ := c.backend.LastProposal()
 	if lastProposal.Hash() != qc.Hash {
@@ -93,10 +93,10 @@ func (c *core) createNewProposal() (*MsgNewProposal, error) {
 		}
 	}
 
-	return &MsgNewProposal{
-		View:     c.currentView(),
-		Proposal: req.Proposal,
-		HighQC:   c.getHighQC(),
+	return &MsgPrepare{
+		View:      c.currentView(),
+		Proposal:  req.Proposal,
+		HighQC: c.getHighQC(),
 	}, nil
 }
 
