@@ -58,131 +58,131 @@ type testCommittedMsgs struct {
 //
 // define the functions that needs to be provided for Istanbul.
 
-func (self *mockBackend) Address() common.Address {
-	return self.address
+func (m *mockBackend) Address() common.Address {
+	return m.address
 }
 
 // Peers returns all connected peers
-func (self *mockBackend) Validators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
-	return self.peers
+func (m *mockBackend) Validators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
+	return m.peers
 }
 
-func (self *mockBackend) EventMux() *event.TypeMux {
-	return self.events
+func (m *mockBackend) EventMux() *event.TypeMux {
+	return m.events
 }
 
-func (self *mockBackend) Send(message []byte, target common.Address) error {
-	testLogger.Info("enqueuing a message...", "address", self.Address())
-	self.sentMsgs = append(self.sentMsgs, message)
-	self.sys.queuedMessage <- hotstuff.MessageEvent{
+func (m *mockBackend) Send(message []byte, target common.Address) error {
+	testLogger.Info("enqueuing a message...", "address", m.Address())
+	m.sentMsgs = append(m.sentMsgs, message)
+	m.sys.queuedMessage <- hotstuff.MessageEvent{
 		Payload: message,
 	}
 	return nil
 }
 
-func (self *mockBackend) Broadcast(valSet hotstuff.ValidatorSet, message []byte) error {
-	testLogger.Info("enqueuing a message...", "address", self.Address())
-	self.sentMsgs = append(self.sentMsgs, message)
-	self.sys.queuedMessage <- hotstuff.MessageEvent{
+func (m *mockBackend) Broadcast(valSet hotstuff.ValidatorSet, message []byte) error {
+	testLogger.Info("enqueuing a message...", "address", m.Address())
+	m.sentMsgs = append(m.sentMsgs, message)
+	m.sys.queuedMessage <- hotstuff.MessageEvent{
 		Payload: message,
 	}
 	return nil
 }
 
-func (self *mockBackend) Gossip(valSet hotstuff.ValidatorSet, message []byte) error {
+func (m *mockBackend) Gossip(valSet hotstuff.ValidatorSet, message []byte) error {
 	testLogger.Warn("not sign any data")
 	return nil
 }
 
-func (self *mockBackend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
+func (m *mockBackend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	return nil
 }
 
 // todo:
-func (self *mockBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
-	//testLogger.Info("commit message", "address", self.Address())
-	//self.committedMsgs = append(self.committedMsgs, testCommittedMsgs{
+func (m *mockBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
+	//testLogger.Info("commit message", "address", m.Address())
+	//m.committedMsgs = append(m.committedMsgs, testCommittedMsgs{
 	//	commitProposal: proposal,
 	//	committedSeals: seals,
 	//})
 	//
 	//// fake new head events
-	//go self.events.Post(hotstuff.FinalCommittedEvent{})
+	//go m.events.Post(hotstuff.FinalCommittedEvent{})
 	//return nil
 	return nil, nil
 }
 
-func (self *mockBackend) Commit(proposal hotstuff.Proposal) error {
+func (m *mockBackend) Commit(proposal hotstuff.Proposal) error {
 	return nil
 }
 
-func (self *mockBackend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
+func (m *mockBackend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 	return 0, nil
 }
 
-func (self *mockBackend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
+func (m *mockBackend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
 	return 0, nil
 }
 
-func (self *mockBackend) Sign(data []byte) ([]byte, error) {
+func (m *mockBackend) Sign(data []byte) ([]byte, error) {
 	testLogger.Info("returning current backend address so that CheckValidatorSignature returns the same value")
-	return self.address.Bytes(), nil
+	return m.address.Bytes(), nil
 }
 
 // SignTx signs transaction data with backend's private key
-func (self *mockBackend) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
+func (m *mockBackend) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
 	return nil, nil
 }
 
-func (self *mockBackend) CheckSignature([]byte, common.Address, []byte) error {
+func (m *mockBackend) CheckSignature([]byte, common.Address, []byte) error {
 	return nil
 }
 
 // todo: delete after test
-func (self *mockBackend) CheckValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+func (m *mockBackend) CheckValidatorSignature(data []byte, sig []byte) (common.Address, error) {
 	return common.BytesToAddress(sig), nil
 }
 
-func (self *mockBackend) Hash(b interface{}) common.Hash {
+func (m *mockBackend) Hash(b interface{}) common.Hash {
 	return common.HexToHash("Test")
 }
 
-func (self *mockBackend) NewRequest(request hotstuff.Proposal) {
-	go self.events.Post(hotstuff.RequestEvent{
+func (m *mockBackend) NewRequest(request hotstuff.Proposal) {
+	go m.events.Post(hotstuff.RequestEvent{
 		Proposal: request,
 	})
 }
 
-func (self *mockBackend) HasBadProposal(hash common.Hash) bool {
+func (m *mockBackend) HasBadProposal(hash common.Hash) bool {
 	return false
 }
 
-func (self *mockBackend) LastProposal() (hotstuff.Proposal, common.Address) {
-	l := len(self.committedMsgs)
+func (m *mockBackend) LastProposal() (hotstuff.Proposal, common.Address) {
+	l := len(m.committedMsgs)
 	if l > 0 {
-		return self.committedMsgs[l-1].commitProposal, common.Address{}
+		return m.committedMsgs[l-1].commitProposal, common.Address{}
 	}
 	return makeBlock(0), common.Address{}
 }
 
-func (self *mockBackend) CurrentProposer() (*big.Int, common.Address) {
+func (m *mockBackend) CurrentProposer() (*big.Int, common.Address) {
 	return nil, common.Address{}
 }
 
 // Only block height 5 will return true
-func (self *mockBackend) HasProposal(hash common.Hash, number *big.Int) bool {
+func (m *mockBackend) HasProposal(hash common.Hash, number *big.Int) bool {
 	return number.Cmp(big.NewInt(5)) == 0
 }
 
-func (self *mockBackend) GetProposer(number uint64) common.Address {
+func (m *mockBackend) GetProposer(number uint64) common.Address {
 	return common.Address{}
 }
 
-func (self *mockBackend) ParentValidators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
-	return self.peers
+func (m *mockBackend) ParentValidators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
+	return m.peers
 }
 
-func (sb *mockBackend) Close() error {
+func (m *mockBackend) Close() error {
 	return nil
 }
 
