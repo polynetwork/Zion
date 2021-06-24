@@ -20,7 +20,6 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic"
 	"math/big"
 	"sync"
 	"time"
@@ -28,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic"
 	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -198,24 +198,32 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 }
 
 // PreCommit implements hotstuff.Backend.PreCommit
-func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
+func (s *backend) PreCommit(view *hotstuff.View, proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, *hotstuff.QuorumCert, error) {
 	// Check if the proposal is a valid block
 	block := &types.Block{}
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		s.logger.Error("Invalid proposal, %v", proposal)
-		return nil, errInvalidProposal
+		return nil, nil, errInvalidProposal
 	}
 
 	h := block.Header()
 	// Append seals into extra-data
 	if err := writeCommittedSeals(h, seals); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	// update block's header
 	block = block.WithSeal(h)
-	return block, nil
+
+	//
+	qc := new(hotstuff.QuorumCert)
+	qc.View = view
+	qc.Hash = h.Hash()
+	qc.Proposer = h.Coinbase
+	qc.Extra = h.Extra
+
+	return block, qc, nil
 }
 
 func (s *backend) Commit(proposal hotstuff.Proposal) error {
@@ -316,7 +324,11 @@ func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Durat
 }
 
 func (s *backend) VerifyQuorumCert(qc *hotstuff.QuorumCert) error {
-	addr, err := basic.GetSignatureAddress(qc.Hash.Bytes(), qc.Seal)
+	extra, err := types.ExtractHotstuffExtraPayload(qc.Extra)
+	if err != nil {
+		return err
+	}
+	addr, err := basic.GetSignatureAddress(qc.Hash.Bytes(), extra.Seal)
 	if err != nil {
 		return err
 	}
@@ -329,12 +341,12 @@ func (s *backend) VerifyQuorumCert(qc *hotstuff.QuorumCert) error {
 		return errInvalidSigner
 	}
 
-	commiters, err := s.signersFromCommittedSeals(qc.Hash, qc.CommittedSeal)
+	committers, err := s.signersFromCommittedSeals(qc.Hash, extra.CommittedSeal)
 	if err != nil {
 		return err
 	}
 
-	return s.checkValidatorQuorum(commiters, snap)
+	return s.checkValidatorQuorum(committers, snap)
 }
 
 // Sign implements hotstuff.Backend.Sign

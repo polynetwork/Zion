@@ -2,12 +2,12 @@ package core
 
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -167,21 +167,14 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
-func Proposal2QC(view *hotstuff.View, proposal hotstuff.Proposal) (*hotstuff.QuorumCert, error) {
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		return nil, errInvalidProposal
-	}
-
+func Proposal2QC(view *hotstuff.View, proposal hotstuff.Proposal) *hotstuff.QuorumCert {
+	block := proposal.(*types.Block)
+	h := block.Header()
 	qc := new(hotstuff.QuorumCert)
 	qc.View = view
-	qc.Hash = block.Hash()
-	qc.Proposer = block.Coinbase()
-	header, err := types.ExtractHotstuffExtra(block.Header())
-	if err != nil {
-		return nil, errInvalidProposal
-	}
-	qc.Seal = header.Seal
-	qc.CommittedSeal = header.CommittedSeal
-	return qc, nil
+	qc.Hash = h.Hash()
+	qc.Proposer = h.Coinbase
+	qc.Extra = h.Extra
+
+	return qc
 }

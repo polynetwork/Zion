@@ -31,17 +31,12 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.current.state < StatePrepared {
 		seal := c.getSeals(size)
-		newProposal, err := c.backend.PreCommit(c.current.Proposal(), seal)
+		newProposal, prepareQC, err := c.backend.PreCommit(c.currentView(), c.current.Proposal(), seal)
 		if err != nil {
 			logger.Error("Failed to assemble committed seal", "err", err)
 			return err
 		}
 		c.current.SetProposal(newProposal)
-		prepareQC, err := Proposal2QC(c.currentView(), newProposal)
-		if err != nil {
-			logger.Error("Failed to generate prepareQC with proposal", "err", err)
-			return err
-		}
 		c.current.SetPrepareQC(prepareQC)
 		c.current.SetState(StatePrepared)
 		c.sendPreCommit()

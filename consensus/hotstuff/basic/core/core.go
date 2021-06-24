@@ -95,11 +95,7 @@ func (c *core) startNewRound(round *big.Int) {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
 	}
-	prepareQC, err := Proposal2QC(newView, lastProposal)
-	if err != nil {
-		logger.Error("New prepareQC", "err", err)
-		return
-	}
+	prepareQC := Proposal2QC(newView, lastProposal)
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	if c.current == nil {
 		c.current = newRoundState(newView, c.valSet, prepareQC)

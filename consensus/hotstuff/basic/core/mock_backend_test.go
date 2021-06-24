@@ -102,18 +102,12 @@ func (m *mockBackend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) erro
 	return nil
 }
 
-// todo:
-func (m *mockBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
-	//testLogger.Info("commit message", "address", m.Address())
-	//m.committedMsgs = append(m.committedMsgs, testCommittedMsgs{
-	//	commitProposal: proposal,
-	//	committedSeals: seals,
-	//})
-	//
-	//// fake new head events
-	//go m.events.Post(hotstuff.FinalCommittedEvent{})
-	//return nil
-	return nil, nil
+func (m *mockBackend) PreCommit(view *hotstuff.View, proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, *hotstuff.QuorumCert, error) {
+	qc := &hotstuff.QuorumCert{
+		View:     view,
+		Hash:     proposal.Hash(),
+	}
+	return proposal, qc, nil
 }
 
 func (m *mockBackend) Commit(proposal hotstuff.Proposal) error {

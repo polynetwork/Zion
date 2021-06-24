@@ -69,12 +69,16 @@ func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 // error if the length of the given extra-data is less than 32 bytes or the extra-data can not
 // be decoded.
 func ExtractHotstuffExtra(h *Header) (*HotstuffExtra, error) {
-	if len(h.Extra) < HotstuffExtraVanity {
+	return ExtractHotstuffExtraPayload(h.Extra)
+}
+
+func ExtractHotstuffExtraPayload(extra []byte) (*HotstuffExtra, error) {
+	if len(extra) < HotstuffExtraVanity {
 		return nil, ErrInvalidHotstuffHeaderExtra
 	}
 
 	var istanbulExtra *HotstuffExtra
-	err := rlp.DecodeBytes(h.Extra[HotstuffExtraVanity:], &istanbulExtra)
+	err := rlp.DecodeBytes(extra[HotstuffExtraVanity:], &istanbulExtra)
 	if err != nil {
 		return nil, err
 	}
