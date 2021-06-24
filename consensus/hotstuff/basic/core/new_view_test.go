@@ -114,50 +114,29 @@ func TestHandleNewViewFailed(t *testing.T) {
 
 	sys := NewTestSystemWithBackend(N, F, H, R)
 	leader := sys.getLeader()
-	repos := sys.getRepos()
-
-	testMessage := func(data *MsgNewView, index int) *message {
-		src := repos[index].address
-		payload, _ := Encode(data)
-		return &message{
-			Code:    MsgTypeNewView,
-			Msg:     payload,
-			Address: src,
-		}
-	}
-	testValidator := func(index int) hotstuff.Validator {
-		return validator.New(repos[index].address)
-	}
+	repo := sys.getRepos()[0]
+	val := validator.New(repo.Address())
 
 	testcases := []struct {
-		Msg       *message
-		Src       hotstuff.Validator
+		H, R uint64
 		ExpectErr error
 	}{
 		{
-			Msg:       &message{Msg: []byte("123456")},
-			Src:       testValidator(0),
-			ExpectErr: errFailedDecodeNewView,
-		},
-		{
-			Msg: testMessage(&MsgNewView{
-				View:      makeView(H-1, R),
-				PrepareQC: newTestQC(repos[0], H-1, R),
-			}, 0),
-			Src:       testValidator(0),
+			H: H - 1,
+			R: R,
 			ExpectErr: errOldMessage,
 		},
 		{
-			Msg: testMessage(&MsgNewView{
-				View:      makeView(H+1, R),
-				PrepareQC: newTestQC(repos[0], H, R),
-			}, 0),
-			Src:       testValidator(0),
+			H: H + 1,
+			R: R,
 			ExpectErr: errFutureMessage,
 		},
 	}
 
+	assert.Equal(t, errFailedDecodeNewView, leader.handleNewView(&message{Msg: []byte("123456")}, val))
 	for _, v := range testcases {
-		assert.Equal(t, v.ExpectErr, leader.handleNewView(v.Msg, v.Src))
+		qc := newTestQC(repo, v.H, v.R)
+		msg := newTestNewViewMsg(repo, 0, v.H, v.R, qc)
+		assert.Equal(t, v.ExpectErr, leader.handleNewView(msg, val))
 	}
 }
