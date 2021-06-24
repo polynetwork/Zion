@@ -12,7 +12,7 @@ import (
 )
 
 func (c *core) checkMsgFromProposer(src hotstuff.Validator) error {
-	if c.valSet.IsProposer(src.Address()) {
+	if !c.valSet.IsProposer(src.Address()) {
 		return errNotFromProposer
 	}
 	return nil

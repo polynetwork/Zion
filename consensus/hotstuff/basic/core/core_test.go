@@ -29,6 +29,10 @@ import (
 )
 
 func makeBlock(number int64) *types.Block {
+	return makeBlockWithParentHash(number, EmptyHash)
+}
+
+func makeBlockWithParentHash(number int64, parentHash common.Hash) *types.Block {
 	header := &types.Header{
 		Difficulty: big.NewInt(0),
 		Number:     big.NewInt(number),
@@ -36,12 +40,11 @@ func makeBlock(number int64) *types.Block {
 		GasUsed:    0,
 		Time:       0,
 	}
+	if parentHash != EmptyHash {
+		header.ParentHash = parentHash
+	}
 	block := &types.Block{}
 	return block.WithSeal(header)
-}
-
-func makeProposal(number int64) hotstuff.Proposal {
-	return makeBlock(number)
 }
 
 func makeAddress(i int) common.Address {

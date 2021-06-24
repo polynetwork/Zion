@@ -121,6 +121,9 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) e
 func (c *core) safeNode(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
 	safety := false
 	liveness := false
+	if c.current.LockedQC() == nil {
+		return errSafeNode
+	}
 	if err := c.extend(proposal, c.current.LockedQC()); err == nil {
 		safety = true
 	}
