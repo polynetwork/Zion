@@ -53,7 +53,7 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 		return errVerifyQC
 	}
 
-	if err = c.current.AddNewViews(data); err != nil {
+	if err := c.current.AddNewViews(data); err != nil {
 		logger.Error("Failed to add new view", "err", err)
 		return errAddNewViews
 	}

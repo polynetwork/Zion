@@ -205,6 +205,25 @@ type testSystem struct {
 	quit          chan struct{}
 }
 
+func (s *testSystem) getLeader() *core {
+	for _, v := range s.backends {
+		if v.engine.IsProposer() {
+			return v.core()
+		}
+	}
+	return nil
+}
+
+func (s *testSystem) getRepos() []*core {
+	list := make([]*core, 0)
+	for _, v := range s.backends {
+		if !v.engine.IsProposer() {
+			list = append(list, v.core())
+		}
+	}
+	return list
+}
+
 func newTestSystem(n uint64) *testSystem {
 	testLogger.SetHandler(elog.StdoutHandler)
 	return &testSystem{
