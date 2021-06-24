@@ -17,7 +17,6 @@
 package core
 
 import (
-	"math/big"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -31,7 +30,7 @@ import (
 func TestHandleMsg(t *testing.T) {
 	N := uint64(4)
 	F := uint64(1)
-	H := uint64(1)
+	H := uint64(5)
 	R := uint64(0)
 
 	sys := NewTestSystemWithBackend(N, F, H, R)
@@ -40,21 +39,15 @@ func TestHandleMsg(t *testing.T) {
 	defer closer()
 
 	v0 := sys.backends[0]
-	r0 := v0.engine.(*core)
+	r0 := v0.core()
 	_, val := v0.Validators(nil).GetByAddress(v0.Address())
 
 	// decode new view
 	{
 		block := makeBlock(1)
-		payload, _ := Encode(&hotstuff.QuorumCert{
-			View: &hotstuff.View{
-				Height: big.NewInt(0),
-				Round:  big.NewInt(0),
-			},
-			Hash:          block.Hash(),
-			Proposer:      val.Address(),
-			Seal:          []byte("123"),
-			CommittedSeal: [][]byte{[]byte("12"), []byte("23"), []byte("34")},
+		payload, _ := Encode(&MsgNewView{
+			View:      makeView(H, R),
+			PrepareQC: newTestQC(r0, H-1, R),
 		})
 		// with a matched payload. msg prepare vote should match with *hotstuff.MsgPrepareVote in normal case.
 		msg := &message{
@@ -63,28 +56,15 @@ func TestHandleMsg(t *testing.T) {
 			Address: v0.Address(),
 		}
 		r0.current.SetProposal(block)
-		assert.Equal(t, errFailedDecodeNewView, r0.handleCheckedMsg(msg, val))
+		assert.NoError(t, r0.handleCheckedMsg(msg, val))
 	}
 
 	// decode prepare failed
 	{
-		qc := makeBlock(4)
-		lastProposer := v0.Validators(nil).GetByIndex(1)
-		payload, _ := Encode(&MsgNewView{
-			View: &hotstuff.View{
-				Height: big.NewInt(5),
-				Round:  big.NewInt(0),
-			},
-			PrepareQC: &hotstuff.QuorumCert{
-				View: &hotstuff.View{
-					Round:  big.NewInt(0),
-					Height: big.NewInt(0),
-				},
-				Hash:          qc.Hash(),
-				Proposer:      lastProposer.Address(),
-				Seal:          []byte("1234"),
-				CommittedSeal: [][]byte{[]byte("12"), []byte("23"), []byte("34")},
-			},
+		payload, _ := Encode(&MsgPrepare{
+			View:     makeView(H, R),
+			Proposal: makeBlock(int64(H - 1)),
+			HighQC:   newTestQC(r0, H, R),
 		})
 		msg := &message{
 			Code:    MsgTypePrepare,
@@ -93,17 +73,14 @@ func TestHandleMsg(t *testing.T) {
 		}
 		enc, err := r0.finalizeMessage(msg)
 		assert.NoError(t, err)
-		assert.Equal(t, errFailedDecodePrepare, r0.handleMsg(enc))
+		assert.Equal(t, errExtend, r0.handleMsg(enc))
 	}
 
 	// decode prepareVote failed
 	{
-		block := makeBlock(1)
+		block := makeBlock(int64(H))
 		payload, _ := Encode(&hotstuff.Vote{
-			View: &hotstuff.View{
-				Height: big.NewInt(0),
-				Round:  big.NewInt(0),
-			},
+			View:   makeView(H, R),
 			Digest: block.Hash(),
 		})
 		// with a matched payload. msg prepare vote should match with *hotstuff.MsgPrepareVote in normal case.
@@ -112,7 +89,6 @@ func TestHandleMsg(t *testing.T) {
 			Msg:     payload,
 			Address: v0.Address(),
 		}
-		r0.current.SetProposal(block)
-		assert.Equal(t, errFailedDecodePrepareVote, r0.handleCheckedMsg(msg, val))
+		assert.Equal(t, errInconsistentVote, r0.handleCheckedMsg(msg, val))
 	}
 }
