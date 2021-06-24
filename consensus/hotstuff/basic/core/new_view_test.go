@@ -45,6 +45,7 @@ func newProposalAndQC(c *core, h, r uint64) (hotstuff.Proposal, *hotstuff.Quorum
 		View:     view,
 		Hash:     block.Hash(),
 		Proposer: coinbase.Address(),
+		Extra:    []byte{},
 	}
 }
 
@@ -130,17 +131,17 @@ func TestHandleNewViewFailed(t *testing.T) {
 	val := validator.New(repo.Address())
 
 	testcases := []struct {
-		H, R uint64
+		H, R      uint64
 		ExpectErr error
 	}{
 		{
-			H: H - 1,
-			R: R,
+			H:         H - 1,
+			R:         R,
 			ExpectErr: errOldMessage,
 		},
 		{
-			H: H + 1,
-			R: R,
+			H:         H + 1,
+			R:         R,
 			ExpectErr: errFutureMessage,
 		},
 	}

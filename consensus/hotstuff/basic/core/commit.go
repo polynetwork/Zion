@@ -15,10 +15,10 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 		logger.Error("Failed to check vote", "type", msgTyp, "err", err)
 		return errFailedDecodePreCommitVote
 	}
-	if err := c.checkVote(vote); err != nil {
+	if err := c.checkView(msgTyp, vote.View); err != nil {
 		return err
 	}
-	if err := c.checkView(msgTyp, vote.View); err != nil {
+	if err := c.checkVote(vote); err != nil {
 		return err
 	}
 	if err := c.checkMsgToProposer(); err != nil {
@@ -61,18 +61,25 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
 		return errFailedDecodeCommit
 	}
+	if err := c.checkView(MsgTypeCommit, c.currentView()); err != nil {
+		return err
+	}
+	if err := c.checkMsgFromProposer(src); err != nil {
+		return err
+	}
 	if err := c.checkQC(msg); err != nil {
 		return err
 	}
 	if err := c.backend.VerifyQuorumCert(msg); err != nil {
 		return errVerifyQC
 	}
-	if err := c.checkMsgFromProposer(src); err != nil {
-		return err
+	if c.current.State() >= StateLocked {
+		return errState
 	}
 
 	c.current.SetLockedQC(msg)
 	c.current.SetState(StateLocked)
+	c.sendCommitVote()
 	return nil
 }
 
