@@ -32,7 +32,10 @@ import (
 	elog "github.com/ethereum/go-ethereum/log"
 )
 
-var testLogger = elog.New()
+var (
+	needBroadCast = false
+	testLogger    = elog.New()
+)
 
 type mockBackend struct {
 	id  uint64
@@ -85,6 +88,9 @@ func (m *mockBackend) Send(message []byte, target common.Address) error {
 }
 
 func (m *mockBackend) Broadcast(valSet hotstuff.ValidatorSet, message []byte) error {
+	if !needBroadCast {
+		return nil
+	}
 	testLogger.Info("enqueuing a message...", "address", m.Address())
 	m.sentMsgs = append(m.sentMsgs, message)
 	m.sys.queuedMessage <- hotstuff.MessageEvent{
@@ -104,8 +110,8 @@ func (m *mockBackend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) erro
 
 func (m *mockBackend) PreCommit(view *hotstuff.View, proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, *hotstuff.QuorumCert, error) {
 	qc := &hotstuff.QuorumCert{
-		View:     view,
-		Hash:     proposal.Hash(),
+		View: view,
+		Hash: proposal.Hash(),
 	}
 	return proposal, qc, nil
 }
@@ -262,11 +268,34 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 		}, vset, nil)
 		core.valSet = vset
 		core.logger = testLogger
+		core.backend = backend
 		core.validateFn = backend.CheckValidatorSignature
 
 		backend.engine = core
+
+		core.subscribeEvents()
+		defer core.unsubscribeEvents()
 	}
 
+	//backend := &testSystemBackend{
+	//	events: new(event.TypeMux),
+	//	peers:  vset,
+	//}
+	//c := &core{
+	//	logger:     log.New("backend", "test", "id", 0),
+	//	backlogs:   make(map[common.Address]*prque.Prque),
+	//	backlogsMu: new(sync.Mutex),
+	//	valSet:     vset,
+	//	backend:    backend,
+	//	state:      State(msg.Code),
+	//	current: newRoundState(&istanbul.View{
+	//		Sequence: big.NewInt(1),
+	//		Round:    big.NewInt(0),
+	//	}, newTestValidatorSet(4), common.Hash{}, nil, nil, nil),
+	//}
+	//c.subscribeEvents()
+	//defer c.unsubscribeEvents()
+	//
 	return sys
 }
 
