@@ -89,12 +89,14 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		logger.Error("Failed to verify proposal", "err", err)
 		return errVerifyQC
 	}
-
-	if c.current.state < StatePrepared {
-		c.current.SetPrepareQC(msg)
-		c.current.SetState(StatePrepared)
+	// todo: compare state in other steps
+	if c.current.state >= StatePrepared {
+		return errState
 	}
-	c.sendPrepareVote()
+
+	c.current.SetPrepareQC(msg)
+	c.current.SetState(StatePrepared)
+	c.sendPreCommitVote()
 
 	return nil
 }

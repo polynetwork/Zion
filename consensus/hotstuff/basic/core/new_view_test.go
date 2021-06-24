@@ -36,6 +36,18 @@ func newTestQC(c *core, h, r uint64) *hotstuff.QuorumCert {
 	}
 }
 
+func newProposalAndQC(c *core, h, r uint64) (hotstuff.Proposal, *hotstuff.QuorumCert) {
+	view := makeView(h, r)
+	block := makeBlock(int64(h))
+	N := c.valSet.Size()
+	coinbase := c.valSet.GetByIndex(h % uint64(N))
+	return block, &hotstuff.QuorumCert{
+		View:     view,
+		Hash:     block.Hash(),
+		Proposer: coinbase.Address(),
+	}
+}
+
 func newTestNewViewMsg(c *core, index int, h, r uint64, prepareQC *hotstuff.QuorumCert) *message {
 	curView := makeView(h, r)
 	val := c.valSet.GetByIndex(uint64(index))
