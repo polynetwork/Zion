@@ -7,7 +7,11 @@ var (
 	// current subject.
 	errInconsistentVote = errors.New("inconsistent vote")
 
-	errInconsistentQC = errors.New("inconsistent qc")
+	errInconsistentPrepareQC = errors.New("inconsistent prepare qc")
+
+	errInconsistentLockedQC = errors.New("inconsistent locked qc")
+
+	errInvalidDigest = errors.New("invalid digest")
 
 	// errNotFromProposer is returned when received message is supposed to be from proposer.
 	errNotFromProposer = errors.New("message does not come from proposer")

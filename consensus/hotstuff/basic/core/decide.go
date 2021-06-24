@@ -16,11 +16,14 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 		logger.Error("Failed to check vote", "vote", msgTyp, "err", err)
 		return errFailedDecodeCommitVote
 	}
+	if err := c.checkView(msgTyp, vote.View); err != nil {
+		return err
+	}
 	if err := c.checkVote(vote); err != nil {
 		return err
 	}
-	if err := c.checkView(msgTyp, vote.View); err != nil {
-		return err
+	if vote.Digest != c.current.LockedQC().Hash {
+		return errInvalidDigest
 	}
 	if err := c.checkMsgToProposer(); err != nil {
 		return err

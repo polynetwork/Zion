@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHandlePreCommitVote(t *testing.T) {
@@ -47,6 +47,7 @@ func TestHandlePreCommitVote(t *testing.T) {
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
+				core.current.SetPrepareQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
 
 				vote := newVote(core, proposal.Hash())
 				msg := newVoteMsg(vote)
@@ -70,6 +71,7 @@ func TestHandlePreCommitVote(t *testing.T) {
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
+				core.current.SetPrepareQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
 
 				vote := newVote(core, proposal.Hash())
 				vote.View.Height = new(big.Int).SetUint64(H - 1)
@@ -95,6 +97,7 @@ func TestHandlePreCommitVote(t *testing.T) {
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
+				core.current.SetPrepareQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
 
 				vote := newVote(core, proposal.Hash())
 				vote.View.Round = new(big.Int).SetUint64(R + 1)
@@ -120,6 +123,7 @@ func TestHandlePreCommitVote(t *testing.T) {
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
+				core.current.SetPrepareQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
 
 				vote := newVote(core, proposal.Hash())
 				vote.Digest = common.HexToHash("0x1234")
@@ -273,7 +277,7 @@ func TestHandleCommit(t *testing.T) {
 			}
 		}(),
 
-		// errInconsistentQC
+		// errInconsistentPrepareQC
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			var (
@@ -284,16 +288,15 @@ func TestHandleCommit(t *testing.T) {
 				core := backend.core()
 				proposal, qc = newPreCommitMsg(core)
 				core.current.SetProposal(proposal)
-				core.current.SetPrepareQC(qc)
+				core.current.SetPrepareQC(&hotstuff.QuorumCert{Hash: common.HexToHash("0x124")})
 			}
-			qc.Hash = common.HexToHash("0x124")
 			msg := newP2PMsg(qc)
 			val := validator.New(sys.getLeader().address)
 			return &testcase{
 				Sys:       sys,
 				Msg:       msg,
 				Leader:    val,
-				ExpectErr: errInconsistentQC,
+				ExpectErr: errInconsistentPrepareQC,
 			}
 		}(),
 

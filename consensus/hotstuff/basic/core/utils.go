@@ -25,9 +25,16 @@ func (c *core) checkMsgToProposer() error {
 	return nil
 }
 
-func (c *core) checkQC(qc *hotstuff.QuorumCert) error {
+func (c *core) checkPrepareQC(qc *hotstuff.QuorumCert) error {
 	if !reflect.DeepEqual(c.current.PrepareQC(), qc) {
-		return errInconsistentQC
+		return errInconsistentPrepareQC
+	}
+	return nil
+}
+
+func (c *core) checkLockedQC(qc *hotstuff.QuorumCert) error {
+	if !reflect.DeepEqual(c.current.LockedQC(), qc) {
+		return errInconsistentPrepareQC
 	}
 	return nil
 }

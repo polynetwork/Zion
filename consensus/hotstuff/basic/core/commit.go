@@ -21,6 +21,9 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 	if err := c.checkVote(vote); err != nil {
 		return err
 	}
+	if vote.Digest != c.current.PrepareQC().Hash {
+		return errInvalidDigest
+	}
 	if err := c.checkMsgToProposer(); err != nil {
 		return err
 	}
@@ -61,13 +64,13 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
 		return errFailedDecodeCommit
 	}
-	if err := c.checkView(MsgTypeCommit, c.currentView()); err != nil {
+	if err := c.checkView(MsgTypeCommit, msg.View); err != nil {
 		return err
 	}
 	if err := c.checkMsgFromProposer(src); err != nil {
 		return err
 	}
-	if err := c.checkQC(msg); err != nil {
+	if err := c.checkPrepareQC(msg); err != nil {
 		return err
 	}
 	if err := c.backend.VerifyQuorumCert(msg); err != nil {

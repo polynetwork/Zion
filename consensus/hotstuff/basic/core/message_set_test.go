@@ -85,16 +85,12 @@ func TestMessageSetVote(t *testing.T) {
 		Address: valSet.GetProposer().Address(),
 	}
 
-	err = ms.Add(msg)
-	if err != nil {
+	if err := ms.Add(msg); err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
-
-	err = ms.Add(msg)
-	if err != nil {
+	if err := ms.Add(msg); err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
-
 	if ms.Size() != 1 {
 		t.Errorf("the size of message set mismatch: have %v, want 1", ms.Size())
 	}

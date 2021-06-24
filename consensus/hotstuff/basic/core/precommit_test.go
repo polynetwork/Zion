@@ -7,7 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
-	"gotest.tools/assert"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHandlePrepareVote(t *testing.T) {
