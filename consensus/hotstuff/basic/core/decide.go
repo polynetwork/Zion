@@ -22,6 +22,9 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 	if err := c.checkView(msgTyp, vote.View); err != nil {
 		return err
 	}
+	if err := c.checkMsgToProposer(); err != nil {
+		return err
+	}
 
 	if err := c.current.AddCommitVote(data); err != nil {
 		logger.Error("Failed to add vote", "type", msgTyp, "err", err)

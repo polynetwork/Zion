@@ -10,9 +10,6 @@ import (
 func (c *core) sendPrepare() {
 	logger := c.logger.New("state", c.current.State())
 
-	if !c.IsProposer() {
-		return
-	}
 	msgTyp := MsgTypePrepare
 
 	prepare, err := c.createNewProposal()
@@ -42,6 +39,9 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 		return errFailedDecodePrepare
 	}
 	if err := c.checkView(msgTyp, msg.View); err != nil {
+		return err
+	}
+	if err := c.checkMsgFromProposer(src); err != nil {
 		return err
 	}
 

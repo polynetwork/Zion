@@ -21,6 +21,9 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 	if err := c.checkVote(vote); err != nil {
 		return err
 	}
+	if err := c.checkMsgToProposer(); err != nil {
+		return err
+	}
 	if err := c.current.AddPrepareVote(data); err != nil {
 		logger.Error("Failed to add vote", "type", msgTyp, "err", err)
 		return errAddPrepareVote
@@ -80,17 +83,23 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
 		return errFailedDecodePreCommit
 	}
-
+	if err := c.checkView(MsgTypePreCommit, msg.View); err != nil {
+		return err
+	}
+	if err := c.checkMsgFromProposer(src); err != nil {
+		return err
+	}
 	// todo compare high qc
 	if err := c.backend.VerifyQuorumCert(msg); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
 		return errVerifyQC
 	}
 
-	if !c.IsProposer() {
+	if c.current.state < StatePrepared {
 		c.current.SetPrepareQC(msg)
 		c.current.SetState(StatePrepared)
 	}
+	c.sendPrepareVote()
 
 	return nil
 }

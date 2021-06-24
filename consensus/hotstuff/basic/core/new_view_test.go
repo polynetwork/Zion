@@ -17,10 +17,11 @@
 package core
 
 import (
+	"testing"
+
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
 	"github.com/stretchr/testify/assert"
-	"testing"
 )
 
 func newTestQC(c *core, h, r uint64) *hotstuff.QuorumCert {

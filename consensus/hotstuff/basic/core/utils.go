@@ -11,6 +11,20 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+func (c *core) checkMsgFromProposer(src hotstuff.Validator) error {
+	if c.valSet.IsProposer(src.Address()) {
+		return errNotFromProposer
+	}
+	return nil
+}
+
+func (c *core) checkMsgToProposer() error {
+	if !c.IsProposer() {
+		return errNotToProposer
+	}
+	return nil
+}
+
 func (c *core) checkQC(qc *hotstuff.QuorumCert) error {
 	if !reflect.DeepEqual(c.current.PrepareQC(), qc) {
 		return errInconsistentQC

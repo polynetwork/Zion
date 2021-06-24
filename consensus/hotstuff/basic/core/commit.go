@@ -21,6 +21,9 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 	if err := c.checkView(msgTyp, vote.View); err != nil {
 		return err
 	}
+	if err := c.checkMsgToProposer(); err != nil {
+		return err
+	}
 
 	if err := c.current.AddPreCommitVote(data); err != nil {
 		logger.Error("Failed to add vote", "type", msgTyp, "err", err)
@@ -63,6 +66,9 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 	}
 	if err := c.backend.VerifyQuorumCert(msg); err != nil {
 		return errVerifyQC
+	}
+	if err := c.checkMsgFromProposer(src); err != nil {
+		return err
 	}
 
 	c.current.SetLockedQC(msg)

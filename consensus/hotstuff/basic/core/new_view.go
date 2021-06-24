@@ -43,15 +43,17 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 	if err := c.checkView(msgTyp, msg.View); err != nil {
 		return err
 	}
-
-	// todo: check repo qc, lastPrepareQC and highQC should be the same
+	if err := c.checkMsgToProposer(); err != nil {
+		return err
+	}
+	// todo: catch up new view if `errFutureMessage`
 
 	if err := c.backend.VerifyQuorumCert(msg.PrepareQC); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
 		return errVerifyQC
 	}
 
-	if err := c.current.AddNewViews(data); err != nil {
+	if err = c.current.AddNewViews(data); err != nil {
 		logger.Error("Failed to add new view", "err", err)
 		return errAddNewViews
 	}
@@ -59,6 +61,7 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 	if c.current.NewViewSize() == c.Q() {
 		highQC := c.getHighQC()
 		c.current.SetHighQC(highQC)
+		c.sendPrepare()
 	}
 
 	return nil
