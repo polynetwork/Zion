@@ -146,7 +146,7 @@ func (s *roundState) PendingRequest() *hotstuff.Request {
 	return s.pendingRequest
 }
 
-func (s *roundState) Subject() *hotstuff.Vote {
+func (s *roundState) Vote() *hotstuff.Vote {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 

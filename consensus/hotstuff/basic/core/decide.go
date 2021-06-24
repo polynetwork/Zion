@@ -12,9 +12,15 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 		vote   *hotstuff.Vote
 		msgTyp = MsgTypeCommitVote
 	)
-	if err := c.decodeAndCheckVote(data, msgTyp, vote); err != nil {
+	if err := data.Decode(&vote); err != nil {
 		logger.Error("Failed to check vote", "vote", msgTyp, "err", err)
 		return errFailedDecodeCommitVote
+	}
+	if err := c.checkVote(vote); err != nil {
+		return err
+	}
+	if err := c.checkView(msgTyp, vote.View); err != nil {
+		return err
 	}
 
 	if err := c.current.AddCommitVote(data); err != nil {

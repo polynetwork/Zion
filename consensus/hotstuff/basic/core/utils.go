@@ -2,95 +2,34 @@ package core
 
 import (
 	"bytes"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
-func (c *core) decodeAndCheckPrepare(data *message, msgTyp MsgType, msg *MsgPrepare) error {
-	if err := data.Decode(&msg); err != nil {
-		return err
-	}
-
-	if data.Code != msgTyp {
-		return errMsgTypeInvalid
-	}
-
-	return c.checkMessage(data.Code, msg.View)
-}
-
-func (c *core) decodeAndCheckProposal(data *message, msgTyp MsgType, msg *MsgNewView) error {
-	if err := data.Decode(&msg); err != nil {
-		return err
-	}
-
-	if data.Code != msgTyp {
-		return errMsgTypeInvalid
-	}
-
-	if msgTyp == MsgTypeNewView && !c.IsProposer() {
-		return errNotToProposer
-	}
-
-	if msgTyp == MsgTypeCommit && !reflect.DeepEqual(c.current.PrepareQC(), msg) {
+func (c *core) checkQC(qc *hotstuff.QuorumCert) error {
+	if !reflect.DeepEqual(c.current.PrepareQC(), qc) {
 		return errInconsistentQC
 	}
-	return c.checkMessage(data.Code, msg.View)
-}
-
-func (c *core) decodeAndCheckMessage(data *message, msgTyp MsgType, msg *hotstuff.QuorumCert) error {
-	if err := data.Decode(&msg); err != nil {
-		return err
-	}
-
-	if data.Code != msgTyp {
-		return errMsgTypeInvalid
-	}
-
-	if msgTyp == MsgTypeNewView && !c.IsProposer() {
-		return errNotToProposer
-	}
-
-	if msgTyp == MsgTypeCommit && !reflect.DeepEqual(c.current.PrepareQC(), msg) {
-		return errInconsistentQC
-	}
-	return c.checkMessage(data.Code, msg.View)
-}
-
-func (c *core) decodeAndCheckVote(data *message, msgTyp MsgType, vote *hotstuff.Vote) error {
-	if err := data.Decode(&vote); err != nil {
-		return err
-	}
-
-	if !c.IsProposer() {
-		return errNotToProposer
-	}
-
-	if data.Code != msgTyp {
-		return errMsgTypeInvalid
-	}
-
-	if err := c.checkMessage(data.Code, vote.View); err != nil {
-		return err
-	}
-
-	sub := c.current.Subject()
-	if !reflect.DeepEqual(sub, vote) {
-		return errInconsistentSubject
-	}
-
 	return nil
 }
 
-// checkMessage checks the message state
+func (c *core) checkVote(vote *hotstuff.Vote) error {
+	if !reflect.DeepEqual(c.current.Vote(), vote) {
+		return errInconsistentVote
+	}
+	return nil
+}
+
+// checkView checks the message state
 // return errInvalidMessage if the message is invalid
 // return errFutureMessage if the message view is larger than current view
 // return errOldMessage if the message view is smaller than current view
-func (c *core) checkMessage(msgCode MsgType, view *hotstuff.View) error {
+func (c *core) checkView(msgCode MsgType, view *hotstuff.View) error {
 	if view == nil || view.Height == nil || view.Round == nil {
 		return errInvalidMessage
 	}
@@ -111,44 +50,6 @@ func (c *core) checkMessage(msgCode MsgType, view *hotstuff.View) error {
 	if view.Cmp(c.currentView()) < 0 {
 		return errOldMessage
 	}
-
-	//if c.waitingForRoundChange {
-	//	return errFutureMessage
-	//}
-
-	// todo:
-	//
-	//// StateAcceptRequest only accepts msgPreprepare
-	//// other messages are future messages
-	//if c.state == StateAcceptRequest {
-	//	if msgCode > MsgTypePrepare {
-	//		return errFutureMessage
-	//	}
-	//	return nil
-	//}
-	//
-	//// For states(StatePreprepared, StatePrepared, StateCommitted),
-	//// can accept all message types if processing with same view
-	//
-	//if msgCode == MsgTypeNewView && c.currentState() >= StatePrepared {
-	//	return errFutureMessage
-	//}
-	//if msgCode == MsgTypePrepare && c.currentState() >= StatePrepared {
-	//	return errFutureMessage
-	//}
-	//if msgCode == MsgTypePreCommit && c.currentState() >= StateLocked {
-	//	return errFutureMessage
-	//}
-	//
-	//if msgCode == MsgTypePrepareVote && c.currentState() >= StatePrepared {
-	//	return errOldVote
-	//}
-	//if msgCode == MsgTypePreCommitVote && c.currentState() >= StateLocked {
-	//	return errOldVote
-	//}
-	//if msgCode == MsgTypeCommitVote && c.currentState() >= StateCommitted {
-	//	return errOldVote
-	//}
 	return nil
 }
 

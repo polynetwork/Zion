@@ -64,7 +64,7 @@ func TestMaxView(t *testing.T) {
 	c := sys.backends[0].core()
 
 	addQC := func(index int, h, r uint64) {
-		prepareQC := newTestQC(c, h - 1, r)
+		prepareQC := newTestQC(c, h-1, r)
 		msg := newTestNewViewMsg(c, index, h, r, prepareQC)
 		assert.NoError(t, c.current.AddNewViews(msg))
 	}
@@ -76,7 +76,7 @@ func TestMaxView(t *testing.T) {
 	addQC(3, maxHeight, 0)
 
 	highQC := c.getHighQC()
-	assert.Equal(t, maxHeight - 1, highQC.View.Height.Uint64())
+	assert.Equal(t, maxHeight-1, highQC.View.Height.Uint64())
 }
 
 func TestHandleNewView(t *testing.T) {
@@ -89,7 +89,7 @@ func TestHandleNewView(t *testing.T) {
 	msgList := make([]*message, N)
 	for index, node := range sys.backends {
 		c := node.core()
-		prepareQC := newTestQC(c, H - 1, R)
+		prepareQC := newTestQC(c, H-1, R)
 		c.current.SetPrepareQC(prepareQC)
 		msg := newTestNewViewMsg(c, index, H, R, prepareQC)
 		msgList[index] = msg
@@ -184,8 +184,8 @@ func TestHandleNewView(t *testing.T) {
 //				t.Errorf("state mismatch: have %v, want %v", c.state, StatePreprepared)
 //			}
 //
-//			if !test.existingBlock && !reflect.DeepEqual(c.current.Subject().View, curView) {
-//				t.Errorf("view mismatch: have %v, want %v", c.current.Subject().View, curView)
+//			if !test.existingBlock && !reflect.DeepEqual(c.current.Vote().View, curView) {
+//				t.Errorf("view mismatch: have %v, want %v", c.current.Vote().View, curView)
 //			}
 //
 //			// verify prepare messages
@@ -208,8 +208,8 @@ func TestHandleNewView(t *testing.T) {
 //			if err != nil {
 //				t.Errorf("error mismatch: have %v, want nil", err)
 //			}
-//			if !test.existingBlock && !reflect.DeepEqual(subject, c.current.Subject()) {
-//				t.Errorf("subject mismatch: have %v, want %v", subject, c.current.Subject())
+//			if !test.existingBlock && !reflect.DeepEqual(subject, c.current.Vote()) {
+//				t.Errorf("subject mismatch: have %v, want %v", subject, c.current.Vote())
 //			}
 //		}
 //	}

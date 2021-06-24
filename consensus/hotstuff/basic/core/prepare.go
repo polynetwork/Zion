@@ -37,9 +37,12 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 		msg    *MsgPrepare
 		msgTyp = MsgTypePrepare
 	)
-	if err := c.decodeAndCheckPrepare(data, msgTyp, msg); err != nil {
+	if err := data.Decode(&msg); err != nil {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
 		return errFailedDecodePrepare
+	}
+	if err := c.checkView(msgTyp, msg.View); err != nil {
+		return err
 	}
 
 	proposal := msg.Proposal
@@ -66,7 +69,7 @@ func (c *core) sendPrepareVote() {
 	logger := c.logger.New("state", c.current.State())
 
 	msgTyp := MsgTypePrepareVote
-	sub := c.current.Subject()
+	sub := c.current.Vote()
 	payload, err := Encode(sub)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
@@ -94,9 +97,9 @@ func (c *core) createNewProposal() (*MsgPrepare, error) {
 	}
 
 	return &MsgPrepare{
-		View:      c.currentView(),
-		Proposal:  req.Proposal,
-		HighQC: c.getHighQC(),
+		View:     c.currentView(),
+		Proposal: req.Proposal,
+		HighQC:   c.getHighQC(),
 	}, nil
 }
 

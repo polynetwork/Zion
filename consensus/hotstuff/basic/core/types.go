@@ -204,8 +204,8 @@ func (m *MsgNewView) EncodeRLP(w io.Writer) error {
 
 func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
 	var proposal struct {
-		View     *hotstuff.View
-		PrepareQC   *hotstuff.QuorumCert
+		View      *hotstuff.View
+		PrepareQC *hotstuff.QuorumCert
 	}
 
 	if err := s.Decode(&proposal); err != nil {

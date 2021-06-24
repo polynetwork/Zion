@@ -11,11 +11,16 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 		vote   *hotstuff.Vote
 		msgTyp = MsgTypePrepareVote
 	)
-	if err := c.decodeAndCheckVote(data, msgTyp, vote); err != nil {
+	if err := data.Decode(&vote); err != nil {
 		logger.Error("Failed to check vote", "type", msgTyp, "err", err)
 		return errFailedDecodePrepareVote
 	}
-
+	if err := c.checkView(msgTyp, vote.View); err != nil {
+		return err
+	}
+	if err := c.checkVote(vote); err != nil {
+		return err
+	}
 	if err := c.current.AddPrepareVote(data); err != nil {
 		logger.Error("Failed to add vote", "type", msgTyp, "err", err)
 		return errAddPrepareVote
@@ -71,18 +76,22 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		msg    *hotstuff.QuorumCert
 		msgTyp = MsgTypePreCommit
 	)
-	if err := c.decodeAndCheckMessage(data, msgTyp, msg); err != nil {
+	if err := data.Decode(&msg); err != nil {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
 		return errFailedDecodePreCommit
 	}
 
+	// todo compare high qc
 	if err := c.backend.VerifyQuorumCert(msg); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
 		return errVerifyQC
 	}
 
-	c.current.SetPrepareQC(msg)
-	c.current.SetState(StatePrepared)
+	if !c.IsProposer() {
+		c.current.SetPrepareQC(msg)
+		c.current.SetState(StatePrepared)
+	}
+
 	return nil
 }
 
@@ -90,7 +99,7 @@ func (c *core) sendPreCommitVote() {
 	logger := c.logger.New("state", c.current.State())
 
 	msgTyp := MsgTypePreCommitVote
-	sub := c.current.Subject()
+	sub := c.current.Vote()
 	payload, err := Encode(sub)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)

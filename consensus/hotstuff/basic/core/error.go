@@ -3,9 +3,9 @@ package core
 import "errors"
 
 var (
-	// errInconsistentSubject is returned when received subject is different from
+	// errInconsistentVote is returned when received subject is different from
 	// current subject.
-	errInconsistentSubject = errors.New("inconsistent subjects")
+	errInconsistentVote = errors.New("inconsistent vote")
 
 	errInconsistentQC = errors.New("inconsistent qc")
 
@@ -66,11 +66,11 @@ var (
 	errInvalidProposal = errors.New("invalid proposal")
 
 	errVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
-	errExtend = errors.New("proposal extend relationship error")
-	errVerifyQC = errors.New("verify qc error")
-	errSafeNode = errors.New("safeNode checking failed")
-	errAddNewViews = errors.New("add new view error")
-	errAddPrepareVote = errors.New("add prepare vote error")
-	errAddPreCommitVote = errors.New("add pre commit vote error")
-	errAddCommitVote = errors.New("add commit vote error")
+	errExtend                 = errors.New("proposal extend relationship error")
+	errVerifyQC               = errors.New("verify qc error")
+	errSafeNode               = errors.New("safeNode checking failed")
+	errAddNewViews            = errors.New("add new view error")
+	errAddPrepareVote         = errors.New("add prepare vote error")
+	errAddPreCommitVote       = errors.New("add pre commit vote error")
+	errAddCommitVote          = errors.New("add commit vote error")
 )

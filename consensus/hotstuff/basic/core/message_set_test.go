@@ -34,7 +34,7 @@ func TestMessageSetWithNewView(t *testing.T) {
 		Height: new(big.Int),
 	}
 	pp := &MsgNewView{
-		View:     view,
+		View: view,
 	}
 	payload, err := Encode(pp)
 	if err != nil {

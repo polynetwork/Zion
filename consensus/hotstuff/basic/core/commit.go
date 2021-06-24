@@ -1,17 +1,25 @@
 package core
 
-import "github.com/ethereum/go-ethereum/consensus/hotstuff"
+import (
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+)
 
 func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error {
 	logger := c.logger.New("state", c.currentState())
 
 	var (
-		msg    *hotstuff.Vote
+		vote   *hotstuff.Vote
 		msgTyp = MsgTypePreCommitVote
 	)
-	if err := c.decodeAndCheckVote(data, msgTyp, msg); err != nil {
+	if err := data.Decode(&vote); err != nil {
 		logger.Error("Failed to check vote", "type", msgTyp, "err", err)
 		return errFailedDecodePreCommitVote
+	}
+	if err := c.checkVote(vote); err != nil {
+		return err
+	}
+	if err := c.checkView(msgTyp, vote.View); err != nil {
+		return err
 	}
 
 	if err := c.current.AddPreCommitVote(data); err != nil {
@@ -46,9 +54,15 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 		msg    *hotstuff.QuorumCert
 		msgTyp = MsgTypeCommit
 	)
-	if err := c.decodeAndCheckMessage(data, msgTyp, msg); err != nil {
+	if err := data.Decode(&msg); err != nil {
 		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
 		return errFailedDecodeCommit
+	}
+	if err := c.checkQC(msg); err != nil {
+		return err
+	}
+	if err := c.backend.VerifyQuorumCert(msg); err != nil {
+		return errVerifyQC
 	}
 
 	c.current.SetLockedQC(msg)

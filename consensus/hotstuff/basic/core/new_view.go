@@ -40,9 +40,11 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 	if err := data.Decode(&msg); err != nil {
 		return errFailedDecodeNewView
 	}
-	if err := c.checkMessage(msgTyp, msg.View); err != nil {
+	if err := c.checkView(msgTyp, msg.View); err != nil {
 		return err
 	}
+
+	// todo: check repo qc, lastPrepareQC and highQC should be the same
 
 	if err := c.backend.VerifyQuorumCert(msg.PrepareQC); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
