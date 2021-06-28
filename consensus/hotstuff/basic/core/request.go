@@ -42,6 +42,7 @@ func (s *requestSet) checkRequest(view *hotstuff.View, req *hotstuff.Request) er
 		return errInvalidMessage
 	}
 
+	// todo(fuk): how to process future block, store or throw?
 	if c := view.Height.Cmp(req.Proposal.Number()); c < 0 {
 		return errFutureMessage
 	} else if c > 0 {

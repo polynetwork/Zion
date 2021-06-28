@@ -49,6 +49,7 @@ func (c *core) getSeals(n int) [][]byte {
 	seals := make([][]byte, n)
 	for i, data := range c.current.PrepareVotes() {
 		if i < n {
+			// todo(fuk): should be committedSeal
 			seals[i] = data.Signature
 		}
 	}

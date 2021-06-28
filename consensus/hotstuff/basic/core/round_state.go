@@ -18,6 +18,7 @@ type roundState struct {
 	pendingRequest *hotstuff.Request // leader's pending request
 	proposal       hotstuff.Proposal // repo's prepare proposal
 
+	// o(4n)
 	newViews       *messageSet
 	prepareVotes   *messageSet
 	preCommitVotes *messageSet

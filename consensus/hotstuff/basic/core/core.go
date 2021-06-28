@@ -74,7 +74,7 @@ func (c *core) startNewRound(round *big.Int) {
 		logger = c.logger.New("old_round", c.current.Round(), "old_height", c.current.Height())
 	}
 
-	roundChange := false
+	changeView := false
 	// Try to get last proposal
 	lastProposal, lastProposer := c.backend.LastProposal()
 	if c.current == nil {
@@ -87,7 +87,7 @@ func (c *core) startNewRound(round *big.Int) {
 			logger.Warn("New round should not be smaller than current round", "height", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
 			return
 		}
-		roundChange = true
+		changeView = true
 	} else {
 		logger.Warn("New height should be larger than current height", "new_height", lastProposal.Number().Int64())
 		return
@@ -97,7 +97,7 @@ func (c *core) startNewRound(round *big.Int) {
 		Height: new(big.Int).Add(lastProposal.Number(), common.Big1),
 		Round:  common.Big0,
 	}
-	if roundChange {
+	if changeView {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
 	}
