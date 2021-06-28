@@ -89,20 +89,19 @@ func (c *core) startNewRound(round *big.Int) {
 
 	newView := &hotstuff.View{
 		Height: new(big.Int).Add(lastProposal.Number(), common.Big1),
-		Round:  new(big.Int),
+		Round:  common.Big0,
 	}
 	if roundChange {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
 	}
-	prepareQC := Proposal2QC(newView, lastProposal)
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	if c.current == nil {
+		prepareQC := Proposal2QC(lastProposal)
 		c.current = newRoundState(newView, c.valSet, prepareQC)
 	} else {
-		c.current = c.current.Spawn(newView)
+		c.current = c.current.Spawn(newView, c.valSet)
 	}
-	c.current = c.current.Spawn(newView)
 	c.sendNewView(newView)
 	c.newRoundChangeTimer()
 
@@ -118,6 +117,10 @@ func (c *core) currentView() *hotstuff.View {
 
 func (c *core) currentState() State {
 	return c.current.State()
+}
+
+func (c *core) currentProposer() hotstuff.Validator {
+	return c.valSet.GetProposer()
 }
 
 // todo: 检查是否收到了新的proposal
@@ -155,11 +158,3 @@ func (c *core) newRoundChangeTimer() {
 		c.sendEvent(timeoutEvent{})
 	})
 }
-
-//func (c *core) setState(state State) {
-//	c.current.SetState(state)
-//	//if state == StateAcceptRequest {
-//	//	c.GetRequest()
-//	//}
-//	//c.processBacklog()
-//}

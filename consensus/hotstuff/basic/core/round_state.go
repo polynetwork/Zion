@@ -47,12 +47,12 @@ func newRoundState(view *hotstuff.View, validatorSet hotstuff.ValidatorSet, prep
 	}
 }
 
-func (s *roundState) Spawn(view *hotstuff.View) *roundState {
+func (s *roundState) Spawn(view *hotstuff.View, valset hotstuff.ValidatorSet) *roundState {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
 	nrs := new(roundState)
-	nrs.vs = s.vs
+	nrs.vs = valset
 	nrs.height = view.Height
 	nrs.round = view.Round
 	nrs.state = StateAcceptRequest

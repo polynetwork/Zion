@@ -5,10 +5,10 @@ import (
 )
 
 func (c *core) sendNewView(view *hotstuff.View) {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("sendNewView: state", c.currentState())
 
 	curView := c.currentView()
-	if curView.Cmp(view) >= 0 {
+	if curView.Cmp(view) > 0 {
 		logger.Error("Cannot send out the round change", "current round", curView.Round, "target round", view.Round)
 		return
 	}
@@ -30,7 +30,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 }
 
 func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("handleNewView: state", c.currentState())
 
 	var (
 		msg    *MsgNewView

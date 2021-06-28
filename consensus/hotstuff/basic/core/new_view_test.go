@@ -41,6 +41,8 @@ func newProposalAndQC(c *core, h, r uint64) (hotstuff.Proposal, *hotstuff.Quorum
 	block := makeBlock(int64(h))
 	N := c.valSet.Size()
 	coinbase := c.valSet.GetByIndex(h % uint64(N))
+	header := block.Header()
+	header.Coinbase = coinbase.Address()
 	return block, &hotstuff.QuorumCert{
 		View:     view,
 		Hash:     block.Hash(),

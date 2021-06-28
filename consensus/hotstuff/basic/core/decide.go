@@ -6,7 +6,7 @@ import (
 )
 
 func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("handleCommitVote: state", c.currentState())
 
 	var (
 		vote   *hotstuff.Vote
@@ -47,7 +47,7 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 }
 
 func (c *core) handleFinalCommitted() error {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("handleFinalCommitted: state", c.currentState())
 	logger.Trace("Received a final committed proposal")
 	c.startNewRound(common.Big0)
 	return nil

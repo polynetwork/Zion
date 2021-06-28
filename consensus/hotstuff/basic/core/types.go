@@ -11,7 +11,10 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-var EmptyHash = common.Hash{}
+var (
+	EmptyHash    = common.Hash{}
+	EmptyAddress = common.Address{}
+)
 
 type CoreEngine interface {
 	Start() error

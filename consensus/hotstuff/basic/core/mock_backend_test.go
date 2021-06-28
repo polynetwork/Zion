@@ -87,14 +87,14 @@ func (m *mockBackend) Send(message []byte, target common.Address) error {
 	return nil
 }
 
-func (m *mockBackend) Broadcast(valSet hotstuff.ValidatorSet, message []byte) error {
+func (m *mockBackend) Broadcast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	if !needBroadCast {
 		return nil
 	}
-	testLogger.Info("enqueuing a message...", "address", m.Address())
-	m.sentMsgs = append(m.sentMsgs, message)
+	testLogger.Info("enqueuing a broadcast message...", "address", m.Address())
+	m.sentMsgs = append(m.sentMsgs, payload)
 	m.sys.queuedMessage <- hotstuff.MessageEvent{
-		Payload: message,
+		Payload: payload,
 	}
 	return nil
 }
@@ -105,7 +105,17 @@ func (m *mockBackend) Gossip(valSet hotstuff.ValidatorSet, message []byte) error
 }
 
 func (m *mockBackend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
-	return nil
+	testLogger.Info("enqueuing a unicast payload...", "address", m.Address())
+	//m.sentMsgs = append(m.sentMsgs, payload)
+	//m.queuedMessage <- hotstuff.MessageEvent{
+	//	Payload: payload,
+	//}
+	//proposer := valSet.GetProposer()
+	//leader := m.sys.getLeader()
+	//return leader.backend.EventMux().Post(hotstuff.MessageEvent{
+	//	Payload:payload,
+	//})
+	return m.Broadcast(valSet, payload)
 }
 
 func (m *mockBackend) PreCommit(view *hotstuff.View, proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, *hotstuff.QuorumCert, error) {
@@ -113,10 +123,18 @@ func (m *mockBackend) PreCommit(view *hotstuff.View, proposal hotstuff.Proposal,
 		View: view,
 		Hash: proposal.Hash(),
 	}
+	qc.Proposer = proposal.(*types.Block).Header().Coinbase
+	qc.Extra = seals[0]
 	return proposal, qc, nil
 }
 
 func (m *mockBackend) Commit(proposal hotstuff.Proposal) error {
+	testLogger.Info("commit message", "address", m.Address())
+	m.committedMsgs = append(m.committedMsgs, testCommittedMsgs{
+		commitProposal: proposal,
+	})
+	// fake new head events
+	// go self.events.Post(istanbul.FinalCommittedEvent{})
 	return nil
 }
 
@@ -167,10 +185,13 @@ func (m *mockBackend) HasBadProposal(hash common.Hash) bool {
 
 func (m *mockBackend) LastProposal() (hotstuff.Proposal, common.Address) {
 	l := len(m.committedMsgs)
-	if l > 0 {
-		return m.committedMsgs[l-1].commitProposal, common.Address{}
+	if l == 0 {
+		return nil, EmptyAddress
+	} else {
+		proposal := m.committedMsgs[l-1].commitProposal
+		block := proposal.(*types.Block)
+		return proposal, block.Coinbase()
 	}
-	return makeBlock(0), common.Address{}
 }
 
 func (m *mockBackend) CurrentProposer() (*big.Int, common.Address) {
@@ -214,6 +235,19 @@ func (s *testSystem) getLeader() *core {
 	return nil
 }
 
+func (s *testSystem) getLeaderByRound(lastProposer common.Address, round *big.Int) *core {
+	valset := s.backends[0].peers.Copy()
+	valset.CalcProposer(lastProposer, round.Uint64())
+	proposer := valset.GetProposer().Address()
+	for _, v := range s.backends {
+		core := v.core()
+		if core.address == proposer {
+			return v.core()
+		}
+	}
+	return nil
+}
+
 func (s *testSystem) getRepos() []*core {
 	list := make([]*core, 0)
 	for _, v := range s.backends {
@@ -229,7 +263,7 @@ func newTestSystem(n uint64) *testSystem {
 	return &testSystem{
 		backends: make([]*mockBackend, n),
 
-		queuedMessage: make(chan hotstuff.MessageEvent),
+		queuedMessage: make(chan hotstuff.MessageEvent, 10000),
 		quit:          make(chan struct{}),
 	}
 }
@@ -273,8 +307,8 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 
 		backend.engine = core
 
-		core.subscribeEvents()
-		defer core.unsubscribeEvents()
+		//core.subscribeEvents()
+		//defer core.unsubscribeEvents()
 	}
 
 	//backend := &testSystemBackend{

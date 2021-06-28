@@ -8,13 +8,13 @@ import (
 )
 
 func (c *core) sendPrepare() {
-	logger := c.logger.New("state", c.current.State())
+	logger := c.logger.New("sendPrepare: state", c.current.State())
 
 	msgTyp := MsgTypePrepare
 
 	prepare, err := c.createNewProposal()
 	if err != nil {
-		logger.Error("Failed to creat leaf", "err", err)
+		logger.Error("Failed to creat proposal", "err", err)
 		return
 	}
 
@@ -28,7 +28,7 @@ func (c *core) sendPrepare() {
 }
 
 func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("handlePrepare: state", c.currentState())
 
 	var (
 		msg    *MsgPrepare
@@ -66,7 +66,7 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 }
 
 func (c *core) sendPrepareVote() {
-	logger := c.logger.New("state", c.current.State())
+	logger := c.logger.New("sendPrepareVote: state", c.current.State())
 
 	msgTyp := MsgTypePrepareVote
 	sub := c.current.Vote()
@@ -119,6 +119,9 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) e
 
 // proposal extend lockedQC `OR` hiqhQC.view > lockedQC.view
 func (c *core) safeNode(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
+	if proposal.Number().Uint64() == 1 {
+		return nil
+	}
 	safety := false
 	liveness := false
 	if c.current.LockedQC() == nil {

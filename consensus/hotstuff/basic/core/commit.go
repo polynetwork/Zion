@@ -5,7 +5,7 @@ import (
 )
 
 func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("handlePreCommitVote: state", c.currentState())
 
 	var (
 		vote   *hotstuff.Vote
@@ -42,7 +42,7 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 }
 
 func (c *core) sendCommit() {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("sendCommit: state", c.currentState())
 
 	msgTyp := MsgTypeCommit
 	payload, err := Encode(c.current.LockedQC())
@@ -54,7 +54,7 @@ func (c *core) sendCommit() {
 }
 
 func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("handleCommit: state", c.currentState())
 
 	var (
 		msg    *hotstuff.QuorumCert
@@ -87,10 +87,11 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 }
 
 func (c *core) sendCommitVote() {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("sendCommitVote: state", c.currentState())
 
 	msgTyp := MsgTypeCommitVote
-	payload, err := Encode(c.current.LockedQC())
+	vote := c.current.Vote()
+	payload, err := Encode(vote)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return

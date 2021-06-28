@@ -324,6 +324,9 @@ func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Durat
 }
 
 func (s *backend) VerifyQuorumCert(qc *hotstuff.QuorumCert) error {
+	if qc.View.Height.Uint64() == 0 {
+		return nil
+	}
 	extra, err := types.ExtractHotstuffExtraPayload(qc.Extra)
 	if err != nil {
 		return err

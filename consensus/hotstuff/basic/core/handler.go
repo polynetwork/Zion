@@ -80,14 +80,17 @@ func (c *core) handleEvents() {
 			// A real event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case hotstuff.RequestEvent:
+				logger.Trace("handle request event", "height", ev.Proposal.Number().Uint64(), "hash", ev.Proposal.Hash().Hex())
 				c.handleRequest(&hotstuff.Request{
 					Proposal: ev.Proposal,
 				})
 
 			case hotstuff.MessageEvent:
+				logger.Trace("handle message event")
 				c.handleMsg(ev.Payload)
 
 			case backlogEvent:
+				logger.Trace("handle backlog event")
 				c.handleCheckedMsg(ev.msg, ev.src)
 			}
 

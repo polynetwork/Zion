@@ -2,13 +2,14 @@ package core
 
 import (
 	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/prque"
 )
 
 func (c *core) handleRequest(req *hotstuff.Request) error {
-	logger := c.logger.New("state", c.currentState(), "height", c.current.Height())
+	logger := c.logger.New("handle request, state", c.currentState(), "height", c.current.Height())
 	if err := c.requests.checkRequest(c.currentView(), req); err != nil {
 		if err == errFutureMessage {
 			goto store
@@ -18,7 +19,7 @@ func (c *core) handleRequest(req *hotstuff.Request) error {
 		}
 	}
 store:
-	logger.Trace("handle request", "number", req.Proposal.Number(), "hash", req.Proposal.Hash())
+	logger.Trace("store request", "number", req.Proposal.Number(), "hash", req.Proposal.Hash())
 	c.requests.StoreRequest(req)
 	return nil
 }
@@ -61,6 +62,8 @@ func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
+	maxRetry := 3
+retry:
 	for !s.pendingRequest.Empty() {
 		m, prior := s.pendingRequest.Pop()
 		req, ok := m.(*hotstuff.Request)
@@ -77,6 +80,10 @@ func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
 			continue
 		}
 		return req
+	}
+	if maxRetry -= 1; maxRetry > 0 {
+		time.Sleep(1 * time.Second)
+		goto retry
 	}
 	return nil
 }

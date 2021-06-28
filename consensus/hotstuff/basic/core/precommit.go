@@ -5,7 +5,7 @@ import (
 )
 
 func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("handlePrepareVote: state", c.currentState())
 
 	var (
 		vote   *hotstuff.Vote
@@ -56,7 +56,7 @@ func (c *core) getSeals(n int) [][]byte {
 }
 
 func (c *core) sendPreCommit() {
-	logger := c.logger.New("state", c.current.State())
+	logger := c.logger.New("sendPreCommit: state", c.current.State())
 
 	msgTyp := MsgTypePreCommit
 	payload, err := Encode(c.current.PrepareQC())
@@ -68,7 +68,7 @@ func (c *core) sendPreCommit() {
 }
 
 func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("state", c.currentState())
+	logger := c.logger.New("handlePreCommit: state", c.currentState())
 
 	var (
 		msg    *hotstuff.QuorumCert

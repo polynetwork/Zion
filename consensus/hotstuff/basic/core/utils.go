@@ -3,7 +3,6 @@ package core
 import (
 	"bytes"
 	"github.com/ethereum/go-ethereum/core/types"
-	"math/big"
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -119,30 +118,18 @@ func (c *core) broadcast(msg *message) {
 		return
 	}
 
-	if msg.Code == MsgTypeNewView { // todo: judge current proposal is not nil
-		_, lastProposer := c.backend.LastProposal()
-		proposedNewSet := c.valSet.Copy()
-		newRound := new(big.Int).Add(c.currentView().Round, common.Big1)
-		proposedNewSet.CalcProposer(lastProposer, newRound.Uint64())
-		if !proposedNewSet.IsProposer(c.Address()) {
-			if err = c.backend.Unicast(proposedNewSet, payload); err != nil {
-				logger.Error("Failed to unicast message", "msg", msg, "err", err)
-				return
-			}
-		} else {
-			logger.Trace("Local is the next proposer", "msg", msg)
-			return
-		}
-	} else if msg.Code == MsgTypePrepareVote || msg.Code == MsgTypePreCommitVote || msg.Code == MsgTypeCommitVote { // todo: judge current proposal is not nil
+	// todo: judge current proposal is not nil
+	switch msg.Code {
+	case MsgTypeNewView, MsgTypePrepareVote, MsgTypePreCommitVote, MsgTypeCommitVote:
 		if err := c.backend.Unicast(c.valSet, payload); err != nil {
 			logger.Error("Failed to unicast message", "msg", msg, "err", err)
-			return
 		}
-	} else {
+	case MsgTypePrepare, MsgTypePreCommit, MsgTypeCommit, MsgTypeDecide:
 		if err := c.backend.Broadcast(c.valSet, payload); err != nil {
 			logger.Error("Failed to broadcast message", "msg", msg, "err", err)
-			return
 		}
+	default:
+		logger.Error("invalid msg type", "msg", msg)
 	}
 }
 
@@ -174,14 +161,16 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
 
-func Proposal2QC(view *hotstuff.View, proposal hotstuff.Proposal) *hotstuff.QuorumCert {
+func Proposal2QC(proposal hotstuff.Proposal) *hotstuff.QuorumCert {
 	block := proposal.(*types.Block)
 	h := block.Header()
 	qc := new(hotstuff.QuorumCert)
-	qc.View = view
+	qc.View = &hotstuff.View{
+		Height: proposal.Number(),
+		Round:  common.Big0,
+	}
 	qc.Hash = h.Hash()
 	qc.Proposer = h.Coinbase
 	qc.Extra = h.Extra
-
 	return qc
 }
