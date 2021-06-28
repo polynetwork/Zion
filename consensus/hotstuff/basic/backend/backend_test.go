@@ -26,23 +26,21 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSign(t *testing.T) {
 	b := newBackend()
 	data := []byte("Here is a string....")
 	sig, err := b.Sign(data)
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
+	assert.NoError(t, err, "error mismatch: have %v, want nil", err)
+
 	//Check signature recover
-	hashData := crypto.Keccak256([]byte(data))
+	hashData := crypto.Keccak256(data)
 	pubkey, _ := crypto.Ecrecover(hashData, sig)
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
-	if signer != getAddress() {
-		t.Errorf("address mismatch: have %v, want %s", signer.Hex(), getAddress().Hex())
-	}
+	assert.Equal(t, signer, getAddress(), "address mismatch: have %v, want %s", signer.Hex(), getAddress().Hex())
 }
 
 func TestCheckSignature(t *testing.T) {
@@ -52,15 +50,10 @@ func TestCheckSignature(t *testing.T) {
 	sig, _ := crypto.Sign(hashData, key)
 	b := newBackend()
 	a := getAddress()
-	err := b.CheckSignature(data, a, sig)
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
+	assert.NoError(t, b.CheckSignature(data, a, sig), "error mismatch: want nil")
+
 	a = getInvalidAddress()
-	err = b.CheckSignature(data, a, sig)
-	if err != errInvalidSignature {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidSignature)
-	}
+	assert.Error(t, b.CheckSignature(data, a, sig), "error mismatch: want%v", errInvalidSignature)
 }
 
 func TestCheckValidatorSignature(t *testing.T) {
@@ -72,40 +65,30 @@ func TestCheckValidatorSignature(t *testing.T) {
 	for i, k := range keys {
 		// Sign
 		sig, err := crypto.Sign(hashData, k)
-		if err != nil {
-			t.Errorf("error mismatch: have %v, want nil", err)
-		}
+		assert.NoError(t, err, "error mismatch: have %v, want nil", err)
+
 		// CheckValidatorSignature should succeed
 		addr, err := hotstuff.CheckValidatorSignature(vset, data, sig)
-		if err != nil {
-			t.Errorf("error mismatch: have %v, want nil", err)
-		}
+		assert.NoError(t, err, "error mismatch: have %v, want nil", err)
+
 		val := vset.GetByIndex(uint64(i))
-		if addr != val.Address() {
-			t.Errorf("validator address mismatch: have %v, want %v", addr, val.Address())
-		}
+		assert.Equal(t, addr, val.Address(), "validator address mismatch: have %v, want %v", addr, val.Address())
 	}
 
 	// 2. Negative test: sign with any key other than validator's key should return error
 	key, err := crypto.GenerateKey()
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
+	assert.NoError(t, err, "error mismatch: have %v, want nil", err)
+
 	// Sign
 	sig, err := crypto.Sign(hashData, key)
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
+	assert.NoError(t, err, "error mismatch: have %v, want nil", err)
 
 	// CheckValidatorSignature should return ErrUnauthorizedAddress
 	addr, err := hotstuff.CheckValidatorSignature(vset, data, sig)
-	if err != hotstuff.ErrUnauthorizedAddress {
-		t.Errorf("error mismatch: have %v, want %v", err, hotstuff.ErrUnauthorizedAddress)
-	}
+	assert.Equal(t, err, hotstuff.ErrUnauthorizedAddress, "error mismatch: have %v, want %v", err, hotstuff.ErrUnauthorizedAddress)
+
 	emptyAddr := common.Address{}
-	if addr != emptyAddr {
-		t.Errorf("address mismatch: have %v, want %v", addr, emptyAddr)
-	}
+	assert.Equal(t, emptyAddr, common.Address{}, "address mismatch: have %v, want %v", addr, emptyAddr)
 }
 
 func TestCommit(t *testing.T) {
@@ -181,7 +164,5 @@ func TestGetProposer(t *testing.T) {
 	chain.InsertChain(types.Blocks{block})
 	expected := engine.GetProposer(1)
 	actual := engine.Address()
-	if actual != expected {
-		t.Errorf("proposer mismatch: have %v, want %v", actual.Hex(), expected.Hex())
-	}
+	assert.Equal(t, expected, actual, "proposer mismatch: have %v, want %v", actual.Hex(), expected.Hex())
 }
