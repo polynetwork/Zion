@@ -57,7 +57,13 @@ func (c *core) IsProposer() bool {
 }
 
 func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
-	return c.current != nil && c.current.Proposal() != nil && c.current.Proposal().Hash() == blockHash
+	if c.current != nil && c.current.Proposal() != nil && c.current.Proposal().Hash() == blockHash {
+		return true
+	}
+	if c.current != nil && c.current.PendingRequest() != nil && c.current.PendingRequest().Proposal.Hash() == blockHash {
+		return true
+	}
+	return false
 }
 
 func (c *core) startNewRound(round *big.Int) {
@@ -95,6 +101,7 @@ func (c *core) startNewRound(round *big.Int) {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
 	}
+
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	if c.current == nil {
 		prepareQC := Proposal2QC(lastProposal)

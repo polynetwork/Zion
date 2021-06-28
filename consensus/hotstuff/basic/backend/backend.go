@@ -373,10 +373,14 @@ func (s *backend) CheckSignature(data []byte, address common.Address, sig []byte
 }
 
 func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
+	if s.currentBlock == nil {
+		return nil, common.Address{}
+	}
+
 	block := s.currentBlock()
 
 	var proposer common.Address
-	if block.Number().Cmp(common.Big0) >= 0 {
+	if block.Number().Cmp(common.Big0) > 0 {
 		var err error
 		proposer, err = s.Author(block.Header())
 		if err != nil {
