@@ -3,7 +3,6 @@ package backend
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/p2p"
 	"io/ioutil"
 	"math/big"
 	"sort"
@@ -19,9 +18,13 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/crypto"
+	elog "github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 )
+
+var testLogger = elog.New()
 
 func getGenesisAndKeys(n int) (*core.Genesis, []*ecdsa.PrivateKey, hotstuff.ValidatorSet) {
 	// Setup validators
@@ -111,13 +114,10 @@ func newBlockChain(n int) (*core.BlockChain, *backend) {
 
 	txLookUpLimit := uint64(100)
 	cacheConfig := &core.CacheConfig{
-		TrieCleanLimit: 32,
-		TrieDirtyLimit: 32,
-		TrieTimeLimit:  2 * time.Minute,
-		SnapshotLimit:  32,
-		SnapshotWait:   true,
+		TrieCleanLimit: 256,
+		TrieDirtyLimit: 256,
+		TrieTimeLimit:  5 * time.Minute,
 	}
-
 	blockchain, err := core.NewBlockChain(memDB, cacheConfig, genesis.Config, b, vm.Config{}, nil, &txLookUpLimit)
 	if err != nil {
 		panic(err)
@@ -234,4 +234,3 @@ func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Blo
 	arbitraryP2PMessage := p2p.Msg{Code: NewBlockMsg, Size: uint32(size), Payload: bytes.NewReader(payload)}
 	return arbitraryBlock, arbitraryP2PMessage
 }
-
