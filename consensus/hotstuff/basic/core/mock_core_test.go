@@ -1,12 +1,14 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core -run TestNewRound
 func TestNewRound(t *testing.T) {
 	N := uint64(4)
 	F := uint64(1)
@@ -26,21 +28,17 @@ func TestNewRound(t *testing.T) {
 		v.core().current = nil
 	}
 
-	// leader := sys.getLeader()
+	close := sys.Run(true)
+	defer close()
+
 	block := makeBlockWithParentHash(1, genesisBlock.Hash())
 	for _, backend := range sys.backends {
-		//go backend.EventMux().Post(hotstuff.RequestEvent{
-		//	Proposal: block,
-		//})
-		backend.core().requests.StoreRequest(&hotstuff.Request{
+		go backend.EventMux().Post(hotstuff.RequestEvent{
 			Proposal: block,
 		})
 	}
 
-	close := sys.Run(true)
-	defer close()
-
-	<-time.After(2 * time.Second)
+	<-time.After(10 * time.Second)
 
 	for _, v := range sys.backends {
 		if len(v.committedMsgs) > 1 {

@@ -16,7 +16,7 @@ type roundState struct {
 	state  State
 
 	pendingRequest *hotstuff.Request // leader's pending request
-	proposal       hotstuff.Proposal // repo's prepare proposal
+	proposal       hotstuff.Proposal // Address's prepare proposal
 
 	// o(4n)
 	newViews       *messageSet
@@ -25,9 +25,9 @@ type roundState struct {
 	commitVotes    *messageSet
 
 	highQC      *hotstuff.QuorumCert // leader highQC
-	prepareQC   *hotstuff.QuorumCert // repo and leader's prepareQC
-	lockedQC    *hotstuff.QuorumCert // repo's lockedQC or leader's pre-committed QC
-	committedQC *hotstuff.QuorumCert // repo and leader's committedQC
+	prepareQC   *hotstuff.QuorumCert // Address and leader's prepareQC
+	lockedQC    *hotstuff.QuorumCert // Address's lockedQC or leader's pre-committed QC
+	committedQC *hotstuff.QuorumCert // Address and leader's committedQC
 
 	mtx *sync.RWMutex
 }

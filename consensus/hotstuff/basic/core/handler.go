@@ -74,36 +74,37 @@ func (c *core) handleEvents() {
 		select {
 		case event, ok := <-c.events.Chan():
 			if !ok {
-				logger.Error("Failed to receive msg event")
+				logger.Error("Failed to receive msg Event")
 				return
 			}
-			// A real event arrived, process interesting content
+			// A real Event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case hotstuff.RequestEvent:
-				logger.Trace("handle request event", "height", ev.Proposal.Number().Uint64(), "hash", ev.Proposal.Hash().Hex())
+				logger.Trace("handle request Event", "height", ev.Proposal.Number().Uint64(), "hash", ev.Proposal.Hash().Hex())
 				c.handleRequest(&hotstuff.Request{
 					Proposal: ev.Proposal,
 				})
 
 			case hotstuff.MessageEvent:
-				logger.Trace("handle message event")
+				logger.Trace("handle message Event")
 				c.handleMsg(ev.Payload)
 
 			case backlogEvent:
-				logger.Trace("handle backlog event")
+				logger.Trace("handle backlog Event")
 				c.handleCheckedMsg(ev.msg, ev.src)
 			}
 
 		case _, ok := <-c.timeoutSub.Chan():
+			logger.Trace("handle timeout Event")
 			if !ok {
-				logger.Error("Failed to receive timeout event")
+				logger.Error("Failed to receive timeout Event")
 				return
 			}
 			c.handleTimeoutMsg()
 
 		case _, ok := <-c.finalCommittedSub.Chan():
 			if !ok {
-				logger.Error("Failed to receive finalCommitted event")
+				logger.Error("Failed to receive finalCommitted Event")
 				return
 			}
 			c.handleFinalCommitted()

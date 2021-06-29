@@ -5,7 +5,7 @@ import (
 )
 
 func (c *core) sendNewView(view *hotstuff.View) {
-	logger := c.logger.New("sendNewView: state", c.currentState())
+	logger := c.logger.New("sendNewView: state", c.currentState(), "view", c.currentView())
 
 	curView := c.currentView()
 	if curView.Cmp(view) > 0 {
@@ -27,10 +27,12 @@ func (c *core) sendNewView(view *hotstuff.View) {
 		Code: MsgTypeNewView,
 		Msg:  payload,
 	})
+
+	logger.Info("sendNewView", "repo", c.address.Hex())
 }
 
 func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("handleNewView: state", c.currentState())
+	logger := c.logger.New("handleNewView: state", c.currentState(), "view", c.currentView())
 
 	var (
 		msg    *MsgNewView
@@ -64,6 +66,7 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 		c.sendPrepare()
 	}
 
+	logger.Trace("leader handle newView", "address", c.Address())
 	return nil
 }
 

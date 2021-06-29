@@ -10,11 +10,14 @@ import (
 func (c *core) sendPrepare() {
 	logger := c.logger.New("sendPrepare: state", c.current.State())
 
-	msgTyp := MsgTypePrepare
+	if !c.IsProposer() {
+		return
+	}
 
+	msgTyp := MsgTypePrepare
 	prepare, err := c.createNewProposal()
 	if err != nil {
-		logger.Error("Failed to creat proposal", "err", err)
+		logger.Error("Failed to create proposal", "err", err)
 		return
 	}
 

@@ -78,23 +78,16 @@ func (m *mockBackend) EventMux() *event.TypeMux {
 	return m.events
 }
 
-func (m *mockBackend) Send(message []byte, target common.Address) error {
-	testLogger.Info("enqueuing a message...", "address", m.Address())
-	m.sentMsgs = append(m.sentMsgs, message)
-	m.sys.queuedMessage <- hotstuff.MessageEvent{
-		Payload: message,
-	}
-	return nil
-}
-
 func (m *mockBackend) Broadcast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	if !needBroadCast {
 		return nil
 	}
-	testLogger.Info("enqueuing a broadcast message...", "address", m.Address())
+	testLogger.Info("leader broadcast", m.Address().Hex())
 	m.sentMsgs = append(m.sentMsgs, payload)
-	m.sys.queuedMessage <- hotstuff.MessageEvent{
-		Payload: payload,
+	m.sys.broadcastQueuedMessage <- innerEvent{
+		Event:   hotstuff.MessageEvent{Payload: payload},
+		Address: m.address,
+		View:    m.core().currentView(),
 	}
 	return nil
 }
@@ -105,17 +98,13 @@ func (m *mockBackend) Gossip(valSet hotstuff.ValidatorSet, message []byte) error
 }
 
 func (m *mockBackend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
-	testLogger.Info("enqueuing a unicast payload...", "address", m.Address())
-	//m.sentMsgs = append(m.sentMsgs, payload)
-	//m.queuedMessage <- hotstuff.MessageEvent{
-	//	Payload: payload,
-	//}
-	//proposer := valSet.GetProposer()
-	//leader := m.sys.getLeader()
-	//return leader.backend.EventMux().Post(hotstuff.MessageEvent{
-	//	Payload:payload,
-	//})
-	return m.Broadcast(valSet, payload)
+	m.sentMsgs = append(m.sentMsgs, payload)
+	m.sys.unicastQueuedMessage <- innerEvent{
+		Event:   hotstuff.MessageEvent{Payload: payload},
+		Address: m.address,
+		View:    m.core().currentView(),
+	}
+	return nil
 }
 
 func (m *mockBackend) PreCommit(view *hotstuff.View, proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, *hotstuff.QuorumCert, error) {
@@ -151,7 +140,7 @@ func (s *mockBackend) VerifyQuorumCert(qc *hotstuff.QuorumCert) error {
 }
 
 func (m *mockBackend) Sign(data []byte) ([]byte, error) {
-	testLogger.Info("returning current backend address so that CheckValidatorSignature returns the same value")
+	//testLogger.Info("returning current backend address so that CheckValidatorSignature returns the same value")
 	return m.address.Bytes(), nil
 }
 
@@ -219,11 +208,18 @@ func (m *mockBackend) Close() error {
 //
 // define the struct that need to be provided for integration tests.
 
+type innerEvent struct {
+	Event   hotstuff.MessageEvent
+	Address common.Address
+	View    *hotstuff.View
+}
+
 type testSystem struct {
 	backends []*mockBackend
 
-	queuedMessage chan hotstuff.MessageEvent
-	quit          chan struct{}
+	broadcastQueuedMessage chan innerEvent //hotstuff.MessageEvent
+	unicastQueuedMessage   chan innerEvent //hotstuff.MessageEvent
+	quit                   chan struct{}
 }
 
 func (s *testSystem) getLeader() *core {
@@ -263,8 +259,9 @@ func newTestSystem(n uint64) *testSystem {
 	return &testSystem{
 		backends: make([]*mockBackend, n),
 
-		queuedMessage: make(chan hotstuff.MessageEvent, 10000),
-		quit:          make(chan struct{}),
+		broadcastQueuedMessage: make(chan innerEvent, 128),
+		unicastQueuedMessage:   make(chan innerEvent, 128),
+		quit:                   make(chan struct{}),
 	}
 }
 
@@ -306,30 +303,7 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 		core.validateFn = backend.CheckValidatorSignature
 
 		backend.engine = core
-
-		//core.subscribeEvents()
-		//defer core.unsubscribeEvents()
 	}
-
-	//backend := &testSystemBackend{
-	//	events: new(event.TypeMux),
-	//	peers:  vset,
-	//}
-	//c := &core{
-	//	logger:     log.New("backend", "test", "id", 0),
-	//	backlogs:   make(map[common.Address]*prque.Prque),
-	//	backlogsMu: new(sync.Mutex),
-	//	valSet:     vset,
-	//	backend:    backend,
-	//	state:      State(msg.Code),
-	//	current: newRoundState(&istanbul.View{
-	//		Sequence: big.NewInt(1),
-	//		Round:    big.NewInt(0),
-	//	}, newTestValidatorSet(4), common.Hash{}, nil, nil, nil),
-	//}
-	//c.subscribeEvents()
-	//defer c.unsubscribeEvents()
-	//
 	return sys
 }
 
@@ -339,11 +313,15 @@ func (t *testSystem) listen() {
 		select {
 		case <-t.quit:
 			return
-		case queuedMessage := <-t.queuedMessage:
-			testLogger.Info("consuming a queue message...")
+		case m := <-t.broadcastQueuedMessage:
 			for _, backend := range t.backends {
-				go backend.EventMux().Post(queuedMessage)
+				go backend.EventMux().Post(m.Event)
 			}
+			testLogger.Info("broadcast", "leader", m.Address.Hex(), "height", m.View.Height, "round", m.View.Round)
+		case m := <-t.unicastQueuedMessage:
+			leader := t.getLeader()
+			go leader.sendEvent(m.Event)
+			testLogger.Info("unicast", "Address", m.Address.Hex(), "leader", leader.address.Hex(), "height", m.View.Height, "round", m.View.Round)
 		}
 	}
 }

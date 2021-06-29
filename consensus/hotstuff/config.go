@@ -32,8 +32,9 @@ type Config struct {
 	Epoch          uint64               `toml:",omitempty"` // The number of blocks after which to checkpoint and reset the pending votes
 }
 
+// todo: modify request timeout
 var DefaultConfig = &Config{
-	RequestTimeout: 20000,
+	RequestTimeout: 2000,
 	BlockPeriod:    5,
 	LeaderPolicy:   RoundRobin,
 	Epoch:          30000,

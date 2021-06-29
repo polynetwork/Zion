@@ -9,18 +9,23 @@ import (
 )
 
 func (c *core) handleRequest(req *hotstuff.Request) error {
-	logger := c.logger.New("handle request, state", c.currentState(), "height", c.current.Height())
+	logger := c.logger.New("handle request, state", c.currentState(), "view", c.currentView())
+
 	if err := c.requests.checkRequest(c.currentView(), req); err != nil {
 		if err == errFutureMessage {
-			goto store
+			c.requests.StoreRequest(req)
+			return nil
 		} else {
 			logger.Warn("receive request", "err", err)
 			return err
 		}
 	}
-store:
-	logger.Trace("store request", "number", req.Proposal.Number(), "hash", req.Proposal.Hash())
-	c.requests.StoreRequest(req)
+
+	if c.currentState() == StateAcceptRequest && c.current.PendingRequest() == nil {
+		c.current.SetPendingRequest(req)
+	}
+
+	logger.Trace("store request", "validator", c.address.Hex())
 	return nil
 }
 

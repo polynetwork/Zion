@@ -25,10 +25,7 @@ type core struct {
 	timeoutSub        *event.TypeMuxSubscription
 	finalCommittedSub *event.TypeMuxSubscription
 
-	futureProposalTimer *time.Timer
-	consensusTimestamp  time.Time
 	roundChangeTimer    *time.Timer
-	futurePrepareTimer  *time.Timer
 
 	validateFn func([]byte, []byte) (common.Address, error) // == c.checkValidatorSignature
 }
@@ -41,7 +38,6 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, valSet hotstuff.Vali
 		valSet:             valSet,
 		logger:             log.New("address", backend.Address()),
 		backend:            backend,
-		consensusTimestamp: time.Time{},
 	}
 	c.requests = newRequestSet()
 	c.validateFn = c.checkValidatorSignature
@@ -109,10 +105,12 @@ func (c *core) startNewRound(round *big.Int) {
 	} else {
 		c.current = c.current.Spawn(newView, c.valSet)
 	}
-	c.sendNewView(newView)
+	if c.current.PendingRequest() != nil {
+		c.sendNewView(newView)
+	}
 	c.newRoundChangeTimer()
 
-	logger.Debug("New round", "last block number", lastProposal.Number().Uint64(), "new_round", newView.Round, "new_heigth", newView.Height, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
+	logger.Debug("New round", "last block number", lastProposal.Number().Uint64(), "new_round", newView.Round, "new_height", newView.Height, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 }
 
 func (c *core) currentView() *hotstuff.View {
@@ -139,14 +137,7 @@ func (c *core) catchUpRound(view *hotstuff.View) {
 	logger.Trace("Catch up round", "new_round", view.Round, "new_height", view.Height, "new_proposer", c.valSet)
 }
 
-func (c *core) stopFuturePrepareTimer() {
-	if c.futurePrepareTimer != nil {
-		c.futurePrepareTimer.Stop()
-	}
-}
-
 func (c *core) stopTimer() {
-	c.stopFuturePrepareTimer()
 	if c.roundChangeTimer != nil {
 		c.roundChangeTimer.Stop()
 	}

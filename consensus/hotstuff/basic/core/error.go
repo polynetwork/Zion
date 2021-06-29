@@ -18,7 +18,7 @@ var (
 
 	errNotToProposer = errors.New("message does not send to proposer")
 
-	errNotToValidator = errors.New("message does not send to repo validator")
+	errNotToValidator = errors.New("message does not send to Address validator")
 
 	// errIgnored is returned when a message was ignored.
 	errIgnored = errors.New("message is ignored")
