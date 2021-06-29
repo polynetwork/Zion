@@ -2,6 +2,7 @@ package backend
 
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic"
 	"math/big"
 	"time"
 
@@ -9,7 +10,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic"
 	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -18,7 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
-	"golang.org/x/crypto/sha3"
 )
 
 const (
@@ -49,7 +48,7 @@ func (s *backend) Author(header *types.Header) (common.Address, error) {
 }
 
 func (s *backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
-	return s.verifyHeader(chain, header, nil)
+	return s.verifyHeader(chain, header, nil, seal)
 }
 
 func (s *backend) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*types.Header, seals []bool) (chan<- struct{}, <-chan error) {
@@ -57,7 +56,11 @@ func (s *backend) VerifyHeaders(chain consensus.ChainHeaderReader, headers []*ty
 	results := make(chan error, len(headers))
 	go func() {
 		for i, header := range headers {
-			err := s.verifyHeader(chain, header, headers[:i])
+			seal := false
+			if seals != nil && len(seals) > i {
+				seal = seals[i]
+			}
+			err := s.verifyHeader(chain, header, headers[:i], seal)
 
 			select {
 			case <-abort:
@@ -78,7 +81,7 @@ func (s *backend) VerifyUncles(chain consensus.ChainReader, block *types.Block) 
 
 func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Header) error {
 	// unused fields, force to set to empty
-	header.Coinbase = common.Address{}
+	header.Coinbase = s.signer
 	header.Nonce = emptyNonce
 	header.MixDigest = types.HotstuffDigest
 
@@ -173,7 +176,8 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 			case result := <-s.commitCh:
 				// if the block hash and the hash from channel are the same,
 				// return the result. Otherwise, keep waiting the next hash.
-				if result != nil && block.Hash() == result.Hash() {
+				// todo: if result != nil && block.Hash() == result.Hash() {
+				if result != nil {
 					results <- result
 					return
 				}
@@ -187,7 +191,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 }
 
 func (s *backend) SealHash(header *types.Header) common.Hash {
-	return sigHash(header)
+	return basic.SigHash(header)
 }
 
 // useless
@@ -208,23 +212,6 @@ func (s *backend) Close() error {
 	return nil
 }
 
-// FIXME: Need to update this for Istanbul
-// sigHash returns the hash which is used as input for the Istanbul
-// signing. It is the hash of the entire header apart from the 65 byte signature
-// contained at the end of the extra data.
-//
-// Note, the method requires the extra data to be at least 65 bytes, otherwise it
-// panics. This is done to avoid accidentally using both forms (signature present
-// or not), which could be abused to produce different hashes for the same header.
-func sigHash(header *types.Header) (hash common.Hash) {
-	hasher := sha3.NewLegacyKeccak256()
-
-	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.HotstuffFilteredHeader(header, false))
-	hasher.Sum(hash[:0])
-	return hash
-}
-
 // ecrecover extracts the Ethereum account address from a signed header.
 func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, error) {
 	hash := header.Hash()
@@ -233,12 +220,12 @@ func ecrecover(header *types.Header, sigcache *lru.ARCCache) (common.Address, er
 	}
 
 	// Retrieve the signature from the header extra-data
-	istanbulExtra, err := types.ExtractHotstuffExtra(header)
+	hotstuffExtra, err := types.ExtractHotstuffExtra(header)
 	if err != nil {
 		return common.Address{}, err
 	}
 
-	addr, err := basic.GetSignatureAddress(sigHash(header).Bytes(), istanbulExtra.Seal)
+	addr, err := basic.GetSignatureAddress(basic.SigHash(header).Bytes(), hotstuffExtra.Seal)
 	if err != nil {
 		return addr, err
 	}
@@ -277,13 +264,13 @@ func writeSeal(h *types.Header, seal []byte) error {
 		return errInvalidSignature
 	}
 
-	HotstuffExtra, err := types.ExtractHotstuffExtra(h)
+	extra, err := types.ExtractHotstuffExtra(h)
 	if err != nil {
 		return err
 	}
 
-	HotstuffExtra.Seal = seal
-	payload, err := rlp.EncodeToBytes(&HotstuffExtra)
+	extra.Seal = seal
+	payload, err := rlp.EncodeToBytes(&extra)
 	if err != nil {
 		return err
 	}
@@ -392,7 +379,7 @@ func (s *backend) checkValidatorQuorum(committers []common.Address, validators h
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
-func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header, seal bool) error {
 	if header.Number == nil {
 		return errUnknownBlock
 	}
@@ -427,7 +414,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidDifficulty
 	}
 
-	return s.verifyCascadingFields(chain, header, parents)
+	return s.verifyCascadingFields(chain, header, parents, seal)
 }
 
 // Signers extracts all the addresses who have signed the given header
@@ -463,7 +450,7 @@ func (s *backend) signersFromCommittedSeals(hash common.Hash, seals [][]byte) ([
 // rather depend on a batch of previous headers. The caller may optionally pass
 // in a batch of parents (ascending order) to avoid looking those up from the
 // database. This is useful for concurrently verifying a batch of new headers.
-func (s *backend) verifyCascadingFields(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header) error {
+func (s *backend) verifyCascadingFields(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header, seal bool) error {
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -492,7 +479,11 @@ func (s *backend) verifyCascadingFields(chain consensus.ChainHeaderReader, heade
 		return err
 	}
 
-	return s.verifyCommittedSeals(chain, header, parents)
+	// verify unsealed proposal
+	if seal {
+		return s.verifyCommittedSeals(chain, header, parents)
+	}
+	return nil
 }
 
 // update timestamp and signature of the block based on its number of transactions
@@ -513,7 +504,7 @@ func (s *backend) updateBlock(block *types.Block) (*types.Block, error) {
 }
 
 func (s *backend) sealHeader(header *types.Header) ([]byte, error) {
-	return s.Sign(sigHash(header).Bytes())
+	return s.Sign(basic.SigHash(header).Bytes())
 }
 
 // Start and Stop invoked in worker.go - start and stop

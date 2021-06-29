@@ -254,6 +254,38 @@ func (m *MsgPrepare) String() string {
 	return fmt.Sprintf("{NewProposal Height: %d Round: %d Hash: %s}", m.View.Height, m.View.Round, m.Proposal.Hash())
 }
 
+type MsgPreCommit struct {
+	View      *hotstuff.View
+	Proposal  hotstuff.Proposal
+	PrepareQC *hotstuff.QuorumCert
+}
+
+func (m *MsgPreCommit) EncodeRLP(w io.Writer) error {
+	block, ok := m.Proposal.(*types.Block)
+	if !ok {
+		return errInvalidProposal
+	}
+	return rlp.Encode(w, []interface{}{m.View, block, m.PrepareQC})
+}
+
+func (m *MsgPreCommit) DecodeRLP(s *rlp.Stream) error {
+	var proposal struct {
+		View      *hotstuff.View
+		Proposal  *types.Block
+		PrepareQC *hotstuff.QuorumCert
+	}
+
+	if err := s.Decode(&proposal); err != nil {
+		return err
+	}
+	m.View, m.Proposal, m.PrepareQC = proposal.View, proposal.Proposal, proposal.PrepareQC
+	return nil
+}
+
+func (m *MsgPreCommit) String() string {
+	return fmt.Sprintf("{MsgPreCommit Height: %d Round: %d Hash: %s}", m.View.Height, m.View.Round, m.Proposal.Hash())
+}
+
 type timeoutEvent struct{}
 type backlogEvent struct {
 	src hotstuff.Validator

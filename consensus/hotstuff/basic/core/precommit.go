@@ -30,8 +30,8 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 	}
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.current.state < StatePrepared {
-		seal := c.getSeals(size)
-		newProposal, prepareQC, err := c.backend.PreCommit(c.currentView(), c.current.Proposal(), seal)
+		seals := c.getMessageSeals(size)
+		newProposal, prepareQC, err := c.backend.PreCommit(c.currentView(), c.current.Proposal(), seals)
 		if err != nil {
 			logger.Error("Failed to assemble committed seal", "err", err)
 			return err
@@ -45,22 +45,16 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 	return nil
 }
 
-func (c *core) getSeals(n int) [][]byte {
-	seals := make([][]byte, n)
-	for i, data := range c.current.PrepareVotes() {
-		if i < n {
-			// todo(fuk): should be committedSeal
-			seals[i] = data.Signature
-		}
-	}
-	return seals
-}
-
 func (c *core) sendPreCommit() {
 	logger := c.logger.New("sendPreCommit: state", c.current.State())
 
 	msgTyp := MsgTypePreCommit
-	payload, err := Encode(c.current.PrepareQC())
+	msg := &MsgPreCommit{
+		View:      c.currentView(),
+		Proposal:  c.current.Proposal(),
+		PrepareQC: c.current.PrepareQC(),
+	}
+	payload, err := Encode(msg)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
@@ -72,7 +66,7 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 	logger := c.logger.New("handlePreCommit: state", c.currentState())
 
 	var (
-		msg    *hotstuff.QuorumCert
+		msg    *MsgPreCommit
 		msgTyp = MsgTypePreCommit
 	)
 	if err := data.Decode(&msg); err != nil {
@@ -86,17 +80,16 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		return err
 	}
 	// todo compare high qc
-	if err := c.backend.VerifyQuorumCert(msg); err != nil {
+	if err := c.backend.VerifyQuorumCert(msg.PrepareQC); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
 		return errVerifyQC
 	}
-	// todo: compare state in other steps
-	if c.current.state >= StatePrepared {
-		return errState
-	}
 
-	c.current.SetPrepareQC(msg)
-	c.current.SetState(StatePrepared)
+	if !c.IsProposer() && c.current.state < StatePrepared {
+		c.current.SetPrepareQC(msg.PrepareQC)
+		c.current.SetProposal(msg.Proposal)
+		c.current.SetState(StatePrepared)
+	}
 	c.sendPreCommitVote()
 
 	return nil

@@ -122,7 +122,7 @@ func newBlockChain(n int) (*core.BlockChain, *backend) {
 	if err != nil {
 		panic(err)
 	}
-	b.Start(blockchain, blockchain.CurrentBlock, nil)
+
 	proposerAddr := valset.GetProposer().Address()
 
 	// find proposer key
@@ -133,6 +133,8 @@ func newBlockChain(n int) (*core.BlockChain, *backend) {
 			b.signer = addr
 		}
 	}
+
+	b.Start(blockchain, blockchain.CurrentBlock, nil)
 
 	return blockchain, b
 }

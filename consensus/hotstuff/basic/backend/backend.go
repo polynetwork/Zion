@@ -20,6 +20,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic"
 	"math/big"
 	"sync"
 	"time"
@@ -27,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic"
 	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -171,26 +171,35 @@ func (s *backend) Gossip(valSet hotstuff.ValidatorSet, payload []byte) error {
 	return nil
 }
 
-// Broadcast implements hotstuff.Backend.Unicast
+// Unicast implements hotstuff.Backend.Unicast
 func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
-	if valSet.IsProposer(s.Address()) {
-		return errInvalidProposal
-	}
-
+	msg := hotstuff.MessageEvent{Payload: payload}
+	leader := valSet.GetProposer()
+	target := leader.Address()
 	hash := hotstuff.RLPHash(payload)
 	s.knownMessages.Add(hash, true)
 
-	targets := make(map[common.Address]bool)
-	for _, val := range valSet.List() {
-		if val.Address() != s.Address() {
-			targets[val.Address()] = true
-		}
+	// send to self
+	if s.signer == target {
+		go s.EventMux().Post(msg)
+		return nil
 	}
-	if s.broadcaster != nil && len(targets) > 0 {
-		ps := s.broadcaster.FindPeers(targets)
-		if p, exist := ps[valSet.GetProposer().Address()]; !exist {
-			return errInvalidProposal
-		} else {
+
+	// send to other peer
+	if s.broadcaster != nil {
+		if p := s.broadcaster.FindPeer(target); p != nil {
+			ms, ok := s.recentMessages.Get(target)
+			var m *lru.ARCCache
+			if ok {
+				m, _ = ms.(*lru.ARCCache)
+				if _, k := m.Get(hash); k {
+					return nil
+				}
+			} else {
+				m, _ = lru.NewARC(inmemoryMessages)
+			}
+			m.Add(hash, true)
+			s.recentMessages.Add(target, m)
 			go p.Send(hotstuffMsg, payload)
 		}
 	}
@@ -219,7 +228,8 @@ func (s *backend) PreCommit(view *hotstuff.View, proposal hotstuff.Proposal, sea
 	//
 	qc := new(hotstuff.QuorumCert)
 	qc.View = view
-	qc.Hash = h.Hash()
+	qc.Hash = proposal.Hash()
+	qc.SigHash = basic.SigHash(h)
 	qc.Proposer = h.Coinbase
 	qc.Extra = h.Extra
 
@@ -242,12 +252,14 @@ func (s *backend) Commit(proposal hotstuff.Proposal) error {
 	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
 	//    the next block and the previous Seal() will be stopped (need to check this --- saber).
 	// -- otherwise, an error will be returned and a round change event will be fired.
-	if s.proposedBlockHash == block.Hash() {
-		// feed block hash to Seal() and wait the Seal() result
-		s.commitCh <- block
-		return nil
-	}
-
+	// todo
+	//if s.proposedBlockHash == block.Hash() {
+	//	// feed block hash to Seal() and wait the Seal() result
+	//	s.commitCh <- block
+	//	return nil
+	//}
+	s.commitCh <- block
+	return nil
 	if s.broadcaster != nil {
 		s.broadcaster.Enqueue(fetcherID, block)
 	}
@@ -331,7 +343,8 @@ func (s *backend) VerifyQuorumCert(qc *hotstuff.QuorumCert) error {
 	if err != nil {
 		return err
 	}
-	addr, err := basic.GetSignatureAddress(qc.Hash.Bytes(), extra.Seal)
+
+	addr, err := basic.GetSignatureAddress(qc.SigHash[:], extra.Seal)
 	if err != nil {
 		return err
 	}
@@ -339,7 +352,7 @@ func (s *backend) VerifyQuorumCert(qc *hotstuff.QuorumCert) error {
 		return errInvalidSigner
 	}
 
-	snap := s.getValidators()
+	snap := s.getValidators().Copy()
 	if idx, _ := snap.GetByAddress(addr); idx < 0 {
 		return errInvalidSigner
 	}

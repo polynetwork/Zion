@@ -80,14 +80,8 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	msg.Address = c.Address()
 
 	// Add proof of consensus
-	msg.CommittedSeal = []byte{}
-	// Assign the CommittedSeal if it's a COMMIT message and proposal is not nil
-	if msg.Code == MsgTypeCommit && c.current.Proposal() != nil {
-		seal := PrepareCommittedSeal(c.current.Proposal().Hash())
-		msg.CommittedSeal, err = c.backend.Sign(seal)
-		if err != nil {
-			return nil, err
-		}
+	if err = c.writeMessageSeal(msg); err != nil {
+		return nil, err
 	}
 
 	// Sign message
@@ -107,6 +101,29 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	}
 
 	return payload, nil
+}
+
+func (c *core) writeMessageSeal(msg *message) (err error) {
+	// Add proof of consensus
+	msg.CommittedSeal = []byte{}
+	// Assign the CommittedSeal if it's a COMMIT message and proposal is not nil
+	if msg.Code == MsgTypePrepareVote && c.current.Proposal() != nil {
+		seal := PrepareCommittedSeal(c.current.Proposal().Hash())
+		if msg.CommittedSeal, err = c.backend.Sign(seal); err != nil {
+			return
+		}
+	}
+	return
+}
+
+func (c *core) getMessageSeals(n int) [][]byte {
+	seals := make([][]byte, n)
+	for i, data := range c.current.PrepareVotes() {
+		if i < n {
+			seals[i] = data.CommittedSeal
+		}
+	}
+	return seals
 }
 
 func (c *core) broadcast(msg *message) {
@@ -145,7 +162,7 @@ func (c *core) Q() int {
 func PrepareCommittedSeal(hash common.Hash) []byte {
 	var buf bytes.Buffer
 	buf.Write(hash.Bytes())
-	buf.Write([]byte{byte(MsgTypeCommit)})
+	buf.Write([]byte{byte(MsgTypePrepareVote)})
 	return buf.Bytes()
 }
 
@@ -159,6 +176,27 @@ func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 		return common.Address{}, err
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
+}
+
+func GetSignerFromCommittedSeal(hash common.Hash, sig []byte) (common.Address, error) {
+	proposalSeal := PrepareCommittedSeal(hash)
+	return GetSignatureAddress(proposalSeal, sig)
+}
+
+func GetSignersFromCommittedSeal(hash common.Hash, sigs [][]byte) ([]common.Address, error) {
+	var addrs []common.Address
+	proposalSeal := PrepareCommittedSeal(hash)
+
+	// 1. Get committed seals from current header
+	for _, sig := range sigs {
+		// 2. Get the original address by seal and parent block hash
+		addr, err := GetSignatureAddress(proposalSeal, sig)
+		if err != nil {
+			return nil, err
+		}
+		addrs = append(addrs, addr)
+	}
+	return addrs, nil
 }
 
 func Proposal2QC(proposal hotstuff.Proposal) *hotstuff.QuorumCert {

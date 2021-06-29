@@ -21,7 +21,7 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 	if err := c.checkVote(vote); err != nil {
 		return err
 	}
-	if vote.Digest != c.current.PrepareQC().Hash {
+	if vote.Digest != c.current.Proposal().Hash() {
 		return errInvalidDigest
 	}
 	if err := c.checkMsgToProposer(); err != nil {
@@ -76,12 +76,10 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 	if err := c.backend.VerifyQuorumCert(msg); err != nil {
 		return errVerifyQC
 	}
-	if c.current.State() >= StateLocked {
-		return errState
+	if !c.IsProposer() && c.current.State() < StateLocked {
+		c.current.SetLockedQC(msg)
+		c.current.SetState(StateLocked)
 	}
-
-	c.current.SetLockedQC(msg)
-	c.current.SetState(StateLocked)
 	c.sendCommitVote()
 	return nil
 }
