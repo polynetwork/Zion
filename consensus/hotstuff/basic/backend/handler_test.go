@@ -72,7 +72,7 @@ func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
 
 	handled, err := backend.HandleMsg(arbitraryAddress, arbitraryP2PMessage)
 	assert.NoError(t, err, "expected message being handled successfully but got", err)
-	assert.False(t, handled, "expected message not being handled")
+	assert.True(t, handled, "expected message not being handled")
 
 	_, err = ioutil.ReadAll(arbitraryP2PMessage.Payload)
 	assert.NoError(t, err, "expected p2p message payload is restored")

@@ -123,16 +123,15 @@ func newBlockChain(n int) (*core.BlockChain, *backend) {
 		panic(err)
 	}
 
-	proposerAddr := valset.GetProposer().Address()
+	//proposerAddr := valset.GetProposer().Address()
 
-	// find proposer key
-	for _, key := range nodeKeys {
-		addr := crypto.PubkeyToAddress(key.PublicKey)
-		if addr.String() == proposerAddr.String() {
-			b.privateKey = key
-			b.signer = addr
-		}
-	}
+	//// find proposer key
+	//for _, key := range nodeKeys {
+	//	addr := crypto.PubkeyToAddress(key.PublicKey)
+	//	if addr.String() == proposerAddr.String() {
+	//		b.signer = NewSigner(key, 3)
+	//	}
+	//}
 
 	b.Start(blockchain, blockchain.CurrentBlock, nil)
 
@@ -188,8 +187,6 @@ func (slice Keys) Swap(i, j int) {
 
 func newBackend() (b *backend) {
 	_, b = newBlockChain(4)
-	key, _ := generatePrivateKey()
-	b.privateKey = key
 	return
 }
 

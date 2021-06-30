@@ -100,7 +100,7 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		proposals:      make(map[common.Address]bool),
 	}
 
-	backend.core = hsc.New(backend, config, valset)
+	backend.core = hsc.New(backend, config, signer, valset)
 	return backend
 }
 

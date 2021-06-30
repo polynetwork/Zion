@@ -318,7 +318,7 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 		signer := &mockSinger{address: backend.address}
 		backend.signer = signer
 
-		core := New(backend, config, vset).(*core)
+		core := New(backend, config, signer, vset).(*core)
 		core.current = newRoundState(&hotstuff.View{
 			Height: new(big.Int).SetUint64(h),
 			Round:  new(big.Int).SetUint64(r),
