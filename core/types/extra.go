@@ -77,12 +77,12 @@ func ExtractHotstuffExtraPayload(extra []byte) (*HotstuffExtra, error) {
 		return nil, ErrInvalidHotstuffHeaderExtra
 	}
 
-	var istanbulExtra *HotstuffExtra
-	err := rlp.DecodeBytes(extra[HotstuffExtraVanity:], &istanbulExtra)
+	var hotstuffExtra *HotstuffExtra
+	err := rlp.DecodeBytes(extra[HotstuffExtraVanity:], &hotstuffExtra)
 	if err != nil {
 		return nil, err
 	}
-	return istanbulExtra, nil
+	return hotstuffExtra, nil
 }
 
 // HotstuffFilteredHeader returns a filtered header which some information (like seal, committed seals)
@@ -90,17 +90,17 @@ func ExtractHotstuffExtraPayload(extra []byte) (*HotstuffExtra, error) {
 // decoded/encoded by rlp.
 func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	newHeader := CopyHeader(h)
-	istanbulExtra, err := ExtractHotstuffExtra(newHeader)
+	hotstuffExtra, err := ExtractHotstuffExtra(newHeader)
 	if err != nil {
 		return nil
 	}
 
 	if !keepSeal {
-		istanbulExtra.Seal = []byte{}
+		hotstuffExtra.Seal = []byte{}
 	}
-	istanbulExtra.CommittedSeal = [][]byte{}
+	hotstuffExtra.CommittedSeal = [][]byte{}
 
-	payload, err := rlp.EncodeToBytes(&istanbulExtra)
+	payload, err := rlp.EncodeToBytes(&hotstuffExtra)
 	if err != nil {
 		return nil
 	}

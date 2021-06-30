@@ -30,7 +30,7 @@ type Backend interface {
 	Address() common.Address
 
 	// Validators returns the validator set
-	Validators(proposal Proposal) ValidatorSet
+	Validators() ValidatorSet
 
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux
@@ -45,7 +45,7 @@ type Backend interface {
 	Unicast(valSet ValidatorSet, payload []byte) error
 
 	// PreCommit write seal to header and assemble new qc
-	PreCommit(view *View, proposal Proposal, seals [][]byte) (Proposal, *QuorumCert, error)
+	PreCommit(proposal Proposal, seals [][]byte) (Proposal, error)
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
@@ -59,17 +59,15 @@ type Backend interface {
 	// the time difference of the proposal and current time is also returned.
 	VerifyUnsealedProposal(Proposal) (time.Duration, error)
 
-	VerifyQuorumCert(*QuorumCert) error
-
 	// Sign signs input data with the backend's private key
-	Sign([]byte) ([]byte, error)
+	// Sign([]byte) ([]byte, error)
 
 	//// SignTx signs transaction data with backend's private key
 	//SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error)
 
 	// CheckSignature verifies the signature by checking if it's signed by
 	// the given validator
-	CheckSignature(data []byte, addr common.Address, sig []byte) error
+	// CheckSignature(data []byte, addr common.Address, sig []byte) error
 
 	// LastProposal retrieves latest committed proposal and the address of proposer
 	LastProposal() (Proposal, common.Address)

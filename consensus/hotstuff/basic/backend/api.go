@@ -21,7 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 )
 
-// API is a user facing RPC API to allow controlling the signer and voting
+// API is a user facing RPC API to allow controlling the address and voting
 // mechanisms of the HotStuff scheme.
 type API struct {
 	chain    consensus.ChainHeaderReader

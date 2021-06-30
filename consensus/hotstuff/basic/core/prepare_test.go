@@ -49,7 +49,7 @@ func TestHandlePrepare(t *testing.T) {
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			leader := sys.getLeader()
-			val := validator.New(leader.address)
+			val := validator.New(leader.Address())
 			var data *MsgPrepare
 			for _, backend := range sys.backends {
 				core := backend.core()
@@ -75,7 +75,7 @@ func TestHandlePrepare(t *testing.T) {
 				core.current.height = new(big.Int).SetUint64(H + 1)
 			}
 			msg := newP2PMsg(data)
-			leader := validator.New(sys.getLeader().address)
+			leader := validator.New(sys.getLeader().Address())
 			return &testcase{
 				Sys:       sys,
 				Msg:       msg,
@@ -94,7 +94,7 @@ func TestHandlePrepare(t *testing.T) {
 				core.current.round = new(big.Int).SetUint64(R - 1)
 			}
 			msg := newP2PMsg(data)
-			leader := validator.New(sys.getLeader().address)
+			leader := validator.New(sys.getLeader().Address())
 			return &testcase{
 				Sys:       sys,
 				Msg:       msg,
@@ -112,7 +112,7 @@ func TestHandlePrepare(t *testing.T) {
 				data = newPrepareMsg(core)
 			}
 			msg := newP2PMsg(data)
-			wrongLeader := validator.New(sys.getRepos()[0].address)
+			wrongLeader := validator.New(sys.getRepos()[0].Address())
 			return &testcase{
 				Sys:       sys,
 				Msg:       msg,
@@ -125,7 +125,7 @@ func TestHandlePrepare(t *testing.T) {
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			leader := sys.getLeader()
-			val := validator.New(leader.address)
+			val := validator.New(leader.Address())
 			var data *MsgPrepare
 			for _, backend := range sys.backends {
 				core := backend.core()
@@ -147,7 +147,7 @@ func TestHandlePrepare(t *testing.T) {
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			leader := sys.getLeader()
-			val := validator.New(leader.address)
+			val := validator.New(leader.Address())
 			var data *MsgPrepare
 			for _, backend := range sys.backends {
 				core := backend.core()

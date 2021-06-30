@@ -28,7 +28,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 		Msg:  payload,
 	})
 
-	logger.Info("sendNewView", "repo", c.address.Hex())
+	logger.Info("sendNewView", "repo", c.Address().Hex())
 }
 
 func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
@@ -50,7 +50,7 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 	}
 	// todo: catch up new view if `errFutureMessage`
 
-	if err := c.backend.VerifyQuorumCert(msg.PrepareQC); err != nil {
+	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
 		return errVerifyQC
 	}

@@ -23,6 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
+	"golang.org/x/crypto/sha3"
 )
 
 // Proposal supports retrieving height and serialized block to be used during HotStuff consensus.
@@ -124,14 +125,14 @@ func (b *Vote) String() string {
 type QuorumCert struct {
 	View     *View
 	Hash     common.Hash
-	SigHash  common.Hash
+	SealHash common.Hash // header hash without proposer signature and multi-sig
 	Proposer common.Address
 	Extra    []byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{qc.View, qc.Hash, qc.SigHash, qc.Proposer, qc.Extra})
+	return rlp.Encode(w, []interface{}{qc.View, qc.Hash, qc.SealHash, qc.Proposer, qc.Extra})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
@@ -139,7 +140,7 @@ func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 	var cert struct {
 		View     *View
 		Hash     common.Hash
-		SigHash  common.Hash
+		SealHash common.Hash
 		Proposer common.Address
 		Extra    []byte
 	}
@@ -147,7 +148,7 @@ func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&cert); err != nil {
 		return err
 	}
-	qc.View, qc.Hash, qc.SigHash, qc.Proposer, qc.Extra = cert.View, cert.Hash, cert.SigHash, cert.Proposer, cert.Extra
+	qc.View, qc.Hash, qc.SealHash, qc.Proposer, qc.Extra = cert.View, cert.Hash, cert.SealHash, cert.Proposer, cert.Extra
 	return nil
 }
 
@@ -165,4 +166,11 @@ func (qc *QuorumCert) Copy() *QuorumCert {
 		return nil
 	}
 	return newQC
+}
+
+func RLPHash(v interface{}) (h common.Hash) {
+	hw := sha3.NewLegacyKeccak256()
+	rlp.Encode(hw, v)
+	hw.Sum(h[:0])
+	return h
 }

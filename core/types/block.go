@@ -98,6 +98,13 @@ type headerMarshaling struct {
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
+	// If the mix digest is equivalent to the predefined Hotstuff digest, use Hotstuff specific hash calculation.
+	if h.MixDigest == HotstuffDigest {
+		// Seal is reserved in extra-data. To prove block is signed by the proposer.
+		if hotstuffHeader := HotstuffFilteredHeader(h, true); hotstuffHeader != nil {
+			return rlpHash(hotstuffHeader)
+		}
+	}
 	return rlpHash(h)
 }
 

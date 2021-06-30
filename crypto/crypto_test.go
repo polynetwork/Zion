@@ -103,7 +103,7 @@ func TestSign(t *testing.T) {
 	}
 	recoveredPub, err := Ecrecover(msg, sig)
 	if err != nil {
-		t.Errorf("ECRecover error: %s", err)
+		t.Errorf("Recover error: %s", err)
 	}
 	pubKey, _ := UnmarshalPubkey(recoveredPub)
 	recoveredAddr := PubkeyToAddress(*pubKey)
@@ -114,7 +114,7 @@ func TestSign(t *testing.T) {
 	// should be equal to SigToPub
 	recoveredPub2, err := SigToPub(msg, sig)
 	if err != nil {
-		t.Errorf("ECRecover error: %s", err)
+		t.Errorf("Recover error: %s", err)
 	}
 	recoveredAddr2 := PubkeyToAddress(*recoveredPub2)
 	if addr != recoveredAddr2 {

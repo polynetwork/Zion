@@ -25,7 +25,7 @@ func (c *core) handleRequest(req *hotstuff.Request) error {
 		c.current.SetPendingRequest(req)
 	}
 
-	logger.Trace("store request", "validator", c.address.Hex())
+	logger.Trace("store request", "validator", c.Address().Hex())
 	return nil
 }
 

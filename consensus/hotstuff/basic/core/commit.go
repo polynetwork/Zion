@@ -73,7 +73,7 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 	if err := c.checkPrepareQC(msg); err != nil {
 		return err
 	}
-	if err := c.backend.VerifyQuorumCert(msg); err != nil {
+	if err := c.signer.VerifyQC(msg, c.valSet); err != nil {
 		return errVerifyQC
 	}
 	if !c.IsProposer() && c.current.State() < StateLocked {

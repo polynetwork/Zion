@@ -51,7 +51,7 @@ func TestHandlePreCommitVote(t *testing.T) {
 
 				vote := newVote(core, proposal.Hash())
 				msg := newVoteMsg(vote)
-				msg.Address = core.address
+				msg.Address = core.Address()
 				val := validator.New(msg.Address)
 
 				votes[val] = msg
@@ -77,7 +77,7 @@ func TestHandlePreCommitVote(t *testing.T) {
 				vote.View.Height = new(big.Int).SetUint64(H - 1)
 
 				msg := newVoteMsg(vote)
-				msg.Address = core.address
+				msg.Address = core.Address()
 				val := validator.New(msg.Address)
 
 				votes[val] = msg
@@ -103,7 +103,7 @@ func TestHandlePreCommitVote(t *testing.T) {
 				vote.View.Round = new(big.Int).SetUint64(R + 1)
 
 				msg := newVoteMsg(vote)
-				msg.Address = core.address
+				msg.Address = core.Address()
 				val := validator.New(msg.Address)
 
 				votes[val] = msg
@@ -128,7 +128,7 @@ func TestHandlePreCommitVote(t *testing.T) {
 				vote := newVote(core, proposal.Hash())
 				vote.Digest = common.HexToHash("0x1234")
 				msg := newVoteMsg(vote)
-				msg.Address = core.address
+				msg.Address = core.Address()
 				val := validator.New(msg.Address)
 
 				votes[val] = msg
@@ -184,7 +184,7 @@ func TestHandleCommit(t *testing.T) {
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			leader := sys.getLeader()
-			val := validator.New(leader.address)
+			val := validator.New(leader.Address())
 			var (
 				proposal hotstuff.Proposal
 				qc       *hotstuff.QuorumCert
@@ -208,7 +208,7 @@ func TestHandleCommit(t *testing.T) {
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			leader := sys.getLeader()
-			val := validator.New(leader.address)
+			val := validator.New(leader.Address())
 			var (
 				proposal hotstuff.Proposal
 				qc       *hotstuff.QuorumCert
@@ -233,7 +233,7 @@ func TestHandleCommit(t *testing.T) {
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			leader := sys.getLeader()
-			val := validator.New(leader.address)
+			val := validator.New(leader.Address())
 			var (
 				proposal hotstuff.Proposal
 				qc       *hotstuff.QuorumCert
@@ -268,7 +268,7 @@ func TestHandleCommit(t *testing.T) {
 				core.current.SetPrepareQC(qc)
 			}
 			msg := newP2PMsg(qc)
-			val := validator.New(sys.getRepos()[0].address)
+			val := validator.New(sys.getRepos()[0].Address())
 			return &testcase{
 				Sys:       sys,
 				Msg:       msg,
@@ -291,7 +291,7 @@ func TestHandleCommit(t *testing.T) {
 				core.current.SetPrepareQC(&hotstuff.QuorumCert{Hash: common.HexToHash("0x124")})
 			}
 			msg := newP2PMsg(qc)
-			val := validator.New(sys.getLeader().address)
+			val := validator.New(sys.getLeader().Address())
 			return &testcase{
 				Sys:       sys,
 				Msg:       msg,
@@ -315,7 +315,7 @@ func TestHandleCommit(t *testing.T) {
 				core.current.SetState(StateLocked)
 			}
 			msg := newP2PMsg(qc)
-			val := validator.New(sys.getLeader().address)
+			val := validator.New(sys.getLeader().Address())
 			return &testcase{
 				Sys:       sys,
 				Msg:       msg,

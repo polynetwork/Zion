@@ -107,7 +107,7 @@ func (c *core) createNewProposal() (*MsgPrepare, error) {
 }
 
 func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
-	if err := c.backend.VerifyQuorumCert(highQC); err != nil {
+	if err := c.signer.VerifyQC(highQC, c.valSet); err != nil {
 		return err
 	}
 	block, ok := proposal.(*types.Block)

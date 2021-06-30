@@ -87,6 +87,17 @@ func (valSet *defaultSet) List() []hotstuff.Validator {
 	return valSet.validators
 }
 
+func (valSet *defaultSet) AddressList() []common.Address {
+	valSet.validatorMu.RLock()
+	defer valSet.validatorMu.RUnlock()
+
+	vals := make([]common.Address, valSet.Size())
+	for i, v := range valSet.List() {
+		vals[i] = v.Address()
+	}
+	return vals
+}
+
 func (valSet *defaultSet) GetByIndex(i uint64) hotstuff.Validator {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()

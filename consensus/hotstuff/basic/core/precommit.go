@@ -2,6 +2,7 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
@@ -31,11 +32,21 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.current.state < StatePrepared {
 		seals := c.getMessageSeals(size)
-		newProposal, prepareQC, err := c.backend.PreCommit(c.currentView(), c.current.Proposal(), seals)
+		newProposal, err := c.backend.PreCommit(c.current.Proposal(), seals)
 		if err != nil {
 			logger.Error("Failed to assemble committed seal", "err", err)
 			return err
 		}
+		block := newProposal.(*types.Block)
+		header := block.Header()
+		prepareQC := &hotstuff.QuorumCert{
+			View:     c.currentView(),
+			Hash:     newProposal.Hash(),
+			SealHash: c.signer.SigHash(header),
+			Proposer: header.Coinbase,
+			Extra:    header.Extra,
+		}
+
 		c.current.SetProposal(newProposal)
 		c.current.SetPrepareQC(prepareQC)
 		c.current.SetState(StatePrepared)
@@ -80,7 +91,7 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		return err
 	}
 	// todo compare high qc
-	if err := c.backend.VerifyQuorumCert(msg.PrepareQC); err != nil {
+	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
 		logger.Error("Failed to verify proposal", "err", err)
 		return errVerifyQC
 	}

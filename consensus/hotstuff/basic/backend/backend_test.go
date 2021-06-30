@@ -108,7 +108,7 @@ func TestCommit(t *testing.T) {
 			func() *types.Block {
 				chain, engine := newBlockChain(1)
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-				expectedBlock, _ := engine.updateBlock(block)
+				expectedBlock, _ := engine.UpdateBlock(block)
 				return expectedBlock
 			},
 		},
@@ -119,7 +119,7 @@ func TestCommit(t *testing.T) {
 			func() *types.Block {
 				chain, engine := newBlockChain(1)
 				block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-				expectedBlock, _ := engine.updateBlock(block)
+				expectedBlock, _ := engine.UpdateBlock(block)
 				return expectedBlock
 			},
 		},

@@ -51,7 +51,7 @@ func TestHandleCommitVote(t *testing.T) {
 
 				vote := newVote(core, proposal.Hash())
 				msg := newVoteMsg(vote)
-				msg.Address = core.address
+				msg.Address = core.Address()
 				val := validator.New(msg.Address)
 
 				votes[val] = msg
@@ -77,7 +77,7 @@ func TestHandleCommitVote(t *testing.T) {
 				vote.View.Height = new(big.Int).SetUint64(H - 1)
 
 				msg := newVoteMsg(vote)
-				msg.Address = core.address
+				msg.Address = core.Address()
 				val := validator.New(msg.Address)
 
 				votes[val] = msg
@@ -103,7 +103,7 @@ func TestHandleCommitVote(t *testing.T) {
 				vote.View.Round = new(big.Int).SetUint64(R + 1)
 
 				msg := newVoteMsg(vote)
-				msg.Address = core.address
+				msg.Address = core.Address()
 				val := validator.New(msg.Address)
 
 				votes[val] = msg
@@ -128,7 +128,7 @@ func TestHandleCommitVote(t *testing.T) {
 				vote := newVote(core, proposal.Hash())
 				vote.Digest = common.HexToHash("0x1234")
 				msg := newVoteMsg(vote)
-				msg.Address = core.address
+				msg.Address = core.Address()
 				val := validator.New(msg.Address)
 
 				votes[val] = msg
@@ -152,7 +152,7 @@ func TestHandleCommitVote(t *testing.T) {
 
 				vote := newVote(core, proposal.Hash())
 				msg := newVoteMsg(vote)
-				msg.Address = core.address
+				msg.Address = core.Address()
 				val := validator.New(msg.Address)
 
 				votes[val] = msg

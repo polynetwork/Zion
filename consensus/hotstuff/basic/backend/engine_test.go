@@ -45,7 +45,7 @@ func TestVerifyHeader(t *testing.T) {
 
 	// errEmptyCommittedSeals case
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	block, _ = engine.updateBlock(block)
+	block, _ = engine.UpdateBlock(block)
 	err := engine.VerifyHeader(chain, block.Header(), false)
 	assert.Equal(t, errEmptyCommittedSeals, err, "error mismatch")
 
@@ -102,10 +102,10 @@ func TestVerifyHeaders(t *testing.T) {
 		var b *types.Block
 		if i == 0 {
 			b = makeBlockWithoutSeal(chain, engine, genesis)
-			b, _ = engine.updateBlock(b)
+			b, _ = engine.UpdateBlock(b)
 		} else {
 			b = makeBlockWithoutSeal(chain, engine, blocks[i-1])
-			b, _ = engine.updateBlock(b)
+			b, _ = engine.UpdateBlock(b)
 		}
 		blocks = append(blocks, b)
 		headers = append(headers, blocks[i].Header())
@@ -352,7 +352,7 @@ func TestSealPreCommitOtherHash(t *testing.T) {
 func TestSealCommitted(t *testing.T) {
 	chain, engine := newBlockChain(1)
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	expectedBlock, _ := engine.updateBlock(block)
+	expectedBlock, _ := engine.UpdateBlock(block)
 	resultCh := make(chan *types.Block, 10)
 	go func() {
 		err := engine.Seal(chain, block, resultCh, make(chan struct{}))

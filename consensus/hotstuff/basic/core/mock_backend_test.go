@@ -42,6 +42,7 @@ type mockBackend struct {
 	sys *testSystem
 
 	engine CoreEngine
+	signer hotstuff.Signer
 	peers  hotstuff.ValidatorSet
 	events *event.TypeMux
 
@@ -61,6 +62,12 @@ func (m *mockBackend) core() *core {
 	return m.engine.(*core)
 }
 
+func (m *mockBackend) NewRequest(request hotstuff.Proposal) {
+	go m.events.Post(hotstuff.RequestEvent{
+		Proposal: request,
+	})
+}
+
 // ==============================================
 //
 // define the functions that needs to be provided for Istanbul.
@@ -70,7 +77,7 @@ func (m *mockBackend) Address() common.Address {
 }
 
 // Peers returns all connected peers
-func (m *mockBackend) Validators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
+func (m *mockBackend) Validators() hotstuff.ValidatorSet {
 	return m.peers
 }
 
@@ -107,14 +114,14 @@ func (m *mockBackend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) erro
 	return nil
 }
 
-func (m *mockBackend) PreCommit(view *hotstuff.View, proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, *hotstuff.QuorumCert, error) {
-	qc := &hotstuff.QuorumCert{
-		View: view,
-		Hash: proposal.Hash(),
-	}
-	qc.Proposer = proposal.(*types.Block).Header().Coinbase
-	qc.Extra = seals[0]
-	return proposal, qc, nil
+func (m *mockBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
+	//qc := &hotstuff.QuorumCert{
+	//	View: view,
+	//	Hash: proposal.Hash(),
+	//}
+	//qc.Proposer = proposal.(*types.Block).Header().Coinbase
+	//qc.Extra = seals[0]
+	return proposal, nil
 }
 
 func (m *mockBackend) Commit(proposal hotstuff.Proposal) error {
@@ -135,39 +142,6 @@ func (m *mockBackend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.D
 	return 0, nil
 }
 
-func (s *mockBackend) VerifyQuorumCert(qc *hotstuff.QuorumCert) error {
-	return nil
-}
-
-func (m *mockBackend) Sign(data []byte) ([]byte, error) {
-	//testLogger.Info("returning current backend address so that CheckValidatorSignature returns the same value")
-	return m.address.Bytes(), nil
-}
-
-// SignTx signs transaction data with backend's private key
-func (m *mockBackend) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
-	return nil, nil
-}
-
-func (m *mockBackend) CheckSignature([]byte, common.Address, []byte) error {
-	return nil
-}
-
-// todo: delete after test
-func (m *mockBackend) CheckValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return common.BytesToAddress(sig), nil
-}
-
-func (m *mockBackend) Hash(b interface{}) common.Hash {
-	return common.HexToHash("Test")
-}
-
-func (m *mockBackend) NewRequest(request hotstuff.Proposal) {
-	go m.events.Post(hotstuff.RequestEvent{
-		Proposal: request,
-	})
-}
-
 func (m *mockBackend) HasBadProposal(hash common.Hash) bool {
 	return false
 }
@@ -181,10 +155,6 @@ func (m *mockBackend) LastProposal() (hotstuff.Proposal, common.Address) {
 		block := proposal.(*types.Block)
 		return proposal, block.Coinbase()
 	}
-}
-
-func (m *mockBackend) CurrentProposer() (*big.Int, common.Address) {
-	return nil, common.Address{}
 }
 
 // Only block height 5 will return true
@@ -202,6 +172,59 @@ func (m *mockBackend) ParentValidators(proposal hotstuff.Proposal) hotstuff.Vali
 
 func (m *mockBackend) Close() error {
 	return nil
+}
+
+// ==============================================
+//
+// define the mock singer
+
+type mockSinger struct {
+	address common.Address
+}
+
+func (s *mockSinger) Address() common.Address {
+	return s.address
+}
+
+func (m *mockSinger) Sign(data []byte) ([]byte, error) {
+	return m.address.Bytes(), nil
+}
+
+// todo
+func (m *mockSinger) SigHash(header *types.Header) (hash common.Hash) {
+	return header.Hash()
+}
+
+func (s *mockSinger) Recover(h *types.Header) (common.Address, error) {
+	return h.Coinbase, nil
+}
+
+func (s *mockSinger) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
+	return nil, nil
+}
+
+func (s *mockSinger) FillExtraBeforeCommit(h *types.Header) error {
+	return nil
+}
+
+func (s *mockSinger) FillExtraAfterCommit(h *types.Header, committedSeals [][]byte) error {
+	return nil
+}
+
+func (m *mockSinger) VerifyHeader(header *types.Header, valSet hotstuff.ValidatorSet, seal bool) error {
+	return nil
+}
+
+func (s *mockSinger) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.ValidatorSet) error {
+	return nil
+}
+
+func (m *mockSinger) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, signature []byte) (common.Address, error) {
+	return common.BytesToAddress(signature), nil
+}
+
+func (s *mockSinger) WrapCommittedSeal(hash common.Hash) []byte {
+	return hash.Bytes()
 }
 
 // ==============================================
@@ -237,7 +260,7 @@ func (s *testSystem) getLeaderByRound(lastProposer common.Address, round *big.In
 	proposer := valset.GetProposer().Address()
 	for _, v := range s.backends {
 		core := v.core()
-		if core.address == proposer {
+		if core.Address() == proposer {
 			return v.core()
 		}
 	}
@@ -292,6 +315,9 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 		backend.peers = vset
 		backend.address = vset.GetByIndex(i).Address()
 
+		signer := &mockSinger{address: backend.address}
+		backend.signer = signer
+
 		core := New(backend, config, vset).(*core)
 		core.current = newRoundState(&hotstuff.View{
 			Height: new(big.Int).SetUint64(h),
@@ -300,7 +326,10 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 		core.valSet = vset
 		core.logger = testLogger
 		core.backend = backend
-		core.validateFn = backend.CheckValidatorSignature
+		core.signer = signer
+		core.validateFn = func(data []byte, sig []byte) (common.Address, error) {
+			return signer.CheckSignature(vset, data, sig)
+		}
 
 		backend.engine = core
 	}
@@ -321,7 +350,7 @@ func (t *testSystem) listen() {
 		case m := <-t.unicastQueuedMessage:
 			leader := t.getLeader()
 			go leader.sendEvent(m.Event)
-			testLogger.Info("unicast", "Address", m.Address.Hex(), "leader", leader.address.Hex(), "height", m.View.Height, "round", m.View.Round)
+			testLogger.Info("unicast", "Address", m.Address.Hex(), "leader", leader.Address().Hex(), "height", m.View.Height, "round", m.View.Round)
 		}
 	}
 }
@@ -360,6 +389,7 @@ func (t *testSystem) NewBackend(id uint64) *mockBackend {
 		sys:    t,
 		events: new(event.TypeMux),
 		db:     ethDB,
+		signer: nil,
 	}
 
 	t.backends[id] = backend

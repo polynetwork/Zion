@@ -23,7 +23,7 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 		return err
 	}
 	// todo: should be lockedQC.hash
-	//if vote.Digest != c.current.LockedQC().SigHash {
+	//if vote.Digest != c.current.LockedQC().SealHash {
 	if vote.Digest != c.current.Proposal().Hash() {
 		return errInvalidDigest
 	}

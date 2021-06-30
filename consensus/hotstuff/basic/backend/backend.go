@@ -20,7 +20,6 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic"
 	"math/big"
 	"sync"
 	"time"
@@ -31,7 +30,6 @@ import (
 	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -44,7 +42,7 @@ const (
 	fetcherID = "hotstuff"
 )
 
-// // SignerFn is a signer callback function to request a header to be signed by a
+// // SignerFn is a address callback function to request a header to be signed by a
 // // backing account. (Avoid import circle...)
 // type SignerFn func(accounts.Account, string, []byte) ([]byte, error)
 
@@ -53,6 +51,7 @@ type backend struct {
 	config *hotstuff.Config
 	//db           ethdb.Database // Database to store and retrieve necessary information
 	core         hsc.CoreEngine
+	signer       hotstuff.Signer
 	chain        consensus.ChainReader
 	currentBlock func() *types.Block
 	hasBadBlock  func(hash common.Hash) bool
@@ -60,19 +59,15 @@ type backend struct {
 
 	valset         hotstuff.ValidatorSet
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
-	signatures     *lru.ARCCache // Signatures of recent blocks to speed up mining
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
-
-	privateKey *ecdsa.PrivateKey
-	signer     common.Address // Ethereum address of the signing key
 
 	// The channels for hotstuff engine notifications
 	sealMu            sync.Mutex
 	commitCh          chan *types.Block
 	proposedBlockHash common.Hash
 	coreStarted       bool
-	sigMu             sync.RWMutex // Protects the signer fields
+	sigMu             sync.RWMutex // Protects the address fields
 	consenMu          sync.Mutex   // Ensure a round can only start after the last one has finished
 	coreMu            sync.RWMutex
 
@@ -86,10 +81,10 @@ type backend struct {
 
 func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
-	signatures, _ := lru.NewARC(inmemorySignatures)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
+	signer := NewSigner(privateKey, byte(hsc.MsgTypePrepareVote))
 	backend := &backend{
 		config: config,
 		//db:             db,
@@ -98,8 +93,7 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		commitCh:       make(chan *types.Block, 1),
 		coreStarted:    false,
 		eventMux:       new(event.TypeMux),
-		privateKey:     privateKey,
-		signatures:     signatures,
+		signer:         signer,
 		recentMessages: recentMessages,
 		knownMessages:  knownMessages,
 		recents:        recents,
@@ -112,12 +106,12 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 
 // Address implements hotstuff.Backend.Address
 func (s *backend) Address() common.Address {
-	return s.signer
+	return s.signer.Address()
 }
 
 // Validators implements hotstuff.Backend.Validators
-func (s *backend) Validators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
-	return s.getValidators()
+func (s *backend) Validators() hotstuff.ValidatorSet {
+	return s.snap()
 }
 
 // EventMux implements hotstuff.Backend.EventMux
@@ -180,7 +174,7 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	s.knownMessages.Add(hash, true)
 
 	// send to self
-	if s.signer == target {
+	if s.Address() == target {
 		go s.EventMux().Post(msg)
 		return nil
 	}
@@ -207,33 +201,25 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 }
 
 // PreCommit implements hotstuff.Backend.PreCommit
-func (s *backend) PreCommit(view *hotstuff.View, proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, *hotstuff.QuorumCert, error) {
+func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
 	// Check if the proposal is a valid block
 	block := &types.Block{}
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		s.logger.Error("Invalid proposal, %v", proposal)
-		return nil, nil, errInvalidProposal
+		return nil, errInvalidProposal
 	}
 
 	h := block.Header()
 	// Append seals into extra-data
-	if err := writeCommittedSeals(h, seals); err != nil {
-		return nil, nil, err
+	if err := s.signer.FillExtraAfterCommit(h, seals); err != nil {
+		return nil, err
 	}
 
 	// update block's header
 	block = block.WithSeal(h)
 
-	//
-	qc := new(hotstuff.QuorumCert)
-	qc.View = view
-	qc.Hash = proposal.Hash()
-	qc.SigHash = basic.SigHash(h)
-	qc.Proposer = h.Coinbase
-	qc.Extra = h.Extra
-
-	return block, qc, nil
+	return block, nil
 }
 
 func (s *backend) Commit(proposal hotstuff.Proposal) error {
@@ -252,14 +238,11 @@ func (s *backend) Commit(proposal hotstuff.Proposal) error {
 	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
 	//    the next block and the previous Seal() will be stopped (need to check this --- saber).
 	// -- otherwise, an error will be returned and a round change event will be fired.
-	// todo
-	//if s.proposedBlockHash == block.Hash() {
-	//	// feed block hash to Seal() and wait the Seal() result
-	//	s.commitCh <- block
-	//	return nil
-	//}
-	s.commitCh <- block
-	return nil
+	if s.proposedBlockHash == block.Hash() {
+		// feed block hash to Seal() and wait the Seal() result
+		s.commitCh <- block
+		return nil
+	}
 	if s.broadcaster != nil {
 		s.broadcaster.Enqueue(fetcherID, block)
 	}
@@ -326,64 +309,24 @@ func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Durat
 	}
 
 	// verify the header of proposed block
-	err := s.VerifyHeader(s.chain, block.Header(), false)
-	if err == nil {
+	if err := s.VerifyHeader(s.chain, block.Header(), false); err == nil {
 		return 0, nil
 	} else if err == consensus.ErrFutureBlock {
 		return time.Unix(int64(block.Header().Time), 0).Sub(now()), consensus.ErrFutureBlock
+	} else {
+		return 0, err
 	}
-	return 0, err
 }
 
-func (s *backend) VerifyQuorumCert(qc *hotstuff.QuorumCert) error {
-	if qc.View.Height.Uint64() == 0 {
-		return nil
-	}
-	extra, err := types.ExtractHotstuffExtraPayload(qc.Extra)
-	if err != nil {
-		return err
-	}
+//func (s *backend) VerifyQC(qc *hotstuff.QuorumCert) error {
+//	snap := s.snap()
+//	return s.signer.VerifyQC(qc, snap)
+//}
 
-	addr, err := basic.GetSignatureAddress(qc.SigHash[:], extra.Seal)
-	if err != nil {
-		return err
-	}
-	if addr != qc.Proposer {
-		return errInvalidSigner
-	}
-
-	snap := s.getValidators().Copy()
-	if idx, _ := snap.GetByAddress(addr); idx < 0 {
-		return errInvalidSigner
-	}
-
-	committers, err := s.signersFromCommittedSeals(qc.Hash, extra.CommittedSeal)
-	if err != nil {
-		return err
-	}
-
-	return s.checkValidatorQuorum(committers, snap)
-}
-
-// Sign implements hotstuff.Backend.Sign
-func (s *backend) Sign(data []byte) ([]byte, error) {
-	hashData := crypto.Keccak256(data)
-	return crypto.Sign(hashData, s.privateKey)
-}
-
-// CheckSignature implements hotstuff.Backend.CheckSignature
-func (s *backend) CheckSignature(data []byte, address common.Address, sig []byte) error {
-	signer, err := hotstuff.GetSignatureAddress(data, sig)
-	if err != nil {
-		log.Error("Failed to get signer address", "err", err)
-		return err
-	}
-	// Compare derived addresses
-	if signer != address {
-		return errInvalidSignature
-	}
-	return nil
-}
+//// Sign implements hotstuff.Backend.Sign
+//func (s *backend) Sign(data []byte) ([]byte, error) {
+//	return s.signer.Sign(data)
+//}
 
 func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 	if s.currentBlock == nil {
@@ -423,21 +366,7 @@ func (s *backend) GetProposer(number uint64) common.Address {
 // todo:
 // ParentValidators implements hotstuff.Backend.GetParentValidators
 func (s *backend) ParentValidators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
-	return s.getValidators()
-}
-
-// todo: use snap or reconfig validators group
-func (s *backend) getValidators() hotstuff.ValidatorSet {
-	return s.valset
-}
-
-func (s *backend) getValidatorsAddress() []common.Address {
-	valset := s.getValidators()
-	list := make([]common.Address, valset.Size())
-	for i, v := range valset.List() {
-		list[i] = v.Address()
-	}
-	return list
+	return s.snap()
 }
 
 func (s *backend) HasBadProposal(hash common.Hash) bool {

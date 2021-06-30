@@ -12,12 +12,14 @@ import (
 )
 
 type core struct {
-	config  *hotstuff.Config
-	address common.Address
-	logger  log.Logger
+	config *hotstuff.Config
+	//address common.Address
+	logger log.Logger
 
-	current  *roundState
-	backend  hotstuff.Backend
+	current *roundState
+	backend hotstuff.Backend
+	signer  hotstuff.Signer
+
 	valSet   hotstuff.ValidatorSet
 	requests *requestSet
 
@@ -25,7 +27,7 @@ type core struct {
 	timeoutSub        *event.TypeMuxSubscription
 	finalCommittedSub *event.TypeMuxSubscription
 
-	roundChangeTimer    *time.Timer
+	roundChangeTimer *time.Timer
 
 	validateFn func([]byte, []byte) (common.Address, error) // == c.checkValidatorSignature
 }
@@ -33,19 +35,18 @@ type core struct {
 // New creates an HotStuff consensus core
 func New(backend hotstuff.Backend, config *hotstuff.Config, valSet hotstuff.ValidatorSet) CoreEngine {
 	c := &core{
-		config:             config,
-		address:            backend.Address(),
-		valSet:             valSet,
-		logger:             log.New("address", backend.Address()),
-		backend:            backend,
+		config:  config,
+		logger:  log.New("address", backend.Address()),
+		backend: backend,
 	}
 	c.requests = newRequestSet()
 	c.validateFn = c.checkValidatorSignature
+	c.valSet = valSet
 	return c
 }
 
 func (c *core) Address() common.Address {
-	return c.backend.Address()
+	return c.signer.Address()
 }
 
 func (c *core) IsProposer() bool {

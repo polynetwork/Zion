@@ -411,7 +411,7 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 		GasLimit:   11500000,
 		Difficulty: big.NewInt(1),
 		Alloc: map[common.Address]GenesisAccount{
-			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // ECRecover
+			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // Recover
 			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256
 			common.BytesToAddress([]byte{3}): {Balance: big.NewInt(1)}, // RIPEMD
 			common.BytesToAddress([]byte{4}): {Balance: big.NewInt(1)}, // Identity

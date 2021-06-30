@@ -40,7 +40,7 @@ func TestHandleMsg(t *testing.T) {
 
 	v0 := sys.backends[0]
 	r0 := v0.core()
-	_, val := v0.Validators(nil).GetByAddress(v0.Address())
+	_, val := v0.Validators().GetByAddress(v0.Address())
 
 	// decode new view
 	{

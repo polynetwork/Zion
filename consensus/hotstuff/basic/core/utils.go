@@ -1,13 +1,11 @@
 package core
 
 import (
-	"bytes"
-	"github.com/ethereum/go-ethereum/core/types"
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func (c *core) checkMsgFromProposer(src hotstuff.Validator) error {
@@ -89,7 +87,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	msg.Signature, err = c.backend.Sign(data)
+	msg.Signature, err = c.signer.Sign(data)
 	if err != nil {
 		return nil, err
 	}
@@ -108,8 +106,8 @@ func (c *core) writeMessageSeal(msg *message) (err error) {
 	msg.CommittedSeal = []byte{}
 	// Assign the CommittedSeal if it's a COMMIT message and proposal is not nil
 	if msg.Code == MsgTypePrepareVote && c.current.Proposal() != nil {
-		seal := PrepareCommittedSeal(c.current.Proposal().Hash())
-		if msg.CommittedSeal, err = c.backend.Sign(seal); err != nil {
+		seal := c.signer.WrapCommittedSeal(c.current.Proposal().Hash())
+		if msg.CommittedSeal, err = c.signer.Sign(seal); err != nil {
 			return
 		}
 	}
@@ -151,52 +149,11 @@ func (c *core) broadcast(msg *message) {
 }
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return hotstuff.CheckValidatorSignature(c.valSet, data, sig)
+	return c.signer.CheckSignature(c.valSet, data, sig)
 }
 
 func (c *core) Q() int {
 	return c.valSet.Q()
-}
-
-// PrepareCommittedSeal returns a committed seal for the given hash
-func PrepareCommittedSeal(hash common.Hash) []byte {
-	var buf bytes.Buffer
-	buf.Write(hash.Bytes())
-	buf.Write([]byte{byte(MsgTypePrepareVote)})
-	return buf.Bytes()
-}
-
-// GetSignatureAddress gets the signer address from the signature
-func GetSignatureAddress(data []byte, sig []byte) (common.Address, error) {
-	// 1. Keccak data
-	hashData := crypto.Keccak256(data)
-	// 2. Recover public key
-	pubkey, err := crypto.SigToPub(hashData, sig)
-	if err != nil {
-		return common.Address{}, err
-	}
-	return crypto.PubkeyToAddress(*pubkey), nil
-}
-
-func GetSignerFromCommittedSeal(hash common.Hash, sig []byte) (common.Address, error) {
-	proposalSeal := PrepareCommittedSeal(hash)
-	return GetSignatureAddress(proposalSeal, sig)
-}
-
-func GetSignersFromCommittedSeal(hash common.Hash, sigs [][]byte) ([]common.Address, error) {
-	var addrs []common.Address
-	proposalSeal := PrepareCommittedSeal(hash)
-
-	// 1. Get committed seals from current header
-	for _, sig := range sigs {
-		// 2. Get the original address by seal and parent block hash
-		addr, err := GetSignatureAddress(proposalSeal, sig)
-		if err != nil {
-			return nil, err
-		}
-		addrs = append(addrs, addr)
-	}
-	return addrs, nil
 }
 
 func Proposal2QC(proposal hotstuff.Proposal) *hotstuff.QuorumCert {

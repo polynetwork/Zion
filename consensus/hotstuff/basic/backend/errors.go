@@ -49,7 +49,7 @@ var (
 	errStartedEngine = errors.New("started engine")
 	// errInvalidSigner is returned if the msg is unsigned
 	errInvalidSigner = errors.New("message not signed by the sender")
-	// errDuplicateVote is returned if the signer vote is already sent
+	// errDuplicateVote is returned if the address vote is already sent
 	errDuplicateVote = errors.New("message not signed by the sender")
 	// errDecodeFailed is returned if the message can't be decode
 	errDecodeFailed = errors.New("decode p2p message failed")
