@@ -28,7 +28,7 @@ import (
 
 // TestSealStopChannel stop consensus before result committed
 func TestSealStopChannel(t *testing.T) {
-	chain, engine := newBlockChain(4)
+	chain, engine := singleNodeChain()
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	stop := make(chan struct{}, 1)
 	eventSub := engine.EventMux().Subscribe(hotstuff.RequestEvent{})
@@ -55,7 +55,7 @@ func TestSealStopChannel(t *testing.T) {
 }
 
 func TestSealPreCommitOtherHash(t *testing.T) {
-	chain, engine := newBlockChain(4)
+	chain, engine := singleNodeChain()
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	otherBlock := makeBlockWithoutSeal(chain, engine, block)
 	expectedCommittedSeal := append([]byte{1, 2, 3}, bytes.Repeat([]byte{0x00}, types.HotstuffExtraSeal-3)...)
@@ -96,7 +96,7 @@ func TestSealPreCommitOtherHash(t *testing.T) {
 }
 
 func TestSealCommitted(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine := singleNodeChain()
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	header := block.Header()
 
@@ -119,4 +119,13 @@ func TestSealCommitted(t *testing.T) {
 	if finalBlock.Hash() != expectedBlock.Hash() {
 		t.Errorf("hash mismatch: have %v, want %v", finalBlock.Hash(), expectedBlock.Hash())
 	}
+}
+
+// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/basic/backend -run TestInsertChain
+func TestInsertChain(t *testing.T) {
+	chain, engine := singleNodeChain()
+	expectBlock := makeBlock(t, chain, engine, chain.Genesis())
+	chain.InsertChain(types.Blocks{expectBlock})
+	block := chain.GetBlockByNumber(1)
+	assert.Equal(t, expectBlock, block)
 }

@@ -73,7 +73,7 @@ func TestCheckValidatorSignature(t *testing.T) {
 }
 
 func TestPrepare(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine := singleNodeChain()
 	header := makeHeader(chain.Genesis(), engine.config)
 	assert.NoError(t, engine.Prepare(chain, header))
 
@@ -82,7 +82,7 @@ func TestPrepare(t *testing.T) {
 }
 
 func TestVerifyHeader(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine := singleNodeChain()
 
 	// errEmptyCommittedSeals case
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
@@ -131,7 +131,7 @@ func TestVerifyHeader(t *testing.T) {
 }
 
 func TestVerifyHeaders(t *testing.T) {
-	chain, engine := newBlockChain(1)
+	chain, engine := singleNodeChain()
 	genesis := chain.Genesis()
 
 	// success case

@@ -29,7 +29,7 @@ import (
 )
 
 func TestHotstuffMessage(t *testing.T) {
-	_, backend := newBlockChain(1)
+	_, backend := singleNodeChain()
 
 	// generate one msg
 	data := []byte("data1")
@@ -65,7 +65,7 @@ func TestHotstuffMessage(t *testing.T) {
 }
 
 func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
-	_, backend := newBlockChain(1)
+	_, backend := singleNodeChain()
 	arbitraryAddress := common.HexToAddress("arbitrary")
 	arbitraryBlock, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, false)
 	postAndWait(backend, arbitraryBlock, t)
@@ -79,7 +79,7 @@ func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
 }
 
 func TestHandleNewBlockMessage_whenNotAProposedBlock(t *testing.T) {
-	_, backend := newBlockChain(1)
+	_, backend := singleNodeChain()
 	arbitraryAddress := common.HexToAddress("arbitrary")
 	_, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, false)
 	postAndWait(backend, types.NewBlock(&types.Header{
@@ -98,7 +98,7 @@ func TestHandleNewBlockMessage_whenNotAProposedBlock(t *testing.T) {
 }
 
 func TestHandleNewBlockMessage_whenFailToDecode(t *testing.T) {
-	_, backend := newBlockChain(1)
+	_, backend := singleNodeChain()
 	arbitraryAddress := common.HexToAddress("arbitrary")
 	_, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, true)
 	postAndWait(backend, types.NewBlock(&types.Header{

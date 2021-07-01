@@ -46,7 +46,7 @@ func getGenesisAndKeys(n int) (*core.Genesis, []*ecdsa.PrivateKey, hotstuff.Vali
 	genesis.Mixhash = types.HotstuffDigest
 
 	appendValidators(genesis, addrs)
-	valset := validator.NewSet(addrs, hotstuff.RoundRobin)
+	valset := makeValSet(addrs)
 	return genesis, nodeKeys, valset
 }
 
@@ -84,13 +84,34 @@ func makeHeader(parent *types.Block, config *hotstuff.Config) *types.Header {
 	return header
 }
 
-func makeBlock(chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
-	block := makeBlockWithoutSeal(chain, engine, parent)
-	stopCh := make(chan struct{})
+func makeBlock(t *testing.T, chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
+	//block := makeBlockWithoutSeal(chain, engine, parent)
+	//header := block.Header()
+	//seal, _ := engine.signer.Sign(engine.signer.SigHash(block.Header()).Bytes())
+	//_ = engine.signer.FillExtraBeforeCommit(header, seal)
+	//block = block.WithSeal(header)
+	//
+	//stopCh := make(chan struct{})
+	//resultCh := make(chan *types.Block, 10)
+	//go engine.Seal(chain, block, resultCh, stopCh)
+	//blk := <-resultCh
+	//return blk
+
+	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+	header := block.Header()
+
+	seal, _ := engine.signer.Sign(engine.signer.SigHash(header).Bytes())
+	engine.signer.FillExtraBeforeCommit(header, seal)
+	expectBlock := block.WithSeal(header)
+
 	resultCh := make(chan *types.Block, 10)
-	go engine.Seal(chain, block, resultCh, stopCh)
-	blk := <-resultCh
-	return blk
+	go func() {
+		if err := engine.Seal(chain, expectBlock, resultCh, make(chan struct{})); err != nil {
+			t.Errorf("seal block failed, err: %s", err)
+		}
+	}()
+
+	return <-resultCh
 }
 
 func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
@@ -104,8 +125,8 @@ func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
-func newBlockChain(n int) (*core.BlockChain, *backend) {
-	genesis, nodeKeys, valset := getGenesisAndKeys(n)
+func singleNodeChain() (*core.BlockChain, *backend) {
+	genesis, nodeKeys, valset := getGenesisAndKeys(1)
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultConfig
 	// Use the first key as private key
@@ -122,16 +143,6 @@ func newBlockChain(n int) (*core.BlockChain, *backend) {
 	if err != nil {
 		panic(err)
 	}
-
-	//proposerAddr := valset.GetProposer().Address()
-
-	//// find proposer key
-	//for _, key := range nodeKeys {
-	//	addr := crypto.PubkeyToAddress(key.PublicKey)
-	//	if addr.String() == proposerAddr.String() {
-	//		b.signer = NewSigner(key, 3)
-	//	}
-	//}
 
 	b.Start(blockchain, blockchain.CurrentBlock, nil)
 
@@ -183,11 +194,6 @@ func (slice Keys) Less(i, j int) bool {
 
 func (slice Keys) Swap(i, j int) {
 	slice[i], slice[j] = slice[j], slice[i]
-}
-
-func newBackend() (b *backend) {
-	_, b = newBlockChain(4)
-	return
 }
 
 func makeMsg(msgcode uint64, data interface{}) p2p.Msg {
