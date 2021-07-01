@@ -85,18 +85,6 @@ func makeHeader(parent *types.Block, config *hotstuff.Config) *types.Header {
 }
 
 func makeBlock(t *testing.T, chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
-	//block := makeBlockWithoutSeal(chain, engine, parent)
-	//header := block.Header()
-	//seal, _ := engine.signer.Sign(engine.signer.SigHash(block.Header()).Bytes())
-	//_ = engine.signer.FillExtraBeforeCommit(header, seal)
-	//block = block.WithSeal(header)
-	//
-	//stopCh := make(chan struct{})
-	//resultCh := make(chan *types.Block, 10)
-	//go engine.Seal(chain, block, resultCh, stopCh)
-	//blk := <-resultCh
-	//return blk
-
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	header := block.Header()
 

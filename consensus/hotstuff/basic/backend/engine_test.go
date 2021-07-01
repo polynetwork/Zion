@@ -129,3 +129,5 @@ func TestInsertChain(t *testing.T) {
 	block := chain.GetBlockByNumber(1)
 	assert.Equal(t, expectBlock, block)
 }
+
+// todo: mock p2p
