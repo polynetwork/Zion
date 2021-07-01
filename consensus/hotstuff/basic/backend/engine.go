@@ -129,7 +129,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	if err = s.signer.FillExtraBeforeCommit(header); err != nil {
 		return err
 	}
-	block.WithSeal(header)
+	block = block.WithSeal(header)
 
 	delay := time.Unix(int64(block.Header().Time), 0).Sub(now())
 

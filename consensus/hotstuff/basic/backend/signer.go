@@ -69,7 +69,7 @@ func (s *SignerImpl) Recover(header *types.Header) (common.Address, error) {
 	// Retrieve the signature from the header extra-data
 	extra, err := types.ExtractHotstuffExtra(header)
 	if err != nil {
-		return common.Address{}, err
+		return common.Address{}, errInvalidExtraDataFormat
 	}
 
 	payload := s.SigHash(header).Bytes()
@@ -185,7 +185,7 @@ func (s *SignerImpl) VerifyHeader(header *types.Header, valSet hotstuff.Validato
 	if seal {
 		extra, err := types.ExtractHotstuffExtra(header)
 		if err != nil {
-			return err
+			return errInvalidExtraDataFormat
 		}
 		// The length of Committed seals should be larger than 0
 		if len(extra.CommittedSeal) == 0 {

@@ -233,3 +233,18 @@ func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Blo
 	arbitraryP2PMessage := p2p.Msg{Code: NewBlockMsg, Size: uint32(size), Payload: bytes.NewReader(payload)}
 	return arbitraryBlock, arbitraryP2PMessage
 }
+
+var emptySigner = &SignerImpl{}
+
+func (s *backend) UpdateBlock(block *types.Block) (*types.Block, error) {
+	header := block.Header()
+	if err := s.signer.FillExtraBeforeCommit(header); err != nil {
+		return nil, err
+	}
+	newBlock := block.WithSeal(header)
+	return newBlock, nil
+}
+
+func makeValSet(validators []common.Address) hotstuff.ValidatorSet {
+	return validator.NewSet(validators, hotstuff.RoundRobin)
+}
