@@ -22,9 +22,7 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 	if err := c.checkVote(vote); err != nil {
 		return err
 	}
-	// todo: should be lockedQC.hash
-	//if vote.Digest != c.current.LockedQC().SealHash {
-	if vote.Digest != c.current.Proposal().Hash() {
+	if vote.Digest != c.current.LockedQC().Hash {
 		return errInvalidDigest
 	}
 	if err := c.checkMsgToProposer(); err != nil {

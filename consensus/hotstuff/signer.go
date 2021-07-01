@@ -20,8 +20,8 @@ type Signer interface {
 	// PrepareExtra returns a extra-data of the given header and validators, without `Seal` and `CommittedSeal`
 	PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
 
-	// FillExtraBeforeCommit proposer sign `SigHash` to generate signature and fill block header extra
-	FillExtraBeforeCommit(h *types.Header) error
+	// FillExtraBeforeCommit writes the extra-data field of a block header with given seal.
+	FillExtraBeforeCommit(h *types.Header, seal []byte) error
 
 	// FillExtraAfterCommit writes the extra-data field of a block header with given committed seals.
 	FillExtraAfterCommit(h *types.Header, committedSeals [][]byte) error

@@ -238,7 +238,11 @@ var emptySigner = &SignerImpl{}
 
 func (s *backend) UpdateBlock(block *types.Block) (*types.Block, error) {
 	header := block.Header()
-	if err := s.signer.FillExtraBeforeCommit(header); err != nil {
+	seal, err := s.signer.Sign(s.signer.SigHash(header).Bytes())
+	if err != nil {
+		return nil, err
+	}
+	if err := s.signer.FillExtraBeforeCommit(header, seal); err != nil {
 		return nil, err
 	}
 	newBlock := block.WithSeal(header)

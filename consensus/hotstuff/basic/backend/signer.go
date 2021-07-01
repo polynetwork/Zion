@@ -108,13 +108,7 @@ func (s *SignerImpl) PrepareExtra(header *types.Header, valSet hotstuff.Validato
 	return append(buf.Bytes(), payload...), nil
 }
 
-func (s *SignerImpl) FillExtraBeforeCommit(h *types.Header) error {
-	// sign the hash
-	seal, err := s.Sign(s.SigHash(h).Bytes())
-	if err != nil {
-		return err
-	}
-
+func (s *SignerImpl) FillExtraBeforeCommit(h *types.Header, seal []byte) error {
 	// generate extra
 	if len(seal)%types.HotstuffExtraSeal != 0 {
 		return errInvalidSignature
@@ -260,7 +254,8 @@ func (s *SignerImpl) WrapCommittedSeal(hash common.Hash) []byte {
 	return buf.Bytes()
 }
 
-func checkValidatorQuorum(committers []common.Address, validators hotstuff.ValidatorSet) error {
+func checkValidatorQuorum(committers []common.Address, valSet hotstuff.ValidatorSet) error {
+	validators := valSet.Copy()
 	validSeal := 0
 	for _, addr := range committers {
 		if validators.RemoveValidator(addr) {

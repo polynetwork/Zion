@@ -126,7 +126,13 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
-	if err = s.signer.FillExtraBeforeCommit(header); err != nil {
+
+	// sign the sig hash and fill extra seal
+	seal, err := s.signer.Sign(s.signer.SigHash(header).Bytes())
+	if err != nil {
+		return err
+	}
+	if err = s.signer.FillExtraBeforeCommit(header, seal); err != nil {
 		return err
 	}
 	block = block.WithSeal(header)

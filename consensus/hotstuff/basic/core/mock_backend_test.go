@@ -203,7 +203,7 @@ func (s *mockSinger) PrepareExtra(header *types.Header, valSet hotstuff.Validato
 	return nil, nil
 }
 
-func (s *mockSinger) FillExtraBeforeCommit(h *types.Header) error {
+func (s *mockSinger) FillExtraBeforeCommit(h *types.Header, seal []byte) error {
 	return nil
 }
 
