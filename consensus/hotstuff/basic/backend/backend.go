@@ -122,7 +122,9 @@ func (s *backend) EventMux() *event.TypeMux {
 // Broadcast implements hotstuff.Backend.Broadcast
 func (s *backend) Broadcast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	// send to others
-	s.Gossip(valSet, payload)
+	if err := s.Gossip(valSet, payload); err != nil {
+		return err
+	}
 	// send to self
 	msg := hotstuff.MessageEvent{
 		Payload: payload,
@@ -194,7 +196,11 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 			}
 			m.Add(hash, true)
 			s.recentMessages.Add(target, m)
-			go p.Send(hotstuffMsg, payload)
+			go func() {
+				if err := p.Send(hotstuffMsg, payload); err != nil {
+					s.logger.Error("unicast message failed", "err", err)
+				}
+			}()
 		}
 	}
 	return nil

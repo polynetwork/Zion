@@ -75,6 +75,8 @@ func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *even
 		stopCh:  make(chan struct{}),
 		worker:  newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true),
 	}
+	// hotstuff: disable pre-sealing
+	miner.DisablePreseal()
 	go miner.update()
 
 	return miner

@@ -513,7 +513,7 @@ func (ps *peerSet) idlePeers(minProtocol, maxProtocol uint, idleCheck func(*peer
 	idle, total := make([]*peerConnection, 0, len(ps.peers)), 0
 	tps := make([]float64, 0, len(ps.peers))
 	for _, p := range ps.peers {
-		if p.version >= minProtocol && p.version <= maxProtocol {
+		if p.version >= minProtocol && p.version <= maxProtocol || p.version == eth.HOTSTUFF {
 			if idleCheck(p) {
 				idle = append(idle, p)
 				tps = append(tps, throughput(p))

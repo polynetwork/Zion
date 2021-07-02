@@ -287,11 +287,17 @@ func (w *worker) pendingBlock() *types.Block {
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) start() {
 	atomic.StoreInt32(&w.running, 1)
+	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
+		istanbul.Start(w.chain, w.chain.CurrentBlock, nil)
+	}
 	w.startCh <- struct{}{}
 }
 
 // stop sets the running status as 0.
 func (w *worker) stop() {
+	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
+		istanbul.Stop()
+	}
 	atomic.StoreInt32(&w.running, 0)
 }
 
@@ -891,6 +897,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 			return
 		}
 		header.Coinbase = w.coinbase
+		log.Trace("commitNewWork", "number", num.Uint64())
 	}
 	if err := w.engine.Prepare(w.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
@@ -952,11 +959,8 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	}
 
 	// Fill the block with all available pending transactions.
-	pending, err := w.eth.TxPool().Pending()
-	if err != nil {
-		log.Error("Failed to fetch pending transactions", "err", err)
-		return
-	}
+	pending, _ := w.eth.TxPool().Pending()
+
 	// Short circuit if there is no available pending transactions.
 	// But if we disable empty precommit already, ignore it. Since
 	// empty block is necessary to keep the liveness of the network.

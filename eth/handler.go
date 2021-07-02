@@ -149,6 +149,12 @@ func newHandler(config *handlerConfig, engine consensus.Engine) (*handler, error
 		quitSync:   make(chan struct{}),
 		engine:     engine,
 	}
+
+	// only for hotstuff
+	if handler, ok := h.engine.(consensus.Handler); ok {
+		handler.SetBroadcaster(h)
+	}
+
 	if config.Sync == downloader.FullSync {
 		// The database seems empty as the current block is the genesis. Yet the fast
 		// block is ahead, so fast sync was enabled for this node at a certain point.

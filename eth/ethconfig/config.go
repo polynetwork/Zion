@@ -18,7 +18,7 @@
 package ethconfig
 
 import (
-	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"os"
 	"os/user"
@@ -240,14 +240,14 @@ type Config struct {
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
-	// todo: how to get node key
-	var (
-		nodeKey *ecdsa.PrivateKey
-		config  = hotstuff.DefaultConfig
-		valset  = validator.NewSet([]common.Address{}, hotstuff.RoundRobin)
-	)
-	if chainConfig.HotStuff != nil {
-		return hsb.New(config, nodeKey, db, valset)
+	config  := hotstuff.DefaultConfig
+	nodeKey := stack.Config().NodeKey()
+	genesisNodeList := stack.Config().StaticNodes()
+	validators := make([]common.Address, 0)
+	for _, v := range genesisNodeList {
+		pubkey := v.Pubkey()
+		validators = append(validators, crypto.PubkeyToAddress(*pubkey))
 	}
-	return nil
+	valset := validator.NewSet(validators, hotstuff.RoundRobin)
+	return hsb.New(config, nodeKey, db, valset)
 }
