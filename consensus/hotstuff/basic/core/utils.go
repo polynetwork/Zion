@@ -1,6 +1,7 @@
 package core
 
 import (
+	"math/big"
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -78,8 +79,13 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	msg.Address = c.Address()
 
 	// Add proof of consensus
-	if err = c.writeMessageSeal(msg); err != nil {
-		return nil, err
+	proposal := c.current.Proposal()
+	if msg.Code == MsgTypePrepareVote && proposal != nil {
+		seal, err := c.signer.SignVote(proposal)
+		if err != nil {
+			return nil, err
+		}
+		msg.CommittedSeal = seal
 	}
 
 	// Sign message
@@ -99,19 +105,6 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	}
 
 	return payload, nil
-}
-
-func (c *core) writeMessageSeal(msg *message) (err error) {
-	// Add proof of consensus
-	msg.CommittedSeal = []byte{}
-	// Assign the CommittedSeal if it's a COMMIT message and proposal is not nil
-	if msg.Code == MsgTypePrepareVote && c.current.Proposal() != nil {
-		seal := c.signer.WrapCommittedSeal(c.current.Proposal().Hash())
-		if msg.CommittedSeal, err = c.signer.Sign(seal); err != nil {
-			return
-		}
-	}
-	return
 }
 
 func (c *core) getMessageSeals(n int) [][]byte {
@@ -156,13 +149,13 @@ func (c *core) Q() int {
 	return c.valSet.Q()
 }
 
-func Proposal2QC(proposal hotstuff.Proposal) *hotstuff.QuorumCert {
+func proposal2QC(proposal hotstuff.Proposal, round *big.Int) *hotstuff.QuorumCert {
 	block := proposal.(*types.Block)
 	h := block.Header()
 	qc := new(hotstuff.QuorumCert)
 	qc.View = &hotstuff.View{
-		Height: proposal.Number(),
-		Round:  common.Big0,
+		Height: block.Number(),
+		Round:  round,
 	}
 	qc.Hash = h.Hash()
 	qc.Proposer = h.Coinbase

@@ -16,11 +16,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func newTestSigner() hotstuff.Signer {
-	key, _ := generatePrivateKey()
-	return NewSigner(key, 3)
-}
-
 func TestSign(t *testing.T) {
 	s := newTestSigner()
 	data := []byte("Here is a string....")
@@ -256,37 +251,6 @@ func TestPrepareExtra(t *testing.T) {
 	assert.Equal(t, expectedResult, payload)
 }
 
-func TestFillExtraBeforeCommit(t *testing.T) {
-	vanity := bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity)
-	istRawData := hexutil.MustDecode("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")
-	expectedSeal := append([]byte{1, 2, 3}, bytes.Repeat([]byte{0x00}, types.HotstuffExtraSeal-3)...)
-	expectedIstExtra := &types.HotstuffExtra{
-		Validators: []common.Address{
-			common.BytesToAddress(hexutil.MustDecode("0x44add0ec310f115a0e603b2d7db9f067778eaf8a")),
-			common.BytesToAddress(hexutil.MustDecode("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212")),
-			common.BytesToAddress(hexutil.MustDecode("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6")),
-			common.BytesToAddress(hexutil.MustDecode("0x8be76812f765c24641ec63dc2852b378aba2b440")),
-		},
-		Seal:          expectedSeal,
-		CommittedSeal: [][]byte{},
-	}
-	h := &types.Header{
-		Extra: append(vanity, istRawData...),
-	}
-
-	// normal case
-	assert.NoError(t, emptySigner.FillExtraBeforeCommit(h, expectedSeal))
-
-	// verify istanbul extra-data
-	istExtra, err := types.ExtractHotstuffExtra(h)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedIstExtra, istExtra)
-
-	// invalid seal
-	unexpectedSeal := append(expectedSeal, make([]byte, 1)...)
-	assert.Equal(t, errInvalidSignature, emptySigner.FillExtraBeforeCommit(h, unexpectedSeal))
-}
-
 func TestFillExtraAfterCommit(t *testing.T) {
 	vanity := bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity)
 	istRawData := hexutil.MustDecode("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")
@@ -306,7 +270,7 @@ func TestFillExtraAfterCommit(t *testing.T) {
 	}
 
 	// normal case
-	assert.NoError(t, emptySigner.FillExtraAfterCommit(h, [][]byte{expectedCommittedSeal}))
+	assert.NoError(t, emptySigner.SealAfterCommit(h, [][]byte{expectedCommittedSeal}))
 
 	// verify istanbul extra-data
 	istExtra, err := types.ExtractHotstuffExtra(h)
@@ -315,5 +279,5 @@ func TestFillExtraAfterCommit(t *testing.T) {
 
 	// invalid seal
 	unexpectedCommittedSeal := append(expectedCommittedSeal, make([]byte, 1)...)
-	assert.Equal(t, errInvalidCommittedSeals, emptySigner.FillExtraAfterCommit(h, [][]byte{unexpectedCommittedSeal}))
+	assert.Equal(t, errInvalidCommittedSeals, emptySigner.SealAfterCommit(h, [][]byte{unexpectedCommittedSeal}))
 }

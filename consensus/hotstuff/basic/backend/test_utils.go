@@ -88,8 +88,7 @@ func makeBlock(t *testing.T, chain *core.BlockChain, engine *backend, parent *ty
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	header := block.Header()
 
-	seal, _ := engine.signer.Sign(engine.signer.SigHash(header).Bytes())
-	engine.signer.FillExtraBeforeCommit(header, seal)
+	engine.signer.SealBeforeCommit(header)
 	expectBlock := block.WithSeal(header)
 
 	resultCh := make(chan *types.Block, 10)
@@ -232,11 +231,7 @@ var emptySigner = &SignerImpl{}
 
 func (s *backend) UpdateBlock(block *types.Block) (*types.Block, error) {
 	header := block.Header()
-	seal, err := s.signer.Sign(s.signer.SigHash(header).Bytes())
-	if err != nil {
-		return nil, err
-	}
-	if err := s.signer.FillExtraBeforeCommit(header, seal); err != nil {
+	if err := s.signer.SealBeforeCommit(header); err != nil {
 		return nil, err
 	}
 	newBlock := block.WithSeal(header)
@@ -245,4 +240,9 @@ func (s *backend) UpdateBlock(block *types.Block) (*types.Block, error) {
 
 func makeValSet(validators []common.Address) hotstuff.ValidatorSet {
 	return validator.NewSet(validators, hotstuff.RoundRobin)
+}
+
+func newTestSigner() hotstuff.Signer {
+	key, _ := generatePrivateKey()
+	return NewSigner(key, 3)
 }

@@ -2,7 +2,6 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
@@ -37,16 +36,7 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 			logger.Error("Failed to assemble committed seal", "err", err)
 			return err
 		}
-		block := newProposal.(*types.Block)
-		header := block.Header()
-		prepareQC := &hotstuff.QuorumCert{
-			View:     c.currentView(),
-			Hash:     newProposal.Hash(),
-			SealHash: c.signer.SigHash(header),
-			Proposer: header.Coinbase,
-			Extra:    header.Extra,
-		}
-
+		prepareQC := proposal2QC(newProposal, c.current.Round())
 		c.current.SetProposal(newProposal)
 		c.current.SetPrepareQC(prepareQC)
 		c.current.SetState(StatePrepared)

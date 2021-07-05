@@ -100,9 +100,7 @@ func TestSealCommitted(t *testing.T) {
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	header := block.Header()
 
-	seal, err := engine.signer.Sign(engine.signer.SigHash(header).Bytes())
-	assert.NoError(t, err, "sign sig hash err", err)
-	err = engine.signer.FillExtraBeforeCommit(header, seal)
+	err := engine.signer.SealBeforeCommit(header)
 	assert.NoError(t, err, "fillExtraBeforeCommit err", err)
 	expectedBlock := block.WithSeal(header)
 

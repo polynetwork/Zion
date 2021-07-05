@@ -195,6 +195,10 @@ func (m *mockSinger) SigHash(header *types.Header) (hash common.Hash) {
 	return header.Hash()
 }
 
+func (m *mockSinger) SignVote(p hotstuff.Proposal) ([]byte, error) {
+	return nil, nil
+}
+
 func (s *mockSinger) Recover(h *types.Header) (common.Address, error) {
 	return h.Coinbase, nil
 }
@@ -203,11 +207,11 @@ func (s *mockSinger) PrepareExtra(header *types.Header, valSet hotstuff.Validato
 	return nil, nil
 }
 
-func (s *mockSinger) FillExtraBeforeCommit(h *types.Header, seal []byte) error {
+func (s *mockSinger) SealBeforeCommit(h *types.Header) error {
 	return nil
 }
 
-func (s *mockSinger) FillExtraAfterCommit(h *types.Header, committedSeals [][]byte) error {
+func (s *mockSinger) SealAfterCommit(h *types.Header, committedSeals [][]byte) error {
 	return nil
 }
 

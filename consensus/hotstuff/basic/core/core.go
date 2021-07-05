@@ -102,7 +102,7 @@ func (c *core) startNewRound(round *big.Int) {
 
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	if c.current == nil {
-		prepareQC := Proposal2QC(lastProposal)
+		prepareQC := proposal2QC(lastProposal, common.Big0)
 		c.current = newRoundState(newView, c.valSet, prepareQC)
 	} else {
 		c.current = c.current.Spawn(newView, c.valSet)

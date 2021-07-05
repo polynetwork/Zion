@@ -218,7 +218,7 @@ func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuf
 
 	h := block.Header()
 	// Append seals into extra-data
-	if err := s.signer.FillExtraAfterCommit(h, seals); err != nil {
+	if err := s.signer.SealAfterCommit(h, seals); err != nil {
 		return nil, err
 	}
 

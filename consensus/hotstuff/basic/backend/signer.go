@@ -3,6 +3,7 @@ package backend
 import (
 	"bytes"
 	"crypto/ecdsa"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -23,14 +24,14 @@ type SignerImpl struct {
 	commitSigSalt byte          //
 }
 
-func NewSigner(privateKey *ecdsa.PrivateKey, commitSigSalt byte) hotstuff.Signer {
+func NewSigner(privateKey *ecdsa.PrivateKey, commitMsgType byte) hotstuff.Signer {
 	signatures, _ := lru.NewARC(inmemorySignatures)
 	address := crypto.PubkeyToAddress(privateKey.PublicKey)
 	return &SignerImpl{
 		address:       address,
 		privateKey:    privateKey,
 		signatures:    signatures,
-		commitSigSalt: commitSigSalt,
+		commitSigSalt: commitMsgType,
 	}
 }
 
@@ -41,6 +42,12 @@ func (s *SignerImpl) Address() common.Address {
 func (s *SignerImpl) Sign(data []byte) ([]byte, error) {
 	hashData := crypto.Keccak256(data)
 	return crypto.Sign(hashData, s.privateKey)
+}
+
+func (s *SignerImpl) SignVote(proposal hotstuff.Proposal) ([]byte, error) {
+	hash := proposal.Hash()
+	voteHash := s.wrapCommittedSeal(hash)
+	return s.Sign(voteHash)
 }
 
 // SigHash returns the hash which is used as input for the Hotstuff
@@ -62,8 +69,10 @@ func (s *SignerImpl) SigHash(header *types.Header) (hash common.Hash) {
 // Recover extracts the proposer address from a signed header.
 func (s *SignerImpl) Recover(header *types.Header) (common.Address, error) {
 	hash := header.Hash()
-	if addr, ok := s.signatures.Get(hash); ok {
-		return addr.(common.Address), nil
+	if s.signatures != nil {
+		if addr, ok := s.signatures.Get(hash); ok {
+			return addr.(common.Address), nil
+		}
 	}
 
 	// Retrieve the signature from the header extra-data
@@ -78,7 +87,9 @@ func (s *SignerImpl) Recover(header *types.Header) (common.Address, error) {
 		return addr, err
 	}
 
-	s.signatures.Add(hash, addr)
+	if s.signatures != nil {
+		s.signatures.Add(hash, addr)
+	}
 	return addr, nil
 }
 
@@ -108,8 +119,14 @@ func (s *SignerImpl) PrepareExtra(header *types.Header, valSet hotstuff.Validato
 	return append(buf.Bytes(), payload...), nil
 }
 
-func (s *SignerImpl) FillExtraBeforeCommit(h *types.Header, seal []byte) error {
-	// generate extra
+// SignerSeal proposer sign the header hash and fill extra seal with signature.
+func (s *SignerImpl) SealBeforeCommit(h *types.Header) error {
+	sigHash := s.SigHash(h)
+	seal, err := s.Sign(sigHash.Bytes())
+	if err != nil {
+		return errInvalidSignature
+	}
+
 	if len(seal)%types.HotstuffExtraSeal != 0 {
 		return errInvalidSignature
 	}
@@ -118,19 +135,17 @@ func (s *SignerImpl) FillExtraBeforeCommit(h *types.Header, seal []byte) error {
 	if err != nil {
 		return err
 	}
-
 	extra.Seal = seal
 	payload, err := rlp.EncodeToBytes(&extra)
 	if err != nil {
 		return err
 	}
-
 	h.Extra = append(h.Extra[:types.HotstuffExtraVanity], payload...)
 	return nil
 }
 
-// FillExtraAfterCommit writes the extra-data field of a block header with given committed seals.
-func (s *SignerImpl) FillExtraAfterCommit(h *types.Header, committedSeals [][]byte) error {
+// SealAfterCommit writes the extra-data field of a block header with given committed seals.
+func (s *SignerImpl) SealAfterCommit(h *types.Header, committedSeals [][]byte) error {
 	if len(committedSeals) == 0 {
 		return errInvalidCommittedSeals
 	}
@@ -170,6 +185,9 @@ func (s *SignerImpl) VerifyHeader(header *types.Header, valSet hotstuff.Validato
 	if err != nil {
 		return err
 	}
+	if signer != header.Coinbase {
+		return errInvalidSigner
+	}
 
 	// Signer should be in the validator set of previous block's extraData.
 	if _, v := valSet.GetByAddress(signer); v == nil {
@@ -207,7 +225,7 @@ func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.Validator
 	}
 
 	// check proposer signature
-	addr, err := getSignatureAddress(qc.SealHash[:], extra.Seal)
+	addr, err := getSignatureAddress(qc.Hash.Bytes(), extra.Seal)
 	if err != nil {
 		return err
 	}
@@ -215,6 +233,9 @@ func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.Validator
 		return errInvalidSigner
 	}
 	if idx, _ := valSet.GetByAddress(addr); idx < 0 {
+		return errInvalidSigner
+	}
+	if !valSet.IsProposer(addr) {
 		return errInvalidSigner
 	}
 
@@ -244,8 +265,8 @@ func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, s
 	return common.Address{}, errUnauthorizedAddress
 }
 
-// WrapCommittedSeal returns a committed seal for the given hash
-func (s *SignerImpl) WrapCommittedSeal(hash common.Hash) []byte {
+// wrapCommittedSeal returns a committed seal for the given hash
+func (s *SignerImpl) wrapCommittedSeal(hash common.Hash) []byte {
 	var (
 		buf bytes.Buffer
 	)
@@ -274,12 +295,12 @@ func checkValidatorQuorum(committers []common.Address, valSet hotstuff.Validator
 
 func (s *SignerImpl) getSignersFromCommittedSeals(hash common.Hash, seals [][]byte) ([]common.Address, error) {
 	var addrs []common.Address
-	proposalSeal := s.WrapCommittedSeal(hash)
+	sealHash := s.wrapCommittedSeal(hash)
 
 	// 1. Get committed seals from current header
 	for _, seal := range seals {
 		// 2. Get the original address by seal and parent block hash
-		addr, err := getSignatureAddress(proposalSeal, seal)
+		addr, err := getSignatureAddress(sealHash, seal)
 		if err != nil {
 			return nil, errInvalidSignature
 		}
@@ -299,24 +320,3 @@ func getSignatureAddress(data []byte, sig []byte) (common.Address, error) {
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
-
-//func (s *SignerImpl) GetSignerFromCommittedSeal(hash common.Hash, sig []byte) (common.Address, error) {
-//	proposalSeal := s.WrapCommittedSeal(hash)
-//	return s.GetSignatureAddress(proposalSeal, sig)
-//}
-//
-//func (s *SignerImpl) GetSignersFromCommittedSeal(hash common.Hash, sigs [][]byte) ([]common.Address, error) {
-//	var addrs []common.Address
-//	proposalSeal := s.WrapCommittedSeal(hash)
-//
-//	// 1. Get committed seals from current header
-//	for _, sig := range sigs {
-//		// 2. Get the original address by seal and parent block hash
-//		addr, err := s.GetSignatureAddress(proposalSeal, sig)
-//		if err != nil {
-//			return nil, err
-//		}
-//		addrs = append(addrs, addr)
-//	}
-//	return addrs, nil
-//}
