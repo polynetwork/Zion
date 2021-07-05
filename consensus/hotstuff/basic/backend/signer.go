@@ -3,7 +3,6 @@ package backend
 import (
 	"bytes"
 	"crypto/ecdsa"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -233,9 +232,6 @@ func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.Validator
 		return errInvalidSigner
 	}
 	if idx, _ := valSet.GetByAddress(addr); idx < 0 {
-		return errInvalidSigner
-	}
-	if !valSet.IsProposer(addr) {
 		return errInvalidSigner
 	}
 

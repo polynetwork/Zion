@@ -1,6 +1,9 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/common"
+	"time"
+
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -95,4 +98,9 @@ func (c *core) sendCommitVote() {
 		return
 	}
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	if !c.IsProposer() {
+		// todo: repo need to wait the leader's last step `decide`
+		time.Sleep(200 * time.Millisecond)
+		c.startNewRound(common.Big0)
+	}
 }

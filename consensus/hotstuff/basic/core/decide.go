@@ -41,6 +41,7 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 			logger.Error("Failed to commit proposal", "err", err)
 			return err
 		}
+		c.startNewRound(common.Big0)
 	}
 
 	return nil

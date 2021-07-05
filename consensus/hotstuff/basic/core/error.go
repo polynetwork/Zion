@@ -51,6 +51,8 @@ var (
 	// errFailedDecodeCommit is returned when the COMMIT message is malformed.
 	errFailedDecodeCommit = errors.New("failed to decode COMMIT")
 
+	errFailedDecodeDecide = errors.New("failed to decode DECIDE")
+
 	errFailedDecodeCommitVote = errors.New("failed to decode COMMIT_VOTE")
 
 	// errFailedDecodeMessageSet is returned when the message set is malformed.

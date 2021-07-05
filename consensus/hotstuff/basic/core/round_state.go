@@ -4,7 +4,6 @@ import (
 	"math/big"
 	"sync"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -94,12 +93,6 @@ func (s *roundState) Round() *big.Int {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	return s.round
-}
-
-func (s *roundState) NextRound() *big.Int {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
-	return new(big.Int).Add(s.round, common.Big1)
 }
 
 func (s *roundState) View() *hotstuff.View {

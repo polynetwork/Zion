@@ -77,18 +77,23 @@ func (c *core) startNewRound(round *big.Int) {
 	lastProposal, lastProposer := c.backend.LastProposal()
 	if c.current == nil {
 		logger.Trace("Start to the initial round")
-	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Height().Int64()-1)) == 0 {
-		if round.Cmp(common.Big0) == 0 {
-			// same height and round, don't need to start new round
-			return
-		} else if round.Cmp(c.current.Round()) < 0 {
-			logger.Warn("New round should not be smaller than current round", "height", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
-			return
-		}
-		changeView = true
 	} else {
-		logger.Warn("New height should be larger than current height", "new_height", lastProposal.Number().Int64())
-		return
+		// current height - lastProposal height
+		if hdiff := new(big.Int).Sub(c.current.Height(), lastProposal.Number()).Uint64(); hdiff > 0 {
+			if hdiff == 1 && round.Cmp(common.Big0) > 0 {
+				changeView = true
+			} else {
+				// sync proposal to current height
+				return
+			}
+		} else if hdiff < 0 {
+			logger.Warn("New round should not be smaller than last proposal", "last proposal", lastProposal.Number(), "current height", c.current.Height())
+			return
+		} else {
+			if round.Cmp(common.Big0) > 0 {
+				changeView = true
+			}
+		}
 	}
 
 	newView := &hotstuff.View{
@@ -99,7 +104,6 @@ func (c *core) startNewRound(round *big.Int) {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
 	}
-
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	if c.current == nil {
 		prepareQC := proposal2QC(lastProposal, common.Big0)
@@ -128,15 +132,6 @@ func (c *core) currentState() State {
 
 func (c *core) currentProposer() hotstuff.Validator {
 	return c.valSet.GetProposer()
-}
-
-// todo: 检查是否收到了新的proposal
-func (c *core) catchUpRound(view *hotstuff.View) {
-	logger := c.logger.New("old_round", c.current.Round(), "old_height", c.current.Height(), "old_proposer", c.valSet.GetProposer())
-
-	c.newRoundChangeTimer()
-
-	logger.Trace("Catch up round", "new_round", view.Round, "new_height", view.Height, "new_proposer", c.valSet)
 }
 
 func (c *core) stopTimer() {

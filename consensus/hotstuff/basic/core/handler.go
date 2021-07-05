@@ -17,6 +17,8 @@
 package core
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
@@ -160,5 +162,6 @@ func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) (err error
 }
 
 func (c *core) handleTimeoutMsg() {
-	c.startNewRound(c.current.NextRound())
+	round := new(big.Int).Add(c.current.Round(), common.Big1)
+	c.startNewRound(round)
 }
