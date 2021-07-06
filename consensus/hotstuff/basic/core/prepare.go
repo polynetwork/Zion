@@ -103,12 +103,12 @@ func (c *core) createNewProposal() (*MsgPrepare, error) {
 }
 
 func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
-	if err := c.signer.VerifyQC(highQC, c.valSet); err != nil {
-		return err
-	}
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		return fmt.Errorf("invalid proposal: hash %s", proposal.Hash())
+	}
+	if err := c.signer.VerifyQC(highQC, c.valSet); err != nil {
+		return err
 	}
 	if highQC.Hash != block.ParentHash() {
 		return fmt.Errorf("block %v (parent %v) not extend hiqhQC %v", block.Hash(), block.ParentHash(), highQC.Hash)
