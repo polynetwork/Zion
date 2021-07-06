@@ -6,7 +6,7 @@ import (
 )
 
 func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("handleCommitVote: state", c.currentState())
+	logger := c.newLogger()
 
 	var (
 		vote   *hotstuff.Vote
@@ -35,21 +35,65 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 	}
 
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
-		c.current.SetState(StateCommitted)
-		c.current.SetCommittedQC(c.current.LockedQC())
+		c.acceptDecide()
+		c.sendDecide()
 		if err := c.backend.Commit(c.current.Proposal()); err != nil {
 			logger.Error("Failed to commit proposal", "err", err)
 			return err
 		}
-		c.startNewRound(common.Big0)
 	}
 
+	logger.Trace("handleCommitVote", "src", src.Address(), "vote view", vote.View, "vote", vote.Digest)
 	return nil
 }
 
+func (c *core) sendDecide() {
+	logger := c.newLogger()
+
+	msgTyp := MsgTypeDecide
+	qc := c.current.CommittedQC()
+	payload, err := Encode(qc)
+	if err != nil {
+		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
+		return
+	}
+	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	logger.Trace("sendDecide", "msg view", qc.View, "proposal", qc.Hash)
+}
+
+func (c *core) handleDecide(data *message, src hotstuff.Validator) error {
+	logger := c.newLogger()
+
+	var (
+		msg    *hotstuff.QuorumCert
+		msgTyp = MsgTypeDecide
+	)
+	if err := data.Decode(&msg); err != nil {
+		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
+		return errFailedDecodeDecide
+	}
+	if err := c.checkView(MsgTypeDecide, msg.View); err != nil {
+		return err
+	}
+	if err := c.checkMsgFromProposer(src); err != nil {
+		return err
+	}
+	if !c.IsProposer() {
+		c.acceptDecide()
+	}
+	logger.Trace("handleDecide", "src", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
+	c.startNewRound(common.Big0)
+	return nil
+}
+
+func (c *core) acceptDecide() {
+	c.current.SetState(StateCommitted)
+	c.current.SetCommittedQC(c.current.LockedQC())
+}
+
 func (c *core) handleFinalCommitted() error {
-	logger := c.logger.New("handleFinalCommitted: state", c.currentState())
-	logger.Trace("Received a final committed proposal")
+	logger := c.newLogger()
+	logger.Trace("handleFinalCommitted")
 	c.startNewRound(common.Big0)
 	return nil
 }

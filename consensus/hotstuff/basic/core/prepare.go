@@ -2,13 +2,12 @@ package core
 
 import (
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func (c *core) sendPrepare() {
-	logger := c.logger.New("sendPrepare: state", c.current.State())
+	logger := c.newLogger()
 
 	if !c.IsProposer() {
 		return
@@ -17,7 +16,7 @@ func (c *core) sendPrepare() {
 	msgTyp := MsgTypePrepare
 	prepare, err := c.createNewProposal()
 	if err != nil {
-		logger.Error("Failed to create proposal", "err", err)
+		logger.Error("Failed to create proposal", "err", err, "request set size", c.requests.Size(), "pendingRequest", c.current.PendingRequest(), "view", c.currentView())
 		return
 	}
 
@@ -28,10 +27,11 @@ func (c *core) sendPrepare() {
 	}
 
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	logger.Trace("sendPrepare", "prepare view", prepare.View, "proposal", prepare.Proposal.Hash())
 }
 
 func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("handlePrepare: state", c.currentState())
+	logger := c.newLogger()
 
 	var (
 		msg    *MsgPrepare
@@ -58,6 +58,9 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 		logger.Error("Failed to check extend", "err", err)
 		return errExtend
 	}
+	if c.current.Height().Uint64() == 2 {
+		logger.Trace("")
+	}
 	if err := c.safeNode(proposal, highQC); err != nil {
 		logger.Error("Failed to check safeNode", "err", err)
 		return errSafeNode
@@ -65,11 +68,12 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 
 	c.current.SetProposal(proposal)
 	c.sendPrepareVote()
+	logger.Trace("handlePrepare", "src", src.Address(), "msg view", msg.View, "proposal", msg.Proposal.Hash())
 	return nil
 }
 
 func (c *core) sendPrepareVote() {
-	logger := c.logger.New("sendPrepareVote: state", c.current.State())
+	logger := c.newLogger()
 
 	msgTyp := MsgTypePrepareVote
 	sub := c.current.Vote()
@@ -79,6 +83,7 @@ func (c *core) sendPrepareVote() {
 		return
 	}
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	logger.Trace("sendPrepareVote", "vote view", sub.View, "vote", sub.Digest)
 }
 
 func (c *core) createNewProposal() (*MsgPrepare, error) {

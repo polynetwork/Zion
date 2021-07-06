@@ -127,6 +127,8 @@ type Broadcaster interface {
 	FindPeers(map[common.Address]bool) map[common.Address]Peer
 	// FindPeer find peer by address
 	FindPeer(target common.Address) Peer
+	// PeerCount return peers number
+	PeerCount() int
 }
 
 // Peer defines the interface to communicate with peer

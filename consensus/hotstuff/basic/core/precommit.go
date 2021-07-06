@@ -5,7 +5,7 @@ import (
 )
 
 func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("handlePrepareVote: state", c.currentState())
+	logger := c.newLogger()
 
 	var (
 		vote   *hotstuff.Vote
@@ -43,11 +43,12 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 		c.sendPreCommit()
 	}
 
+	logger.Trace("handlePrepareVote", "src", src.Address(), "msg view", vote.View, "vote", vote.Digest)
 	return nil
 }
 
 func (c *core) sendPreCommit() {
-	logger := c.logger.New("sendPreCommit: state", c.current.State())
+	logger := c.newLogger()
 
 	msgTyp := MsgTypePreCommit
 	msg := &MsgPreCommit{
@@ -61,10 +62,11 @@ func (c *core) sendPreCommit() {
 		return
 	}
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	logger.Trace("sendPreCommit", "msg view", msg.View, "proposal", msg.Proposal.Hash())
 }
 
 func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("handlePreCommit: state", c.currentState())
+	logger := c.newLogger()
 
 	var (
 		msg    *MsgPreCommit
@@ -93,11 +95,12 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 	}
 	c.sendPreCommitVote()
 
+	logger.Trace("handlePreCommit", "src", src.Address(),"msg view", msg.View, "proposal", msg.Proposal.Hash())
 	return nil
 }
 
 func (c *core) sendPreCommitVote() {
-	logger := c.logger.New("state", c.current.State())
+	logger := c.newLogger()
 
 	msgTyp := MsgTypePreCommitVote
 	sub := c.current.Vote()
@@ -107,4 +110,5 @@ func (c *core) sendPreCommitVote() {
 		return
 	}
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	logger.Trace("sendPreCommitVote", "vote view", sub.View, "vote", sub.Digest)
 }

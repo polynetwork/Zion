@@ -9,7 +9,7 @@ import (
 )
 
 func (c *core) handleRequest(req *hotstuff.Request) error {
-	logger := c.logger.New("handle request, state", c.currentState(), "view", c.currentView())
+	logger := c.newLogger()
 
 	if err := c.requests.checkRequest(c.currentView(), req); err != nil {
 		if err == errFutureMessage {
@@ -19,13 +19,19 @@ func (c *core) handleRequest(req *hotstuff.Request) error {
 			logger.Warn("receive request", "err", err)
 			return err
 		}
+	} else {
+		c.requests.StoreRequest(req)
 	}
 
-	if c.currentState() == StateAcceptRequest && c.current.PendingRequest() == nil {
-		c.current.SetPendingRequest(req)
+	if c.currentState() == StateAcceptRequest && c.current.highQC != nil && c.current.highQC.View.Cmp(c.currentView()) == 0 {
+		c.sendPrepare()
 	}
-
-	logger.Trace("store request", "validator", c.Address().Hex())
+	//if c.currentState() == StateAcceptRequest && c.current.PendingRequest() == nil {
+	//	c.current.SetPendingRequest(req)
+	//}
+	//
+	//c.startNewRound(common.Big0)
+	logger.Trace("handleRequest", "height", req.Proposal.Number(), "proposal", req.Proposal.Hash())
 	return nil
 }
 
@@ -68,7 +74,7 @@ func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	maxRetry := 3
+	maxRetry := 20
 retry:
 	for !s.pendingRequest.Empty() {
 		m, prior := s.pendingRequest.Pop()
@@ -81,6 +87,7 @@ retry:
 		if err := s.checkRequest(view, req); err != nil {
 			if err == errFutureMessage {
 				s.pendingRequest.Push(m, prior)
+				// todo: 是否为continue
 				break
 			}
 			continue
@@ -88,7 +95,7 @@ retry:
 		return req
 	}
 	if maxRetry -= 1; maxRetry > 0 {
-		time.Sleep(1 * time.Second)
+		time.Sleep(500 * time.Millisecond)
 		goto retry
 	}
 	return nil

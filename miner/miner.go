@@ -38,6 +38,7 @@ import (
 type Backend interface {
 	BlockChain() *core.BlockChain
 	TxPool() *core.TxPool
+	PeerCount() int
 }
 
 // Config is the configuration parameters of mining.
@@ -75,10 +76,10 @@ func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *even
 		stopCh:  make(chan struct{}),
 		worker:  newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true),
 	}
-	// hotstuff: disable pre-sealing
-	miner.DisablePreseal()
-	go miner.update()
 
+	// hotstuff: disable pre-sealing, and waiting for p2p server connections
+	miner.EnablePreseal()
+	go miner.update()
 	return miner
 }
 

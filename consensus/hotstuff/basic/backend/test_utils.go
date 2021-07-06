@@ -3,6 +3,7 @@ package backend
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
 	"sort"
@@ -24,7 +25,9 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-var testLogger = elog.New()
+var (
+	testLogger    = elog.New()
+)
 
 func getGenesisAndKeys(n int) (*core.Genesis, []*ecdsa.PrivateKey, hotstuff.ValidatorSet) {
 	// Setup validators
@@ -85,10 +88,10 @@ func makeHeader(parent *types.Block, config *hotstuff.Config) *types.Header {
 }
 
 func makeBlock(t *testing.T, chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
-	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+	block := makeBlockWithoutSeal(chain, engine, parent)
 	header := block.Header()
 
-	engine.signer.SealBeforeCommit(header)
+	assert.NoError(t, engine.signer.SealBeforeCommit(header))
 	expectBlock := block.WithSeal(header)
 
 	resultCh := make(chan *types.Block, 10)
@@ -113,6 +116,8 @@ func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
 func singleNodeChain() (*core.BlockChain, *backend) {
+	testLogger.SetHandler(elog.StdoutHandler)
+
 	genesis, nodeKeys, valset := getGenesisAndKeys(1)
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultConfig

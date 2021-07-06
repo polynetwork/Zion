@@ -1,14 +1,11 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"time"
-
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
 func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("handlePreCommitVote: state", c.currentState())
+	logger := c.newLogger()
 
 	var (
 		vote   *hotstuff.Vote
@@ -41,23 +38,26 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 		c.current.SetState(StateLocked)
 		c.sendCommit()
 	}
+	logger.Trace("handlePreCommitVote", "src", src.Address(), "vote view", vote.View, "vote", vote.Digest)
 	return nil
 }
 
 func (c *core) sendCommit() {
-	logger := c.logger.New("sendCommit: state", c.currentState())
+	logger := c.newLogger()
 
 	msgTyp := MsgTypeCommit
-	payload, err := Encode(c.current.LockedQC())
+	sub := c.current.LockedQC()
+	payload, err := Encode(sub)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	logger.Trace("sendCommit", "msg view", sub.View, "proposal", sub.Hash)
 }
 
 func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
-	logger := c.logger.New("handleCommit: state", c.currentState())
+	logger := c.newLogger()
 
 	var (
 		msg    *hotstuff.QuorumCert
@@ -84,11 +84,12 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 		c.current.SetState(StateLocked)
 	}
 	c.sendCommitVote()
+	logger.Trace("handleCommit", "address", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
 	return nil
 }
 
 func (c *core) sendCommitVote() {
-	logger := c.logger.New("sendCommitVote: state", c.currentState())
+	logger := c.newLogger()
 
 	msgTyp := MsgTypeCommitVote
 	vote := c.current.Vote()
@@ -98,9 +99,5 @@ func (c *core) sendCommitVote() {
 		return
 	}
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
-	if !c.IsProposer() {
-		// todo: repo need to wait the leader's last step `decide`
-		time.Sleep(200 * time.Millisecond)
-		c.startNewRound(common.Big0)
-	}
+	logger.Trace("sendCommitVote", "vote view", vote.View, "vote", vote.Digest)
 }

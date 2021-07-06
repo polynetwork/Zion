@@ -82,22 +82,22 @@ func (c *core) handleEvents() {
 			// A real Event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case hotstuff.RequestEvent:
-				logger.Trace("handle request Event", "height", ev.Proposal.Number().Uint64(), "hash", ev.Proposal.Hash().Hex())
+				//logger.Trace("handle request Event", "height", ev.Proposal.Number().Uint64(), "hash", ev.Proposal.Hash().Hex())
 				c.handleRequest(&hotstuff.Request{
 					Proposal: ev.Proposal,
 				})
 
 			case hotstuff.MessageEvent:
-				logger.Trace("handle message Event")
+				// logger.Trace("handle message Event")
 				c.handleMsg(ev.Payload)
 
 			case backlogEvent:
-				logger.Trace("handle backlog Event")
+				//logger.Trace("handle backlog Event")
 				c.handleCheckedMsg(ev.msg, ev.src)
 			}
 
 		case _, ok := <-c.timeoutSub.Chan():
-			logger.Trace("handle timeout Event")
+			//logger.Trace("handle timeout Event")
 			if !ok {
 				logger.Error("Failed to receive timeout Event")
 				return
@@ -116,6 +116,11 @@ func (c *core) handleEvents() {
 
 // sendEvent sends events to mux
 func (c *core) sendEvent(ev interface{}) {
+	switch ev.(type) {
+	case timeoutEvent:
+		c.logger.Trace("sendTimeoutEvent", "state", c.currentState(), "view", c.currentView())
+	default:
+	}
 	c.backend.EventMux().Post(ev)
 }
 
@@ -155,6 +160,8 @@ func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) (err error
 		err = c.handleCommit(msg, src)
 	case MsgTypeCommitVote:
 		err = c.handleCommitVote(msg, src)
+	case MsgTypeDecide:
+		err = c.handleDecide(msg, src)
 	default:
 		c.logger.Error("msg type invalid", "unknown type", msg.Code)
 	}
@@ -162,6 +169,7 @@ func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) (err error
 }
 
 func (c *core) handleTimeoutMsg() {
+	c.logger.Trace("handleTimeout", "state", c.currentState(), "view", c.currentView())
 	round := new(big.Int).Add(c.current.Round(), common.Big1)
 	c.startNewRound(round)
 }

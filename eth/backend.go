@@ -524,6 +524,10 @@ func (s *Ethereum) Protocols() []p2p.Protocol {
 	return protos
 }
 
+func (s *Ethereum) PeerCount() int {
+	return s.p2pServer.PeerCount()
+}
+
 // Start implements node.Lifecycle, starting all internal goroutines needed by the
 // Ethereum protocol implementation.
 func (s *Ethereum) Start() error {

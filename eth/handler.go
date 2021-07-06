@@ -566,3 +566,7 @@ func (h *handler) FindPeer(target common.Address) consensus.Peer {
 	}
 	return nil
 }
+
+func (h *handler) PeerCount() int {
+	return h.peers.len()
+}

@@ -29,7 +29,7 @@ type core struct {
 
 	roundChangeTimer *time.Timer
 
-	validateFn func([]byte, []byte) (common.Address, error) // == c.checkValidatorSignature
+	validateFn func([]byte, []byte) (common.Address, error)
 }
 
 // New creates an HotStuff consensus core
@@ -65,35 +65,27 @@ func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 }
 
 func (c *core) startNewRound(round *big.Int) {
-	var logger log.Logger
-	if c.current == nil {
-		logger = c.logger.New("old_round", -1, "old_height", 0)
-	} else {
-		logger = c.logger.New("old_round", c.current.Round(), "old_height", c.current.Height())
-	}
+	logger := c.logger.New()
 
-	changeView := false
 	// Try to get last proposal
+	changeView := false
 	lastProposal, lastProposer := c.backend.LastProposal()
 	if c.current == nil {
 		logger.Trace("Start to the initial round")
-	} else {
-		// current height - lastProposal height
-		if hdiff := new(big.Int).Sub(c.current.Height(), lastProposal.Number()).Uint64(); hdiff > 0 {
-			if hdiff == 1 && round.Cmp(common.Big0) > 0 {
-				changeView = true
-			} else {
-				// sync proposal to current height
-				return
-			}
-		} else if hdiff < 0 {
-			logger.Warn("New round should not be smaller than last proposal", "last proposal", lastProposal.Number(), "current height", c.current.Height())
+	} else if lastProposal.Number().Cmp(c.current.Height()) >= 0 {
+		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
+	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Height().Int64()-1)) == 0 {
+		if round.Cmp(common.Big0) == 0 {
+			// same height and round, don't need to start new round
 			return
-		} else {
-			if round.Cmp(common.Big0) > 0 {
-				changeView = true
-			}
+		} else if round.Cmp(c.current.Round()) < 0 {
+			logger.Warn("New round should not be smaller than current round", "height", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
+			return
 		}
+		changeView = true
+	} else {
+		logger.Warn("New height should be larger than current height", "new_height", lastProposal.Number().Int64())
+		return
 	}
 
 	newView := &hotstuff.View{
@@ -104,6 +96,7 @@ func (c *core) startNewRound(round *big.Int) {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
 	}
+
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	if c.current == nil {
 		prepareQC := proposal2QC(lastProposal, common.Big0)
@@ -111,12 +104,15 @@ func (c *core) startNewRound(round *big.Int) {
 	} else {
 		c.current = c.current.Spawn(newView, c.valSet)
 	}
-	if c.current.PendingRequest() != nil {
-		c.sendNewView(newView)
-	}
+	c.sendNewView(newView)
 	c.newRoundChangeTimer()
 
-	logger.Debug("New round", "last block number", lastProposal.Number().Uint64(), "new_round", newView.Round, "new_height", newView.Height, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
+	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
+}
+
+// todo
+func (c *core) catchUp() {
+
 }
 
 func (c *core) currentView() *hotstuff.View {

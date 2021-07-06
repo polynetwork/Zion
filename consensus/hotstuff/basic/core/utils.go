@@ -1,6 +1,7 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/log"
 	"math/big"
 	"reflect"
 
@@ -147,6 +148,11 @@ func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address,
 
 func (c *core) Q() int {
 	return c.valSet.Q()
+}
+
+func (c *core) newLogger() log.Logger {
+	logger := c.logger.New("state", c.currentState(), "view", c.currentView())
+	return logger
 }
 
 func proposal2QC(proposal hotstuff.Proposal, round *big.Int) *hotstuff.QuorumCert {

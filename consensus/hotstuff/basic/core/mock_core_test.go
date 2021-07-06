@@ -38,7 +38,7 @@ func TestNewRound(t *testing.T) {
 		})
 	}
 
-	<-time.After(10 * time.Second)
+	<-time.After(2 * time.Second)
 
 	for _, v := range sys.backends {
 		if len(v.committedMsgs) > 1 {

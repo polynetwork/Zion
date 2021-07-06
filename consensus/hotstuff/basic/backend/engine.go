@@ -134,15 +134,16 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	block = block.WithSeal(header)
 
 	delay := time.Unix(int64(block.Header().Time), 0).Sub(now())
+	s.logger.Trace("WorkerSealNewBlock", "height", block.Number(), "delay", delay.Milliseconds())
 
 	go func() {
-		// wait for the timestamp of header, use this to adjust the block period
-		select {
-		case <-time.After(delay):
-		case <-stop:
-			results <- nil
-			return
-		}
+		//// wait for the timestamp of header, use this to adjust the block period
+		//select {
+		//case <-time.After(delay):
+		//case <-stop:
+		//	results <- nil
+		//	return
+		//}
 
 		// get the proposed block hash and clear it if the seal() is completed.
 		s.sealMu.Lock()
@@ -213,6 +214,11 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	s.currentBlock = currentBlock
 	s.hasBadBlock = hasBadBlock
 
+	if s.broadcaster != nil {
+		for s.broadcaster.PeerCount() < s.valset.Q() {
+			time.Sleep(1 * time.Second)
+		}
+	}
 	if err := s.core.Start(); err != nil {
 		return err
 	}
