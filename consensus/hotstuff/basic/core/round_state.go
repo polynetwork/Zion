@@ -33,7 +33,7 @@ type roundState struct {
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
 func newRoundState(view *hotstuff.View, validatorSet hotstuff.ValidatorSet, prepareQC *hotstuff.QuorumCert) *roundState {
-	return &roundState{
+	rs := &roundState{
 		vs:             validatorSet,
 		round:          view.Round,
 		height:         view.Height,
@@ -42,9 +42,14 @@ func newRoundState(view *hotstuff.View, validatorSet hotstuff.ValidatorSet, prep
 		prepareVotes:   newMessageSet(validatorSet),
 		preCommitVotes: newMessageSet(validatorSet),
 		commitVotes:    newMessageSet(validatorSet),
-		prepareQC:      prepareQC,
 		mtx:            new(sync.RWMutex),
 	}
+	if prepareQC != nil {
+		rs.prepareQC = prepareQC.Copy()
+		rs.lockedQC = prepareQC.Copy()
+		rs.committedQC = prepareQC.Copy()
+	}
+	return rs
 }
 
 func (s *roundState) Spawn(view *hotstuff.View, valset hotstuff.ValidatorSet) *roundState {

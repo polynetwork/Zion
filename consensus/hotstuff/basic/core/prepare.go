@@ -124,16 +124,21 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) e
 
 // proposal extend lockedQC `OR` hiqhQC.view > lockedQC.view
 func (c *core) safeNode(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
+	logger := c.newLogger()
+
 	if proposal.Number().Uint64() == 1 {
 		return nil
 	}
 	safety := false
 	liveness := false
 	if c.current.LockedQC() == nil {
+		logger.Trace("safeNodeChecking", "lockQC", "is nil")
 		return errSafeNode
 	}
 	if err := c.extend(proposal, c.current.LockedQC()); err == nil {
 		safety = true
+	} else {
+		logger.Trace("safeNodeChecking", "extend err", err)
 	}
 	if highQC.View.Cmp(c.current.LockedQC().View) > 0 {
 		liveness = true
