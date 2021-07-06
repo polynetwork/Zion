@@ -84,12 +84,6 @@ func (c *core) sendPrepareVote() {
 }
 
 func (c *core) createNewProposal() (*MsgPrepare, error) {
-	qc := c.current.PrepareQC()
-	lastProposal, _ := c.backend.LastProposal()
-	if lastProposal.Hash() != qc.Hash {
-		return nil, fmt.Errorf("parent hash expect %s, got %s", lastProposal.Hash().Hex(), qc.Hash.Hex())
-	}
-
 	var req *hotstuff.Request
 	if c.current.PendingRequest() != nil && c.current.PendingRequest().Proposal.Number().Cmp(c.current.Height()) == 0 {
 		req = c.current.PendingRequest()

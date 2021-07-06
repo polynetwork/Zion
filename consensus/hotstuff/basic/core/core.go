@@ -110,11 +110,6 @@ func (c *core) startNewRound(round *big.Int) {
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 }
 
-// todo
-func (c *core) catchUp() {
-
-}
-
 func (c *core) currentView() *hotstuff.View {
 	return &hotstuff.View{
 		Height: new(big.Int).Set(c.current.Height()),

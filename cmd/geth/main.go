@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/cmd/utils"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/console/prompt"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
@@ -299,6 +300,10 @@ func prepare(ctx *cli.Context) {
 		log.Info("Dropping default light client cache", "provided", ctx.GlobalInt(utils.CacheFlag.Name), "updated", 128)
 		ctx.GlobalSet(utils.CacheFlag.Name, strconv.Itoa(128))
 	}
+
+	// hotstuff: set miner recommit time value as hotstuff block period duration
+	defaultRecommitTime := time.Second * time.Duration(hotstuff.DefaultConfig.BlockPeriod)
+	ctx.GlobalSet(utils.MinerRecommitIntervalFlag.Name, strconv.Itoa(int(defaultRecommitTime)))
 
 	// Start metrics export if enabled
 	utils.SetupMetrics(ctx)
