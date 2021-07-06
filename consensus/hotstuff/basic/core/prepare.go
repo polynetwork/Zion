@@ -58,9 +58,6 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 		logger.Error("Failed to check extend", "err", err)
 		return errExtend
 	}
-	if c.current.Height().Uint64() == 2 {
-		logger.Trace("")
-	}
 	if err := c.safeNode(proposal, highQC); err != nil {
 		logger.Error("Failed to check safeNode", "err", err)
 		return errSafeNode
@@ -120,7 +117,7 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) e
 		return fmt.Errorf("invalid proposal: hash %s", proposal.Hash())
 	}
 	if highQC.Hash != block.ParentHash() {
-		return fmt.Errorf("block %s not extend hiqhQC %s", block.Hash().String(), highQC.Hash)
+		return fmt.Errorf("block %v (parent %v) not extend hiqhQC %v", block.Hash(), block.ParentHash(), highQC.Hash)
 	}
 	return nil
 }
