@@ -149,7 +149,7 @@ func (s *roundState) Vote() *hotstuff.Vote {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
-	if s.proposal.Hash() == EmptyHash {
+	if s.proposal == nil || s.proposal.Hash() == EmptyHash {
 		return nil
 	}
 

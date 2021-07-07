@@ -93,6 +93,10 @@ func (c *core) sendCommitVote() {
 
 	msgTyp := MsgTypeCommitVote
 	vote := c.current.Vote()
+	if vote == nil {
+		logger.Error("proposal is nil")
+		return
+	}
 	payload, err := Encode(vote)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
