@@ -66,9 +66,10 @@ func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 
 func (c *core) startNewRound(round *big.Int) {
 	logger := c.logger.New()
-
+	catchUpRetryCnt := 0
 	// Try to get last proposal
 	changeView := false
+catchup:
 	lastProposal, lastProposer := c.backend.LastProposal()
 	if c.current == nil {
 		logger.Trace("Start to the initial round")
@@ -76,8 +77,12 @@ func (c *core) startNewRound(round *big.Int) {
 		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
 	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Height().Int64()-1)) == 0 {
 		if round.Cmp(common.Big0) == 0 {
-			// same height and round, don't need to start new round
-			return
+			// chain reader sync last proposal
+			if catchUpRetryCnt++; catchUpRetryCnt > 100 {
+				logger.Warn("Sync last proposal", "retry number", catchUpRetryCnt)
+			}
+			time.Sleep(500 * time.Millisecond)
+			goto catchup
 		} else if round.Cmp(c.current.Round()) < 0 {
 			logger.Warn("New round should not be smaller than current round", "height", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
 			return
