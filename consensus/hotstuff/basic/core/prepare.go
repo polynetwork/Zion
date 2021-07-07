@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )

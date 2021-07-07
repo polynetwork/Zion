@@ -4,8 +4,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/prque"
 )
 
 func (c *core) handleRequest(req *hotstuff.Request) error {
@@ -44,7 +44,7 @@ type requestSet struct {
 func newRequestSet() *requestSet {
 	return &requestSet{
 		mtx:            new(sync.RWMutex),
-		pendingRequest: prque.New(),
+		pendingRequest: prque.New(nil),
 	}
 }
 
@@ -67,7 +67,8 @@ func (s *requestSet) StoreRequest(req *hotstuff.Request) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	s.pendingRequest.Push(req, float32(-req.Proposal.Number().Int64()))
+	priority := -req.Proposal.Number().Int64()
+	s.pendingRequest.Push(req, priority)
 }
 
 func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {

@@ -36,12 +36,11 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
 		c.acceptDecide()
-		// c.sendDecide()
+		c.sendDecide()
 		if err := c.backend.Commit(c.current.Proposal()); err != nil {
 			logger.Error("Failed to commit proposal", "err", err)
 			return err
 		}
-		c.startNewRound(common.Big0)
 	}
 
 	logger.Trace("handleCommitVote", "src", src.Address(), "vote view", vote.View, "vote", vote.Digest)
@@ -79,9 +78,13 @@ func (c *core) handleDecide(data *message, src hotstuff.Validator) error {
 	if err := c.checkMsgFromProposer(src); err != nil {
 		return err
 	}
+	if c.currentState() < StateLocked {
+		return errState
+	}
 	if !c.IsProposer() {
 		c.acceptDecide()
 	}
+
 	logger.Trace("handleDecide", "src", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
 	c.startNewRound(common.Big0)
 	return nil

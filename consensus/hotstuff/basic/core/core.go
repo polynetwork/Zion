@@ -13,7 +13,6 @@ import (
 
 type core struct {
 	config *hotstuff.Config
-	//address common.Address
 	logger log.Logger
 
 	current *roundState
@@ -64,11 +63,14 @@ func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 	return false
 }
 
+const maxRetry uint64 = 10
+
 func (c *core) startNewRound(round *big.Int) {
 	logger := c.logger.New()
-	catchUpRetryCnt := 0
-	// Try to get last proposal
+
 	changeView := false
+	catchUpRetryCnt := maxRetry
+	retryPeriod := time.Duration(c.config.RequestTimeout / maxRetry) * time.Millisecond
 catchup:
 	lastProposal, lastProposer := c.backend.LastProposal()
 	if c.current == nil {
@@ -78,11 +80,13 @@ catchup:
 	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Height().Int64()-1)) == 0 {
 		if round.Cmp(common.Big0) == 0 {
 			// chain reader sync last proposal
-			if catchUpRetryCnt++; catchUpRetryCnt > 100 {
-				logger.Warn("Sync last proposal", "retry number", catchUpRetryCnt)
+			if catchUpRetryCnt-=1; catchUpRetryCnt <=0 {
+				logger.Warn("Sync last proposal failed", "height", c.current.Height())
+				return
+			} else {
+				time.Sleep(retryPeriod)
+				goto catchup
 			}
-			time.Sleep(500 * time.Millisecond)
-			goto catchup
 		} else if round.Cmp(c.current.Round()) < 0 {
 			logger.Warn("New round should not be smaller than current round", "height", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
 			return
@@ -105,10 +109,11 @@ catchup:
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	prepareQC := proposal2QC(lastProposal, common.Big0)
 	c.current = newRoundState(newView, c.valSet, prepareQC)
-	c.sendNewView(newView)
-	c.newRoundChangeTimer()
 
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
+
+	c.sendNewView(newView)
+	c.newRoundChangeTimer()
 }
 
 func (c *core) currentView() *hotstuff.View {
@@ -124,6 +129,10 @@ func (c *core) currentState() State {
 
 func (c *core) currentProposer() hotstuff.Validator {
 	return c.valSet.GetProposer()
+}
+
+func (c *core) Q() int {
+	return c.valSet.Q()
 }
 
 func (c *core) stopTimer() {
