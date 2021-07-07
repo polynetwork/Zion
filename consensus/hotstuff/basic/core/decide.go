@@ -36,11 +36,12 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
 		c.acceptDecide()
-		c.sendDecide()
+		// c.sendDecide()
 		if err := c.backend.Commit(c.current.Proposal()); err != nil {
 			logger.Error("Failed to commit proposal", "err", err)
 			return err
 		}
+		c.startNewRound(common.Big0)
 	}
 
 	logger.Trace("handleCommitVote", "src", src.Address(), "vote view", vote.View, "vote", vote.Digest)
