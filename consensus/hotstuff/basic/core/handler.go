@@ -83,17 +83,17 @@ func (c *core) handleEvents() {
 			switch ev := event.Data.(type) {
 			case hotstuff.RequestEvent:
 				//logger.Trace("handle request Event", "height", ev.Proposal.Number().Uint64(), "hash", ev.Proposal.Hash().Hex())
-				c.handleRequest(&hotstuff.Request{
+				_ = c.handleRequest(&hotstuff.Request{
 					Proposal: ev.Proposal,
 				})
 
 			case hotstuff.MessageEvent:
 				// logger.Trace("handle message Event")
-				c.handleMsg(ev.Payload)
+				_ = c.handleMsg(ev.Payload)
 
 			case backlogEvent:
 				//logger.Trace("handle backlog Event")
-				c.handleCheckedMsg(ev.msg, ev.src)
+				_ = c.handleCheckedMsg(ev.msg, ev.src)
 			}
 
 		case _, ok := <-c.timeoutSub.Chan():
@@ -144,28 +144,33 @@ func (c *core) handleMsg(payload []byte) error {
 	return c.handleCheckedMsg(msg, src)
 }
 
-func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) (err error) {
+func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) error {
+	testBacklog := func(err error) error {
+		if err == errFutureMessage {
+			c.storeBacklog(msg, src)
+		}
+		return err
+	}
+
 	switch msg.Code {
 	case MsgTypeNewView:
-		err = c.handleNewView(msg, src)
+		return testBacklog(c.handleNewView(msg, src))
 	case MsgTypePrepare:
-		err = c.handlePrepare(msg, src)
+		return testBacklog(c.handlePrepare(msg, src))
 	case MsgTypePrepareVote:
-		err = c.handlePrepareVote(msg, src)
+		return testBacklog(c.handlePrepareVote(msg, src))
 	case MsgTypePreCommit:
-		err = c.handlePreCommit(msg, src)
+		return testBacklog(c.handlePreCommit(msg, src))
 	case MsgTypePreCommitVote:
-		err = c.handlePreCommitVote(msg, src)
+		return testBacklog(c.handlePreCommitVote(msg, src))
 	case MsgTypeCommit:
-		err = c.handleCommit(msg, src)
+		return testBacklog(c.handleCommit(msg, src))
 	case MsgTypeCommitVote:
-		err = c.handleCommitVote(msg, src)
-	case MsgTypeDecide:
-		err = c.handleDecide(msg, src)
+		return testBacklog(c.handleCommitVote(msg, src))
 	default:
 		c.logger.Error("msg type invalid", "unknown type", msg.Code)
 	}
-	return
+	return errInvalidMessage
 }
 
 func (c *core) handleTimeoutMsg() {

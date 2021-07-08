@@ -113,6 +113,7 @@ func (s State) Cmp(y State) int {
 
 type message struct {
 	Code          MsgType
+	View          *hotstuff.View
 	Msg           []byte
 	Address       common.Address
 	Signature     []byte
@@ -125,13 +126,14 @@ type message struct {
 
 // EncodeRLP serializes m into the Ethereum RLP format.
 func (m *message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal})
+	return rlp.Encode(w, []interface{}{m.Code, m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (m *message) DecodeRLP(s *rlp.Stream) error {
 	var msg struct {
 		Code          MsgType
+		View          *hotstuff.View
 		Msg           []byte
 		Address       common.Address
 		Signature     []byte
@@ -141,7 +143,7 @@ func (m *message) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&msg); err != nil {
 		return err
 	}
-	m.Code, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Code, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	m.Code, m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
 	return nil
 }
 
@@ -182,6 +184,7 @@ func (m *message) Payload() ([]byte, error) {
 func (m *message) PayloadNoSig() ([]byte, error) {
 	return rlp.EncodeToBytes(&message{
 		Code:      m.Code,
+		View:      m.View,
 		Msg:       m.Msg,
 		Address:   m.Address,
 		Signature: []byte{},

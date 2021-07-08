@@ -91,6 +91,12 @@ func (v *View) Cmp(y *View) int {
 	return 0
 }
 
+func (v *View) Sub(y *View) (int64, int64) {
+	h := new(big.Int).Sub(v.Height, y.Height).Int64()
+	r := new(big.Int).Sub(v.Round, y.Round).Int64()
+	return h, r
+}
+
 // -------------------------------------------
 // Vote
 

@@ -1,13 +1,13 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/log"
 	"math/big"
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 func (c *core) checkMsgFromProposer(src hotstuff.Validator) error {
@@ -45,32 +45,35 @@ func (c *core) checkVote(vote *hotstuff.Vote) error {
 	return nil
 }
 
-// checkView checks the message state
-// return errInvalidMessage if the message is invalid
-// return errFutureMessage if the message view is larger than current view
-// return errOldMessage if the message view is smaller than current view
+// checkView checks the message state, msg view should not be nil. if the view is ahead of current view
+// we name the message to be future message, and if the view is behind of current view, we name it as old
+// message. `old message` and `invalid message` will be dropped . and we use the storage of `backlog` to
+// cache the future message, it only allow the message height not bigger than `current height + 1` to ensure
+// that the `backlog` memory won't be too large, it won't interrupt the consensus process, because that the
+// `core` instance will sync block until the current height to the correct value.
+//
+// if the view is equal the current view, compare the message type and round state, with the right round state sequence,
+// message ahead of certain state is `old message`, and message behind certain state is `future message`.
+// message type and round state table as follow:
 func (c *core) checkView(msgCode MsgType, view *hotstuff.View) error {
 	if view == nil || view.Height == nil || view.Round == nil {
 		return errInvalidMessage
 	}
 
-	if msgCode == MsgTypeNewView {
-		if view.Height.Cmp(c.currentView().Height) > 0 {
-			return errFutureMessage
-		} else if view.Cmp(c.currentView()) < 0 {
-			return errOldMessage
-		}
+	// validators not in the same view
+	if hdiff, rdiff := view.Sub(c.currentView()); hdiff < 0 {
+		return errOldMessage
+	} else if hdiff > 1 {
+		return  errInvalidMessage
+	} else if hdiff == 1 {
+		return errFutureMessage
+	} else if rdiff < 0 {
+		return errOldMessage
+	} else if rdiff == 0 {
 		return nil
-	}
-
-	if view.Cmp(c.currentView()) > 0 {
+	} else {
 		return errFutureMessage
 	}
-
-	if view.Cmp(c.currentView()) < 0 {
-		return errOldMessage
-	}
-	return nil
 }
 
 func (c *core) finalizeMessage(msg *message) ([]byte, error) {
@@ -78,6 +81,7 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 
 	// Add sender address
 	msg.Address = c.Address()
+	msg.View = c.currentView()
 
 	// Add proof of consensus
 	proposal := c.current.Proposal()

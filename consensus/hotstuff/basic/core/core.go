@@ -21,6 +21,7 @@ type core struct {
 
 	valSet   hotstuff.ValidatorSet
 	requests *requestSet
+	backlogs *backlog
 
 	events            *event.TypeMuxSubscription
 	timeoutSub        *event.TypeMuxSubscription
@@ -39,6 +40,7 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 		backend: backend,
 	}
 	c.requests = newRequestSet()
+	c.backlogs = newBackLog()
 	c.validateFn = c.checkValidatorSignature
 	c.valSet = valSet
 	c.signer = signer
@@ -70,7 +72,8 @@ func (c *core) startNewRound(round *big.Int) {
 
 	changeView := false
 	catchUpRetryCnt := maxRetry
-	retryPeriod := time.Duration(c.config.RequestTimeout / maxRetry) * time.Millisecond
+	retryPeriod := time.Duration(c.config.RequestTimeout/maxRetry) * time.Millisecond
+
 catchup:
 	lastProposal, lastProposer := c.backend.LastProposal()
 	if c.current == nil {
@@ -80,7 +83,7 @@ catchup:
 	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Height().Int64()-1)) == 0 {
 		if round.Cmp(common.Big0) == 0 {
 			// chain reader sync last proposal
-			if catchUpRetryCnt-=1; catchUpRetryCnt <=0 {
+			if catchUpRetryCnt -= 1; catchUpRetryCnt <= 0 {
 				logger.Warn("Sync last proposal failed", "height", c.current.Height())
 				return
 			} else {
@@ -106,13 +109,17 @@ catchup:
 		newView.Round = new(big.Int).Set(round)
 	}
 
+	// calculate new proposal and init round state
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	prepareQC := proposal2QC(lastProposal, common.Big0)
 	c.current = newRoundState(newView, c.valSet, prepareQC)
-
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
+	// process pending request
+	c.setCurrentState(StateAcceptRequest)
 	c.sendNewView(newView)
+
+	// stop last timer and regenerate new timer
 	c.newRoundChangeTimer()
 }
 
@@ -125,6 +132,11 @@ func (c *core) currentView() *hotstuff.View {
 
 func (c *core) currentState() State {
 	return c.current.State()
+}
+
+func (c *core) setCurrentState(s State) {
+	c.current.SetState(s)
+	c.processBacklog()
 }
 
 func (c *core) currentProposer() hotstuff.Validator {

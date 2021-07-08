@@ -83,6 +83,7 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		return err
 	}
 	// todo compare high qc
+	// todo compare proposal
 	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
 		logger.Error("Failed to verify prepareQC", "err", err)
 		return errVerifyQC

@@ -214,11 +214,11 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	s.currentBlock = currentBlock
 	s.hasBadBlock = hasBadBlock
 
-	if s.broadcaster != nil {
-		for s.broadcaster.PeerCount() < s.valset.Q() {
-			time.Sleep(1 * time.Second)
-		}
-	}
+	//if s.broadcaster != nil {
+	//	for s.broadcaster.PeerCount() < s.valset.Q() {
+	//		time.Sleep(1 * time.Second)
+	//	}
+	//}
 	if err := s.core.Start(); err != nil {
 		return err
 	}

@@ -48,7 +48,6 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 	if err := c.checkMsgToProposer(); err != nil {
 		return err
 	}
-	// todo: catch up new view if `errFutureMessage`
 
 	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
 		logger.Error("Failed to verify highQC", "err", err)
