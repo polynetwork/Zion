@@ -82,8 +82,12 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 	if err := c.checkMsgFromProposer(src); err != nil {
 		return err
 	}
-	// todo compare high qc
-	// todo compare proposal
+	if msg.Proposal.Hash() != msg.PrepareQC.Hash {
+		return errInvalidProposal
+	}
+	if _, err := c.backend.Verify(msg.Proposal); err != nil {
+		return err
+	}
 	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
 		logger.Error("Failed to verify prepareQC", "err", err)
 		return errVerifyQC

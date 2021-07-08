@@ -9,19 +9,12 @@ var (
 
 	errInconsistentPrepareQC = errors.New("inconsistent prepare qc")
 
-	errInconsistentLockedQC = errors.New("inconsistent locked qc")
-
 	errInvalidDigest = errors.New("invalid digest")
 
 	// errNotFromProposer is returned when received message is supposed to be from proposer.
 	errNotFromProposer = errors.New("message does not come from proposer")
 
 	errNotToProposer = errors.New("message does not send to proposer")
-
-	errNotToValidator = errors.New("message does not send to Address validator")
-
-	// errIgnored is returned when a message was ignored.
-	errIgnored = errors.New("message is ignored")
 
 	// errFutureMessage is returned when current view is earlier than the
 	// view of the received message.
@@ -55,15 +48,12 @@ var (
 
 	errFailedDecodeCommitVote = errors.New("failed to decode COMMIT_VOTE")
 
-	// errFailedDecodeMessageSet is returned when the message set is malformed.
-	errFailedDecodeMessageSet = errors.New("failed to decode message set")
-
 	// errInvalidSigner is returned when the message is signed by a validator different than message sender
 	errInvalidSigner = errors.New("message not signed by the sender")
 
-	errHashAlreadyLocked = errors.New("proposal hash already locked")
-
 	errState = errors.New("error state")
+
+	errProposal = errors.New("proposal hash is not equal to qc digest")
 
 	errMsgTypeInvalid = errors.New("message type invalid")
 
