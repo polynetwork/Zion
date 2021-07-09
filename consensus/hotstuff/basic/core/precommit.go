@@ -108,12 +108,16 @@ func (c *core) sendPreCommitVote() {
 	logger := c.newLogger()
 
 	msgTyp := MsgTypePreCommitVote
-	sub := c.current.Vote()
-	payload, err := Encode(sub)
+	vote := c.current.Vote()
+	if vote == nil {
+		logger.Error("proposal is nil")
+		return
+	}
+	payload, err := Encode(vote)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendPreCommitVote", "vote view", sub.View, "vote", sub.Digest)
+	logger.Trace("sendPreCommitVote", "vote view", vote.View, "vote", vote.Digest)
 }

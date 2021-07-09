@@ -74,14 +74,18 @@ func (c *core) sendPrepareVote() {
 	logger := c.newLogger()
 
 	msgTyp := MsgTypePrepareVote
-	sub := c.current.Vote()
-	payload, err := Encode(sub)
+	vote := c.current.Vote()
+	if vote == nil {
+		logger.Error("proposal is nil")
+		return
+	}
+	payload, err := Encode(vote)
 	if err != nil {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendPrepareVote", "vote view", sub.View, "vote", sub.Digest)
+	logger.Trace("sendPrepareVote", "vote view", vote.View, "vote", vote.Digest)
 }
 
 func (c *core) createNewProposal() (*MsgPrepare, error) {
