@@ -48,9 +48,6 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 	return nil
 }
 
-func (c *core) acceptDecide() {
-}
-
 func (c *core) handleFinalCommitted() error {
 	logger := c.newLogger()
 	logger.Trace("handleFinalCommitted")
