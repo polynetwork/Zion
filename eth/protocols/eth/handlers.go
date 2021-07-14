@@ -80,7 +80,7 @@ func answerGetBlockHeadersQuery(backend Backend, query *GetBlockHeadersPacket, p
 			origin = backend.Chain().GetHeaderByNumber(query.Origin.Number)
 		}
 		if origin == nil {
-			log.Info("----------- origin is nil, query hash %s", query.Origin.Hash.Hex(), "query number", query.Origin.Number)
+			peer.Log().Debug("----------- origin is nil", "query hash", query.Origin.Hash.Hex(), "query number", query.Origin.Number)
 			break
 		}
 		headers = append(headers, origin)
