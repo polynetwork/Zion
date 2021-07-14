@@ -73,14 +73,25 @@ func answerGetBlockHeadersQuery(backend Backend, query *GetBlockHeadersPacket, p
 				if origin != nil {
 					query.Origin.Number = origin.Number.Uint64()
 				}
+				if origin == nil {
+					peer.Log().Debug("----------- origin is nil 1", "query hash", query.Origin.Hash.Hex(), "query number", query.Origin.Number)
+					break
+				}
 			} else {
 				origin = backend.Chain().GetHeader(query.Origin.Hash, query.Origin.Number)
+				if origin == nil {
+					peer.Log().Debug("----------- origin is nil 2", "query hash", query.Origin.Hash.Hex(), "query number", query.Origin.Number)
+					break
+				}
 			}
 		} else {
 			origin = backend.Chain().GetHeaderByNumber(query.Origin.Number)
+			if origin == nil {
+				peer.Log().Debug("----------- origin is nil 3", "query hash", query.Origin.Hash.Hex(), "query number", query.Origin.Number)
+				break
+			}
 		}
 		if origin == nil {
-			peer.Log().Debug("----------- origin is nil", "query hash", query.Origin.Hash.Hex(), "query number", query.Origin.Number)
 			break
 		}
 		headers = append(headers, origin)
