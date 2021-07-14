@@ -56,10 +56,13 @@ func (c *core) IsProposer() bool {
 }
 
 func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
-	if c.current != nil && c.current.Proposal() != nil && c.current.Proposal().Hash() == blockHash {
+	if c.current == nil {
+		return false
+	}
+	if proposal := c.current.Proposal(); proposal != nil && proposal.Hash() == blockHash {
 		return true
 	}
-	if c.current != nil && c.current.PendingRequest() != nil && c.current.PendingRequest().Proposal.Hash() == blockHash {
+	if req := c.current.PendingRequest(); req != nil && req.Proposal != nil && req.Proposal.Hash() == blockHash {
 		return true
 	}
 	return false
