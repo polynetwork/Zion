@@ -275,8 +275,18 @@ func ReadHeaderRLP(db ethdb.Reader, hash common.Hash, number uint64) rlp.RawValu
 	// comparison is necessary since ancient database only maintains
 	// the canonical data.
 	data, _ := db.Ancient(freezerHeaderTable, number)
-	if len(data) > 0 && crypto.Keccak256Hash(data) == hash {
-		return data
+	//if len(data) > 0 && crypto.Keccak256Hash(data) == hash {
+	//	return data
+	//}
+	// hotstuff only: header hash can be generated approach crypto.Keccak256Hash and header.Hash.
+	// the original go-ethereum use the first way to persist header data, and hotstuff use personal way to get it.
+	// if the param `hash` not equal with the header hash, it will affect block sync and api backend functions.
+	if len(data) > 0 {
+		var header *types.Header
+		rlp.DecodeBytes(data, &header)
+		if header != nil && header.Hash() == hash {
+			return data
+		}
 	}
 	// Then try to look up the data in leveldb.
 	data, _ = db.Get(headerKey(number, hash))
