@@ -54,7 +54,7 @@ func TestHandlePrepare(t *testing.T) {
 			for _, backend := range sys.backends {
 				core := backend.core()
 				data = newPrepareMsg(core)
-				core.current.SetLockedQC(data.HighQC)
+				core.current.SetPreCommittedQC(data.HighQC)
 			}
 			msg := newP2PMsg(data)
 			return &testcase{
@@ -130,7 +130,7 @@ func TestHandlePrepare(t *testing.T) {
 			for _, backend := range sys.backends {
 				core := backend.core()
 				data = newPrepareMsg(core)
-				core.current.SetLockedQC(data.HighQC)
+				core.current.SetPreCommittedQC(data.HighQC)
 			}
 			// msg.proposal.parentHash not equal to the field of `lockedQC.Hash`
 			data.HighQC.Hash = common.HexToHash("0x124")
@@ -156,7 +156,7 @@ func TestHandlePrepare(t *testing.T) {
 				// msg.proposal is not extend lockedQC
 				// msg.highQC.view is smaller than lockedQC.view
 				// or just set lockedQC is nil
-				//core.current.SetLockedQC(data.HighQC)
+				//core.current.SetPreCommittedQC(data.HighQC)
 			}
 			msg := newP2PMsg(data)
 			return &testcase{

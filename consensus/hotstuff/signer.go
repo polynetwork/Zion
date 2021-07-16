@@ -35,6 +35,9 @@ type Signer interface {
 	// VerifyQC verify quorum cert
 	VerifyQC(qc *QuorumCert, valSet ValidatorSet) error
 
+	// CheckQCParticipant return nil if `signer` is qc proposer or committer
+	CheckQCParticipant(qc *QuorumCert, signer common.Address) error
+
 	// CheckSignature extract address from signature and check if the address exist in validator set
 	CheckSignature(valSet ValidatorSet, data []byte, signature []byte) (common.Address, error)
 }

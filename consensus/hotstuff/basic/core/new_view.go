@@ -62,22 +62,19 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 		return errAddNewViews
 	}
 
-	logger.Trace("handleNewView", "src", src.Address(), "msg view", msg.View, "prepareQC", msg.PrepareQC.Hash)
+	size := c.current.NewViewSize()
+	logger.Trace("handleNewView", "src", src.Address(), "hash", msg.PrepareQC.Hash, "size", size)
 
-	if c.current.NewViewSize() == c.Q() {
-		c.acceptNewView(src, msg)
+	if size >= c.Q() && c.currentState() < StateHighQC {
+		highQC := c.getHighQC()
+		c.current.SetHighQC(highQC)
+		c.current.SetState(StateHighQC)
+		logger.Trace("acceptHighQC", "msg", msgTyp, "hash", msg.PrepareQC.Hash)
+
 		c.sendPrepare()
 	}
 
 	return nil
-}
-
-func (c *core) acceptNewView(src hotstuff.Validator, msg *MsgNewView) {
-	logger := c.newLogger()
-
-	highQC := c.getHighQC()
-	c.current.SetHighQC(highQC)
-	logger.Trace("acceptNewView", "src", src.Address(), "msg view", msg.View, "prepareQC", msg.PrepareQC.Hash)
 }
 
 func (c *core) getHighQC() *hotstuff.QuorumCert {

@@ -147,7 +147,7 @@ func TestHandlePreCommitVote(t *testing.T) {
 			assert.Equal(t, v.ExpectErr, leader.handlePreCommitVote(vote, src))
 		}
 		if v.ExpectErr == nil {
-			assert.Equal(t, StateLocked, leader.current.State())
+			assert.Equal(t, StatePreCommitted, leader.current.State())
 			assert.Equal(t, int(N), leader.current.PreCommitVoteSize())
 		}
 	}
@@ -312,7 +312,7 @@ func TestHandleCommit(t *testing.T) {
 				proposal, qc = newPreCommitMsg(core)
 				core.current.SetProposal(proposal)
 				core.current.SetPrepareQC(qc)
-				core.current.SetState(StateLocked)
+				core.current.SetState(StatePreCommitted)
 			}
 			msg := newP2PMsg(qc)
 			val := validator.New(sys.getLeader().Address())

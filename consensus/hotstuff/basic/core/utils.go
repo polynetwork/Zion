@@ -31,8 +31,8 @@ func (c *core) checkPrepareQC(qc *hotstuff.QuorumCert) error {
 	return nil
 }
 
-func (c *core) checkLockedQC(qc *hotstuff.QuorumCert) error {
-	if !reflect.DeepEqual(c.current.LockedQC(), qc) {
+func (c *core) checkPreCommittedQC(qc *hotstuff.QuorumCert) error {
+	if !reflect.DeepEqual(c.current.PreCommittedQC(), qc) {
 		return errInconsistentPrepareQC
 	}
 	return nil

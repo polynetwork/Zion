@@ -32,35 +32,26 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 		return errAddPrepareVote
 	}
 
-	logger.Trace("handlePrepareVote", "src", src.Address(), "msg view", vote.View, "vote", vote.Digest)
+	logger.Trace("handlePrepareVote", "src", src.Address(), "hash", vote.Digest, "size", c.current.PrepareVoteSize())
 
-	if c.current.PrepareVoteSize() >= c.Q() && c.current.state < StatePrepared {
-		if c.acceptPrepareVote(src, vote) {
-			c.sendPreCommit()
+	if 	size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() < StatePrepared {
+		seals := c.getMessageSeals(size)
+		newProposal, err := c.backend.PreCommit(c.current.Proposal(), seals)
+		if err != nil {
+			logger.Trace("Failed to assemble committed seal", "err", err)
+			return err
 		}
+
+		prepareQC := proposal2QC(newProposal, c.current.Round())
+		c.current.SetProposal(newProposal)
+		c.current.SetPrepareQC(prepareQC)
+		c.current.SetState(StatePrepared)
+		logger.Trace("acceptPrepare", "msg", MsgTypePrepareVote, "hash", newProposal.Hash())
+
+		c.sendPreCommit()
 	}
 
 	return nil
-}
-
-func (c *core) acceptPrepareVote(src hotstuff.Validator, msg *hotstuff.Vote) bool {
-	logger := c.newLogger()
-
-	seals := c.getMessageSeals(c.Q())
-	newProposal, err := c.backend.PreCommit(c.current.Proposal(), seals)
-	if err != nil {
-		logger.Trace("Failed to assemble committed seal", "err", err)
-		return false
-	}
-
-	prepareQC := proposal2QC(newProposal, c.current.Round())
-	c.current.SetProposal(newProposal)
-	c.current.SetPrepareQC(prepareQC)
-	c.current.SetState(StatePrepared)
-
-	logger.Trace("acceptPrepareVote", "msg", MsgTypePrepareVote, "vote digest", msg.Digest.Hex())
-
-	return true
 }
 
 func (c *core) sendPreCommit() {
@@ -113,22 +104,21 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		return errVerifyQC
 	}
 
-	logger.Trace("handlePreCommit", "src", src.Address(),"msg view", msg.View, "proposal", msg.Proposal.Hash())
-	if !c.IsProposer() && c.current.state < StatePrepared {
-		c.acceptPreCommit(src, msg)
+	logger.Trace("handlePreCommit", "src", src.Address(), "hash", msg.Proposal.Hash())
+
+	if c.IsProposer() && c.currentState() < StatePreCommitted {
+		c.sendPreCommitVote()
 	}
-	c.sendPreCommitVote()
+	if !c.IsProposer() && c.currentState() < StatePrepared {
+		c.current.SetPrepareQC(msg.PrepareQC)
+		c.current.SetProposal(msg.Proposal)
+		c.current.SetState(StatePrepared)
+		logger.Trace("acceptPrepare", "msg", msgTyp, "hash", msg.PrepareQC.Hash.Hex())
+
+		c.sendPreCommitVote()
+	}
 
 	return nil
-}
-
-func (c *core) acceptPreCommit(src hotstuff.Validator, msg *MsgPreCommit) {
-	logger := c.newLogger()
-
-	c.current.SetPrepareQC(msg.PrepareQC)
-	c.current.SetProposal(msg.Proposal)
-	c.current.SetState(StatePrepared)
-	logger.Trace("acceptPreCommit", "msg view", msg.View, "hash", msg.PrepareQC.Hash.Hex())
 }
 
 func (c *core) sendPreCommitVote() {

@@ -78,18 +78,21 @@ type State uint64
 
 const (
 	StateAcceptRequest State = 1
-	StatePrepared      State = 2
-	StateLocked        State = 3
-	StateCommitted     State = 4
+	StateHighQC        State = 2
+	StatePrepared      State = 3
+	StatePreCommitted  State = 4
+	StateCommitted     State = 5
 )
 
 func (s State) String() string {
 	if s == StateAcceptRequest {
-		return "AcceptRequest"
+		return "StateAcceptRequest"
+	} else if s == StateHighQC {
+		return "StateHighQC"
 	} else if s == StatePrepared {
-		return "Prepared"
-	} else if s == StateLocked {
-		return "StateLocked"
+		return "StatePrepared"
+	} else if s == StatePreCommitted {
+		return "StatePreCommitted"
 	} else if s == StateCommitted {
 		return "Committed"
 	} else {

@@ -61,6 +61,8 @@ var (
 
 	errInvalidProposal = errors.New("invalid proposal")
 
+	errInvalidQCParticipant = errors.New("invalid qc participant")
+
 	errVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
 	errExtend                 = errors.New("proposal extend relationship error")
 	errVerifyQC               = errors.New("verify qc error")

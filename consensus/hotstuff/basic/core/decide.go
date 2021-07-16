@@ -24,8 +24,8 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 		logger.Trace("Failed to check vote", "msg", msgTyp, "err", err)
 		return err
 	}
-	if vote.Digest != c.current.LockedQC().Hash {
-		logger.Trace("Failed to check hash", "msg", msgTyp, "expect vote", c.current.LockedQC().Hash.Hex(), "got", vote.Digest.Hex())
+	if vote.Digest != c.current.PreCommittedQC().Hash {
+		logger.Trace("Failed to check hash", "msg", msgTyp, "expect vote", c.current.PreCommittedQC().Hash, "got", vote.Digest)
 		return errInvalidDigest
 	}
 	if err := c.checkMsgToProposer(); err != nil {
@@ -38,28 +38,21 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 		return errAddPreCommitVote
 	}
 
-	logger.Trace("handleCommitVote", "src", src.Address(), "vote view", vote.View, "vote", vote.Digest)
+	logger.Trace("handleCommitVote", "src", src.Address(), "hash", vote.Digest, "size", c.current.CommitVoteSize())
 
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
-		if c.acceptCommitVote(src, vote) {
-			c.startNewRound(common.Big0)
+		c.current.SetState(StateCommitted)
+		c.current.SetCommittedQC(c.current.PreCommittedQC())
+		if err := c.backend.Commit(c.current.Proposal()); err != nil {
+			logger.Trace("Failed to commit proposal", "err", err)
+			return err
 		}
+		c.startNewRound(common.Big0)
 	}
 
 	return nil
 }
 
-func (c *core) acceptCommitVote(src hotstuff.Validator, msg *hotstuff.Vote) bool {
-	logger := c.newLogger()
-
-	c.current.SetState(StateCommitted)
-	c.current.SetCommittedQC(c.current.LockedQC())
-	if err := c.backend.Commit(c.current.Proposal()); err != nil {
-		logger.Trace("Failed to commit proposal", "err", err)
-		return false
-	}
-	return true
-}
 
 func (c *core) handleFinalCommitted() error {
 	logger := c.newLogger()

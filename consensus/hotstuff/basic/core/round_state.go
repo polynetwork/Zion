@@ -246,13 +246,13 @@ func (s *roundState) PrepareQC() *hotstuff.QuorumCert {
 	return s.prepareQC
 }
 
-func (s *roundState) SetLockedQC(qc *hotstuff.QuorumCert) {
+func (s *roundState) SetPreCommittedQC(qc *hotstuff.QuorumCert) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 	s.lockedQC = qc
 }
 
-func (s *roundState) LockedQC() *hotstuff.QuorumCert {
+func (s *roundState) PreCommittedQC() *hotstuff.QuorumCert {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 	return s.lockedQC

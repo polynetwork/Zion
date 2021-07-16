@@ -47,7 +47,7 @@ func TestHandleCommitVote(t *testing.T) {
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
-				core.current.SetLockedQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
+				core.current.SetPreCommittedQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
 
 				vote := newVote(core, proposal.Hash())
 				msg := newVoteMsg(vote)
@@ -71,7 +71,7 @@ func TestHandleCommitVote(t *testing.T) {
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
-				core.current.SetLockedQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
+				core.current.SetPreCommittedQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
 
 				vote := newVote(core, proposal.Hash())
 				vote.View.Height = new(big.Int).SetUint64(H - 1)
@@ -97,7 +97,7 @@ func TestHandleCommitVote(t *testing.T) {
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
-				core.current.SetLockedQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
+				core.current.SetPreCommittedQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
 
 				vote := newVote(core, proposal.Hash())
 				vote.View.Round = new(big.Int).SetUint64(R + 1)
@@ -123,7 +123,7 @@ func TestHandleCommitVote(t *testing.T) {
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
-				core.current.SetLockedQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
+				core.current.SetPreCommittedQC(&hotstuff.QuorumCert{Hash: proposal.Hash()})
 
 				vote := newVote(core, proposal.Hash())
 				vote.Digest = common.HexToHash("0x1234")
@@ -148,7 +148,7 @@ func TestHandleCommitVote(t *testing.T) {
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
-				core.current.SetLockedQC(&hotstuff.QuorumCert{Hash: common.HexToHash("0x124")})
+				core.current.SetPreCommittedQC(&hotstuff.QuorumCert{Hash: common.HexToHash("0x124")})
 
 				vote := newVote(core, proposal.Hash())
 				msg := newVoteMsg(vote)
