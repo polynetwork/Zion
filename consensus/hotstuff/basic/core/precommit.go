@@ -12,39 +12,55 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 		msgTyp = MsgTypePrepareVote
 	)
 	if err := data.Decode(&vote); err != nil {
-		logger.Error("Failed to check vote", "type", msgTyp, "err", err)
+		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
 		return errFailedDecodePrepareVote
 	}
 	if err := c.checkView(msgTyp, vote.View); err != nil {
+		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.checkVote(vote); err != nil {
+		logger.Trace("Failed to check vote", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.checkMsgToProposer(); err != nil {
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.current.AddPrepareVote(data); err != nil {
-		logger.Error("Failed to add vote", "type", msgTyp, "err", err)
+		logger.Trace("Failed to add vote", "type", msgTyp, "err", err)
 		return errAddPrepareVote
 	}
 
-	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.current.state < StatePrepared {
-		seals := c.getMessageSeals(size)
-		newProposal, err := c.backend.PreCommit(c.current.Proposal(), seals)
-		if err != nil {
-			logger.Error("Failed to assemble committed seal", "err", err)
-			return err
+	logger.Trace("handlePrepareVote", "src", src.Address(), "msg view", vote.View, "vote", vote.Digest)
+
+	if c.current.PrepareVoteSize() >= c.Q() && c.current.state < StatePrepared {
+		if c.acceptPrepareVote(src, vote) {
+			c.sendPreCommit()
 		}
-		prepareQC := proposal2QC(newProposal, c.current.Round())
-		c.current.SetProposal(newProposal)
-		c.current.SetPrepareQC(prepareQC)
-		c.current.SetState(StatePrepared)
-		c.sendPreCommit()
 	}
 
-	logger.Trace("handlePrepareVote", "src", src.Address(), "msg view", vote.View, "vote", vote.Digest)
 	return nil
+}
+
+func (c *core) acceptPrepareVote(src hotstuff.Validator, msg *hotstuff.Vote) bool {
+	logger := c.newLogger()
+
+	seals := c.getMessageSeals(c.Q())
+	newProposal, err := c.backend.PreCommit(c.current.Proposal(), seals)
+	if err != nil {
+		logger.Trace("Failed to assemble committed seal", "err", err)
+		return false
+	}
+
+	prepareQC := proposal2QC(newProposal, c.current.Round())
+	c.current.SetProposal(newProposal)
+	c.current.SetPrepareQC(prepareQC)
+	c.current.SetState(StatePrepared)
+
+	logger.Trace("acceptPrepareVote", "msg", MsgTypePrepareVote, "vote digest", msg.Digest.Hex())
+
+	return true
 }
 
 func (c *core) sendPreCommit() {
@@ -58,7 +74,7 @@ func (c *core) sendPreCommit() {
 	}
 	payload, err := Encode(msg)
 	if err != nil {
-		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
@@ -73,35 +89,46 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		msgTyp = MsgTypePreCommit
 	)
 	if err := data.Decode(&msg); err != nil {
-		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
+		logger.Trace("Failed to check decode", "msg", msgTyp, "err", err)
 		return errFailedDecodePreCommit
 	}
 	if err := c.checkView(MsgTypePreCommit, msg.View); err != nil {
+		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.checkMsgFromProposer(src); err != nil {
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
 	if msg.Proposal.Hash() != msg.PrepareQC.Hash {
+		logger.Trace("Failed to check msg", "msg", msgTyp, "expect prepareQC hash", msg.Proposal.Hash().Hex(), "got", msg.PrepareQC.Hash.Hex())
 		return errInvalidProposal
 	}
 	if _, err := c.backend.Verify(msg.Proposal); err != nil {
+		logger.Trace("Failed to check verify proposal", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
-		logger.Error("Failed to verify prepareQC", "err", err)
+		logger.Trace("Failed to verify prepareQC", "msg", msgTyp, "err", err)
 		return errVerifyQC
 	}
 
+	logger.Trace("handlePreCommit", "src", src.Address(),"msg view", msg.View, "proposal", msg.Proposal.Hash())
 	if !c.IsProposer() && c.current.state < StatePrepared {
-		c.current.SetPrepareQC(msg.PrepareQC)
-		c.current.SetProposal(msg.Proposal)
-		c.current.SetState(StatePrepared)
+		c.acceptPreCommit(src, msg)
 	}
 	c.sendPreCommitVote()
 
-	logger.Trace("handlePreCommit", "src", src.Address(),"msg view", msg.View, "proposal", msg.Proposal.Hash())
 	return nil
+}
+
+func (c *core) acceptPreCommit(src hotstuff.Validator, msg *MsgPreCommit) {
+	logger := c.newLogger()
+
+	c.current.SetPrepareQC(msg.PrepareQC)
+	c.current.SetProposal(msg.Proposal)
+	c.current.SetState(StatePrepared)
+	logger.Trace("acceptPreCommit", "msg view", msg.View, "hash", msg.PrepareQC.Hash.Hex())
 }
 
 func (c *core) sendPreCommitVote() {
@@ -110,7 +137,7 @@ func (c *core) sendPreCommitVote() {
 	msgTyp := MsgTypePreCommitVote
 	vote := c.current.Vote()
 	if vote == nil {
-		logger.Error("proposal is nil")
+		logger.Trace("Failed to send vote", "msg", msgTyp, "err", "current vote is nil")
 		return
 	}
 	payload, err := Encode(vote)

@@ -9,7 +9,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 
 	curView := c.currentView()
 	if curView.Cmp(view) > 0 {
-		logger.Error("Cannot send out the round change", "current round", curView.Round, "target round", view.Round)
+		logger.Trace("Cannot send out the round change", "current round", curView.Round, "target round", view.Round)
 		return
 	}
 
@@ -20,7 +20,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 	}
 	payload, err := Encode(newViewMsg)
 	if err != nil {
-		logger.Error("Failed to encode", "msg", MsgTypeNewView, "err", err)
+		logger.Trace("Failed to encode", "msg", MsgTypeNewView, "err", err)
 		return
 	}
 	c.broadcast(&message{
@@ -28,7 +28,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 		Msg:  payload,
 	})
 
-	logger.Info("sendNewView", "prepareQC", prepareQC.Hash)
+	logger.Trace("sendNewView", "prepareQC", prepareQC.Hash)
 }
 
 func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
@@ -40,33 +40,44 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 	)
 
 	if err := data.Decode(&msg); err != nil {
+		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
 		return errFailedDecodeNewView
 	}
 	if err := c.checkView(msgTyp, msg.View); err != nil {
+		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.checkMsgToProposer(); err != nil {
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
 
 	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
-		logger.Error("Failed to verify highQC", "err", err)
+		logger.Trace("Failed to verify highQC", "err", err)
 		return errVerifyQC
 	}
 
 	if err := c.current.AddNewViews(data); err != nil {
-		logger.Error("Failed to add new view", "err", err)
+		logger.Trace("Failed to add new view", "err", err)
 		return errAddNewViews
 	}
 
+	logger.Trace("handleNewView", "src", src.Address(), "msg view", msg.View, "prepareQC", msg.PrepareQC.Hash)
+
 	if c.current.NewViewSize() == c.Q() {
-		highQC := c.getHighQC()
-		c.current.SetHighQC(highQC)
+		c.acceptNewView(src, msg)
 		c.sendPrepare()
 	}
 
-	logger.Trace("handleNewView", "src", src.Address(), "msg view", msg.View, "prepareQC", msg.PrepareQC.Hash)
 	return nil
+}
+
+func (c *core) acceptNewView(src hotstuff.Validator, msg *MsgNewView) {
+	logger := c.newLogger()
+
+	highQC := c.getHighQC()
+	c.current.SetHighQC(highQC)
+	logger.Trace("acceptNewView", "src", src.Address(), "msg view", msg.View, "prepareQC", msg.PrepareQC.Hash)
 }
 
 func (c *core) getHighQC() *hotstuff.QuorumCert {

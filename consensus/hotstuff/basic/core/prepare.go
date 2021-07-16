@@ -17,13 +17,13 @@ func (c *core) sendPrepare() {
 	msgTyp := MsgTypePrepare
 	prepare, err := c.createNewProposal()
 	if err != nil {
-		logger.Error("Failed to create proposal", "err", err, "request set size", c.requests.Size(), "pendingRequest", c.current.PendingRequest(), "view", c.currentView())
+		logger.Trace("Failed to create proposal", "err", err, "request set size", c.requests.Size(), "pendingRequest", c.current.PendingRequest(), "view", c.currentView())
 		return
 	}
 
 	payload, err := Encode(prepare)
 	if err != nil {
-		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
 
@@ -39,34 +39,37 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 		msgTyp = MsgTypePrepare
 	)
 	if err := data.Decode(&msg); err != nil {
-		logger.Error("Failed to check msg", "type", msgTyp, "err", err)
+		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
 		return errFailedDecodePrepare
 	}
 	if err := c.checkView(msgTyp, msg.View); err != nil {
+		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.checkMsgFromProposer(src); err != nil {
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
 
 	proposal := msg.Proposal
 	highQC := msg.HighQC
 	if _, err := c.backend.VerifyUnsealedProposal(proposal); err != nil {
-		logger.Error("Failed to verify unsealed proposal", "err", err)
+		logger.Trace("Failed to verify unsealed proposal", "err", err)
 		return errVerifyUnsealedProposal
 	}
 	if err := c.extend(proposal, highQC); err != nil {
-		logger.Error("Failed to check extend", "err", err)
+		logger.Trace("Failed to check extend", "err", err)
 		return errExtend
 	}
 	if err := c.safeNode(proposal, highQC); err != nil {
-		logger.Error("Failed to check safeNode", "err", err)
+		logger.Trace("Failed to check safeNode", "err", err)
 		return errSafeNode
 	}
 
 	c.current.SetProposal(proposal)
-	c.sendPrepareVote()
 	logger.Trace("handlePrepare", "src", src.Address(), "msg view", msg.View, "proposal", msg.Proposal.Hash())
+
+	c.sendPrepareVote()
 	return nil
 }
 
@@ -76,12 +79,12 @@ func (c *core) sendPrepareVote() {
 	msgTyp := MsgTypePrepareVote
 	vote := c.current.Vote()
 	if vote == nil {
-		logger.Error("proposal is nil")
+		logger.Trace("Failed to send vote", "msg", msgTyp, "err", "current vote is nil")
 		return
 	}
 	payload, err := Encode(vote)
 	if err != nil {
-		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
