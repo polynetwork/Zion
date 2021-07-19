@@ -20,7 +20,6 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	signer2 "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"math/big"
 	"sync"
 	"time"
@@ -29,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
+	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -85,7 +85,7 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
-	signer := signer2.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote))
+	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote))
 	backend := &backend{
 		config: config,
 		//db:             db,

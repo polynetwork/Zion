@@ -3,8 +3,6 @@ package backend
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
-	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
 	"sort"
@@ -15,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
+	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -24,10 +23,11 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testLogger    = elog.New()
+	testLogger = elog.New()
 )
 
 func getGenesisAndKeys(n int) (*core.Genesis, []*ecdsa.PrivateKey, hotstuff.ValidatorSet) {
@@ -233,7 +233,7 @@ func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Blo
 	return arbitraryBlock, arbitraryP2PMessage
 }
 
-var emptySigner = &signer.SignerImpl{}
+var emptySigner = &snr.SignerImpl{}
 
 func (s *backend) UpdateBlock(block *types.Block) (*types.Block, error) {
 	header := block.Header()
@@ -250,5 +250,5 @@ func makeValSet(validators []common.Address) hotstuff.ValidatorSet {
 
 func newTestSigner() hotstuff.Signer {
 	key, _ := generatePrivateKey()
-	return signer.NewSigner(key, 3)
+	return snr.NewSigner(key, 3)
 }
