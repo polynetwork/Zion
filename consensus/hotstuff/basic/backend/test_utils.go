@@ -3,6 +3,7 @@ package backend
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/stretchr/testify/assert"
 	"io/ioutil"
 	"math/big"
@@ -232,7 +233,7 @@ func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Blo
 	return arbitraryBlock, arbitraryP2PMessage
 }
 
-var emptySigner = &SignerImpl{}
+var emptySigner = &signer.SignerImpl{}
 
 func (s *backend) UpdateBlock(block *types.Block) (*types.Block, error) {
 	header := block.Header()
@@ -249,5 +250,5 @@ func makeValSet(validators []common.Address) hotstuff.ValidatorSet {
 
 func newTestSigner() hotstuff.Signer {
 	key, _ := generatePrivateKey()
-	return NewSigner(key, 3)
+	return signer.NewSigner(key, 3)
 }

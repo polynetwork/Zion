@@ -26,7 +26,7 @@ func (c *core) handleRequest(req *hotstuff.Request) error {
 	if c.currentState() == StateAcceptRequest && c.current.highQC != nil && c.current.highQC.View.Cmp(c.currentView()) == 0 {
 		c.sendPrepare()
 	}
-	
+
 	logger.Trace("handleRequest", "height", req.Proposal.Number(), "proposal", req.Proposal.Hash())
 	return nil
 }
