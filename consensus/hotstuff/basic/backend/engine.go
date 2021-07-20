@@ -25,7 +25,6 @@ var (
 	nilUncleHash             = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
 	emptyNonce               = types.BlockNonce{}
 	now                      = time.Now
-	allowFutureBlockDuration = 0 * time.Second // do not allow future block
 )
 
 func (s *backend) Author(header *types.Header) (common.Address, error) {
@@ -186,8 +185,6 @@ func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	}}
 }
 
-// Start and Stop invoked in worker.go - start and stop
-// Start implements consensus.HotStuff.Start
 // Start implements consensus.Istanbul.Start
 func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	s.coreMu.Lock()
@@ -242,9 +239,14 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errUnknownBlock
 	}
 
-	// Don't waste time checking blocks from the future (adjusting for allowed threshold)
-	adjustedTimeNow := now().Add(allowFutureBlockDuration).Unix()
-	if header.Time > uint64(adjustedTimeNow) {
+	if header.Number.Uint64() == 0 {
+		return nil
+	}
+
+	// todo: Don't waste time checking blocks from the future (adjusting for allowed threshold)
+	parentTime := chain.GetHeaderByNumber(header.Number.Uint64() - 1).Time
+	adjustedTime := parentTime + s.config.BlockPeriod
+	if header.Time > adjustedTime && header.Time > uint64(now().Unix()) {
 		return consensus.ErrFutureBlock
 	}
 
