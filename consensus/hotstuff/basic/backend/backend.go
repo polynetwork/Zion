@@ -43,10 +43,6 @@ const (
 	fetcherID = "hotstuff"
 )
 
-// // SignerFn is a address callback function to request a header to be signed by a
-// // backing account. (Avoid import circle...)
-// type SignerFn func(accounts.Account, string, []byte) ([]byte, error)
-
 // HotStuff is the scalable hotstuff consensus engine
 type backend struct {
 	config *hotstuff.Config
@@ -324,16 +320,6 @@ func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Durat
 		return 0, err
 	}
 }
-
-//func (s *backend) VerifyQC(qc *hotstuff.QuorumCert) error {
-//	snap := s.snap()
-//	return s.signer.VerifyQC(qc, snap)
-//}
-
-//// Sign implements hotstuff.Backend.Sign
-//func (s *backend) Sign(data []byte) ([]byte, error) {
-//	return s.signer.Sign(data)
-//}
 
 func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 	if s.currentBlock == nil {

@@ -64,7 +64,7 @@ func (c *core) checkView(msgCode MsgType, view *hotstuff.View) error {
 	if hdiff, rdiff := view.Sub(c.currentView()); hdiff < 0 {
 		return errOldMessage
 	} else if hdiff > 1 {
-		return  errInvalidMessage
+		return errInvalidMessage
 	} else if hdiff == 1 {
 		return errFutureMessage
 	} else if rdiff < 0 {

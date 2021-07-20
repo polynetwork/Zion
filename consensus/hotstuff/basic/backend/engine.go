@@ -21,10 +21,11 @@ const (
 
 // HotStuff protocol constants.
 var (
-	defaultDifficulty = big.NewInt(1)
-	nilUncleHash      = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
-	emptyNonce        = types.BlockNonce{}
-	now               = time.Now
+	defaultDifficulty        = big.NewInt(1)
+	nilUncleHash             = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
+	emptyNonce               = types.BlockNonce{}
+	now                      = time.Now
+	allowFutureBlockDuration = 0 * time.Second // do not allow future block
 )
 
 func (s *backend) Author(header *types.Header) (common.Address, error) {
@@ -137,14 +138,6 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	s.logger.Trace("WorkerSealNewBlock", "height", block.Number(), "delay", delay.Milliseconds())
 
 	go func() {
-		//// wait for the timestamp of header, use this to adjust the block period
-		//select {
-		//case <-time.After(delay):
-		//case <-stop:
-		//	results <- nil
-		//	return
-		//}
-
 		// get the proposed block hash and clear it if the seal() is completed.
 		s.sealMu.Lock()
 		s.proposedBlockHash = block.Hash()
@@ -214,11 +207,6 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	s.currentBlock = currentBlock
 	s.hasBadBlock = hasBadBlock
 
-	//if s.broadcaster != nil {
-	//	for s.broadcaster.PeerCount() < s.valset.Q() {
-	//		time.Sleep(1 * time.Second)
-	//	}
-	//}
 	if err := s.core.Start(); err != nil {
 		return err
 	}
@@ -254,18 +242,12 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errUnknownBlock
 	}
 
-	// todo: verify header time
 	// Don't waste time checking blocks from the future (adjusting for allowed threshold)
-	//adjustedTimeNow := now().Add(time.Duration(s.config.AllowedFutureBlockTime) * time.Second).Unix()
-	//if header.Time > uint64(adjustedTimeNow) {
-	//	return consensus.ErrFutureBlock
-	//}
+	adjustedTimeNow := now().Add(allowFutureBlockDuration).Unix()
+	if header.Time > uint64(adjustedTimeNow) {
+		return consensus.ErrFutureBlock
+	}
 
-	// todo: check nonce
-	// Ensure that the coinbase is valid
-	//if header.Nonce != (emptyNonce) && !bytes.Equal(header.Nonce[:], nonceAuthVote) && !bytes.Equal(header.Nonce[:], nonceDropVote) {
-	//	return errInvalidNonce
-	//}
 	// Ensure that the mix digest is zero as we don't have fork protection currently
 	if header.MixDigest != types.HotstuffDigest {
 		return errInvalidMixDigest

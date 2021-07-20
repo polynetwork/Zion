@@ -34,7 +34,7 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 
 	logger.Trace("handlePrepareVote", "src", src.Address(), "hash", vote.Digest, "size", c.current.PrepareVoteSize())
 
-	if 	size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() < StatePrepared {
+	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() < StatePrepared {
 		seals := c.getMessageSeals(size)
 		newProposal, err := c.backend.PreCommit(c.current.Proposal(), seals)
 		if err != nil {

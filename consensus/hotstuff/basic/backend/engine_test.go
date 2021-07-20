@@ -131,9 +131,9 @@ func TestInsertChain(t *testing.T) {
 func TestContinueBlock(t *testing.T) {
 	var N int = 10
 	chain, engine := singleNodeChain()
-	for i:=0;i<N;i++ {
+	for i := 0; i < N; i++ {
 		parent := chain.GetBlockByNumber(uint64(i))
-		block := makeBlock(t, chain,engine, parent)
+		block := makeBlock(t, chain, engine, parent)
 		affected, err := chain.InsertChain(types.Blocks{block})
 		assert.NoError(t, err, "insert err", err)
 		assert.Equal(t, int(1), affected)

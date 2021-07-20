@@ -223,7 +223,7 @@ func (s *mockSinger) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.Validator
 	return nil
 }
 
-func (s *mockSinger) 	CheckQCParticipant(qc *hotstuff.QuorumCert, signer common.Address) error {
+func (s *mockSinger) CheckQCParticipant(qc *hotstuff.QuorumCert, signer common.Address) error {
 	return nil
 }
 
