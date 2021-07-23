@@ -69,7 +69,7 @@ func TestMessageSetVote(t *testing.T) {
 		Height: new(big.Int),
 	}
 
-	sub := &hotstuff.Vote{
+	sub := &Vote{
 		View:   view,
 		Digest: common.HexToHash("1234567890"),
 	}

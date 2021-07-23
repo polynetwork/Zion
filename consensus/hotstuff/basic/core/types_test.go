@@ -178,9 +178,9 @@ func TestQuorumCertWithSig(t *testing.T) {
 	// 2.3 Test failed validate func
 	decodedMsg = new(message)
 	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte) (common.Address, error) {
-		return common.Address{}, hotstuff.ErrUnauthorizedAddress
+		return common.Address{}, ErrUnauthorizedAddress
 	})
-	if err != hotstuff.ErrUnauthorizedAddress {
-		t.Errorf("error mismatch: have %v, want %v", err, hotstuff.ErrUnauthorizedAddress)
+	if err != ErrUnauthorizedAddress {
+		t.Errorf("error mismatch: have %v, want %v", err, ErrUnauthorizedAddress)
 	}
 }

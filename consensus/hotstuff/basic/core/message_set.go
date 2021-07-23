@@ -84,7 +84,7 @@ func (s *messageSet) String() string {
 // verify if the message comes from one of the validators
 func (s *messageSet) verify(msg *message) error {
 	if _, v := s.vs.GetByAddress(msg.Address); v == nil {
-		return hotstuff.ErrUnauthorizedAddress
+		return ErrUnauthorizedAddress
 	}
 
 	return nil

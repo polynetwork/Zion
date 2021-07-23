@@ -38,7 +38,7 @@ func (c *core) checkPreCommittedQC(qc *hotstuff.QuorumCert) error {
 	return nil
 }
 
-func (c *core) checkVote(vote *hotstuff.Vote) error {
+func (c *core) checkVote(vote *Vote) error {
 	if !reflect.DeepEqual(c.current.Vote(), vote) {
 		return errInconsistentVote
 	}

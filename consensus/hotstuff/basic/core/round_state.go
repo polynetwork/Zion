@@ -145,7 +145,7 @@ func (s *roundState) PendingRequest() *hotstuff.Request {
 	return s.pendingRequest
 }
 
-func (s *roundState) Vote() *hotstuff.Vote {
+func (s *roundState) Vote() *Vote {
 	s.mtx.RLock()
 	defer s.mtx.RUnlock()
 
@@ -153,7 +153,7 @@ func (s *roundState) Vote() *hotstuff.Vote {
 		return nil
 	}
 
-	return &hotstuff.Vote{
+	return &Vote{
 		View: &hotstuff.View{
 			Round:  new(big.Int).Set(s.round),
 			Height: new(big.Int).Set(s.height),

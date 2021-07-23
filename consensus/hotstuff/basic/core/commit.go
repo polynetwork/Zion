@@ -9,7 +9,7 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 	logger := c.newLogger()
 
 	var (
-		vote   *hotstuff.Vote
+		vote   *Vote
 		msgTyp = MsgTypePreCommitVote
 	)
 	if err := data.Decode(&vote); err != nil {
