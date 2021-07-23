@@ -17,7 +17,7 @@
 package validator
 
 import (
-	"github.com/stretchr/testify/assert"
+	"fmt"
 	"reflect"
 	"strings"
 	"testing"
@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -35,9 +36,10 @@ var (
 func TestValidatorSet(t *testing.T) {
 	testNewValidatorSet(t)
 	testNormalValSet(t)
+	testCalcProposerByIndex(t)
 	testEmptyValSet(t)
 	testStickyProposer(t)
-	//testAddAndRemoveValidator(t)
+	testAddAndRemoveValidator(t)
 }
 
 func testNewValidatorSet(t *testing.T) {
@@ -68,6 +70,25 @@ func testNewValidatorSet(t *testing.T) {
 		if strings.Compare(val.String(), nextVal.String()) >= 0 {
 			t.Errorf("validator set is not sorted in ascending order")
 		}
+	}
+}
+
+func testCalcProposerByIndex(t *testing.T) {
+	const ValCnt = 100
+
+	var addrs []common.Address
+	for i := 0; i < ValCnt; i++ {
+		key, _ := crypto.GenerateKey()
+		addr := crypto.PubkeyToAddress(key.PublicKey)
+		addrs = append(addrs, addr)
+	}
+	valset := newDefaultSet(addrs, hotstuff.RoundRobin)
+	expected := valset.validators
+
+	// Check validators sorting: should be in ascending order
+	for i := 0; i < ValCnt-1; i++ {
+		valset.CalcProposerByIndex(uint64(i))
+		assert.Equal(t, expected[i], valset.GetProposer())
 	}
 }
 
@@ -135,46 +156,45 @@ func testEmptyValSet(t *testing.T) {
 	}
 }
 
-//
-//func testAddAndRemoveValidator(t *testing.T) {
-//	valSet := NewSet(ExtractValidators([]byte{}), hotstuff.RoundRobin)
-//	if !valSet.AddValidator(common.StringToAddress(string(2))) {
-//		t.Error("the validator should be added")
-//	}
-//	if valSet.AddValidator(common.StringToAddress(string(2))) {
-//		t.Error("the existing validator should not be added")
-//	}
-//	valSet.AddValidator(common.StringToAddress(string(1)))
-//	valSet.AddValidator(common.StringToAddress(string(0)))
-//	if len(valSet.List()) != 3 {
-//		t.Error("the size of validator set should be 3")
-//	}
-//
-//	for i, v := range valSet.List() {
-//		expected := common.StringToAddress(string(i))
-//		if v.Address() != expected {
-//			t.Errorf("the order of validators is wrong: have %v, want %v", v.Address().Hex(), expected.Hex())
-//		}
-//	}
-//
-//	if !valSet.RemoveValidator(common.StringToAddress(string(2))) {
-//		t.Error("the validator should be removed")
-//	}
-//	if valSet.RemoveValidator(common.StringToAddress(string(2))) {
-//		t.Error("the non-existing validator should not be removed")
-//	}
-//	if len(valSet.List()) != 2 {
-//		t.Error("the size of validator set should be 2")
-//	}
-//	valSet.RemoveValidator(common.StringToAddress(string(1)))
-//	if len(valSet.List()) != 1 {
-//		t.Error("the size of validator set should be 1")
-//	}
-//	valSet.RemoveValidator(common.StringToAddress(string(0)))
-//	if len(valSet.List()) != 0 {
-//		t.Error("the size of validator set should be 0")
-//	}
-//}
+func testAddAndRemoveValidator(t *testing.T) {
+	valSet := NewSet(ExtractValidators([]byte{}), hotstuff.RoundRobin)
+	if !valSet.AddValidator(common.HexToAddress("0x2")) {
+		t.Error("the validator should be added")
+	}
+	if valSet.AddValidator(common.HexToAddress("0x2")) {
+		t.Error("the existing validator should not be added")
+	}
+	valSet.AddValidator(common.HexToAddress("0x1"))
+	valSet.AddValidator(common.HexToAddress("0x0"))
+	if len(valSet.List()) != 3 {
+		t.Error("the size of validator set should be 3")
+	}
+
+	for i, v := range valSet.List() {
+		expected := common.HexToAddress(fmt.Sprintf("0x%d", i))
+		if v.Address() != expected {
+			t.Errorf("the order of validators is wrong: have %v, want %v", v.Address().Hex(), expected.Hex())
+		}
+	}
+
+	if !valSet.RemoveValidator(common.HexToAddress("0x2")) {
+		t.Error("the validator should be removed")
+	}
+	if valSet.RemoveValidator(common.HexToAddress("0x2")) {
+		t.Error("the non-existing validator should not be removed")
+	}
+	if len(valSet.List()) != 2 {
+		t.Error("the size of validator set should be 2")
+	}
+	valSet.RemoveValidator(common.HexToAddress("0x1"))
+	if len(valSet.List()) != 1 {
+		t.Error("the size of validator set should be 1")
+	}
+	valSet.RemoveValidator(common.HexToAddress("0x0"))
+	if len(valSet.List()) != 0 {
+		t.Error("the size of validator set should be 0")
+	}
+}
 
 func testStickyProposer(t *testing.T) {
 	b1 := common.Hex2Bytes(testAddress)
