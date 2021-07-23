@@ -315,7 +315,7 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 
 	addrs := generateValidators(int(n))
 	sys := newTestSystem(n)
-	config := hotstuff.DefaultConfig
+	config := hotstuff.DefaultBasicConfig
 
 	for i := uint64(0); i < n; i++ {
 		vset := validator.NewSet(addrs, hotstuff.RoundRobin)

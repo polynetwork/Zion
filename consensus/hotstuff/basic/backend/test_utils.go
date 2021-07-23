@@ -121,7 +121,7 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 
 	genesis, nodeKeys, valset := getGenesisAndKeys(1)
 	memDB := rawdb.NewMemoryDatabase()
-	config := hotstuff.DefaultConfig
+	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
 	b, _ := New(config, nodeKeys[0], memDB, valset).(*backend)
 	genesis.MustCommit(memDB)
