@@ -45,6 +45,20 @@ func (c *core) checkVote(vote *Vote) error {
 	return nil
 }
 
+func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
+	isLocked, proposal := c.current.LastLockedProposal()
+	if !isLocked {
+		return nil
+	}
+	if proposal == nil {
+		return errLockedProposal
+	}
+	if !reflect.DeepEqual(proposal, msg) {
+		return errLockedProposal
+	}
+	return nil
+}
+
 // checkView checks the message state, msg view should not be nil. if the view is ahead of current view
 // we name the message to be future message, and if the view is behind of current view, we name it as old
 // message. `old message` and `invalid message` will be dropped . and we use the storage of `backlog` to
@@ -64,7 +78,7 @@ func (c *core) checkView(msgCode MsgType, view *hotstuff.View) error {
 	if hdiff, rdiff := view.Sub(c.currentView()); hdiff < 0 {
 		return errOldMessage
 	} else if hdiff > 1 {
-		return errInvalidMessage
+		return errFarAwayFutureMessage
 	} else if hdiff == 1 {
 		return errFutureMessage
 	} else if rdiff < 0 {

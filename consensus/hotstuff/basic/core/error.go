@@ -17,6 +17,7 @@ var (
 	// errFutureMessage is returned when current view is earlier than the
 	// view of the received message.
 	errFutureMessage = errors.New("future message")
+	errFarAwayFutureMessage = errors.New("far away future message")
 	// errOldMessage is returned when the received message's view is earlier
 	// than current view.
 	errOldMessage = errors.New("old message")
@@ -42,6 +43,7 @@ var (
 	errExtend                 = errors.New("proposal extend relationship error")
 	errVerifyQC               = errors.New("verify qc error")
 	errSafeNode               = errors.New("safeNode checking failed")
+	errLockedProposal 		  = errors.New("locked proposal checking failed")
 	errAddNewViews            = errors.New("add new view error")
 	errAddPrepareVote         = errors.New("add prepare vote error")
 	errAddPreCommitVote       = errors.New("add pre commit vote error")

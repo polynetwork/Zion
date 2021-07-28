@@ -16,7 +16,7 @@ type roundState struct {
 
 	pendingRequest *hotstuff.Request // leader's pending request
 	proposal       hotstuff.Proposal // Address's prepare proposal
-	lockProposal   bool
+	proposalLocked bool
 
 	// o(4n)
 	newViews       *messageSet
@@ -61,12 +61,6 @@ func (s *roundState) Spawn(view *hotstuff.View, valset hotstuff.ValidatorSet) *r
 	nrs.vs = valset
 	nrs.height = view.Height
 	nrs.round = view.Round
-
-	if s.lockProposal && s.proposal != nil && s.state >= StatePreCommitted {
-		nrs.proposal = s.proposal
-		nrs.state = s.state
-	}
-
 	nrs.state = StateAcceptRequest
 
 	nrs.newViews = newMessageSet(nrs.vs)
@@ -143,23 +137,30 @@ func (s *roundState) Proposal() hotstuff.Proposal {
 func (s *roundState) LockProposal() {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	if s.proposal != nil && !s.lockProposal {
-		s.lockProposal = true
+	if s.proposal != nil && !s.proposalLocked {
+		s.proposalLocked = true
 	}
 }
 
 func (s *roundState) UnLockProposal() {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
-	if s.proposal != nil && s.lockProposal {
-		s.lockProposal = false
+	if s.proposal != nil && s.proposalLocked {
+		s.proposalLocked = false
+		s.proposal = nil
 	}
 }
 
 func (s *roundState) IsProposalLocked() bool {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-	return s.lockProposal
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+	return s.proposalLocked
+}
+
+func (s *roundState) LastLockedProposal() (bool, hotstuff.Proposal) {
+	s.mtx.RLock()
+	defer s.mtx.RUnlock()
+	return s.proposalLocked, s.proposal
 }
 
 func (s *roundState) SetPendingRequest(req *hotstuff.Request) {

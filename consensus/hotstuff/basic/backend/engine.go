@@ -21,10 +21,10 @@ const (
 
 // HotStuff protocol constants.
 var (
-	defaultDifficulty        = big.NewInt(1)
-	nilUncleHash             = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
-	emptyNonce               = types.BlockNonce{}
-	now                      = time.Now
+	defaultDifficulty = big.NewInt(1)
+	nilUncleHash      = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
+	emptyNonce        = types.BlockNonce{}
+	now               = time.Now
 )
 
 func (s *backend) Author(header *types.Header) (common.Address, error) {
@@ -239,17 +239,6 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errUnknownBlock
 	}
 
-	if header.Number.Uint64() == 0 {
-		return nil
-	}
-
-	// todo: Don't waste time checking blocks from the future (adjusting for allowed threshold)
-	parentTime := chain.GetHeaderByNumber(header.Number.Uint64() - 1).Time
-	adjustedTime := parentTime + s.config.BlockPeriod
-	if header.Time > adjustedTime && header.Time > uint64(now().Unix()) {
-		return consensus.ErrFutureBlock
-	}
-
 	// Ensure that the mix digest is zero as we don't have fork protection currently
 	if header.MixDigest != types.HotstuffDigest {
 		return errInvalidMixDigest
@@ -282,7 +271,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time+s.config.BlockPeriod > header.Time {
+	if parent.Time+s.config.BlockPeriod > header.Time && header.Time > uint64(now().Unix()) {
 		return errInvalidTimestamp
 	}
 

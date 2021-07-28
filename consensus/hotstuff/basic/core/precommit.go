@@ -113,7 +113,7 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		c.current.SetPrepareQC(msg.PrepareQC)
 		c.current.SetProposal(msg.Proposal)
 		c.current.SetState(StatePrepared)
-		logger.Trace("acceptPrepare", "msg", msgTyp, "hash", msg.PrepareQC.Hash.Hex())
+		logger.Trace("acceptPrepare", "msg", msgTyp, "prepareQC", msg.PrepareQC.Hash)
 
 		c.sendPreCommitVote()
 	}

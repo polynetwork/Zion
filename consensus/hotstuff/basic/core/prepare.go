@@ -24,17 +24,22 @@ func (c *core) sendPrepare() {
 	}
 
 	msgTyp := MsgTypePrepare
-	proposal, err := c.createNewProposal()
-	if err != nil {
-		logger.Trace("Failed to create proposal", "err", err, "request set size", c.requests.Size(),
-			"pendingRequest", c.current.PendingRequest(), "view", c.currentView())
+	if !c.current.IsProposalLocked() {
+		proposal, err := c.createNewProposal()
+		if err != nil {
+			logger.Trace("Failed to create proposal", "err", err, "request set size", c.requests.Size(),
+				"pendingRequest", c.current.PendingRequest(), "view", c.currentView())
+			return
+		}
+		c.current.SetProposal(proposal)
+	} else if c.current.Proposal() == nil {
+		logger.Error("Failed to get locked proposal", "err", "locked proposal is nil")
 		return
 	}
-	c.current.SetProposal(proposal)
 
 	prepare := &MsgPrepare{
 		View:     c.currentView(),
-		Proposal: proposal,
+		Proposal: c.current.Proposal(),
 		HighQC:   c.current.HighQC(),
 	}
 	payload, err := Encode(prepare)
@@ -79,6 +84,10 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 		logger.Trace("Failed to check safeNode", "err", err)
 		return errSafeNode
 	}
+	if err := c.checkLockedProposal(msg.Proposal); err != nil {
+		logger.Trace("Failed to check locked proposal", "err", "proposal hash should be", c.current.Proposal().Hash(), "got", msg.Proposal.Hash())
+		return errLockedProposal
+	}
 
 	logger.Trace("handlePrepare", "src", src.Address(), "hash", msg.Proposal.Hash())
 
@@ -89,7 +98,7 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 		c.current.SetHighQC(msg.HighQC)
 		c.current.SetProposal(msg.Proposal)
 		c.current.SetState(StateHighQC)
-		logger.Trace("acceptHighQC", "msg", msgTyp, "hash", msg.HighQC.Hash)
+		logger.Trace("acceptHighQC", "msg", msgTyp, "highQC", msg.HighQC.Hash)
 
 		c.sendPrepareVote()
 	}
