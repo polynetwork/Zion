@@ -46,8 +46,7 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 	logger.Trace("handlePreCommitVote", "src", src.Address(), "hash", vote.Digest, "size", c.current.PreCommitVoteSize())
 
 	if c.current.PreCommitVoteSize() >= c.Q() && c.currentState() < StatePreCommitted {
-		c.current.SetPreCommittedQC(c.current.PrepareQC())
-		c.current.SetState(StatePreCommitted)
+		c.lockQCAndProposal(c.current.PrepareQC())
 		logger.Trace("acceptPreCommitted", "msg", msgTyp, "hash", c.current.PreCommittedQC().Hash)
 		c.sendCommit()
 	}
@@ -110,6 +109,12 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 	return nil
 }
 
+func (c *core) lockQCAndProposal(qc *hotstuff.QuorumCert) {
+	c.current.SetPreCommittedQC(qc)
+	c.current.SetState(StatePreCommitted)
+	c.current.LockProposal()
+}
+
 func (c *core) sendCommitVote() {
 	logger := c.newLogger()
 
@@ -128,6 +133,7 @@ func (c *core) sendCommitVote() {
 	logger.Trace("sendCommitVote", "vote view", vote.View, "vote", vote.Digest)
 
 	if !c.IsProposer() {
+		c.setCurrentState(StateCommitted)
 		c.startNewRound(common.Big0)
 	}
 }
