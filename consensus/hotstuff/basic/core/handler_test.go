@@ -19,7 +19,6 @@ package core
 import (
 	"testing"
 
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -79,7 +78,7 @@ func TestHandleMsg(t *testing.T) {
 	// decode prepareVote failed
 	{
 		block := makeBlock(int64(H))
-		payload, _ := Encode(&hotstuff.Vote{
+		payload, _ := Encode(&Vote{
 			View:   makeView(H, R),
 			Digest: block.Hash(),
 		})

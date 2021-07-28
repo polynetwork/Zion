@@ -8,7 +8,7 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
-		vote   *hotstuff.Vote
+		vote   *Vote
 		msgTyp = MsgTypePrepareVote
 	)
 	if err := data.Decode(&vote); err != nil {

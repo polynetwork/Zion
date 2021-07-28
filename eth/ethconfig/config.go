@@ -31,7 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	hsb "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/backend"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
@@ -240,7 +240,7 @@ type Config struct {
 
 // CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
 func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
-	config := hotstuff.DefaultConfig
+	config := hotstuff.DefaultBasicConfig
 	nodeKey := stack.Config().NodeKey()
 	genesisNodeList := stack.Config().StaticNodes()
 	validators := make([]common.Address, 0)

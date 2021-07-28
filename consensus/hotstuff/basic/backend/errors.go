@@ -3,6 +3,10 @@ package backend
 import "errors"
 
 var (
+	// ErrStartedEngine is returned if the engine is already started
+	ErrStartedEngine = errors.New("started engine")
+	// ErrStoppedEngine is returned if the engine is stopped
+	ErrStoppedEngine = errors.New("stopped engine")
 	// errInvalidProposal is returned when a prposal is malformed.
 	errInvalidProposal = errors.New("invalid proposal")
 	// errUnknownBlock is returned when the list of validators is requested for a block that is not part of the local blockchain.

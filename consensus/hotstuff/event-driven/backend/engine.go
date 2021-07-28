@@ -190,7 +190,7 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if s.coreStarted {
-		return ErrStartedEngine
+		return hotstuff.ErrStartedEngine
 	}
 
 	// clear previous data
@@ -217,7 +217,7 @@ func (s *backend) Stop() error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if !s.coreStarted {
-		return ErrStoppedEngine
+		return hotstuff.ErrStoppedEngine
 	}
 	if err := s.core.Stop(); err != nil {
 		return err

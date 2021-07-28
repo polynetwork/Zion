@@ -11,7 +11,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
@@ -62,7 +62,7 @@ func TestCheckValidatorSignature(t *testing.T) {
 	// CheckValidatorSignature should return ErrUnauthorizedAddress
 	signer := NewSigner(key, byte(core.MsgTypePrepareVote))
 	addr, err := signer.CheckSignature(vset, data, sig)
-	assert.Equal(t, err, hotstuff.ErrUnauthorizedAddress, "error mismatch: have %v, want %v", err, hotstuff.ErrUnauthorizedAddress)
+	assert.Equal(t, err, errUnauthorizedAddress, "error mismatch: have %v, want %v", err, errUnauthorizedAddress)
 
 	emptyAddr := common.Address{}
 	assert.Equal(t, emptyAddr, common.Address{}, "address mismatch: have %v, want %v", addr, emptyAddr)
