@@ -119,9 +119,11 @@ catchup:
 	var (
 		lastProposalLocked bool
 		lastLockedProposal hotstuff.Proposal
+		lastPendingRequest *hotstuff.Request
 	)
 	if c.current != nil {
 		lastProposalLocked, lastLockedProposal = c.current.LastLockedProposal()
+		lastPendingRequest = c.current.PendingRequest()
 	}
 
 	// calculate new proposal and init round state
@@ -132,6 +134,10 @@ catchup:
 		c.current.SetProposal(lastLockedProposal)
 		c.current.LockProposal()
 	}
+	if changeView && lastPendingRequest != nil {
+		c.current.SetPendingRequest(lastPendingRequest)
+	}
+	
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
 	// process pending request
