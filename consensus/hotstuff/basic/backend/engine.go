@@ -132,22 +132,13 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		return err
 	}
 	block = block.WithSeal(header)
-
-	delay := time.Unix(int64(block.Header().Time), 0).Sub(now())
-	s.logger.Trace("WorkerSealNewBlock", "height", block.Number(), "delay", delay.Milliseconds())
+	s.logger.Trace("WorkerSealNewBlock", "height", block.Number())
 
 	go func() {
 		// get the proposed block hash and clear it if the seal() is completed.
 		s.sealMu.Lock()
 		s.proposedBlockHash = block.Hash()
 
-		// consensus spent time always less than a block period, waiting for `delay` time to catch up the system time.
-		select {
-		case <-time.After(delay):
-		case <-stop:
-			results <- nil
-			return
-		}
 		defer func() {
 			s.proposedBlockHash = common.Hash{}
 			s.sealMu.Unlock()

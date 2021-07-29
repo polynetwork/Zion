@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -46,6 +47,13 @@ func (c *core) sendPrepare() {
 	if err != nil {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
+	}
+
+	// consensus spent time always less than a block period, waiting for `delay` time to catch up the system time.
+	delay := time.Unix(int64(prepare.Proposal.Time()), 0).Sub(time.Now())
+	select {
+	case <-time.After(delay):
+		logger.Trace("delay to broadcast proposal", "time", delay.Milliseconds())
 	}
 
 	c.broadcast(&message{Code: msgTyp, Msg: payload})

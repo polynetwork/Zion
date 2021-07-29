@@ -37,6 +37,8 @@ type Proposal interface {
 
 	Coinbase() common.Address
 
+	Time() uint64
+
 	EncodeRLP(w io.Writer) error
 
 	DecodeRLP(s *rlp.Stream) error
