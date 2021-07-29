@@ -51,10 +51,8 @@ func (c *core) sendPrepare() {
 
 	// consensus spent time always less than a block period, waiting for `delay` time to catch up the system time.
 	delay := time.Unix(int64(prepare.Proposal.Time()), 0).Sub(time.Now())
-	select {
-	case <-time.After(delay):
-		logger.Trace("delay to broadcast proposal", "time", delay.Milliseconds())
-	}
+	time.Sleep(delay)
+	logger.Trace("delay to broadcast proposal", "time", delay.Milliseconds())
 
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendPrepare", "prepare view", prepare.View, "proposal", prepare.Proposal.Hash())
