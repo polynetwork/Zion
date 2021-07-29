@@ -85,6 +85,9 @@ catchup:
 	lastProposal, lastProposer := c.backend.LastProposal()
 	if c.current == nil {
 		logger.Trace("Start to the initial round")
+	} else if lastProposal == nil {
+		logger.Warn("Last proposal should not be nil")
+		return
 	} else if lastProposal.Number().Cmp(c.current.Height()) >= 0 {
 		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
 	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Height().Int64()-1)) == 0 {
