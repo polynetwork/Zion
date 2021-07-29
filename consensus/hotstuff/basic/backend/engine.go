@@ -141,6 +141,13 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		s.sealMu.Lock()
 		s.proposedBlockHash = block.Hash()
 
+		// consensus spent time always less than a block period, waiting for `delay` time to catch up the system time.
+		select {
+		case <-time.After(delay):
+		case <-stop:
+			results <- nil
+			return
+		}
 		defer func() {
 			s.proposedBlockHash = common.Hash{}
 			s.sealMu.Unlock()
@@ -261,6 +268,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if number == 0 {
 		return nil
 	}
+	
 	// Ensure that the block's timestamp isn't too close to it's parent
 	var parent *types.Header
 	if len(parents) > 0 {
@@ -271,7 +279,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time+s.config.BlockPeriod > header.Time && header.Time > uint64(now().Unix()) {
+	if header.Time > parent.Time+s.config.BlockPeriod && header.Time > uint64(now().Unix()) {
 		return errInvalidTimestamp
 	}
 
