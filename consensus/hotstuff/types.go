@@ -50,9 +50,10 @@ type Request struct {
 
 // View includes a round number and a block height number.
 // Height is the block height number we'd like to commit.
-
+//
 // If the given block is not accepted by validators, a round change will occur
 // and the validators start a new round with round+1.
+//
 type View struct {
 	Round  *big.Int
 	Height *big.Int
