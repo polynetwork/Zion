@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
+	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -271,6 +272,11 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 			statedb.SetState(addr, key, value)
 		}
 	}
+	// create native contracts
+	for _, v := range native.NativeContractAddrMap {
+		g.createNativeContract(statedb, v)
+	}
+
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
 		Number:     new(big.Int).SetUint64(g.Number),
@@ -295,6 +301,15 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	statedb.Database().TrieDB().Commit(root, true, nil)
 
 	return types.NewBlock(head, nil, nil, nil, trie.NewStackTrie(nil))
+}
+
+func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
+	db.CreateAccount(addr)
+	db.SetCode(addr, addr[:])
+	initBlockNumber := big.NewInt(0)
+	if g.Config.IsEIP158(initBlockNumber) {
+		db.SetNonce(addr, 1)
+	}
 }
 
 // Commit writes the block and state of a genesis specification to the database.
