@@ -1,6 +1,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 	"reflect"
 
@@ -25,22 +26,40 @@ func (c *core) checkMsgToProposer() error {
 }
 
 func (c *core) checkPrepareQC(qc *hotstuff.QuorumCert) error {
+	if qc == nil {
+		return fmt.Errorf("external prepare qc is nil")
+	}
+	if c.current.PrepareQC() == nil {
+		return fmt.Errorf("current prepare qc is nil")
+	}
 	if !reflect.DeepEqual(c.current.PrepareQC(), qc) {
-		return errInconsistentPrepareQC
+		return fmt.Errorf("expect %s, got %s", c.current.PrepareQC().String(), qc.String())
 	}
 	return nil
 }
 
 func (c *core) checkPreCommittedQC(qc *hotstuff.QuorumCert) error {
+	if qc == nil {
+		return fmt.Errorf("external pre-committed qc is nil")
+	}
+	if c.current.PreCommittedQC() == nil {
+		return fmt.Errorf("current pre-committed qc is nil")
+	}
 	if !reflect.DeepEqual(c.current.PreCommittedQC(), qc) {
-		return errInconsistentPrepareQC
+		return fmt.Errorf("expect %s, got %s", c.current.PreCommittedQC().String(), qc.String())
 	}
 	return nil
 }
 
 func (c *core) checkVote(vote *Vote) error {
+	if vote == nil {
+		return fmt.Errorf("external vote is nil")
+	}
+	if c.current.Vote() == nil {
+		return fmt.Errorf("current vote is nil")
+	}
 	if !reflect.DeepEqual(c.current.Vote(), vote) {
-		return errInconsistentVote
+		return fmt.Errorf("expect %s, got %s", c.current.Vote().String(), vote.String())
 	}
 	return nil
 }
@@ -51,10 +70,10 @@ func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
 		return nil
 	}
 	if proposal == nil {
-		return errLockedProposal
+		return fmt.Errorf("current locked proposal is nil")
 	}
 	if !reflect.DeepEqual(proposal, msg) {
-		return errLockedProposal
+		return fmt.Errorf("expect %s, got %s", proposal.Hash().Hex(), msg.Hash().Hex())
 	}
 	return nil
 }

@@ -79,23 +79,23 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 	}
 
 	if _, err := c.backend.VerifyUnsealedProposal(msg.Proposal); err != nil {
-		logger.Trace("Failed to verify unsealed proposal", "err", err)
+		logger.Trace("Failed to verify unsealed proposal", "msg", msgTyp, "err", err)
 		return errVerifyUnsealedProposal
 	}
 	if err := c.extend(msg.Proposal, msg.HighQC); err != nil {
-		logger.Trace("Failed to check extend", "err", err)
+		logger.Trace("Failed to check extend", "msg", msgTyp, "err", err)
 		return errExtend
 	}
 	if err := c.safeNode(msg.Proposal, msg.HighQC); err != nil {
-		logger.Trace("Failed to check safeNode", "err", err)
+		logger.Trace("Failed to check safeNode", "msg", msgTyp, "err", err)
 		return errSafeNode
 	}
 	if err := c.checkLockedProposal(msg.Proposal); err != nil {
-		logger.Trace("Failed to check locked proposal", "err", "proposal hash should be", c.current.Proposal().Hash(), "got", msg.Proposal.Hash())
-		return errLockedProposal
+		logger.Trace("Failed to check locked proposal", "msg", msgTyp, "err", err)
+		return err
 	}
 
-	logger.Trace("handlePrepare", "src", src.Address(), "hash", msg.Proposal.Hash())
+	logger.Trace("handlePrepare", "msg", msgTyp, "src", src.Address(), "hash", msg.Proposal.Hash())
 
 	if c.IsProposer() && c.currentState() < StatePrepared {
 		c.sendPrepareVote()
@@ -104,7 +104,7 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 		c.current.SetHighQC(msg.HighQC)
 		c.current.SetProposal(msg.Proposal)
 		c.current.SetState(StateHighQC)
-		logger.Trace("acceptHighQC", "msg", msgTyp, "highQC", msg.HighQC.Hash)
+		logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "highQC", msg.HighQC.Hash)
 
 		c.sendPrepareVote()
 	}

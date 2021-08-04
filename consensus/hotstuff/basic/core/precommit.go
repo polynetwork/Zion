@@ -12,7 +12,7 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 		msgTyp = MsgTypePrepareVote
 	)
 	if err := data.Decode(&vote); err != nil {
-		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
+		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
 		return errFailedDecodePrepareVote
 	}
 	if err := c.checkView(msgTyp, vote.View); err != nil {
@@ -28,11 +28,11 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 		return err
 	}
 	if err := c.current.AddPrepareVote(data); err != nil {
-		logger.Trace("Failed to add vote", "type", msgTyp, "err", err)
+		logger.Trace("Failed to add vote", "msg", msgTyp, "err", err)
 		return errAddPrepareVote
 	}
 
-	logger.Trace("handlePrepareVote", "src", src.Address(), "hash", vote.Digest, "size", c.current.PrepareVoteSize())
+	logger.Trace("handlePrepareVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() < StatePrepared {
 		seals := c.getMessageSeals(size)
@@ -46,7 +46,7 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 		c.current.SetProposal(newProposal)
 		c.current.SetPrepareQC(prepareQC)
 		c.current.SetState(StatePrepared)
-		logger.Trace("acceptPrepare", "msg", MsgTypePrepareVote, "hash", newProposal.Hash())
+		logger.Trace("acceptPrepare", "msg", msgTyp,  "src", src.Address(), "hash", newProposal.Hash(), "size", size)
 
 		c.sendPreCommit()
 	}
@@ -101,10 +101,10 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 	}
 	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
 		logger.Trace("Failed to verify prepareQC", "msg", msgTyp, "err", err)
-		return errVerifyQC
+		return err
 	}
 
-	logger.Trace("handlePreCommit", "src", src.Address(), "hash", msg.Proposal.Hash())
+	logger.Trace("handlePreCommit", "msg", msgTyp, "src", src.Address(), "hash", msg.Proposal.Hash())
 
 	if c.IsProposer() && c.currentState() < StatePreCommitted {
 		c.sendPreCommitVote()
@@ -113,7 +113,7 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		c.current.SetPrepareQC(msg.PrepareQC)
 		c.current.SetProposal(msg.Proposal)
 		c.current.SetState(StatePrepared)
-		logger.Trace("acceptPrepare", "msg", msgTyp, "prepareQC", msg.PrepareQC.Hash)
+		logger.Trace("acceptPrepare", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash)
 
 		c.sendPreCommitVote()
 	}

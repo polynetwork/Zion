@@ -34,15 +34,16 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 	}
 
 	if err := c.current.AddCommitVote(data); err != nil {
-		logger.Trace("Failed to add vote", "type", msgTyp, "err", err)
+		logger.Trace("Failed to add vote", "msg", msgTyp, "err", err)
 		return errAddPreCommitVote
 	}
 
-	logger.Trace("handleCommitVote", "src", src.Address(), "hash", vote.Digest, "size", c.current.CommitVoteSize())
+	logger.Trace("handleCommitVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)
 
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
 		c.current.SetState(StateCommitted)
 		c.current.SetCommittedQC(c.current.PreCommittedQC())
+		logger.Trace("acceptCommit", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest, "size", size)
 		if err := c.backend.Commit(c.current.Proposal()); err != nil {
 			logger.Trace("Failed to commit proposal", "err", err)
 			return err

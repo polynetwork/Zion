@@ -9,7 +9,6 @@ var (
 	// errInconsistentVote is returned when received subject is different from
 	// current subject.
 	errInconsistentVote = errors.New("inconsistent vote")
-	errInconsistentPrepareQC = errors.New("inconsistent prepare qc")
 	errInvalidDigest = errors.New("invalid digest")
 	// errNotFromProposer is returned when received message is supposed to be from proposer.
 	errNotFromProposer = errors.New("message does not come from proposer")
@@ -41,9 +40,7 @@ var (
 	errInvalidProposal = errors.New("invalid proposal")
 	errVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
 	errExtend                 = errors.New("proposal extend relationship error")
-	errVerifyQC               = errors.New("verify qc error")
 	errSafeNode               = errors.New("safeNode checking failed")
-	errLockedProposal 		  = errors.New("locked proposal checking failed")
 	errAddNewViews            = errors.New("add new view error")
 	errAddPrepareVote         = errors.New("add prepare vote error")
 	errAddPreCommitVote       = errors.New("add pre commit vote error")

@@ -38,11 +38,11 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 		return errAddPreCommitVote
 	}
 
-	logger.Trace("handlePreCommitVote", "src", src.Address(), "hash", vote.Digest, "size", c.current.PreCommitVoteSize())
+	logger.Trace("handlePreCommitVote", "src", src.Address(), "hash", vote.Digest)
 
-	if c.current.PreCommitVoteSize() >= c.Q() && c.currentState() < StatePreCommitted {
+	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StatePreCommitted {
 		c.lockQCAndProposal(c.current.PrepareQC())
-		logger.Trace("acceptPreCommitted", "msg", msgTyp, "hash", c.current.PreCommittedQC().Hash)
+		logger.Trace("acceptPreCommitted", "msg", msgTyp,  "src", src.Address(), "hash", c.current.PreCommittedQC().Hash, "size", size)
 		c.sendCommit()
 	}
 	return nil
@@ -70,27 +70,27 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 		msgTyp = MsgTypeCommit
 	)
 	if err := data.Decode(&msg); err != nil {
-		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
+		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
 		return errFailedDecodeCommit
 	}
 	if err := c.checkView(MsgTypeCommit, msg.View); err != nil {
-		logger.Trace("Failed to check view", "type", msgTyp, "err", err)
+		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.checkMsgFromProposer(src); err != nil {
-		logger.Trace("Failed to check proposer", "type", msgTyp, "err", err)
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.checkPrepareQC(msg); err != nil {
-		logger.Trace("Failed to check prepareQC", "type", msgTyp, "err", err)
+		logger.Trace("Failed to check prepareQC", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.signer.VerifyQC(msg, c.valSet); err != nil {
-		logger.Trace("Failed to check verify qc", "type", msgTyp, "err", err)
-		return errVerifyQC
+		logger.Trace("Failed to check verify qc", "msg", msgTyp, "err", err)
+		return err
 	}
 
-	logger.Trace("handleCommit", "address", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
+	logger.Trace("handleCommit", "msg", msgTyp, "address", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
 
 	if c.IsProposer() && c.currentState() < StateCommitted {
 		c.sendCommitVote()
