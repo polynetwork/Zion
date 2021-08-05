@@ -43,10 +43,8 @@ func (c *core) handlePrepareVote(data *message, src hotstuff.Validator) error {
 		}
 
 		prepareQC := proposal2QC(newProposal, c.current.Round())
-		c.current.SetProposal(newProposal)
-		c.current.SetPrepareQC(prepareQC)
-		c.current.SetState(StatePrepared)
-		logger.Trace("acceptPrepare", "msg", msgTyp,  "src", src.Address(), "hash", newProposal.Hash(), "size", size)
+		c.acceptPrepare(prepareQC, newProposal)
+		logger.Trace("acceptPrepare", "msg", msgTyp,  "src", src.Address(), "hash", newProposal.Hash(), "msgSize", size)
 
 		c.sendPreCommit()
 	}
@@ -110,15 +108,19 @@ func (c *core) handlePreCommit(data *message, src hotstuff.Validator) error {
 		c.sendPreCommitVote()
 	}
 	if !c.IsProposer() && c.currentState() < StatePrepared {
-		c.current.SetPrepareQC(msg.PrepareQC)
-		c.current.SetProposal(msg.Proposal)
-		c.current.SetState(StatePrepared)
+		c.acceptPrepare(msg.PrepareQC, msg.Proposal)
 		logger.Trace("acceptPrepare", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash)
 
 		c.sendPreCommitVote()
 	}
 
 	return nil
+}
+
+func (c *core) acceptPrepare(prepareQC *hotstuff.QuorumCert, proposal hotstuff.Proposal) {
+	c.current.SetPrepareQC(prepareQC)
+	c.current.SetProposal(proposal)
+	c.current.SetState(StatePrepared)
 }
 
 func (c *core) sendPreCommitVote() {

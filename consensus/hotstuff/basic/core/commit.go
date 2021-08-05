@@ -42,7 +42,7 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 
 	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StatePreCommitted {
 		c.lockQCAndProposal(c.current.PrepareQC())
-		logger.Trace("acceptPreCommitted", "msg", msgTyp,  "src", src.Address(), "hash", c.current.PreCommittedQC().Hash, "size", size)
+		logger.Trace("acceptPreCommitted", "msg", msgTyp,  "src", src.Address(), "hash", c.current.PreCommittedQC().Hash, "msgSize", size)
 		c.sendCommit()
 	}
 	return nil

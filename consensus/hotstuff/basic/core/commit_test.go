@@ -296,7 +296,7 @@ func TestHandleCommit(t *testing.T) {
 				Sys:       sys,
 				Msg:       msg,
 				Leader:    val,
-				ExpectErr: errInconsistentPrepareQC,
+				ExpectErr: nil,
 			}
 		}(),
 

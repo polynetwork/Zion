@@ -68,7 +68,7 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 		highQC := c.getHighQC()
 		c.current.SetHighQC(highQC)
 		c.current.SetState(StateHighQC)
-		logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash, "size", size)
+		logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash, "msgSize", size)
 
 		c.sendPrepare()
 	}

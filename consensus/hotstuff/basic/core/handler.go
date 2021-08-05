@@ -116,11 +116,6 @@ func (c *core) handleEvents() {
 
 // sendEvent sends events to mux
 func (c *core) sendEvent(ev interface{}) {
-	switch ev.(type) {
-	case timeoutEvent:
-		c.logger.Trace("sendTimeoutEvent", "state", c.currentState(), "view", c.currentView())
-	default:
-	}
 	c.backend.EventMux().Post(ev)
 }
 
@@ -141,36 +136,38 @@ func (c *core) handleMsg(payload []byte) error {
 		return errInvalidSigner
 	}
 
-	return c.handleCheckedMsg(msg, src)
-}
-
-func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) error {
-	testBacklog := func(err error) error {
-		if err == errFutureMessage {
-			c.storeBacklog(msg, src)
-		}
+	// handle checked message
+	if err := c.handleCheckedMsg(msg, src); err != nil {
 		return err
 	}
+	return nil
+}
 
+func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) (err error) {
 	switch msg.Code {
 	case MsgTypeNewView:
-		return testBacklog(c.handleNewView(msg, src))
+		err = c.handleNewView(msg, src)
 	case MsgTypePrepare:
-		return testBacklog(c.handlePrepare(msg, src))
+		err = c.handlePrepare(msg, src)
 	case MsgTypePrepareVote:
-		return testBacklog(c.handlePrepareVote(msg, src))
+		err = c.handlePrepareVote(msg, src)
 	case MsgTypePreCommit:
-		return testBacklog(c.handlePreCommit(msg, src))
+		err = c.handlePreCommit(msg, src)
 	case MsgTypePreCommitVote:
-		return testBacklog(c.handlePreCommitVote(msg, src))
+		err = c.handlePreCommitVote(msg, src)
 	case MsgTypeCommit:
-		return testBacklog(c.handleCommit(msg, src))
+		err = c.handleCommit(msg, src)
 	case MsgTypeCommitVote:
-		return testBacklog(c.handleCommitVote(msg, src))
+		err = c.handleCommitVote(msg, src)
 	default:
+		err = errInvalidMessage
 		c.logger.Error("msg type invalid", "unknown type", msg.Code)
 	}
-	return errInvalidMessage
+
+	if err == errFutureMessage {
+		c.storeBacklog(msg, src)
+	}
+	return
 }
 
 func (c *core) handleTimeoutMsg() {

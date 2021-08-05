@@ -23,7 +23,9 @@ func (c *core) handleRequest(req *hotstuff.Request) error {
 		c.requests.StoreRequest(req)
 	}
 
-	if c.currentState() == StateAcceptRequest && c.current.highQC != nil && c.current.highQC.View.Cmp(c.currentView()) == 0 {
+	if c.currentState() == StateAcceptRequest &&
+		c.current.highQC != nil &&
+		c.current.highQC.View.Cmp(c.currentView()) == 0 {
 		c.sendPrepare()
 	}
 
