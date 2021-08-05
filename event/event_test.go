@@ -66,12 +66,21 @@ func TestConcurrentSub(t *testing.T) {
 	}
 	var w = &wrapState{s: StateAcceptRequest}
 
-	setState := func(ws *wrapState, st State) {
-		ws.s = st
+	setState := func(st State) {
+		w.s = st
 	}
 
 	n := 0
-	const N int = 12000
+	const N int = 1200
+
+	exec := func(num int) int {
+		if num > N-3 && w.s < StatePrepare {
+			time.Sleep(2 * time.Millisecond)
+			setState(StatePrepare)
+			t.Logf("state is %v", w.s)
+		}
+		return num
+	}
 
 	sub := mux.Subscribe(testEvent(0))
 	go func() {
@@ -81,13 +90,8 @@ func TestConcurrentSub(t *testing.T) {
 				if !ok {
 					t.Log("data is not ok")
 				}
-				// t.Log(data.Data, n)
 				n += 1
-				if n > N-4 && w.s < StatePrepare {
-					time.Sleep(2 * time.Millisecond)
-					setState(w, StatePrepare)
-					t.Logf("state is %v", w.s)
-				}
+				_ = exec(n)
 			}
 		}
 	}()
