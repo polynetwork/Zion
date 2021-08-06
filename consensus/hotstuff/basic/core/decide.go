@@ -54,6 +54,10 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 	return nil
 }
 
+// handleFinalCommitted start new round if consensus engine accept notify signal from miner.worker.
+// signals should be related with sync header or body. in fact, we DONT need this function to start an new round,
+// because that the function `startNewRound` will sync header to preparing new consensus round args.
+// we just kept it here for backup.
 func (c *core) handleFinalCommitted() error {
 	logger := c.newLogger()
 	logger.Trace("handleFinalCommitted")

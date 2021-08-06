@@ -29,11 +29,20 @@ func (c *core) checkPrepareQC(qc *hotstuff.QuorumCert) error {
 	if qc == nil {
 		return fmt.Errorf("external prepare qc is nil")
 	}
-	if c.current.PrepareQC() == nil {
+
+	localQC := c.current.PrepareQC()
+	if localQC == nil {
 		return fmt.Errorf("current prepare qc is nil")
 	}
-	if !reflect.DeepEqual(c.current.PrepareQC(), qc) {
-		return fmt.Errorf("expect %s, got %s", c.current.PrepareQC().String(), qc.String())
+
+	if localQC.View.Cmp(qc.View) != 0 {
+		return fmt.Errorf("view unsame, expect %v, got %v", localQC.View, qc.View)
+	}
+	if localQC.Proposer != qc.Proposer {
+		return fmt.Errorf("proposer unsame, expect %v, got %v", localQC.Proposer, qc.Proposer)
+	}
+	if localQC.Hash != qc.Hash {
+		return fmt.Errorf("expect %v, got %v", localQC.Hash, qc.Hash)
 	}
 	return nil
 }
@@ -78,16 +87,17 @@ func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
 	return nil
 }
 
-// checkView checks the message state, msg view should not be nil. if the view is ahead of current view
-// we name the message to be future message, and if the view is behind of current view, we name it as old
-// message. `old message` and `invalid message` will be dropped . and we use the storage of `backlog` to
-// cache the future message, it only allow the message height not bigger than `current height + 1` to ensure
-// that the `backlog` memory won't be too large, it won't interrupt the consensus process, because that the
-// `core` instance will sync block until the current height to the correct value.
+// checkView checks the message state, remote msg view should not be nil(local view WONT be nil).
+// if the view is ahead of current view we name the message to be future message, and if the view
+// is behind of current view, we name it as old message. `old message` and `invalid message` will
+// be dropped. and we use the storage of `backlog` to cache the future message, it only allow the
+// message height not bigger than `current height + 1` to ensure that the `backlog` memory won't be
+// too large, it won't interrupt the consensus process, because that the `core` instance will sync
+// block until the current height to the correct value.
 //
-// if the view is equal the current view, compare the message type and round state, with the right round state sequence,
-// message ahead of certain state is `old message`, and message behind certain state is `future message`.
-// message type and round state table as follow:
+// if the view is equal the current view, compare the message type and round state, with the right
+// round state sequence, message ahead of certain state is `old message`, and message behind certain
+// state is `future message`. message type and round state table as follow:
 func (c *core) checkView(msgCode MsgType, view *hotstuff.View) error {
 	if view == nil || view.Height == nil || view.Round == nil {
 		return errInvalidMessage
@@ -164,7 +174,6 @@ func (c *core) broadcast(msg *message) {
 		return
 	}
 
-	// todo: judge current proposal is not nil
 	switch msg.Code {
 	case MsgTypeNewView, MsgTypePrepareVote, MsgTypePreCommitVote, MsgTypeCommitVote:
 		if err := c.backend.Unicast(c.valSet, payload); err != nil {
