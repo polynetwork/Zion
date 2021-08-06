@@ -776,9 +776,6 @@ func (s *Stream) ListEnd() error {
 		return errNotAtEOL
 	}
 	s.stack = s.stack[:len(s.stack)-1] // pop
-	if len(s.stack) > 0 {
-		s.stack[len(s.stack)-1].pos += tos.size
-	}
 	s.kind = -1
 	s.size = 0
 	return nil
