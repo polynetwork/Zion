@@ -82,18 +82,13 @@ func (c *core) handleEvents() {
 			// A real Event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case hotstuff.RequestEvent:
-				//logger.Trace("handle request Event", "height", ev.Proposal.Number().Uint64(), "hash", ev.Proposal.Hash().Hex())
-				_ = c.handleRequest(&hotstuff.Request{
-					Proposal: ev.Proposal,
-				})
+				c.handleRequest(&hotstuff.Request{Proposal: ev.Proposal})
 
 			case hotstuff.MessageEvent:
-				// logger.Trace("handle message Event")
-				_ = c.handleMsg(ev.Payload)
+				c.handleMsg(ev.Payload)
 
 			case backlogEvent:
-				//logger.Trace("handle backlog Event")
-				_ = c.handleCheckedMsg(ev.msg, ev.src)
+				c.handleCheckedMsg(ev.msg, ev.src)
 			}
 
 		case _, ok := <-c.timeoutSub.Chan():
