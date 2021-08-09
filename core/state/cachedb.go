@@ -91,11 +91,11 @@ func (c *CacheDB) Get(key []byte) ([]byte, error) {
 	}
 
 	s := (*StateDB)(c)
-	stateObject := s.getStateObject(common.BytesToAddress(key[:common.AddressLength]))
-	if stateObject != nil {
+	so := s.getStateObject(common.BytesToAddress(key[:common.AddressLength]))
+	if so != nil {
 		var result []byte
 		slot := c.key2Slot(key[common.AddressLength:])
-		value := stateObject.GetState(s.db, slot)
+		value := so.GetState(s.db, slot)
 		meta := value[:][0]
 		more := meta&1 == 1
 		if more {
@@ -109,7 +109,7 @@ func (c *CacheDB) Get(key []byte) ([]byte, error) {
 
 		for more {
 			slot = c.nextSlot(slot)
-			value = stateObject.GetState(s.db, slot)
+			value = so.GetState(s.db, slot)
 			meta = value[:][0]
 			more = meta&1 == 1
 			if more {
