@@ -9,7 +9,7 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 	logger := c.newLogger()
 
 	var (
-		vote   *hotstuff.Vote
+		vote   *Vote
 		msgTyp = MsgTypePreCommitVote
 	)
 	if err := data.Decode(&vote); err != nil {
@@ -28,11 +28,6 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 		logger.Trace("Failed to check hash", "type", msgTyp, "expect vote", c.current.Proposal().Hash(), vote.Digest)
 		return errInvalidDigest
 	}
-	// todo: do not need?
-	//if err := c.signer.CheckQCParticipant(c.current.PrepareQC(), src.Address()); err != nil {
-	//	logger.Trace("Failed to check qc", "type", msgTyp, "err", err)
-	//	return errInvalidQCParticipant
-	//}
 	if err := c.checkMsgToProposer(); err != nil {
 		logger.Trace("Failed to check proposal", "type", msgTyp, "err", err)
 		return err
@@ -43,12 +38,11 @@ func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error 
 		return errAddPreCommitVote
 	}
 
-	logger.Trace("handlePreCommitVote", "src", src.Address(), "hash", vote.Digest, "size", c.current.PreCommitVoteSize())
+	logger.Trace("handlePreCommitVote", "src", src.Address(), "hash", vote.Digest)
 
-	if c.current.PreCommitVoteSize() >= c.Q() && c.currentState() < StatePreCommitted {
-		c.current.SetPreCommittedQC(c.current.PrepareQC())
-		c.current.SetState(StatePreCommitted)
-		logger.Trace("acceptPreCommitted", "msg", msgTyp, "hash", c.current.PreCommittedQC().Hash)
+	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StatePreCommitted {
+		c.lockQCAndProposal(c.current.PrepareQC())
+		logger.Trace("acceptPreCommitted", "msg", msgTyp,  "src", src.Address(), "hash", c.current.PreCommittedQC().Hash, "msgSize", size)
 		c.sendCommit()
 	}
 	return nil
@@ -76,38 +70,43 @@ func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
 		msgTyp = MsgTypeCommit
 	)
 	if err := data.Decode(&msg); err != nil {
-		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
+		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
 		return errFailedDecodeCommit
 	}
 	if err := c.checkView(MsgTypeCommit, msg.View); err != nil {
-		logger.Trace("Failed to check view", "type", msgTyp, "err", err)
+		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.checkMsgFromProposer(src); err != nil {
-		logger.Trace("Failed to check proposer", "type", msgTyp, "err", err)
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.checkPrepareQC(msg); err != nil {
-		logger.Trace("Failed to check prepareQC", "type", msgTyp, "err", err)
+		logger.Trace("Failed to check prepareQC", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.signer.VerifyQC(msg, c.valSet); err != nil {
-		logger.Trace("Failed to check verify qc", "type", msgTyp, "err", err)
-		return errVerifyQC
+		logger.Trace("Failed to check verify qc", "msg", msgTyp, "err", err)
+		return err
 	}
 
-	logger.Trace("handleCommit", "address", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
+	logger.Trace("handleCommit", "msg", msgTyp, "address", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
 
 	if c.IsProposer() && c.currentState() < StateCommitted {
 		c.sendCommitVote()
 	}
 	if !c.IsProposer() && c.currentState() < StatePreCommitted {
-		c.current.SetPreCommittedQC(msg)
-		c.current.SetState(StatePreCommitted)
-		logger.Trace("acceptPreCommitted", "msg", msgTyp, "hash", c.current.PreCommittedQC().Hash)
+		c.lockQCAndProposal(msg)
+		logger.Trace("acceptPreCommitted", "msg", msgTyp, "lockQC", c.current.PreCommittedQC().Hash)
 		c.sendCommitVote()
 	}
 	return nil
+}
+
+func (c *core) lockQCAndProposal(qc *hotstuff.QuorumCert) {
+	c.current.SetPreCommittedQC(qc)
+	c.current.SetState(StatePreCommitted)
+	c.current.LockProposal()
 }
 
 func (c *core) sendCommitVote() {
@@ -128,6 +127,7 @@ func (c *core) sendCommitVote() {
 	logger.Trace("sendCommitVote", "vote view", vote.View, "vote", vote.Digest)
 
 	if !c.IsProposer() {
+		c.setCurrentState(StateCommitted)
 		c.startNewRound(common.Big0)
 	}
 }

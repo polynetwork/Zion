@@ -21,10 +21,10 @@ const (
 
 // HotStuff protocol constants.
 var (
-	defaultDifficulty        = big.NewInt(1)
-	nilUncleHash             = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
-	emptyNonce               = types.BlockNonce{}
-	now                      = time.Now
+	defaultDifficulty = big.NewInt(1)
+	nilUncleHash      = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
+	emptyNonce        = types.BlockNonce{}
+	now               = time.Now
 )
 
 func (s *backend) Author(header *types.Header) (common.Address, error) {
@@ -132,9 +132,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		return err
 	}
 	block = block.WithSeal(header)
-
-	delay := time.Unix(int64(block.Header().Time), 0).Sub(now())
-	s.logger.Trace("WorkerSealNewBlock", "height", block.Number(), "delay", delay.Milliseconds())
+	s.logger.Trace("WorkerSealNewBlock", "height", block.Number())
 
 	go func() {
 		// get the proposed block hash and clear it if the seal() is completed.
@@ -190,7 +188,7 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if s.coreStarted {
-		return hotstuff.ErrStartedEngine
+		return ErrStartedEngine
 	}
 
 	// clear previous data
@@ -217,7 +215,7 @@ func (s *backend) Stop() error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if !s.coreStarted {
-		return hotstuff.ErrStoppedEngine
+		return ErrStoppedEngine
 	}
 	if err := s.core.Stop(); err != nil {
 		return err
@@ -237,17 +235,6 @@ func (s *backend) Close() error {
 func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header, seal bool) error {
 	if header.Number == nil {
 		return errUnknownBlock
-	}
-
-	if header.Number.Uint64() == 0 {
-		return nil
-	}
-
-	// todo: Don't waste time checking blocks from the future (adjusting for allowed threshold)
-	parentTime := chain.GetHeaderByNumber(header.Number.Uint64() - 1).Time
-	adjustedTime := parentTime + s.config.BlockPeriod
-	if header.Time > adjustedTime && header.Time > uint64(now().Unix()) {
-		return consensus.ErrFutureBlock
 	}
 
 	// Ensure that the mix digest is zero as we don't have fork protection currently
@@ -272,6 +259,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if number == 0 {
 		return nil
 	}
+	
 	// Ensure that the block's timestamp isn't too close to it's parent
 	var parent *types.Header
 	if len(parents) > 0 {
@@ -282,7 +270,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if parent.Time+s.config.BlockPeriod > header.Time {
+	if header.Time > parent.Time+s.config.BlockPeriod && header.Time > uint64(now().Unix()) {
 		return errInvalidTimestamp
 	}
 

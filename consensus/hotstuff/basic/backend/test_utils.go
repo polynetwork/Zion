@@ -12,8 +12,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
 	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -121,7 +121,7 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 
 	genesis, nodeKeys, valset := getGenesisAndKeys(1)
 	memDB := rawdb.NewMemoryDatabase()
-	config := hotstuff.DefaultConfig
+	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
 	b, _ := New(config, nodeKeys[0], memDB, valset).(*backend)
 	genesis.MustCommit(memDB)

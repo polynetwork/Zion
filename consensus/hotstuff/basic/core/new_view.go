@@ -53,23 +53,22 @@ func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
 	}
 
 	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
-		logger.Trace("Failed to verify highQC", "err", err)
-		return errVerifyQC
+		logger.Trace("Failed to verify highQC", "msg", msgTyp, "err", err)
+		return err
 	}
 
 	if err := c.current.AddNewViews(data); err != nil {
-		logger.Trace("Failed to add new view", "err", err)
+		logger.Trace("Failed to add new view", "msg", msgTyp, "err", err)
 		return errAddNewViews
 	}
 
-	size := c.current.NewViewSize()
-	logger.Trace("handleNewView", "src", src.Address(), "hash", msg.PrepareQC.Hash, "size", size)
+	logger.Trace("handleNewView", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash)
 
-	if size >= c.Q() && c.currentState() < StateHighQC {
+	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < StateHighQC {
 		highQC := c.getHighQC()
 		c.current.SetHighQC(highQC)
 		c.current.SetState(StateHighQC)
-		logger.Trace("acceptHighQC", "msg", msgTyp, "hash", msg.PrepareQC.Hash)
+		logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash, "msgSize", size)
 
 		c.sendPrepare()
 	}

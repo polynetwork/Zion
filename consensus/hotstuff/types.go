@@ -37,6 +37,8 @@ type Proposal interface {
 
 	Coinbase() common.Address
 
+	Time() uint64
+
 	EncodeRLP(w io.Writer) error
 
 	DecodeRLP(s *rlp.Stream) error
@@ -48,9 +50,10 @@ type Request struct {
 
 // View includes a round number and a block height number.
 // Height is the block height number we'd like to commit.
-
+//
 // If the given block is not accepted by validators, a round change will occur
 // and the validators start a new round with round+1.
+//
 type View struct {
 	Round  *big.Int
 	Height *big.Int
@@ -97,37 +100,6 @@ func (v *View) Sub(y *View) (int64, int64) {
 	h := new(big.Int).Sub(v.Height, y.Height).Int64()
 	r := new(big.Int).Sub(v.Round, y.Round).Int64()
 	return h, r
-}
-
-// -------------------------------------------
-// Vote
-
-type Vote struct {
-	View   *View
-	Digest common.Hash // Digest of s.Announce.Proposal.Hash()
-}
-
-// EncodeRLP serializes b into the Ethereum RLP format.
-func (b *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Digest})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (b *Vote) DecodeRLP(s *rlp.Stream) error {
-	var subject struct {
-		View   *View
-		Digest common.Hash
-	}
-
-	if err := s.Decode(&subject); err != nil {
-		return err
-	}
-	b.View, b.Digest = subject.View, subject.Digest
-	return nil
-}
-
-func (b *Vote) String() string {
-	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
 }
 
 type QuorumCert struct {

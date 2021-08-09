@@ -3,6 +3,7 @@ package core
 import (
 	"math"
 	"math/big"
+	"math/rand"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -44,6 +45,9 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 	c.validateFn = c.checkValidatorSignature
 	c.valSet = valSet
 	c.signer = signer
+
+	// todo(fuk): delete after test
+	rand.Seed(time.Now().UnixNano())
 	return c
 }
 
@@ -81,6 +85,9 @@ catchup:
 	lastProposal, lastProposer := c.backend.LastProposal()
 	if c.current == nil {
 		logger.Trace("Start to the initial round")
+	} else if lastProposal == nil {
+		logger.Warn("Last proposal should not be nil")
+		return
 	} else if lastProposal.Number().Cmp(c.current.Height()) >= 0 {
 		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
 	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Height().Int64()-1)) == 0 {
@@ -112,10 +119,28 @@ catchup:
 		newView.Round = new(big.Int).Set(round)
 	}
 
+	var (
+		lastProposalLocked bool
+		lastLockedProposal hotstuff.Proposal
+		lastPendingRequest *hotstuff.Request
+	)
+	if c.current != nil {
+		lastProposalLocked, lastLockedProposal = c.current.LastLockedProposal()
+		lastPendingRequest = c.current.PendingRequest()
+	}
+
 	// calculate new proposal and init round state
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	prepareQC := proposal2QC(lastProposal, common.Big0)
 	c.current = newRoundState(newView, c.valSet, prepareQC)
+	if changeView && lastProposalLocked && lastLockedProposal != nil {
+		c.current.SetProposal(lastLockedProposal)
+		c.current.LockProposal()
+	}
+	if changeView && lastPendingRequest != nil {
+		c.current.SetPendingRequest(lastPendingRequest)
+	}
+	
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
 	// process pending request

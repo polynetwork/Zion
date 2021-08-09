@@ -51,6 +51,75 @@ func TestSub(t *testing.T) {
 	}
 }
 
+func TestConcurrentSub(t *testing.T) {
+	mux := new(TypeMux)
+	defer mux.Stop()
+
+	type State uint8
+	const (
+		StateAcceptRequest State = 1
+		StatePrepare       State = 2
+		StatePreCommit     State = 3
+	)
+	type wrapState struct {
+		s State
+	}
+	var w = &wrapState{s: StateAcceptRequest}
+
+	setState := func(st State) {
+		w.s = st
+	}
+
+	n := 0
+	const N int = 1200
+
+	exec := func(num int) int {
+		if num > N-3 && w.s < StatePrepare {
+			time.Sleep(2 * time.Millisecond)
+			setState(StatePrepare)
+			t.Logf("state is %v", w.s)
+		}
+		return num
+	}
+
+	sub := mux.Subscribe(testEvent(0))
+	go func() {
+		for {
+			select {
+			case _, ok := <-sub.Chan():
+				if !ok {
+					t.Log("data is not ok")
+				}
+				n += 1
+				_ = exec(n)
+			}
+		}
+	}()
+
+	for i := 0; i < N; i++ {
+		go mux.Post(testEvent(i))
+	}
+	for n < N-1 {
+		continue
+	}
+	t.Log(n)
+}
+
+func TestClosure(t *testing.T) {
+	closure := func() func() int {
+		n := 0
+		return func() int {
+			n += 1
+			return n
+		}
+	}
+
+	f := closure()
+	t.Log(f())
+	t.Log(f())
+	t.Log(f())
+}
+
 func TestMuxErrorAfterStop(t *testing.T) {
 	mux := new(TypeMux)
 	mux.Stop()

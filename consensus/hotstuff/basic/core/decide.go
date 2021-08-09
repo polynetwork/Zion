@@ -9,7 +9,7 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
-		vote   *hotstuff.Vote
+		vote   *Vote
 		msgTyp = MsgTypeCommitVote
 	)
 	if err := data.Decode(&vote); err != nil {
@@ -34,15 +34,16 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 	}
 
 	if err := c.current.AddCommitVote(data); err != nil {
-		logger.Trace("Failed to add vote", "type", msgTyp, "err", err)
+		logger.Trace("Failed to add vote", "msg", msgTyp, "err", err)
 		return errAddPreCommitVote
 	}
 
-	logger.Trace("handleCommitVote", "src", src.Address(), "hash", vote.Digest, "size", c.current.CommitVoteSize())
+	logger.Trace("handleCommitVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)
 
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
 		c.current.SetState(StateCommitted)
 		c.current.SetCommittedQC(c.current.PreCommittedQC())
+		logger.Trace("acceptCommit", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest, "msgSize", size)
 		if err := c.backend.Commit(c.current.Proposal()); err != nil {
 			logger.Trace("Failed to commit proposal", "err", err)
 			return err
@@ -53,6 +54,10 @@ func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
 	return nil
 }
 
+// handleFinalCommitted start new round if consensus engine accept notify signal from miner.worker.
+// signals should be related with sync header or body. in fact, we DONT need this function to start an new round,
+// because that the function `startNewRound` will sync header to preparing new consensus round args.
+// we just kept it here for backup.
 func (c *core) handleFinalCommitted() error {
 	logger := c.newLogger()
 	logger.Trace("handleFinalCommitted")

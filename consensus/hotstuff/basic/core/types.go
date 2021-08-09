@@ -292,6 +292,34 @@ func (m *MsgPreCommit) String() string {
 	return fmt.Sprintf("{MsgPreCommit Height: %d Round: %d Hash: %s}", m.View.Height, m.View.Round, m.Proposal.Hash())
 }
 
+type Vote struct {
+	View   *hotstuff.View
+	Digest common.Hash // Digest of s.Announce.Proposal.Hash()
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (b *Vote) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{b.View, b.Digest})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (b *Vote) DecodeRLP(s *rlp.Stream) error {
+	var subject struct {
+		View   *hotstuff.View
+		Digest common.Hash
+	}
+
+	if err := s.Decode(&subject); err != nil {
+		return err
+	}
+	b.View, b.Digest = subject.View, subject.Digest
+	return nil
+}
+
+func (b *Vote) String() string {
+	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
+}
+
 type timeoutEvent struct{}
 type backlogEvent struct {
 	src hotstuff.Validator

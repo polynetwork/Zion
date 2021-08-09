@@ -131,6 +131,14 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 	valSet.proposer = valSet.selector(valSet, lastProposer, round)
 }
 
+func (valSet *defaultSet) CalcProposerByIndex(index uint64) {
+	valSet.validatorMu.RLock()
+	defer valSet.validatorMu.RUnlock()
+	if index < uint64(len(valSet.validators)) {
+		valSet.proposer = valSet.validators[index]
+	}
+}
+
 func calcSeed(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) uint64 {
 	offset := 0
 	if idx, val := valSet.GetByAddress(proposer); val != nil {

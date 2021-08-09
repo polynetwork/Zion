@@ -66,6 +66,7 @@ type StateDB struct {
 	prefetcher   *triePrefetcher
 	originalRoot common.Hash // The pre-state root, before any changes were made
 	trie         Trie
+	accountTrie  Trie
 	hasher       crypto.KeccakState
 
 	snaps         *snapshot.Tree

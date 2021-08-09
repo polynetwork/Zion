@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -16,14 +16,14 @@ func TestHandlePreCommitVote(t *testing.T) {
 	H := uint64(5)
 	R := uint64(1)
 
-	newVote := func(c *core, hash common.Hash) *hotstuff.Vote {
+	newVote := func(c *core, hash common.Hash) *Vote {
 		view := c.currentView()
-		return &hotstuff.Vote{
+		return &Vote{
 			View:   view,
 			Digest: hash,
 		}
 	}
-	newVoteMsg := func(vote *hotstuff.Vote) *message {
+	newVoteMsg := func(vote *Vote) *message {
 		payload, _ := Encode(vote)
 		return &message{
 			Code: MsgTypePreCommitVote,
@@ -296,7 +296,7 @@ func TestHandleCommit(t *testing.T) {
 				Sys:       sys,
 				Msg:       msg,
 				Leader:    val,
-				ExpectErr: errInconsistentPrepareQC,
+				ExpectErr: nil,
 			}
 		}(),
 

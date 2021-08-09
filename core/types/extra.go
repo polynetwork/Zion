@@ -40,6 +40,7 @@ type HotstuffExtra struct {
 	Validators    []common.Address
 	Seal          []byte
 	CommittedSeal [][]byte
+	Salt 		  []byte
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
@@ -48,6 +49,7 @@ func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 		ist.Validators,
 		ist.Seal,
 		ist.CommittedSeal,
+		ist.Salt,
 	})
 }
 
@@ -57,11 +59,12 @@ func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 		Validators    []common.Address
 		Seal          []byte
 		CommittedSeal [][]byte
+		Salt 		  []byte
 	}
 	if err := s.Decode(&extra); err != nil {
 		return err
 	}
-	ist.Validators, ist.Seal, ist.CommittedSeal = extra.Validators, extra.Seal, extra.CommittedSeal
+	ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
 	return nil
 }
 
@@ -90,17 +93,18 @@ func ExtractHotstuffExtraPayload(extra []byte) (*HotstuffExtra, error) {
 // decoded/encoded by rlp.
 func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	newHeader := CopyHeader(h)
-	hotstuffExtra, err := ExtractHotstuffExtra(newHeader)
+	extra, err := ExtractHotstuffExtra(newHeader)
 	if err != nil {
 		return nil
 	}
 
 	if !keepSeal {
-		hotstuffExtra.Seal = []byte{}
+		extra.Seal = []byte{}
 	}
-	hotstuffExtra.CommittedSeal = [][]byte{}
+	extra.CommittedSeal = [][]byte{}
+	extra.Salt = []byte{}
 
-	payload, err := rlp.EncodeToBytes(&hotstuffExtra)
+	payload, err := rlp.EncodeToBytes(&extra)
 	if err != nil {
 		return nil
 	}

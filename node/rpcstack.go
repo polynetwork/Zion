@@ -447,8 +447,16 @@ func (w *gzipResponseWriter) WriteHeader(status int) {
 	w.ResponseWriter.WriteHeader(status)
 }
 
+// hotstuff: rpc use too large memory, try to fix it.
 func (w *gzipResponseWriter) Write(b []byte) (int, error) {
-	return w.Writer.Write(b)
+	gz := gzPool.Get().(*gzip.Writer)
+	defer gzPool.Put(gz)
+
+	gz.Reset(w.ResponseWriter)
+	defer gz.Close()
+
+	return gz.Write(b)
+	//return w.Writer.Write(b)
 }
 
 func newGzipHandler(next http.Handler) http.Handler {
@@ -460,13 +468,14 @@ func newGzipHandler(next http.Handler) http.Handler {
 
 		w.Header().Set("Content-Encoding", "gzip")
 
-		gz := gzPool.Get().(*gzip.Writer)
-		defer gzPool.Put(gz)
-
-		gz.Reset(w)
-		defer gz.Close()
-
-		next.ServeHTTP(&gzipResponseWriter{ResponseWriter: w, Writer: gz}, r)
+		//gz := gzPool.Get().(*gzip.Writer)
+		//defer gzPool.Put(gz)
+		//
+		//gz.Reset(w)
+		//defer gz.Close()
+		//
+		//next.ServeHTTP(&gzipResponseWriter{ResponseWriter: w, Writer: gz}, r)
+		next.ServeHTTP(&gzipResponseWriter{ResponseWriter: w, Writer: nil}, r)
 	})
 }
 

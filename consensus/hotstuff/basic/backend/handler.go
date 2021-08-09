@@ -50,7 +50,7 @@ func (s *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 	defer s.coreMu.Unlock()
 	if msg.Code == hotstuffMsg {
 		if !s.coreStarted {
-			return true, hotstuff.ErrStoppedEngine
+			return true, ErrStoppedEngine
 		}
 
 		data, hash, err := s.decode(msg)
@@ -117,7 +117,7 @@ func (s *backend) NewChainHead() error {
 	s.coreMu.RLock()
 	defer s.coreMu.RUnlock()
 	if !s.coreStarted {
-		return hotstuff.ErrStoppedEngine
+		return ErrStoppedEngine
 	}
 	go s.eventMux.Post(hotstuff.FinalCommittedEvent{})
 	return nil

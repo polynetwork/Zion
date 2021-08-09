@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -24,17 +25,22 @@ func (c *core) sendPrepare() {
 	}
 
 	msgTyp := MsgTypePrepare
-	proposal, err := c.createNewProposal()
-	if err != nil {
-		logger.Trace("Failed to create proposal", "err", err, "request set size", c.requests.Size(),
-			"pendingRequest", c.current.PendingRequest(), "view", c.currentView())
+	if !c.current.IsProposalLocked() {
+		proposal, err := c.createNewProposal()
+		if err != nil {
+			logger.Trace("Failed to create proposal", "err", err, "request set size", c.requests.Size(),
+				"pendingRequest", c.current.PendingRequest(), "view", c.currentView())
+			return
+		}
+		c.current.SetProposal(proposal)
+	} else if c.current.Proposal() == nil {
+		logger.Error("Failed to get locked proposal", "err", "locked proposal is nil")
 		return
 	}
-	c.current.SetProposal(proposal)
 
 	prepare := &MsgPrepare{
 		View:     c.currentView(),
-		Proposal: proposal,
+		Proposal: c.current.Proposal(),
 		HighQC:   c.current.HighQC(),
 	}
 	payload, err := Encode(prepare)
@@ -42,6 +48,11 @@ func (c *core) sendPrepare() {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
+
+	// consensus spent time always less than a block period, waiting for `delay` time to catch up the system time.
+	delay := time.Unix(int64(prepare.Proposal.Time()), 0).Sub(time.Now())
+	time.Sleep(delay)
+	logger.Trace("delay to broadcast proposal", "time", delay.Milliseconds())
 
 	c.broadcast(&message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendPrepare", "prepare view", prepare.View, "proposal", prepare.Proposal.Hash())
@@ -68,19 +79,23 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 	}
 
 	if _, err := c.backend.VerifyUnsealedProposal(msg.Proposal); err != nil {
-		logger.Trace("Failed to verify unsealed proposal", "err", err)
+		logger.Trace("Failed to verify unsealed proposal", "msg", msgTyp, "err", err)
 		return errVerifyUnsealedProposal
 	}
 	if err := c.extend(msg.Proposal, msg.HighQC); err != nil {
-		logger.Trace("Failed to check extend", "err", err)
+		logger.Trace("Failed to check extend", "msg", msgTyp, "err", err)
 		return errExtend
 	}
 	if err := c.safeNode(msg.Proposal, msg.HighQC); err != nil {
-		logger.Trace("Failed to check safeNode", "err", err)
+		logger.Trace("Failed to check safeNode", "msg", msgTyp, "err", err)
 		return errSafeNode
 	}
+	if err := c.checkLockedProposal(msg.Proposal); err != nil {
+		logger.Trace("Failed to check locked proposal", "msg", msgTyp, "err", err)
+		return err
+	}
 
-	logger.Trace("handlePrepare", "src", src.Address(), "hash", msg.Proposal.Hash())
+	logger.Trace("handlePrepare", "msg", msgTyp, "src", src.Address(), "hash", msg.Proposal.Hash())
 
 	if c.IsProposer() && c.currentState() < StatePrepared {
 		c.sendPrepareVote()
@@ -89,7 +104,7 @@ func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
 		c.current.SetHighQC(msg.HighQC)
 		c.current.SetProposal(msg.Proposal)
 		c.current.SetState(StateHighQC)
-		logger.Trace("acceptHighQC", "msg", msgTyp, "hash", msg.HighQC.Hash)
+		logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "highQC", msg.HighQC.Hash)
 
 		c.sendPrepareVote()
 	}

@@ -23,7 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/validator"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -315,7 +315,7 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 
 	addrs := generateValidators(int(n))
 	sys := newTestSystem(n)
-	config := hotstuff.DefaultConfig
+	config := hotstuff.DefaultBasicConfig
 
 	for i := uint64(0); i < n; i++ {
 		vset := validator.NewSet(addrs, hotstuff.RoundRobin)
