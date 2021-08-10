@@ -13,8 +13,8 @@ const (
 	NativeCrossChain       = "cross_chain"
 	NativeNeo3StateManager = "neo3_state_manager"
 	NativeNodeManager      = "node_manager"
-	NativeRelayerManager   = "relayerManager"
-	NativeSideChainManager = "sideChainManager"
+	NativeRelayerManager   = "relayer_manager"
+	NativeSideChainManager = "side_chain_manager"
 	// native backup contracts
 	NativeExtra4  = "extra4"
 	NativeExtra5  = "extra5"
