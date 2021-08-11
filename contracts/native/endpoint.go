@@ -16,6 +16,7 @@ type ContractRef struct {
 	stateDB     *state.StateDB
 	blockHeight *big.Int
 	msgSender   common.Address
+	caller      common.Address
 	evmHandler  EVMHandler
 	gasLeft     uint64
 }
@@ -23,6 +24,7 @@ type ContractRef struct {
 func NewContractRef(
 	db *state.StateDB,
 	sender common.Address,
+	caller common.Address,
 	blockHeight *big.Int,
 	suppliedGas uint64,
 	evmHandler EVMHandler) *ContractRef {
@@ -31,6 +33,7 @@ func NewContractRef(
 		contexts:    make([]*Context, 0),
 		stateDB:     db,
 		msgSender:   sender,
+		caller:      caller,
 		blockHeight: blockHeight,
 		gasLeft:     suppliedGas,
 		evmHandler:  evmHandler,
@@ -136,14 +139,21 @@ func (s *ContractRef) CheckContexts() bool {
 }
 
 func (s *ContractRef) CheckWitness(address common.Address) bool {
-	if s.CheckAccountAddress(address) || s.CheckContractAddress(address) {
+	if s.CheckTxSender(address) || s.CheckCaller(address) || s.CheckContractAddress(address) {
 		return true
 	}
 	return false
 }
 
-func (s *ContractRef) CheckAccountAddress(address common.Address) bool {
+func (s *ContractRef) CheckTxSender(address common.Address) bool {
 	if s.msgSender == address {
+		return true
+	}
+	return false
+}
+
+func (s *ContractRef) CheckCaller(address common.Address) bool {
+	if s.caller == address {
 		return true
 	}
 	return false
