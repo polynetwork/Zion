@@ -23,9 +23,13 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	polycomm "github.com/polynetwork/poly/common"
 )
 
-const abijson = ``
+const abijson = `[
+	{"type":"function","constant":true,"name":"` + MethodRegisterSideChain + `","inputs":[{"name":"Address","type":"address"},{"name":"ChainId","type":"uint64"},{"name":"Router","type":"uint64"},{"name":"Name","type":"string"},{"name":"BlocksToWait","type":"uint64"},{"name":"CCMCAddress","type":"bytes"},{"name":"ExtraInfo","type":"bytes"}],"outputs":[{"name":"Succeed","type":"bool"}]},
+	{"type":"event","anonymous":false,"name":"` + MethodRegisterSideChain + `","inputs":[{"indexed":false,"name":"ChainId","type":"uint64"},{"indexed":false,"name":"Router","type":"uint64"},{"indexed":false,"name":"Name","type":"string"},{"indexed":false,"name":"BlocksToWait","type":"uint64"}]}
+]`
 
 func GetABI() abi.ABI {
 	ab, err := abi.JSON(strings.NewReader(abijson))
@@ -70,4 +74,27 @@ type BtcTxParamDetial struct {
 	PVersion  uint64
 	FeeRate   uint64
 	MinChange uint64
+}
+
+func (this *BtcTxParamDetial) Serialization(sink *polycomm.ZeroCopySink) {
+	sink.WriteVarUint(this.PVersion)
+	sink.WriteVarUint(this.FeeRate)
+	sink.WriteVarUint(this.MinChange)
+}
+
+func (this *BtcTxParamDetial) Deserialization(source *polycomm.ZeroCopySource) error {
+	var eof bool
+	this.PVersion, eof = source.NextVarUint()
+	if eof {
+		return fmt.Errorf("BtcTxParamDetial deserialize version error")
+	}
+	this.FeeRate, eof = source.NextVarUint()
+	if eof {
+		return fmt.Errorf("BtcTxParamDetial deserialize fee rate error")
+	}
+	this.MinChange, eof = source.NextVarUint()
+	if eof {
+		return fmt.Errorf("BtcTxParamDetial deserialize min-change error")
+	}
+	return nil
 }

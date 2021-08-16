@@ -39,6 +39,10 @@ func (s *NativeContract) ContractRef() *ContractRef {
 	return s.ref
 }
 
+func (s *NativeContract) GetCacheDB() *state.CacheDB {
+	return (*state.CacheDB)(s.db)
+}
+
 func (s *NativeContract) StateDB() *state.StateDB {
 	return s.db
 }
@@ -104,4 +108,9 @@ func (s *NativeContract) Invoke() ([]byte, error) {
 	}
 
 	return ret, err
+}
+
+func (s *NativeContract) AddNotify(topics []common.Hash, data []byte) {
+	emitter := utils.NewEventEmitter(s.ref.CurrentContext().ContractAddress, s.ContractRef().BlockHeight().Uint64(), s.StateDB())
+	emitter.Event(topics, data)
 }

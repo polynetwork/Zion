@@ -18,14 +18,19 @@
 package side_chain_manager
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
 const contractName = "side chain manager"
 
 const (
+	//function name
 	MethodContractName             = "name"
 	MethodRegisterSideChain        = "registerSideChain"
 	MethodApproveRegisterSideChain = "approveRegisterSideChain"
@@ -35,20 +40,30 @@ const (
 	MethodApproveQuitSideChain     = "approveQuitSideChain"
 	MethodRegisterRedeem           = "registerRedeem"
 	MethodSetBtcTxParam            = "setBtcTxParam"
+
+	//key prefix
+	SIDE_CHAIN_APPLY          = "sideChainApply"
+	UPDATE_SIDE_CHAIN_REQUEST = "updateSideChainRequest"
+	QUIT_SIDE_CHAIN_REQUEST   = "quitSideChainRequest"
+	SIDE_CHAIN                = "sideChain"
+	REDEEM_BIND               = "redeemBind"
+	BIND_SIGN_INFO            = "bindSignInfo"
+	BTC_TX_PARAM              = "btcTxParam"
+	REDEEM_SCRIPT             = "redeemScript"
 )
 
 var (
 	this     = native.NativeContractAddrMap[native.NativeSideChainManager]
 	gasTable = map[string]uint64{
-		MethodContractName:             0,
-		MethodRegisterSideChain:        0,
-		MethodApproveRegisterSideChain: 100000,
-		MethodUpdateSideChain:          0,
-		MethodApproveUpdateSideChain:   0,
-		MethodQuitSideChain:            0,
-		MethodApproveQuitSideChain:     0,
-		MethodRegisterRedeem:           0,
-		MethodSetBtcTxParam:            0,
+		// MethodContractName:             0,
+		MethodRegisterSideChain: 0,
+		// MethodApproveRegisterSideChain: 100000,
+		// MethodUpdateSideChain:          0,
+		// MethodApproveUpdateSideChain:   0,
+		// MethodQuitSideChain:            0,
+		// MethodApproveQuitSideChain:     0,
+		// MethodRegisterRedeem:           0,
+		// MethodSetBtcTxParam:            0,
 	}
 
 	ABI abi.ABI
@@ -62,28 +77,68 @@ func InitSideChainManager() {
 func RegisterSideChainManagerContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
-	s.Register(MethodContractName, Name)
+	// s.Register(MethodContractName, Name)
 	s.Register(MethodRegisterSideChain, RegisterSideChain)
-	s.Register(MethodApproveRegisterSideChain, ApproveRegisterSideChain)
-	s.Register(MethodUpdateSideChain, UpdateSideChain)
-	s.Register(MethodApproveUpdateSideChain, ApproveUpdateSideChain)
-	s.Register(MethodQuitSideChain, QuitSideChain)
-	s.Register(MethodApproveQuitSideChain, ApproveQuitSideChain)
-	s.Register(MethodRegisterRedeem, RegisterRedeem)
-	s.Register(MethodSetBtcTxParam, SetBtcTxParam)
+	// s.Register(MethodApproveRegisterSideChain, ApproveRegisterSideChain)
+	// s.Register(MethodUpdateSideChain, UpdateSideChain)
+	// s.Register(MethodApproveUpdateSideChain, ApproveUpdateSideChain)
+	// s.Register(MethodQuitSideChain, QuitSideChain)
+	// s.Register(MethodApproveQuitSideChain, ApproveQuitSideChain)
+	// s.Register(MethodRegisterRedeem, RegisterRedeem)
+	// s.Register(MethodSetBtcTxParam, SetBtcTxParam)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(ABI, MethodContractName, contractName)
 }
 
-func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
+func RegisterSideChain(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := &RegisterSideChainParam{}
 	if err := utils.UnpackMethod(ABI, MethodRegisterSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
+	//check witness
+	err := contract.ValidateOwner(native, params.Address)
+	if err != nil {
+		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+	}
+	registerSideChain, err := getSideChainApply(native, params.ChainId)
+	if err != nil {
+		return nil, fmt.Errorf("RegisterSideChain, getRegisterSideChain error: %v", err)
+	}
+	if registerSideChain != nil {
+		return nil, fmt.Errorf("RegisterSideChain, chainid already requested")
+	}
+	sideChain, err := GetSideChain(native, params.ChainId)
+	if err != nil {
+		return nil, fmt.Errorf("RegisterSideChain, getSideChain error: %v", err)
+	}
+	if sideChain != nil {
+		return nil, fmt.Errorf("RegisterSideChain, chainid already registered")
+	}
+
+	sideChain = &SideChain{
+		Address:      params.Address,
+		ChainId:      params.ChainId,
+		Router:       params.Router,
+		Name:         params.Name,
+		BlocksToWait: params.BlocksToWait,
+		CCMCAddress:  params.CCMCAddress,
+		ExtraInfo:    params.ExtraInfo,
+	}
+	err = putSideChainApply(native, sideChain)
+	if err != nil {
+		return nil, fmt.Errorf("RegisterSideChain, putRegisterSideChain error: %v", err)
+	}
+
+	eventName := MethodRegisterSideChain
+	data, err := utils.PackEvents(ABI, eventName, params.ChainId, params.Router, params.Name, params.BlocksToWait)
+	if err != nil {
+		return nil, fmt.Errorf("RegisterSideChain, PackEvents error: %v", err)
+	}
+	native.AddNotify([]common.Hash{ABI.Events[eventName].ID}, data)
 	return utils.PackOutputs(ABI, MethodRegisterSideChain, true)
 }
 

@@ -19,6 +19,7 @@ package native
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
 // MinGasUsage tx's gas usage should not be greater than an minimum fixed value if it execute failed.
@@ -53,12 +54,12 @@ const (
 
 var NativeContractAddrMap = map[string]common.Address{
 	NativeGovernance:       common.HexToAddress("0x4600691499997fCc224425ba5C93EebC57f3615b"),
-	NativeSyncHeader:       common.HexToAddress("0xb2799bDE6831449d73C1F22CE815f773D0CafCc5"),
-	NativeCrossChain:       common.HexToAddress("0x5747C05FF236F8d18BB21Bc02ecc389deF853cae"),
-	NativeNeo3StateManager: common.HexToAddress("0x5E839898821dB2A2F0eC9F8aAE7D7053744DB051"),
-	NativeNodeManager:      common.HexToAddress("0xA4Bf827047a08510722B2d62e668a72FCCFa232C"),
-	NativeRelayerManager:   common.HexToAddress("0xA22f301D7Cb5b50dcA4a015b12EC0cc5f3971412"),
-	NativeSideChainManager: common.HexToAddress("0x864Ff06eC5fFc75aB6eaf64263308ef5fa7d6637"),
+	NativeSyncHeader:       utils.HeaderSyncContractAddress,
+	NativeCrossChain:       utils.CrossChainManagerContractAddress,
+	NativeNeo3StateManager: utils.CrossChainManagerContractAddress,
+	NativeNodeManager:      utils.NodeManagerContractAddress,
+	NativeRelayerManager:   utils.RelayerManagerContractAddress,
+	NativeSideChainManager: utils.SideChainManagerContractAddress,
 	NativeExtra4:           common.HexToAddress("0x7d79D936DA7833c7fe056eB450064f34A327DcA8"),
 	NativeExtra5:           common.HexToAddress("0xD37F626c9E007DdD244E5Cbee0C223fec6D11289"),
 	NativeExtra6:           common.HexToAddress("0x33463b771Da32D450723C7C23a2240dE223b53bd"),

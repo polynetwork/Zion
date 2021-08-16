@@ -17,6 +17,20 @@ func MethodID(ab abi.ABI, name string) string {
 	return hexutil.Encode(m.ID)
 }
 
+func PackMethodWithStruct(ab abi.ABI, name string, data interface{}) ([]byte, error) {
+
+	value := reflect.ValueOf(data).Elem()
+
+	var args []interface{}
+	n := value.NumField()
+	for i := 0; i < n; i++ {
+		fv := value.Field(i)
+		args = append(args, fv.Interface())
+	}
+
+	return PackMethod(ab, name, args...)
+}
+
 func PackMethod(ab abi.ABI, name string, args ...interface{}) ([]byte, error) {
 	method, exist := ab.Methods[name]
 	if !exist {
@@ -75,4 +89,12 @@ func UnpackOutputs(ab abi.ABI, name string, data interface{}, payload []byte) er
 		return err
 	}
 	return args.Copy(data, unpacked)
+}
+
+func PackEvents(ab abi.ABI, event string, args ...interface{}) ([]byte, error) {
+	evt, exist := ab.Events[event]
+	if !exist {
+		return nil, fmt.Errorf("event '%s' not found", event)
+	}
+	return evt.Inputs.Pack(args...)
 }
