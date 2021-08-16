@@ -27,8 +27,8 @@ func TestCacheDB(t *testing.T) {
 		}
 
 		c.Delete(key)
-		_, err = c.Get(key)
-		if err != ErrValueNotExists {
+		v, err := c.Get(key)
+		if v != nil || err != nil {
 			t.Fail()
 		}
 	}

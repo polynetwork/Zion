@@ -1,8 +1,6 @@
 package state
 
 import (
-	"errors"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -81,10 +79,6 @@ func (c *CacheDB) nextSlot(slot common.Hash) common.Hash {
 	return c.key2Slot(slotBytes)
 }
 
-var (
-	ErrValueNotExists = errors.New("value not exists")
-)
-
 func (c *CacheDB) Get(key []byte) ([]byte, error) {
 	if len(key) <= common.AddressLength {
 		panic("CacheDB should only be used for native contract storage")
@@ -102,7 +96,7 @@ func (c *CacheDB) Get(key []byte) ([]byte, error) {
 			result = append(result, value[1:]...)
 		} else {
 			if value == (common.Hash{}) {
-				return nil, ErrValueNotExists
+				return nil, nil
 			}
 			result = append(result, value[1:1+meta>>1]...)
 		}
@@ -122,7 +116,7 @@ func (c *CacheDB) Get(key []byte) ([]byte, error) {
 		return result, nil
 	}
 
-	return nil, ErrValueNotExists
+	return nil, nil
 }
 
 func (c *CacheDB) Delete(key []byte) {
