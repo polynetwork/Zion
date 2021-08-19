@@ -39,7 +39,7 @@ func InitGovernance() {
 }
 
 func RegisterGovernanceContract(s *native.NativeContract) {
-	s.Prepare(ABI, gasTable)
+	s.Prepare(&ABI, gasTable)
 
 	s.Register(MethodContractName, Name)
 	s.Register(MethodGetEpoch, GetEpoch)
@@ -48,23 +48,23 @@ func RegisterGovernanceContract(s *native.NativeContract) {
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodContractName, contractName)
+	return utils.PackOutputs(&ABI, MethodContractName, contractName)
 }
 
 func GetEpoch(s *native.NativeContract) ([]byte, error) {
 	testEpoch := big.NewInt(1)
-	return utils.PackOutputs(ABI, MethodGetEpoch, testEpoch)
+	return utils.PackOutputs(&ABI, MethodGetEpoch, testEpoch)
 }
 
 func AddValidator(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	params := &MethodAddValidatorInput{}
-	if err := utils.UnpackMethod(ABI, MethodAddValidator, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(&ABI, MethodAddValidator, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
 	emitAddValidator(s, params.Validator, true)
-	return utils.PackOutputs(ABI, MethodAddValidator, true)
+	return utils.PackOutputs(&ABI, MethodAddValidator, true)
 }
 
 // todo: genesis nodes as validators in the first epoch

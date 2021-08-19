@@ -38,4 +38,34 @@ func TestRegisterSideChainManager(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, ret, result)
 	assert.Equal(t, leftOverGas, extra)
+
+	contract := native.NewNativeContract(sdb, contractRef)
+	sideChain, err := getSideChainApply(contract, 8)
+	assert.Equal(t, sideChain.Name, "mychain")
+	assert.Nil(t, err)
+
+	_, _, err = contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
+	assert.NotNil(t, err)
+}
+
+func TestApproveRegisterSideChain(t *testing.T) {
+	param := new(ChainidParam)
+	param.Chainid = 8
+
+	input, err := utils.PackMethodWithStruct(ABI, MethodApproveRegisterSideChain, param)
+	assert.Nil(t, err)
+
+	db := rawdb.NewMemoryDatabase()
+	sdb, _ := state.New(common.Hash{}, state.NewDatabase(db), nil)
+	blockNumber := big.NewInt(1)
+	extra := uint64(10)
+	contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, gasTable[MethodApproveRegisterSideChain]+extra, nil)
+	ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
+
+	assert.Nil(t, err)
+
+	result, err := utils.PackOutputs(ABI, MethodApproveRegisterSideChain, true)
+	assert.Nil(t, err)
+	assert.Equal(t, ret, result)
+	assert.Equal(t, leftOverGas, extra)
 }

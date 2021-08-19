@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/btcsuite/btcd/btcec"
+	"github.com/btcsuite/btcd/chaincfg"
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -11,6 +12,8 @@ import (
 	"github.com/polynetwork/poly/common"
 	cstates "github.com/polynetwork/poly/core/states"
 )
+
+var netParam = &chaincfg.TestNet3Params
 
 func getSideChainApply(native *native.NativeContract, chanid uint64) (*SideChain, error) {
 	contract := utils.SideChainManagerContractAddress

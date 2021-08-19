@@ -45,7 +45,7 @@ var (
 		MethodApproveRemoveStateValidator:   0,
 	}
 
-	ABI abi.ABI
+	ABI *abi.ABI
 )
 
 func InitNeo3StateManager() {

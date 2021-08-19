@@ -31,12 +31,12 @@ const abijson = `[
 	{"type":"event","anonymous":false,"name":"` + MethodRegisterSideChain + `","inputs":[{"indexed":false,"name":"ChainId","type":"uint64"},{"indexed":false,"name":"Router","type":"uint64"},{"indexed":false,"name":"Name","type":"string"},{"indexed":false,"name":"BlocksToWait","type":"uint64"}]}
 ]`
 
-func GetABI() abi.ABI {
+func GetABI() *abi.ABI {
 	ab, err := abi.JSON(strings.NewReader(abijson))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
-	return ab
+	return &ab
 }
 
 type RegisterSideChainParam struct {

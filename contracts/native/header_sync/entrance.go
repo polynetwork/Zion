@@ -41,7 +41,7 @@ var (
 		MethodSyncCrossChainMsg: 0,
 	}
 
-	ABI abi.ABI
+	ABI *abi.ABI
 )
 
 func InitHeaderSync() {

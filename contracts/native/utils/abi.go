@@ -9,7 +9,7 @@ import (
 )
 
 // MethodID only used for register method handler and prepare native contract context ref.
-func MethodID(ab abi.ABI, name string) string {
+func MethodID(ab *abi.ABI, name string) string {
 	m, ok := ab.Methods[name]
 	if !ok {
 		panic(fmt.Sprintf("method name %s not exist", name))
@@ -17,7 +17,7 @@ func MethodID(ab abi.ABI, name string) string {
 	return hexutil.Encode(m.ID)
 }
 
-func PackMethodWithStruct(ab abi.ABI, name string, data interface{}) ([]byte, error) {
+func PackMethodWithStruct(ab *abi.ABI, name string, data interface{}) ([]byte, error) {
 
 	value := reflect.ValueOf(data).Elem()
 
@@ -31,7 +31,7 @@ func PackMethodWithStruct(ab abi.ABI, name string, data interface{}) ([]byte, er
 	return PackMethod(ab, name, args...)
 }
 
-func PackMethod(ab abi.ABI, name string, args ...interface{}) ([]byte, error) {
+func PackMethod(ab *abi.ABI, name string, args ...interface{}) ([]byte, error) {
 	method, exist := ab.Methods[name]
 	if !exist {
 		return nil, fmt.Errorf("method '%s' not found", name)
@@ -43,7 +43,7 @@ func PackMethod(ab abi.ABI, name string, args ...interface{}) ([]byte, error) {
 	return append(method.ID, arguments...), nil
 }
 
-func UnpackMethod(ab abi.ABI, name string, data interface{}, payload []byte) error {
+func UnpackMethod(ab *abi.ABI, name string, data interface{}, payload []byte) error {
 	mth, ok := ab.Methods[name]
 	if !ok {
 		return fmt.Errorf("abi method %s not exist", name)
@@ -65,7 +65,7 @@ func UnpackMethod(ab abi.ABI, name string, data interface{}, payload []byte) err
 	return args.Copy(data, unpacked)
 }
 
-func PackOutputs(ab abi.ABI, method string, args ...interface{}) ([]byte, error) {
+func PackOutputs(ab *abi.ABI, method string, args ...interface{}) ([]byte, error) {
 	mth, exist := ab.Methods[method]
 	if !exist {
 		return nil, fmt.Errorf("method '%s' not found", method)
@@ -73,7 +73,7 @@ func PackOutputs(ab abi.ABI, method string, args ...interface{}) ([]byte, error)
 	return mth.Outputs.Pack(args...)
 }
 
-func UnpackOutputs(ab abi.ABI, name string, data interface{}, payload []byte) error {
+func UnpackOutputs(ab *abi.ABI, name string, data interface{}, payload []byte) error {
 	mth, ok := ab.Methods[name]
 	if !ok {
 		return fmt.Errorf("abi method %s not exist", name)
@@ -91,7 +91,7 @@ func UnpackOutputs(ab abi.ABI, name string, data interface{}, payload []byte) er
 	return args.Copy(data, unpacked)
 }
 
-func PackEvents(ab abi.ABI, event string, args ...interface{}) ([]byte, error) {
+func PackEvents(ab *abi.ABI, event string, args ...interface{}) ([]byte, error) {
 	evt, exist := ab.Events[event]
 	if !exist {
 		return nil, fmt.Errorf("event '%s' not found", event)
