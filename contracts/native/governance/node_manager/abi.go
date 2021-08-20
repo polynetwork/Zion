@@ -25,7 +25,27 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-const abijson = ``
+const abijson = `[
+	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"int256","name":"signs","type":"int256"}],"name":"CheckConsensusSigns","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + MethodApproveCandidate + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string[]","name":"PubkeyList","type":"string[]"}],"name":"` + MethodBlackNode + `","type":"event"},
+    {"anonymous":false,"inputs":[],"name":"` + MethodCommitDpos + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + MethodQuitNode + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + MethodRegisterCandidate + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + MethodUnRegisterCandidate + `","type":"event"},
+    {"anonymous":false,"inputs":[{"components":[{"internalType":"uint32","name":"BlockMsgDelay","type":"uint32"},{"internalType":"uint32","name":"HashMsgDelay","type":"uint32"},{"internalType":"uint32","name":"PeerHandshakeTimeout","type":"uint32"},{"internalType":"uint32","name":"MaxBlockChangeView","type":"uint32"}],"indexed":false,"internalType":"struct node_manager.Configuration","name":"Config","type":"tuple"}],"name":"` + MethodUpdateConfig + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + MethodWhiteNode + `","type":"event"},
+    {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveCandidate + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"string[]","name":"PeerPubkeyList","type":"string[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodBlackNode + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[],"name":"` + MethodCommitDpos + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"uint32","name":"BlockMsgDelay","type":"uint32"},{"internalType":"uint32","name":"HashMsgDelay","type":"uint32"},{"internalType":"uint32","name":"PeerHandshakeTimeout","type":"uint32"},{"internalType":"uint32","name":"MaxBlockChangeView","type":"uint32"},{"internalType":"string","name":"VrfValue","type":"string"},{"internalType":"string","name":"VrfProof","type":"string"},{"components":[{"internalType":"uint32","name":"Index","type":"uint32"},{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"string","name":"Address","type":"string"}],"internalType":"struct node_manager.VBFTPeerInfo","name":"Peers","type":"tuple"}],"name":"` + MethodInitConfig + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodQuitNode + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRegisterCandidate + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodUnRegisterCandidate + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"components":[{"components":[{"internalType":"uint32","name":"BlockMsgDelay","type":"uint32"},{"internalType":"uint32","name":"HashMsgDelay","type":"uint32"},{"internalType":"uint32","name":"PeerHandshakeTimeout","type":"uint32"},{"internalType":"uint32","name":"MaxBlockChangeView","type":"uint32"}],"internalType":"struct node_manager.Configuration","name":"Config","type":"tuple"}],"internalType":"struct node_manager.UpdateConfigParam","name":"ConfigParam","type":"tuple"}],"name":"` + MethodUpdateConfig + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodWhiteNode + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
+]`
 
 func GetABI() *abi.ABI {
 	ab, err := abi.JSON(strings.NewReader(abijson))
