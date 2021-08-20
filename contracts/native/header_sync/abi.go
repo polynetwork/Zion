@@ -25,7 +25,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-const abijson = ``
+const abijson = `[
+    {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"uint64","name":"ChainID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"},{"internalType":"bytes[]","name":"Headers","type":"bytes[]"}],"name":"` + MethodSyncBlockHeader + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"uint64","name":"ChainID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"},{"internalType":"bytes[]","name":"CrossChainMsgs","type":"bytes[]"}],"name":"` + MethodSyncCrossChainMsg + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"uint64","name":"ChainID","type":"uint64"},{"internalType":"bytes","name":"GenesisHeader","type":"bytes"}],"name":"` + MethodSyncGenesisHeader + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
+]`
 
 func GetABI() *abi.ABI {
 	ab, err := abi.JSON(strings.NewReader(abijson))
