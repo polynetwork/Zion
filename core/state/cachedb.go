@@ -27,7 +27,7 @@ func (c *CacheDB) Put(key []byte, value []byte) {
 		}
 
 		for len(value) > 0 {
-			slot := c.nextSlot(slot)
+			slot = c.nextSlot(slot)
 			if len(value) <= common.HashLength-1 {
 				c.putValue(so, slot, value, false)
 				break

@@ -62,12 +62,12 @@ var (
 		// MethodContractName:             0,
 		MethodRegisterSideChain:        0,
 		MethodApproveRegisterSideChain: 100000,
-		// MethodUpdateSideChain:          0,
-		// MethodApproveUpdateSideChain:   0,
-		// MethodQuitSideChain:            0,
-		// MethodApproveQuitSideChain:     0,
-		// MethodRegisterRedeem:           0,
-		// MethodSetBtcTxParam:            0,
+		MethodUpdateSideChain:          0,
+		MethodApproveUpdateSideChain:   0,
+		MethodQuitSideChain:            0,
+		MethodApproveQuitSideChain:     0,
+		MethodRegisterRedeem:           0,
+		MethodSetBtcTxParam:            0,
 	}
 
 	ABI *abi.ABI
@@ -84,12 +84,12 @@ func RegisterSideChainManagerContract(s *native.NativeContract) {
 	// s.Register(MethodContractName, Name)
 	s.Register(MethodRegisterSideChain, RegisterSideChain)
 	s.Register(MethodApproveRegisterSideChain, ApproveRegisterSideChain)
-	// s.Register(MethodUpdateSideChain, UpdateSideChain)
-	// s.Register(MethodApproveUpdateSideChain, ApproveUpdateSideChain)
-	// s.Register(MethodQuitSideChain, QuitSideChain)
-	// s.Register(MethodApproveQuitSideChain, ApproveQuitSideChain)
-	// s.Register(MethodRegisterRedeem, RegisterRedeem)
-	// s.Register(MethodSetBtcTxParam, SetBtcTxParam)
+	s.Register(MethodUpdateSideChain, UpdateSideChain)
+	s.Register(MethodApproveUpdateSideChain, ApproveUpdateSideChain)
+	s.Register(MethodQuitSideChain, QuitSideChain)
+	s.Register(MethodApproveQuitSideChain, ApproveQuitSideChain)
+	s.Register(MethodRegisterRedeem, RegisterRedeem)
+	s.Register(MethodSetBtcTxParam, SetBtcTxParam)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {

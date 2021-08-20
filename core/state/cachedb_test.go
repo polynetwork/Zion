@@ -2,6 +2,7 @@ package state
 
 import (
 	"bytes"
+	"math/rand"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -31,5 +32,20 @@ func TestCacheDB(t *testing.T) {
 		if v != nil || err != nil {
 			t.Fail()
 		}
+	}
+
+	testByteSize := 160
+	testBytes := make([]byte, testByteSize)
+	n, err := rand.Read(testBytes)
+	if err != nil || n != testByteSize {
+		t.Fail()
+	}
+
+	addr := common.BytesToAddress([]byte{0})
+	key := append(addr[:], []byte("a")...)
+	c.Put(key, testBytes)
+	respBytes, _ := c.Get(key)
+	if !bytes.Equal(testBytes, respBytes) {
+		t.Fail()
 	}
 }
