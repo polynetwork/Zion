@@ -24,7 +24,7 @@ type NativeContract struct {
 	db       *state.StateDB
 	handlers map[string]MethodHandler // map method id to method handler
 	gasTable map[string]uint64        // map method id to gas usage
-	ab       abi.ABI
+	ab       *abi.ABI
 }
 
 func NewNativeContract(db *state.StateDB, ref *ContractRef) *NativeContract {
@@ -39,11 +39,15 @@ func (s *NativeContract) ContractRef() *ContractRef {
 	return s.ref
 }
 
+func (s *NativeContract) GetCacheDB() *state.CacheDB {
+	return (*state.CacheDB)(s.db)
+}
+
 func (s *NativeContract) StateDB() *state.StateDB {
 	return s.db
 }
 
-func (s *NativeContract) Prepare(ab abi.ABI, gasTb map[string]uint64) {
+func (s *NativeContract) Prepare(ab *abi.ABI, gasTb map[string]uint64) {
 	s.ab = ab
 	s.gasTable = make(map[string]uint64)
 	for name, gas := range gasTb {
@@ -104,4 +108,26 @@ func (s *NativeContract) Invoke() ([]byte, error) {
 	}
 
 	return ret, err
+}
+
+func (s *NativeContract) AddNotify(abi *abi.ABI, topics []string, data ...interface{}) (err error) {
+
+	var topicIDs []common.Hash
+	for _, topic := range topics {
+		eventInfo, ok := abi.Events[topic]
+		if !ok {
+			err = fmt.Errorf("topic %s not exists", topic)
+			return
+		}
+		topicIDs = append(topicIDs, eventInfo.ID)
+	}
+
+	packedData, err := utils.PackEvents(abi, topics[0], data...)
+	if err != nil {
+		err = fmt.Errorf("AddNotify, PackEvents error: %v", err)
+		return
+	}
+	emitter := utils.NewEventEmitter(s.ref.CurrentContext().ContractAddress, s.ContractRef().BlockHeight().Uint64(), s.StateDB())
+	emitter.Event(topicIDs, packedData)
+	return
 }

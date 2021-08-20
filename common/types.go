@@ -200,6 +200,15 @@ func (h UnprefixedHash) MarshalText() ([]byte, error) {
 // Address represents the 20 byte address of an Ethereum account.
 type Address [AddressLength]byte
 
+// AddressParseFromBytes returns parsed Address
+func AddressParseFromBytes(f []byte) (Address, error) {
+	if len(f) != AddressLength {
+		return Address{}, errors.New("[Common]: AddressParseFromBytes err, len != 20")
+	}
+
+	return BytesToAddress(f), nil
+}
+
 // BytesToAddress returns Address with value b.
 // If b is larger than len(h), b will be cropped from the left.
 func BytesToAddress(b []byte) Address {

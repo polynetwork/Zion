@@ -43,7 +43,7 @@ var (
 		MethodApproveRemoveRelayer:   0,
 	}
 
-	ABI abi.ABI
+	ABI *abi.ABI
 )
 
 func InitRelayerManager() {

@@ -27,12 +27,12 @@ import (
 
 const abijson = ``
 
-func GetABI() abi.ABI {
+func GetABI() *abi.ABI {
 	ab, err := abi.JSON(strings.NewReader(abijson))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
-	return ab
+	return &ab
 }
 
 type SyncGenesisHeaderParam struct {
