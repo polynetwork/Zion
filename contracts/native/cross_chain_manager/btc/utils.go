@@ -4,7 +4,9 @@ import (
 	"bytes"
 	"crypto/sha256"
 	"encoding/binary"
+	"encoding/hex"
 	"fmt"
+	"sort"
 
 	"github.com/btcsuite/btcd/btcec"
 	"github.com/btcsuite/btcd/chaincfg"
@@ -51,6 +53,57 @@ func getNetParam(service *native.NativeContract, chainId uint64) (*chaincfg.Para
 	default:
 		return &chaincfg.MainNetParams, nil
 	}
+}
+
+func chooseUtxos(native *native.NativeContract, chainID uint64, amount int64, outs []*wire.TxOut, rk []byte, m, n int) ([]*Utxo, int64, int64, error) {
+	utxoKey := hex.EncodeToString(rk)
+	utxos, err := getUtxos(native, chainID, utxoKey)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("chooseUtxos, getUtxos error: %v", err)
+	}
+	sort.Sort(sort.Reverse(utxos))
+	detail, err := side_chain_manager.GetBtcTxParam(native, rk, chainID)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("chooseUtxos, failed to get btcTxParam: %v", err)
+	}
+	if detail == nil {
+		return nil, 0, 0, fmt.Errorf("chooseUtxos, no btcTxParam is set for redeem key %s", hex.EncodeToString(rk))
+	}
+	cs := &CoinSelector{
+		sortedUtxos: utxos,
+		target:      uint64(amount),
+		maxP:        MAX_FEE_COST_PERCENTS,
+		tries:       MAX_SELECTING_TRY_LIMIT,
+		mc:          detail.MinChange,
+		k:           SELECTING_K,
+		txOuts:      outs,
+		feeRate:     detail.FeeRate,
+		m:           m,
+		n:           n,
+	}
+	result, sum, fee := cs.Select()
+	if result == nil || len(result) == 0 {
+		return nil, 0, 0, fmt.Errorf("chooseUtxos, current utxo is not enough")
+	}
+	stxos, err := getStxos(native, chainID, utxoKey)
+	if err != nil {
+		return nil, 0, 0, fmt.Errorf("chooseUtxos, failed to get stxos: %v", err)
+	}
+	stxos.Utxos = append(stxos.Utxos, result...)
+	putStxos(native, chainID, utxoKey, stxos)
+
+	toSort := new(Utxos)
+	toSort.Utxos = result
+	sort.Sort(sort.Reverse(toSort))
+	idx := 0
+	for _, v := range toSort.Utxos {
+		for utxos.Utxos[idx].Op.String() != v.Op.String() {
+			idx++
+		}
+		utxos.Utxos = append(utxos.Utxos[:idx], utxos.Utxos[idx+1:]...)
+	}
+	putUtxos(native, chainID, utxoKey, utxos)
+	return result, int64(sum), int64(fee), nil
 }
 
 func putTxos(k string, native *native.NativeContract, chainID uint64, txoKey string, txos *Utxos) {
@@ -250,6 +303,64 @@ func addSigToTx(sigMap *MultiSignInfo, addrs []btcutil.Address, redeem []byte, t
 		}
 	}
 	return nil
+}
+
+// This function needs to input the input and output information of the transaction
+// and the lock time. Function build a raw transaction without signature and return it.
+// This function uses the partial logic and code of btcd to finally return the
+// reference of the transaction object.
+func getUnsignedTx(txIns []*wire.TxIn, outs []*wire.TxOut, changeOut *wire.TxOut, locktime *int64) (*wire.MsgTx, error) {
+	if locktime != nil && (*locktime < 0 || *locktime > int64(wire.MaxTxInSequenceNum)) {
+		return nil, fmt.Errorf("getUnsignedTx, locktime %d out of range", *locktime)
+	}
+
+	// Add all transaction inputs to a new transaction after performing
+	// some validity checks.
+	mtx := wire.NewMsgTx(wire.TxVersion)
+	for _, in := range txIns {
+		if locktime != nil && *locktime != 0 {
+			in.Sequence = wire.MaxTxInSequenceNum - 1
+		}
+		mtx.AddTxIn(in)
+	}
+	for _, out := range outs {
+		mtx.AddTxOut(out)
+	}
+	if changeOut.Value > 0 {
+		mtx.AddTxOut(changeOut)
+	}
+	// Set the Locktime, if given.
+	if locktime != nil {
+		mtx.LockTime = uint32(*locktime)
+	}
+
+	return mtx, nil
+}
+
+func getTxOuts(amounts map[string]int64, netParam *chaincfg.Params) ([]*wire.TxOut, error) {
+	outs := make([]*wire.TxOut, 0)
+	for encodedAddr, amount := range amounts {
+		// Decode the provided address.
+		addr, err := btcutil.DecodeAddress(encodedAddr, netParam)
+		if err != nil {
+			return nil, fmt.Errorf("getTxOuts, decode addr fail: %v", err)
+		}
+
+		if !addr.IsForNet(netParam) {
+			return nil, fmt.Errorf("getTxOuts, addr is not for %s", netParam.Name)
+		}
+
+		// Create a new script which pays to the provided address.
+		pkScript, err := txscript.PayToAddrScript(addr)
+		if err != nil {
+			return nil, fmt.Errorf("getTxOuts, failed to generate pay-to-address script: %v", err)
+		}
+
+		txOut := wire.NewTxOut(amount, pkScript)
+		outs = append(outs, txOut)
+	}
+
+	return outs, nil
 }
 
 func getLockScript(redeem []byte, netParam *chaincfg.Params) ([]byte, error) {

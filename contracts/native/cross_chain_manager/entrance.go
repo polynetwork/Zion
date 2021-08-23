@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/btc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -66,15 +67,73 @@ func RegisterCrossChainManagerContract(s *native.NativeContract) {
 	s.Register(MethodWhiteChain, WhiteChain)
 }
 
+func GetChainHandler(router uint64) (scom.ChainHandler, error) {
+	return nil, nil
+}
+
 func Name(s *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(scom.ABI, MethodContractName, contractName)
 }
 
-func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
+func ImportOuterTransfer(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := &scom.EntranceParam{}
 	if err := utils.UnpackMethod(scom.ABI, MethodImportOuterTransfer, params, ctx.Payload); err != nil {
 		return nil, err
+	}
+
+	chainID := params.SourceChainID
+	blacked, err := CheckIfChainBlacked(native, chainID)
+	if err != nil {
+		return nil, fmt.Errorf("ImportExTransfer, CheckIfChainBlacked error: %v", err)
+	}
+	if blacked {
+		return nil, fmt.Errorf("ImportExTransfer, source chain is blacked")
+	}
+
+	//check if chainid exist
+	sideChain, err := side_chain_manager.GetSideChain(native, chainID)
+	if err != nil {
+		return nil, fmt.Errorf("ImportExTransfer, side_chain_manager.GetSideChain error: %v", err)
+	}
+	if sideChain == nil {
+		return nil, fmt.Errorf("ImportExTransfer, side chain %d is not registered", chainID)
+	}
+
+	handler, err := GetChainHandler(sideChain.Router)
+	if err != nil {
+		return nil, err
+	}
+	//1. verify tx
+	txParam, err := handler.MakeDepositProposal(native)
+	if err != nil {
+		return nil, err
+	}
+
+	//2. make target chain tx
+	targetid := txParam.ToChainID
+	blacked, err = CheckIfChainBlacked(native, targetid)
+	if err != nil {
+		return nil, fmt.Errorf("ImportExTransfer, CheckIfChainBlacked error: %v", err)
+	}
+	if blacked {
+		return nil, fmt.Errorf("ImportExTransfer, target chain is blacked")
+	}
+
+	//check if chainid exist
+	sideChain, err = side_chain_manager.GetSideChain(native, targetid)
+	if err != nil {
+		return nil, fmt.Errorf("ImportExTransfer, side_chain_manager.GetSideChain error: %v", err)
+	}
+	if sideChain == nil {
+		return nil, fmt.Errorf("ImportExTransfer, side chain %d is not registered", targetid)
+	}
+	if sideChain.Router == utils.BTC_ROUTER {
+		err := btc.NewBTCHandler().MakeTransaction(native, txParam, chainID)
+		if err != nil {
+			return nil, err
+		}
+		return utils.PackOutputs(scom.ABI, MethodImportOuterTransfer, true)
 	}
 
 	return utils.PackOutputs(scom.ABI, MethodImportOuterTransfer, true)
