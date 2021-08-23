@@ -85,7 +85,9 @@ func (this *BTCHandler) MultiSign(service *native.NativeContract, params *scom.M
 	}
 
 	if len(multiSignInfo.MultiSignInfo) != n {
-		service.AddNotify(scom.ABI, []string{"btcTxMultiSign"}, params.TxHash, multiSignInfo.MultiSignInfo)
+		sink := polycomm.NewZeroCopySink(nil)
+		multiSignInfo.Serialization(sink)
+		service.AddNotify(scom.ABI, []string{"btcTxMultiSign"}, params.TxHash, sink.Bytes())
 	} else {
 		err = addSigToTx(multiSignInfo, addrs, redeemScript, mtx, pkScripts)
 		if err != nil {
@@ -138,8 +140,37 @@ func (this *BTCHandler) MakeDepositProposal(service *native.NativeContract) (*sc
 	if err := utils.UnpackMethod(scom.ABI, scom.MethodImportOuterTransfer, params, ctx.Payload); err != nil {
 		return nil, err
 	}
+	if len(params.Proof) == 0 || len(params.Extra) == 0 {
+		return nil, fmt.Errorf("btc MakeDepositProposal, GetInput() data can't be empty")
+	}
 
-	return nil, nil
+	value, err := verifyFromBtcTx(service, params.Proof, params.Extra, params.SourceChainID, params.Height)
+
+	if err != nil {
+		return nil, fmt.Errorf("MakeDepositProposal, verifyFromBtcTx error: %s", err)
+	}
+
+	if err := scom.CheckDoneTx(service, value.TxHash, params.SourceChainID); err != nil {
+		return nil, fmt.Errorf("MakeDepositProposal, check done transaction error:%s", err)
+	}
+
+	if err := scom.PutDoneTx(service, value.TxHash, params.SourceChainID); err != nil {
+		return nil, fmt.Errorf("MakeDepositProposal, PutDoneTx error:%s", err)
+	}
+
+	// decode tx and then update utxos
+	mtx := wire.NewMsgTx(wire.TxVersion)
+	reader := bytes.NewReader(params.Extra)
+	err = mtx.BtcDecode(reader, wire.ProtocolVersion, wire.LatestEncoding)
+	if err != nil {
+		return nil, fmt.Errorf("VerifyFromBtcProof, failed to decode the transaction %s: %s", hex.EncodeToString(params.Extra), err)
+	}
+	err = addUtxos(service, params.SourceChainID, uint32(service.ContractRef().BlockHeight().Uint64()), mtx)
+	if err != nil {
+		return nil, fmt.Errorf("btc Vote, updateUtxo error: %s", err)
+	}
+
+	return value, nil
 }
 
 func (this *BTCHandler) MakeTransaction(service *native.NativeContract, param *scom.MakeTxParam,

@@ -146,6 +146,30 @@ func GetUtxoKey(scriptPk []byte) string {
 	}
 }
 
+func addUtxos(native *native.NativeContract, chainID uint64, height uint32, mtx *wire.MsgTx) error {
+	utxoKey := GetUtxoKey(mtx.TxOut[0].PkScript)
+
+	utxos, err := getUtxos(native, chainID, utxoKey)
+	if err != nil {
+		return fmt.Errorf("addUtxos, getUtxos err:%v", err)
+	}
+	txHash := mtx.TxHash()
+	op := &OutPoint{
+		Hash:  txHash[:],
+		Index: 0,
+	}
+	newUtxo := &Utxo{
+		Op:           op,
+		AtHeight:     height,
+		Value:        uint64(mtx.TxOut[0].Value),
+		ScriptPubkey: mtx.TxOut[0].PkScript,
+	}
+
+	utxos.Utxos = append(utxos.Utxos, newUtxo)
+	putUtxos(native, chainID, utxoKey, utxos)
+	return nil
+}
+
 func chooseUtxos(native *native.NativeContract, chainID uint64, amount int64, outs []*wire.TxOut, rk []byte, m, n int) ([]*Utxo, int64, int64, error) {
 	utxoKey := hex.EncodeToString(rk)
 	utxos, err := getUtxos(native, chainID, utxoKey)
