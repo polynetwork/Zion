@@ -7,15 +7,10 @@ import (
 
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcd/wire"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-)
-
-var (
-	ABI *abi.ABI
 )
 
 type BTCHandler struct {
@@ -87,7 +82,7 @@ func (this *BTCHandler) MultiSign(service *native.NativeContract, params *scom.M
 	}
 
 	if len(multiSignInfo.MultiSignInfo) != n {
-		service.AddNotify(ABI, []string{"btcTxMultiSign"}, params.TxHash, multiSignInfo.MultiSignInfo)
+		service.AddNotify(scom.ABI, []string{"btcTxMultiSign"}, params.TxHash, multiSignInfo.MultiSignInfo)
 	} else {
 		err = addSigToTx(multiSignInfo, addrs, redeemScript, mtx, pkScripts)
 		if err != nil {
@@ -128,7 +123,7 @@ func (this *BTCHandler) MultiSign(service *native.NativeContract, params *scom.M
 				hex.EncodeToString(params.TxHash), err)
 		}
 		putStxos(service, params.ChainID, params.RedeemKey, stxos)
-		service.AddNotify(ABI, []string{"btcTxToRelay"}, btcFromTxInfo.FromChainID, params.ChainID,
+		service.AddNotify(scom.ABI, []string{"btcTxToRelay"}, btcFromTxInfo.FromChainID, params.ChainID,
 			hex.EncodeToString(buf.Bytes()), hex.EncodeToString(btcFromTxInfo.FromTxHash), params.RedeemKey)
 	}
 	return nil

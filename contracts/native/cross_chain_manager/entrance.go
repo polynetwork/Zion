@@ -25,7 +25,6 @@ import (
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
@@ -51,17 +50,14 @@ var (
 		MethodBlackChain:          0,
 		MethodWhiteChain:          0,
 	}
-
-	ABI *abi.ABI
 )
 
 func InitCrossChainManager() {
-	ABI = GetABI()
 	native.Contracts[this] = RegisterCrossChainManagerContract
 }
 
 func RegisterCrossChainManagerContract(s *native.NativeContract) {
-	s.Prepare(ABI, gasTable)
+	s.Prepare(scom.ABI, gasTable)
 
 	s.Register(MethodContractName, Name)
 	s.Register(MethodImportOuterTransfer, ImportOuterTransfer)
@@ -71,23 +67,23 @@ func RegisterCrossChainManagerContract(s *native.NativeContract) {
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodContractName, contractName)
+	return utils.PackOutputs(scom.ABI, MethodContractName, contractName)
 }
 
 func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	params := &scom.EntranceParam{}
-	if err := utils.UnpackMethod(ABI, MethodImportOuterTransfer, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(scom.ABI, MethodImportOuterTransfer, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	return utils.PackOutputs(ABI, MethodImportOuterTransfer, true)
+	return utils.PackOutputs(scom.ABI, MethodImportOuterTransfer, true)
 }
 
 func MultiSign(native *native.NativeContract) ([]byte, error) {
 	ctx := native.ContractRef().CurrentContext()
 	params := &scom.MultiSignParam{}
-	if err := utils.UnpackMethod(ABI, MethodMultiSign, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(scom.ABI, MethodMultiSign, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -99,13 +95,13 @@ func MultiSign(native *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("MultiSign fail:%v", err)
 	}
 
-	return utils.PackOutputs(ABI, MethodMultiSign, true)
+	return utils.PackOutputs(scom.ABI, MethodMultiSign, true)
 }
 
 func BlackChain(native *native.NativeContract) ([]byte, error) {
 	ctx := native.ContractRef().CurrentContext()
-	params := &BlackChainParam{}
-	if err := utils.UnpackMethod(ABI, MethodBlackChain, params, ctx.Payload); err != nil {
+	params := &scom.BlackChainParam{}
+	if err := utils.UnpackMethod(scom.ABI, MethodBlackChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -122,13 +118,13 @@ func BlackChain(native *native.NativeContract) ([]byte, error) {
 	}
 
 	PutBlackChain(native, params.ChainID)
-	return utils.PackOutputs(ABI, MethodBlackChain, true)
+	return utils.PackOutputs(scom.ABI, MethodBlackChain, true)
 }
 
 func WhiteChain(native *native.NativeContract) ([]byte, error) {
 	ctx := native.ContractRef().CurrentContext()
-	params := &BlackChainParam{}
-	if err := utils.UnpackMethod(ABI, MethodWhiteChain, params, ctx.Payload); err != nil {
+	params := &scom.BlackChainParam{}
+	if err := utils.UnpackMethod(scom.ABI, MethodWhiteChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -145,5 +141,5 @@ func WhiteChain(native *native.NativeContract) ([]byte, error) {
 	}
 
 	RemoveBlackChain(native, params.ChainID)
-	return utils.PackOutputs(ABI, MethodWhiteChain, true)
+	return utils.PackOutputs(scom.ABI, MethodWhiteChain, true)
 }
