@@ -23,6 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	polycomm "github.com/polynetwork/poly/common"
 )
 
 const abijson = `[
@@ -46,6 +47,45 @@ func GetABI() *abi.ABI {
 type RelayerListParam struct {
 	AddressList []common.Address
 	Address     common.Address
+}
+
+func (this *RelayerListParam) Serialization(sink *polycomm.ZeroCopySink) {
+	sink.WriteVarUint(uint64(len(this.AddressList)))
+	for _, v := range this.AddressList {
+		sink.WriteVarBytes(v[:])
+	}
+	sink.WriteVarBytes(this.Address[:])
+}
+
+func (this *RelayerListParam) Deserialization(source *polycomm.ZeroCopySource) error {
+	n, eof := source.NextVarUint()
+	if eof {
+		return fmt.Errorf("source.NextVarUint, deserialize AddressList length error")
+	}
+	addressList := make([]common.Address, 0)
+	for i := 0; uint64(i) < n; i++ {
+		address, eof := source.NextVarBytes()
+		if eof {
+			return fmt.Errorf("source.NextVarBytes, deserialize address error")
+		}
+		addr, err := common.AddressParseFromBytes(address)
+		if err != nil {
+			return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
+		}
+		addressList = append(addressList, addr)
+	}
+
+	address, eof := source.NextVarBytes()
+	if eof {
+		return fmt.Errorf("source.NextVarBytes, deserialize address error")
+	}
+	addr, err := common.AddressParseFromBytes(address)
+	if err != nil {
+		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
+	}
+	this.AddressList = addressList
+	this.Address = addr
+	return nil
 }
 
 type ApproveRelayerParam struct {
