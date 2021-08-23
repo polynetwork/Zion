@@ -352,6 +352,38 @@ func (this *OutPoint) String() string {
 	return hash.String() + ":" + strconv.FormatUint(uint64(this.Index), 10)
 }
 
+type Args struct {
+	ToChainID uint64
+	Fee       int64
+	Address   []byte
+}
+
+func (this *Args) Serialization(sink *polycomm.ZeroCopySink) {
+	sink.WriteUint64(this.ToChainID)
+	sink.WriteInt64(this.Fee)
+	sink.WriteVarBytes(this.Address)
+}
+
+func (this *Args) Deserialization(source *polycomm.ZeroCopySource) error {
+	toChainID, eof := source.NextUint64()
+	if eof {
+		return fmt.Errorf("Args deserialize toChainID error")
+	}
+	fee, eof := source.NextInt64()
+	if eof {
+		return fmt.Errorf("Args deserialize fee error")
+	}
+	address, eof := source.NextVarBytes()
+	if eof {
+		return fmt.Errorf("Args deserialize address error")
+	}
+
+	this.ToChainID = toChainID
+	this.Fee = fee
+	this.Address = address
+	return nil
+}
+
 type BtcFromInfo struct {
 	FromTxHash  []byte
 	FromChainID uint64

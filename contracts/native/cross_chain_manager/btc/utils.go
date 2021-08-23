@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"sort"
 
@@ -14,10 +15,15 @@ import (
 	"github.com/btcsuite/btcd/wire"
 	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/btc"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	wire_bch "github.com/gcash/bchd/wire"
+	"github.com/gcash/bchutil/merkleblock"
 	polycomm "github.com/polynetwork/poly/common"
 	cstates "github.com/polynetwork/poly/core/states"
+	"golang.org/x/crypto/ripemd160"
 )
 
 const (
@@ -52,6 +58,91 @@ func getNetParam(service *native.NativeContract, chainId uint64) (*chaincfg.Para
 		return &chaincfg.SimNetParams, nil
 	default:
 		return &chaincfg.MainNetParams, nil
+	}
+}
+
+func verifyFromBtcTx(native *native.NativeContract, proof, tx []byte, fromChainID uint64, height uint32) (*scom.MakeTxParam, error) {
+	// decode tx
+	mtx := wire.NewMsgTx(wire.TxVersion)
+	reader := bytes.NewReader(tx)
+	err := mtx.BtcDecode(reader, wire.ProtocolVersion, wire.LatestEncoding)
+	if err != nil {
+		return nil, fmt.Errorf("VerifyFromBtcProof, failed to decode the transaction %s: %s", hex.EncodeToString(tx), err)
+	}
+	// check tx is legal format for btc cross chain transaction
+	err = ifCanResolve(mtx.TxOut[1], mtx.TxOut[0].Value)
+	if err != nil {
+		return nil, fmt.Errorf("VerifyFromBtcProof, not crosschain btc tx, since failed to resolve parameter: %v", err)
+	}
+
+	// make sure the header with height is already synced, meaning the tx is already confirmed in btc block chain
+	bestHeader, err := btc.GetBestBlockHeader(native, fromChainID)
+	if err != nil {
+		return nil, fmt.Errorf("VerifyFromBtcProof, get best block header error:%s", err)
+	}
+	sideChain, err := side_chain_manager.GetSideChain(native, fromChainID)
+	if err != nil {
+		return nil, fmt.Errorf("VerifyFromBtcProof, side_chain_manager.GetSideChain error: %v", err)
+	}
+	if sideChain == nil {
+		return nil, fmt.Errorf("VerifyFromBtcProof, side chain is not registered")
+	}
+	bestHeight := bestHeader.Height
+	if bestHeight < height || bestHeight-height < uint32(sideChain.BlocksToWait-1) {
+		return nil, fmt.Errorf("verifyFromBtcTx, transaction is not confirmed, current height: %d, input height: %d", bestHeight, height)
+	}
+
+	// verify btc merkle proof
+	header, err := btc.GetHeaderByHeight(native, fromChainID, height)
+	if err != nil {
+		return nil, fmt.Errorf("VerifyFromBtcProof, get header at height %d to verify btc merkle proof error:%s", height, err)
+	}
+	if verified, err := verifyBtcMerkleProof(mtx, header.Header, proof); !verified {
+		return nil, fmt.Errorf("VerifyFromBtcProof, verify merkle proof error:%s", err)
+	}
+
+	// decode the extra data from tx and construct MakeTxParam
+	var p targetChainParam
+	err = p.resolve(mtx.TxOut[0].Value, mtx.TxOut[1])
+	if err != nil {
+		return nil, fmt.Errorf("verifyFromBtcTx, failed to resolve parameter: %v", err)
+	}
+	rk := GetUtxoKey(mtx.TxOut[0].PkScript)
+	redeemKey, err := hex.DecodeString(rk)
+	if err != nil {
+		return nil, fmt.Errorf("verifyFromBtcTx, hex.DecodeString error: %v", err)
+	}
+	toContractAddress, err := side_chain_manager.GetContractBind(native, fromChainID, p.args.ToChainID, redeemKey)
+	if err != nil {
+		return nil, fmt.Errorf("verifyFromBtcTx, side_chain_manager.GetContractBind error: %v", err)
+	}
+	if toContractAddress == nil {
+		return nil, fmt.Errorf("verifyFromBtcTx, no contract binding with redeem key %s", rk)
+	}
+	txHash := mtx.TxHash()
+	return &scom.MakeTxParam{
+		TxHash:              txHash[:],
+		CrossChainID:        txHash[:],
+		FromContractAddress: redeemKey,
+		ToChainID:           p.args.ToChainID,
+		ToContractAddress:   toContractAddress.Contract,
+		Method:              "unlock",
+		Args:                p.AddrAndVal,
+	}, nil
+}
+
+func GetUtxoKey(scriptPk []byte) string {
+	switch txscript.GetScriptClass(scriptPk) {
+	case txscript.MultiSigTy:
+		return hex.EncodeToString(btcutil.Hash160(scriptPk))
+	case txscript.ScriptHashTy:
+		return hex.EncodeToString(scriptPk[2:22])
+	case txscript.WitnessV0ScriptHashTy:
+		hasher := ripemd160.New()
+		hasher.Write(scriptPk[2:34])
+		return hex.EncodeToString(hasher.Sum(nil))
+	default:
+		return ""
 	}
 }
 
@@ -404,4 +495,82 @@ func getBtcFromInfo(native *native.NativeContract, txid []byte) (*BtcFromInfo, e
 		return nil, fmt.Errorf("getBtcFromInfo, deserialize multiSignInfo err:%v", err)
 	}
 	return btcFromInfo, nil
+}
+
+func ifCanResolve(paramOutput *wire.TxOut, value int64) error {
+	script := paramOutput.PkScript
+	if script[2] != OP_RETURN_SCRIPT_FLAG {
+		return errors.New("wrong flag")
+	}
+	args := Args{}
+	err := args.Deserialization(polycomm.NewZeroCopySource(script[3:]))
+	if err != nil {
+		return err
+	}
+	if value < args.Fee && args.Fee >= 0 {
+		return errors.New("the transfer amount cannot be less than the transaction fee")
+	}
+	return nil
+}
+
+func verifyBtcMerkleProof(mtx *wire.MsgTx, blockHeader wire.BlockHeader, proof []byte) (bool, error) {
+	merkleBlockMsg := wire_bch.MsgMerkleBlock{}
+	err := merkleBlockMsg.BchDecode(bytes.NewReader(proof), wire_bch.ProtocolVersion, wire_bch.LatestEncoding)
+	if err != nil {
+		return false, fmt.Errorf("verify, failed to decode proof: %v", err)
+	}
+	merkleBlock := merkleblock.NewMerkleBlockFromMsg(merkleBlockMsg)
+	merkleRootCalc := merkleBlock.ExtractMatches()
+	if merkleRootCalc == nil || merkleBlock.BadTree() || len(merkleBlock.GetMatches()) == 0 {
+		return false, fmt.Errorf("verify, bad merkle tree")
+	}
+	if !bytes.Equal(merkleRootCalc[:], blockHeader.MerkleRoot[:]) {
+		return false, fmt.Errorf("verify, merkle root not equal, merkle root should be %s not %s, block hash in proof is %s",
+			blockHeader.MerkleRoot.String(), merkleRootCalc.String(), merkleBlockMsg.Header.BlockHash().String())
+	}
+
+	// make sure txid exists in proof
+	txid := mtx.TxHash()
+
+	isExist := false
+	for _, hash := range merkleBlockMsg.Hashes {
+		if bytes.Equal(hash[:], txid[:]) {
+			isExist = true
+			break
+		}
+	}
+	if !isExist {
+		return false, fmt.Errorf("verify, transaction %s not found in proof", txid.String())
+	}
+
+	return true, nil
+
+}
+
+// not sure now
+type targetChainParam struct {
+	args       *Args
+	AddrAndVal []byte
+}
+
+// func about OP_RETURN
+func (p *targetChainParam) resolve(amount int64, paramOutput *wire.TxOut) error {
+	script := paramOutput.PkScript
+
+	if script[2] != OP_RETURN_SCRIPT_FLAG {
+		return errors.New("Wrong flag")
+	}
+	inputArgs := new(Args)
+	err := inputArgs.Deserialization(polycomm.NewZeroCopySource(script[3:]))
+	if err != nil {
+		return fmt.Errorf("inputArgs.Deserialization fail: %v", err)
+	}
+	p.args = inputArgs
+
+	sink := polycomm.NewZeroCopySink(nil)
+	sink.WriteVarBytes(inputArgs.Address)
+	sink.WriteUint64(uint64(amount))
+	p.AddrAndVal = sink.Bytes()
+
+	return nil
 }

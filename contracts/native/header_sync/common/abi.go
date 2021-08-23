@@ -15,13 +15,20 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
-package header_sync
+package common
 
 import (
 	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+)
+
+const (
+	MethodContractName      = "name"
+	MethodSyncGenesisHeader = "syncGenesisHeader"
+	MethodSyncBlockHeader   = "syncBlockHeader"
+	MethodSyncCrossChainMsg = "syncCrossChainMsg"
 )
 
 const abijson = `[
@@ -38,3 +45,5 @@ func GetABI() *abi.ABI {
 	}
 	return &ab
 }
+
+var ABI *abi.ABI

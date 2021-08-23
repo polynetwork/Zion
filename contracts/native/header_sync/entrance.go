@@ -20,7 +20,6 @@ package header_sync
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	hscommon "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
@@ -29,47 +28,37 @@ import (
 
 const contractName = "header sync"
 
-const (
-	MethodContractName      = "name"
-	MethodSyncGenesisHeader = "syncGenesisHeader"
-	MethodSyncBlockHeader   = "syncBlockHeader"
-	MethodSyncCrossChainMsg = "syncCrossChainMsg"
-)
-
 var (
 	this     = native.NativeContractAddrMap[native.NativeSyncHeader]
 	gasTable = map[string]uint64{
-		MethodContractName:      0,
-		MethodSyncGenesisHeader: 0,
-		MethodSyncBlockHeader:   100000,
-		MethodSyncCrossChainMsg: 0,
+		hscommon.MethodContractName:      0,
+		hscommon.MethodSyncGenesisHeader: 0,
+		hscommon.MethodSyncBlockHeader:   100000,
+		hscommon.MethodSyncCrossChainMsg: 0,
 	}
-
-	ABI *abi.ABI
 )
 
 func InitHeaderSync() {
-	ABI = GetABI()
 	native.Contracts[this] = RegisterHeaderSyncContract
 }
 
 func RegisterHeaderSyncContract(s *native.NativeContract) {
-	s.Prepare(ABI, gasTable)
+	s.Prepare(hscommon.ABI, gasTable)
 
-	s.Register(MethodContractName, Name)
-	s.Register(MethodSyncGenesisHeader, SyncGenesisHeader)
-	s.Register(MethodSyncBlockHeader, SyncBlockHeader)
-	s.Register(MethodSyncCrossChainMsg, SyncCrossChainMsg)
+	s.Register(hscommon.MethodContractName, Name)
+	s.Register(hscommon.MethodSyncGenesisHeader, SyncGenesisHeader)
+	s.Register(hscommon.MethodSyncBlockHeader, SyncBlockHeader)
+	s.Register(hscommon.MethodSyncCrossChainMsg, SyncCrossChainMsg)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodContractName, contractName)
+	return utils.PackOutputs(hscommon.ABI, hscommon.MethodContractName, contractName)
 }
 
 func SyncGenesisHeader(native *native.NativeContract) ([]byte, error) {
 	ctx := native.ContractRef().CurrentContext()
 	params := &hscommon.SyncGenesisHeaderParam{}
-	if err := utils.UnpackMethod(ABI, MethodSyncGenesisHeader, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(hscommon.ABI, hscommon.MethodSyncGenesisHeader, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 	chainID := params.ChainID
@@ -93,13 +82,13 @@ func SyncGenesisHeader(native *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	return utils.PackOutputs(ABI, MethodSyncGenesisHeader, true)
+	return utils.PackOutputs(hscommon.ABI, hscommon.MethodSyncGenesisHeader, true)
 }
 
 func SyncBlockHeader(native *native.NativeContract) ([]byte, error) {
 	ctx := native.ContractRef().CurrentContext()
 	params := &hscommon.SyncBlockHeaderParam{}
-	if err := utils.UnpackMethod(ABI, MethodSyncBlockHeader, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(hscommon.ABI, hscommon.MethodSyncBlockHeader, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -123,13 +112,13 @@ func SyncBlockHeader(native *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	return utils.PackOutputs(ABI, MethodSyncBlockHeader, true)
+	return utils.PackOutputs(hscommon.ABI, hscommon.MethodSyncBlockHeader, true)
 }
 
 func SyncCrossChainMsg(native *native.NativeContract) ([]byte, error) {
 	ctx := native.ContractRef().CurrentContext()
 	params := &hscommon.SyncCrossChainMsgParam{}
-	if err := utils.UnpackMethod(ABI, MethodSyncCrossChainMsg, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(hscommon.ABI, hscommon.MethodSyncCrossChainMsg, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -153,7 +142,7 @@ func SyncCrossChainMsg(native *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	return utils.PackOutputs(ABI, MethodSyncCrossChainMsg, true)
+	return utils.PackOutputs(hscommon.ABI, hscommon.MethodSyncCrossChainMsg, true)
 }
 
 func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
