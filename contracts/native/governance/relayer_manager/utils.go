@@ -32,7 +32,7 @@ func putRelayerApply(native *native.NativeContract, relayerListParam *RelayerLis
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(RELAYER_APPLY), utils.GetUint64Bytes(applyID)),
 		cstates.GenRawStorageItem(sink.Bytes()))
 
-	// err = native.AddNotify(ABI, []string{MethodRegisterRelayer}, applyID)
+	err = native.AddNotify(ABI, []string{MethodRegisterRelayer}, applyID)
 	if err != nil {
 		return fmt.Errorf("putRelayerApply, AddNotify error: %v", err)
 	}
@@ -101,7 +101,7 @@ func putRelayerRemove(native *native.NativeContract, relayerListParam *RelayerLi
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(RELAYER_REMOVE), utils.GetUint64Bytes(removeID)),
 		cstates.GenRawStorageItem(sink.Bytes()))
 
-	// err = native.AddNotify(ABI, []string{MethodRemoveRelayer}, removeID)
+	err = native.AddNotify(ABI, []string{MethodRemoveRelayer}, removeID)
 	if err != nil {
 		return fmt.Errorf("putRelayerRemove, AddNotify error: %v", err)
 	}
