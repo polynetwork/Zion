@@ -23,9 +23,9 @@ func TestHandlePrepareVote(t *testing.T) {
 			Digest: hash,
 		}
 	}
-	newVoteMsg := func(vote *Vote) *message {
+	newVoteMsg := func(vote *Vote) *hotstuff.Message {
 		payload, _ := Encode(vote)
-		return &message{
+		return &hotstuff.Message{
 			Code: MsgTypePrepareVote,
 			Msg:  payload,
 		}
@@ -33,7 +33,7 @@ func TestHandlePrepareVote(t *testing.T) {
 
 	type testcase struct {
 		Sys       *testSystem
-		Votes     map[hotstuff.Validator]*message
+		Votes     map[hotstuff.Validator]*hotstuff.Message
 		ExpectErr error
 	}
 
@@ -43,7 +43,7 @@ func TestHandlePrepareVote(t *testing.T) {
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			proposal := makeBlock(int64(H))
-			votes := make(map[hotstuff.Validator]*message)
+			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
@@ -66,7 +66,7 @@ func TestHandlePrepareVote(t *testing.T) {
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			proposal := makeBlock(int64(H))
-			votes := make(map[hotstuff.Validator]*message)
+			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
@@ -91,7 +91,7 @@ func TestHandlePrepareVote(t *testing.T) {
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			proposal := makeBlock(int64(H))
-			votes := make(map[hotstuff.Validator]*message)
+			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
@@ -116,7 +116,7 @@ func TestHandlePrepareVote(t *testing.T) {
 		func() *testcase {
 			sys := NewTestSystemWithBackend(N, F, H, R)
 			proposal := makeBlock(int64(H))
-			votes := make(map[hotstuff.Validator]*message)
+			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 			for _, v := range sys.backends {
 				core := v.core()
 				core.current.SetProposal(proposal)
@@ -161,9 +161,9 @@ func TestHandlePreCommit(t *testing.T) {
 		r := coreView.Round.Uint64()
 		return newProposalAndQC(c, h, r)
 	}
-	newP2PMsg := func(msg *hotstuff.QuorumCert) *message {
+	newP2PMsg := func(msg *hotstuff.QuorumCert) *hotstuff.Message {
 		payload, _ := Encode(msg)
-		return &message{
+		return &hotstuff.Message{
 			Code: MsgTypePreCommit,
 			Msg:  payload,
 		}
@@ -171,7 +171,7 @@ func TestHandlePreCommit(t *testing.T) {
 
 	type testcase struct {
 		Sys       *testSystem
-		Msg       *message
+		Msg       *hotstuff.Message
 		Leader    hotstuff.Validator
 		ExpectErr error
 	}

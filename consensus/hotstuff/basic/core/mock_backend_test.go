@@ -47,7 +47,7 @@ type mockBackend struct {
 	events *event.TypeMux
 
 	committedMsgs []testCommittedMsgs
-	sentMsgs      [][]byte // store the message when Send is called by core
+	sentMsgs      [][]byte // store the messages when Send is called by core
 
 	address common.Address
 	db      ethdb.Database
@@ -125,7 +125,7 @@ func (m *mockBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hot
 }
 
 func (m *mockBackend) Commit(proposal hotstuff.Proposal) error {
-	testLogger.Info("commit message", "address", m.Address())
+	testLogger.Info("commit Message", "address", m.Address())
 	m.committedMsgs = append(m.committedMsgs, testCommittedMsgs{
 		commitProposal: proposal,
 	})
@@ -344,7 +344,7 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 	return sys
 }
 
-// listen will consume messages from queue and deliver a message to core
+// listen will consume messages from queue and deliver a Message to core
 func (t *testSystem) listen() {
 	for {
 		select {

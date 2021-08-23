@@ -30,9 +30,9 @@ func TestHandlePrepare(t *testing.T) {
 			HighQC:   highQC,
 		}
 	}
-	newP2PMsg := func(msg *MsgPrepare) *message {
+	newP2PMsg := func(msg *MsgPrepare) *hotstuff.Message {
 		payload, _ := Encode(msg)
-		return &message{
+		return &hotstuff.Message{
 			Code: MsgTypePrepare,
 			Msg:  payload,
 		}
@@ -40,7 +40,7 @@ func TestHandlePrepare(t *testing.T) {
 
 	type testcase struct {
 		Sys       *testSystem
-		Msg       *message
+		Msg       *hotstuff.Message
 		Leader    hotstuff.Validator
 		ExpectErr error
 	}
