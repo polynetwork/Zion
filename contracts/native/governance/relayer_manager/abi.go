@@ -29,12 +29,14 @@ import (
 const abijson = `[
     {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + MethodApproveRegisterRelayer + `","type":"event"},
     {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + MethodApproveRemoveRelayer + `","type":"event"},
+	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"applyID","type":"uint64"}],"name":"MethodRegisterRelayerEvent","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"removeID","type":"uint64"}],"name":"MethodRemoveRelayerEvent","type":"event"},
     {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRegisterRelayer + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRemoveRelayer + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"address[]","name":"AddressList","type":"address[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRegisterRelayer + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"address[]","name":"AddressList","type":"address[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRemoveRelayer + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
-]`
+	]`
 
 func GetABI() *abi.ABI {
 	ab, err := abi.JSON(strings.NewReader(abijson))
