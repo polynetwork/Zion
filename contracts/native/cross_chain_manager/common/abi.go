@@ -22,7 +22,7 @@ func init() {
 }
 
 const abijson = `[
-	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"TxHash","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"MultiSign","type":"bytes"}],"name":"` + btcTxMultiSign + `","type":"event"},
+	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"TxHash","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"sink","type":"bytes"}],"name":"` + btcTxMultiSign + `","type":"event"},
     {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"FromChainID","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"ChainID","type":"uint64"},{"indexed":false,"internalType":"string","name":"buf","type":"string"},{"indexed":false,"internalType":"string","name":"FromTxHash","type":"string"},{"indexed":false,"internalType":"string","name":"RedeemKey","type":"string"}],"name":"` + btcTxToRelay + `","type":"event"},
     {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"rk","type":"string"},{"indexed":false,"internalType":"string","name":"buf","type":"string"},{"indexed":false,"internalType":"uint64[]","name":"amts","type":"uint64[]"}],"name":"` + makeBtcTx + `","type":"event"},
     {"inputs":[{"internalType":"uint64","name":"ChainID","type":"uint64"}],"name":"` + MethodBlackChain + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
