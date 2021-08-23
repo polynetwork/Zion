@@ -151,3 +151,7 @@ func getConsensusSigns(native *native.NativeContract, key polycomm.Uint256) (*Co
 	}
 	return consensusSigns, nil
 }
+
+func GetCurConOperator(native *native.NativeContract) (common.Address, error) {
+	return common.Address{}, nil
+}

@@ -18,6 +18,13 @@
 package cross_chain_manager
 
 import (
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/contracts/native/contract"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/btc"
+	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -31,6 +38,8 @@ const (
 	MethodMultiSign           = "MultiSign"
 	MethodBlackChain          = "BlackChain"
 	MethodWhiteChain          = "WhiteChain"
+
+	BLACKED_CHAIN = "BlackedChain"
 )
 
 var (
@@ -67,7 +76,7 @@ func Name(s *native.NativeContract) ([]byte, error) {
 
 func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &EntranceParam{}
+	params := &scom.EntranceParam{}
 	if err := utils.UnpackMethod(ABI, MethodImportOuterTransfer, params, ctx.Payload); err != nil {
 		return nil, err
 	}
@@ -75,32 +84,66 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(ABI, MethodImportOuterTransfer, true)
 }
 
-func MultiSign(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
-	params := &MultiSignParam{}
+func MultiSign(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
+	params := &scom.MultiSignParam{}
 	if err := utils.UnpackMethod(ABI, MethodMultiSign, params, ctx.Payload); err != nil {
 		return nil, err
+	}
+
+	handler := btc.NewBTCHandler()
+
+	//1. multi sign
+	err := handler.MultiSign(native, params)
+	if err != nil {
+		return nil, fmt.Errorf("MultiSign fail:%v", err)
 	}
 
 	return utils.PackOutputs(ABI, MethodMultiSign, true)
 }
 
-func BlackChain(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
+func BlackChain(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := &BlackChainParam{}
 	if err := utils.UnpackMethod(ABI, MethodBlackChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
+	// Get current epoch operator
+	operatorAddress, err := node_manager.GetCurConOperator(native)
+	if err != nil {
+		return nil, fmt.Errorf("BlackChain, get current consensus operator address error: %v", err)
+	}
+
+	//check witness
+	err = contract.ValidateOwner(native, operatorAddress)
+	if err != nil {
+		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+	}
+
+	PutBlackChain(native, params.ChainID)
 	return utils.PackOutputs(ABI, MethodBlackChain, true)
 }
 
-func WhiteChain(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
+func WhiteChain(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := &BlackChainParam{}
 	if err := utils.UnpackMethod(ABI, MethodWhiteChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
+	// Get current epoch operator
+	operatorAddress, err := node_manager.GetCurConOperator(native)
+	if err != nil {
+		return nil, fmt.Errorf("BlackChain, get current consensus operator address error: %v", err)
+	}
+
+	//check witness
+	err = contract.ValidateOwner(native, operatorAddress)
+	if err != nil {
+		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+	}
+
+	RemoveBlackChain(native, params.ChainID)
 	return utils.PackOutputs(ABI, MethodWhiteChain, true)
 }

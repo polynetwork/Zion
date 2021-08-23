@@ -2,6 +2,15 @@ package utils
 
 import "github.com/ethereum/go-ethereum/common"
 
+type BtcNetType int
+
+const (
+	TyTestnet3 BtcNetType = iota
+	TyRegtest
+	TySimnet
+	TyMainnet
+)
+
 var (
 	HeaderSyncContractAddress        = common.HexToAddress("0xb2799bDE6831449d73C1F22CE815f773D0CafCc5")
 	CrossChainManagerContractAddress = common.HexToAddress("0x5747C05FF236F8d18BB21Bc02ecc389deF853cae")
