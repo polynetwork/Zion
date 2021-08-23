@@ -142,3 +142,11 @@ func (this *SyncCrossChainMsgParam) Deserialization(source *polycomm.ZeroCopySou
 	this.CrossChainMsgs = crossChainMsgs
 	return nil
 }
+
+func NotifyPutHeader(native *native.NativeContract, chainID uint64, height uint64, blockHash string) {
+
+	err := native.AddNotify(ABI, []string{SYNC_HEADER_NAME}, chainID, height, blockHash, native.ContractRef().BlockHeight())
+	if err != nil {
+		panic(fmt.Sprintf("NotifyPutHeader failed: %v", err))
+	}
+}
