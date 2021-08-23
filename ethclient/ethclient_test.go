@@ -29,6 +29,9 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/governance"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -212,13 +215,16 @@ func newTestBackend(t *testing.T) (*node.Node, []*types.Block) {
 	return n, blocks
 }
 
+// todo(fuk): modify test chain generator
 func generateTestChain() (*core.Genesis, []*types.Block) {
 	db := rawdb.NewMemoryDatabase()
 	config := params.AllEthashProtocolChanges
+	basicHotstuffExtra := []byte("0x0000000000000000000000000000000000000000000000000000000000000000f89bf85494258af48e28e4a6846e931ddff8e1cdf8579821e5948c09d936a1b408d6e0afaa537ba4e06c4504a0ae94c095448424a5ecd5ca7ccdadfaad127a9d7e88ec94d47a4e56e9262543db39d9203cf1a2e53735f834b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c080")
+	//normalExtra := []byte("test genesis")
 	genesis := &core.Genesis{
 		Config:    config,
 		Alloc:     core.GenesisAlloc{testAddr: {Balance: testBalance}},
-		ExtraData: []byte("test genesis"),
+		ExtraData: basicHotstuffExtra,
 		Timestamp: 9000,
 	}
 	generate := func(i int, g *core.BlockGen) {
@@ -480,6 +486,50 @@ func testCallContract(t *testing.T, client *rpc.Client) {
 	if gas != 21000 {
 		t.Fatalf("unexpected gas price: %v", gas)
 	}
+	// CallContract
+	if _, err := ec.CallContract(context.Background(), msg, big.NewInt(1)); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	// PendingCallCOntract
+	if _, err := ec.PendingCallContract(context.Background(), msg); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+func TestCallNativeContract(t *testing.T) {
+	backend, _ := newTestBackend(t)
+	client, _ := backend.Attach()
+	ec := NewClient(client)
+
+	contractAddr := native.NativeContractAddrMap[native.NativeGovernance]
+	// estimate native contract gas
+	ab := governance.GetABI()
+	name := governance.MethodAddValidator
+
+	expectValidator := common.HexToAddress("0x12345")
+	payload, err := utils.PackMethod(ab, name, expectValidator)
+	if err != nil {
+		t.Fatalf("pack native contract method err: %v", err)
+	}
+	msg := ethereum.CallMsg{
+		From:       testAddr,
+		To:         &contractAddr,
+		Gas:        0,
+		GasPrice:   nil,
+		Value:      nil,
+		Data:       payload,
+		AccessList: nil,
+	}
+	gas, err := ec.EstimateGas(context.Background(), msg)
+	if err != nil {
+		t.Fatalf("estimate native contract call gas used err: %v", err)
+	}
+	if gas != 100000 {
+		t.Fatalf("unexpected gas usage %d", gas)
+	} else {
+		t.Logf("gas estimated as %d", gas)
+	}
+
 	// CallContract
 	if _, err := ec.CallContract(context.Background(), msg, big.NewInt(1)); err != nil {
 		t.Fatalf("unexpected error: %v", err)
