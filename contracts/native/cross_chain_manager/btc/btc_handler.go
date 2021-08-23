@@ -133,6 +133,12 @@ func (this *BTCHandler) MultiSign(service *native.NativeContract, params *scom.M
 }
 
 func (this *BTCHandler) MakeDepositProposal(service *native.NativeContract) (*scom.MakeTxParam, error) {
+	ctx := service.ContractRef().CurrentContext()
+	params := &scom.EntranceParam{}
+	if err := utils.UnpackMethod(scom.ABI, scom.MethodImportOuterTransfer, params, ctx.Payload); err != nil {
+		return nil, err
+	}
+
 	return nil, nil
 }
 

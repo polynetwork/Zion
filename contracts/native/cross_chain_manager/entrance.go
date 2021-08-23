@@ -33,23 +33,17 @@ import (
 const contractName = "cross chain manager"
 
 const (
-	MethodContractName        = "name"
-	MethodImportOuterTransfer = "importOuterTransfer"
-	MethodMultiSign           = "MultiSign"
-	MethodBlackChain          = "BlackChain"
-	MethodWhiteChain          = "WhiteChain"
-
 	BLACKED_CHAIN = "BlackedChain"
 )
 
 var (
 	this     = native.NativeContractAddrMap[native.NativeCrossChain]
 	gasTable = map[string]uint64{
-		MethodContractName:        0,
-		MethodImportOuterTransfer: 0,
-		MethodMultiSign:           100000,
-		MethodBlackChain:          0,
-		MethodWhiteChain:          0,
+		scom.MethodContractName:        0,
+		scom.MethodImportOuterTransfer: 0,
+		scom.MethodMultiSign:           100000,
+		scom.MethodBlackChain:          0,
+		scom.MethodWhiteChain:          0,
 	}
 )
 
@@ -60,11 +54,11 @@ func InitCrossChainManager() {
 func RegisterCrossChainManagerContract(s *native.NativeContract) {
 	s.Prepare(scom.ABI, gasTable)
 
-	s.Register(MethodContractName, Name)
-	s.Register(MethodImportOuterTransfer, ImportOuterTransfer)
-	s.Register(MethodMultiSign, MultiSign)
-	s.Register(MethodBlackChain, BlackChain)
-	s.Register(MethodWhiteChain, WhiteChain)
+	s.Register(scom.MethodContractName, Name)
+	s.Register(scom.MethodImportOuterTransfer, ImportOuterTransfer)
+	s.Register(scom.MethodMultiSign, MultiSign)
+	s.Register(scom.MethodBlackChain, BlackChain)
+	s.Register(scom.MethodWhiteChain, WhiteChain)
 }
 
 func GetChainHandler(router uint64) (scom.ChainHandler, error) {
@@ -72,13 +66,13 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
-	return utils.PackOutputs(scom.ABI, MethodContractName, contractName)
+	return utils.PackOutputs(scom.ABI, scom.MethodContractName, contractName)
 }
 
 func ImportOuterTransfer(native *native.NativeContract) ([]byte, error) {
 	ctx := native.ContractRef().CurrentContext()
 	params := &scom.EntranceParam{}
-	if err := utils.UnpackMethod(scom.ABI, MethodImportOuterTransfer, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(scom.ABI, scom.MethodImportOuterTransfer, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -133,16 +127,16 @@ func ImportOuterTransfer(native *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		return utils.PackOutputs(scom.ABI, MethodImportOuterTransfer, true)
+		return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
 	}
 
-	return utils.PackOutputs(scom.ABI, MethodImportOuterTransfer, true)
+	return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
 }
 
 func MultiSign(native *native.NativeContract) ([]byte, error) {
 	ctx := native.ContractRef().CurrentContext()
 	params := &scom.MultiSignParam{}
-	if err := utils.UnpackMethod(scom.ABI, MethodMultiSign, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(scom.ABI, scom.MethodMultiSign, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -154,13 +148,13 @@ func MultiSign(native *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("MultiSign fail:%v", err)
 	}
 
-	return utils.PackOutputs(scom.ABI, MethodMultiSign, true)
+	return utils.PackOutputs(scom.ABI, scom.MethodMultiSign, true)
 }
 
 func BlackChain(native *native.NativeContract) ([]byte, error) {
 	ctx := native.ContractRef().CurrentContext()
 	params := &scom.BlackChainParam{}
-	if err := utils.UnpackMethod(scom.ABI, MethodBlackChain, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(scom.ABI, scom.MethodBlackChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -177,13 +171,13 @@ func BlackChain(native *native.NativeContract) ([]byte, error) {
 	}
 
 	PutBlackChain(native, params.ChainID)
-	return utils.PackOutputs(scom.ABI, MethodBlackChain, true)
+	return utils.PackOutputs(scom.ABI, scom.MethodBlackChain, true)
 }
 
 func WhiteChain(native *native.NativeContract) ([]byte, error) {
 	ctx := native.ContractRef().CurrentContext()
 	params := &scom.BlackChainParam{}
-	if err := utils.UnpackMethod(scom.ABI, MethodWhiteChain, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(scom.ABI, scom.MethodWhiteChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -200,5 +194,5 @@ func WhiteChain(native *native.NativeContract) ([]byte, error) {
 	}
 
 	RemoveBlackChain(native, params.ChainID)
-	return utils.PackOutputs(scom.ABI, MethodWhiteChain, true)
+	return utils.PackOutputs(scom.ABI, scom.MethodWhiteChain, true)
 }
