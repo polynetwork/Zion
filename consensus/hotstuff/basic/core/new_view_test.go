@@ -51,7 +51,7 @@ func newProposalAndQC(c *core, h, r uint64) (hotstuff.Proposal, *hotstuff.Quorum
 	}
 }
 
-func newTestNewViewMsg(c *core, index int, h, r uint64, prepareQC *hotstuff.QuorumCert) *message {
+func newTestNewViewMsg(c *core, index int, h, r uint64, prepareQC *hotstuff.QuorumCert) *hotstuff.Message {
 	curView := makeView(h, r)
 	val := c.valSet.GetByIndex(uint64(index))
 	newViewMsg := &MsgNewView{
@@ -62,7 +62,7 @@ func newTestNewViewMsg(c *core, index int, h, r uint64, prepareQC *hotstuff.Quor
 	if err != nil {
 		panic(err)
 	}
-	msg := &message{
+	msg := &hotstuff.Message{
 		Code:    MsgTypeNewView,
 		Msg:     payload,
 		Address: val.Address(),
@@ -102,7 +102,7 @@ func TestHandleNewView(t *testing.T) {
 	R := uint64(0)
 
 	sys := NewTestSystemWithBackend(N, F, H, R)
-	msgList := make([]*message, N)
+	msgList := make([]*hotstuff.Message, N)
 	for index, node := range sys.backends {
 		c := node.core()
 		prepareQC := newTestQC(c, H-1, R)
@@ -148,7 +148,7 @@ func TestHandleNewViewFailed(t *testing.T) {
 		},
 	}
 
-	assert.Equal(t, errFailedDecodeNewView, leader.handleNewView(&message{Msg: []byte("123456")}, val))
+	assert.Equal(t, errFailedDecodeNewView, leader.handleNewView(&hotstuff.Message{Msg: []byte("123456")}, val))
 	for _, v := range testcases {
 		qc := newTestQC(repo, v.H, v.R)
 		msg := newTestNewViewMsg(repo, 0, v.H, v.R, qc)

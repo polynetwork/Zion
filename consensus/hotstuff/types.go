@@ -17,6 +17,8 @@
 package hotstuff
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -144,6 +146,109 @@ func (qc *QuorumCert) Copy() *QuorumCert {
 		return nil
 	}
 	return newQC
+}
+
+type MsgType interface {
+	String() string
+	Value() uint64
+}
+
+type MsgTypeConvert func(data interface{}) MsgType
+
+var MsgTypeConvertHandler MsgTypeConvert
+
+func RegisterMsgTypeConvertHandler(handler MsgTypeConvert) {
+	MsgTypeConvertHandler = handler
+}
+
+type Message struct {
+	Code          MsgType
+	View          *View
+	Msg           []byte
+	Address       common.Address
+	Signature     []byte
+	CommittedSeal []byte
+}
+
+// ==============================================
+//
+// define the functions that needs to be provided for rlp Encoder/Decoder.
+
+// EncodeRLP serializes m into the Ethereum RLP format.
+func (m *Message) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (m *Message) DecodeRLP(s *rlp.Stream) error {
+	var msg struct {
+		Code          uint64
+		View          *View
+		Msg           []byte
+		Address       common.Address
+		Signature     []byte
+		CommittedSeal []byte
+	}
+
+	if err := s.Decode(&msg); err != nil {
+		return err
+	}
+
+	code := MsgTypeConvertHandler(msg.Code)
+	m.Code, m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal = code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	return nil
+}
+
+// ==============================================
+//
+// define the functions that needs to be provided for core.
+
+func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
+	// Decode Message
+	err := rlp.DecodeBytes(b, &m)
+	if err != nil {
+		return err
+	}
+
+	// Validate Message (on a Message without Signature)
+	if validateFn != nil {
+		var payload []byte
+		payload, err = m.PayloadNoSig()
+		if err != nil {
+			return err
+		}
+
+		signerAdd, err := validateFn(payload, m.Signature)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(signerAdd.Bytes(), m.Address.Bytes()) {
+			return errors.New("Message not signed by the sender")
+		}
+	}
+	return nil
+}
+
+func (m *Message) Payload() ([]byte, error) {
+	return rlp.EncodeToBytes(m)
+}
+
+func (m *Message) PayloadNoSig() ([]byte, error) {
+	return rlp.EncodeToBytes(&Message{
+		Code:      m.Code,
+		View:      m.View,
+		Msg:       m.Msg,
+		Address:   m.Address,
+		Signature: []byte{},
+	})
+}
+
+func (m *Message) Decode(val interface{}) error {
+	return rlp.DecodeBytes(m.Msg, val)
+}
+
+func (m *Message) String() string {
+	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
 }
 
 func RLPHash(v interface{}) (h common.Hash) {

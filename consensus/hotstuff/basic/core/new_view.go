@@ -23,7 +23,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 		logger.Trace("Failed to encode", "msg", MsgTypeNewView, "err", err)
 		return
 	}
-	c.broadcast(&message{
+	c.broadcast(&hotstuff.Message{
 		Code: MsgTypeNewView,
 		Msg:  payload,
 	})
@@ -31,7 +31,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 	logger.Trace("sendNewView", "prepareQC", prepareQC.Hash)
 }
 
-func (c *core) handleNewView(data *message, src hotstuff.Validator) error {
+func (c *core) handleNewView(data *hotstuff.Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
