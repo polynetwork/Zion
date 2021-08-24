@@ -17,15 +17,3 @@
  */
 
 package core
-
-type VoteInfo struct {
-
-}
-
-type CommittedInfo struct {
-
-}
-
-type VoteMsg struct {
-
-}

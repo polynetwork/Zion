@@ -17,3 +17,18 @@
  */
 
 package core
+
+import (
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
+)
+
+// todo: if actually need it
+type BlockPool struct {
+	tree *PendingBlockTree
+	hash2qc map[string]*hotstuff.QuorumCert 	// map block hash to quorum certificate
+	highQC *hotstuff.QuorumCert		// the highest qc
+	highCommittedBlock *types.Block 	// the highest committed block
+}
+
+// func (bp *BlockPool)

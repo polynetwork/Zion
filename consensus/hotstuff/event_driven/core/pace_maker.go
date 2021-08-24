@@ -17,3 +17,43 @@
  */
 
 package core
+
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"math/big"
+	"time"
+)
+
+// PaceMaker paceMaker is an standalone module which used to keep consensus liveness.
+// it driven the proposal round in sequence by an `QC` or `TC` which means that the consensus need at least
+// `2F + 1` valid vote message or timeout message to agree that the consensus engine can be driven into
+// the next round.
+type PaceMaker struct {
+	currentRound *big.Int			// current view round
+	tmoSet map[uint64]common.Address // map round to message sender collection
+}
+
+func NewPaceMaker() *PaceMaker {
+	return nil
+}
+
+// ProcessLocalTimeout broadcast timeout message to all and record the message sender and round
+func (p *PaceMaker) ProcessLocalTimeout(sender common.Address, round *big.Int) {
+
+}
+
+// ProcessRemoteTimeout record timeout info and drive consensus into next round
+// if timeout message count arrived an quorum size.
+func (p *PaceMaker) ProcessRemoteTimeout(sender common.Address, round *big.Int) {
+
+}
+
+// AdvanceRound drive the consensus to the next round by qc/tc
+func (p *PaceMaker) AdvanceRound(qc *hotstuff.QuorumCert) error {
+	return nil
+}
+
+func (p *PaceMaker) GetDeltaTime(round *big.Int) time.Duration {
+	return 0
+}

@@ -17,3 +17,40 @@
  */
 
 package core
+
+import (
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
+)
+
+// EventDrivenEngine implement event-driven hotstuff protocol, it obtains:
+// 1.validator set which represent consensus participants
+// 2.timer which used to
+
+type EventDrivenEngine struct {
+	valset hotstuff.ValidatorSet
+}
+
+func NewEventDrivenEngine(valset hotstuff.ValidatorSet) *EventDrivenEngine {
+	return nil
+}
+
+// ProcessCertificates validate and handle QC/TC
+func (e *EventDrivenEngine) ProcessCertificates(qc *hotstuff.QuorumCert) error {
+	return nil
+}
+
+// ProcessProposal check proposal info and vote to the next leader if the proposal is valid
+func (e *EventDrivenEngine) ProcessProposal(proposal *types.Block) error {
+	return nil
+}
+
+// ProcessVoteMsg validate vote message and try to assemble qc
+func (e *EventDrivenEngine) ProcessVoteMsg(vote *VoteMsg) error {
+	return nil
+}
+
+// ProcessNewRoundEvent generate new proposal and broadcast to all validators.
+func (e *EventDrivenEngine) ProcessNewRoundEvent() error {
+	return nil
+}

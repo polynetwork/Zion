@@ -17,3 +17,52 @@
  */
 
 package core
+
+import (
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
+)
+
+// SafetyRules contains 3 group variables which used to judge that if the new proposal can be voted or committed.
+// lockQC denotes an 2-chain header's qc, and the proposal which related by it can be committed in the next round.
+// lastVote recorded the latest vote and round which used to ensure that there are only one vote in single round.
+// lastCommittedQC represent an 3-chain header which have already been committed into pendingBlockTree/chain.
+type SafetyRules struct {
+	lockQC      *hotstuff.QuorumCert
+	lockQCRound *big.Int
+
+	lastVoteMsg   *VoteMsg
+	lastVoteRound *big.Int
+
+	lastCommittedQC    *hotstuff.QuorumCert
+	lastCommittedRound *big.Int
+}
+
+func NewSafetyRules() *SafetyRules {
+	return nil
+}
+
+// UpdateLockQC update the latest quorum certificate after voteRule judgement succeed.
+func (sr *SafetyRules) UpdateLockQC(qc *hotstuff.QuorumCert, round *big.Int) {
+	sr.lockQC = qc
+	sr.lockQCRound = round
+}
+
+// VoteRule validator should check vote in consensus round:
+// first, the proposal should be exist in the `PendingBlockTree`
+// second, the proposal round should be greater than `lastVoteRound`
+// third, the proposal's justify qc round should NOT be smaller than `lockQCRound`
+// we should ensure that only one vote in different round with first two items,
+// and the last item used to make sure that there were `2F + 1` votes have been locked last in 3-chain round,
+// and the proposal of that round should be current proposal's grand pa or justifyQC's parent.
+func (sr *SafetyRules) VoteRule(proposalRound *big.Int, justifyQC *hotstuff.QuorumCert) bool {
+	return false
+}
+
+// CommitRule validator should find out the parent block and grand pa block of the committed block by parent hash,
+// and their height should be decreased by one.
+func (sr *SafetyRules) CommitRule(block *types.Block, propoosalRound *big.Int, justifyQC *hotstuff.QuorumCert) bool {
+	return false
+}
