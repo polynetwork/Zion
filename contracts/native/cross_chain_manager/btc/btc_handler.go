@@ -87,7 +87,7 @@ func (this *BTCHandler) MultiSign(service *native.NativeContract, params *scom.M
 	if len(multiSignInfo.MultiSignInfo) != n {
 		sink := polycomm.NewZeroCopySink(nil)
 		multiSignInfo.Serialization(sink)
-		service.AddNotify(scom.ABI, []string{"btcTxMultiSign"}, params.TxHash, sink.Bytes())
+		service.AddNotify(scom.ABI, []string{"btcTxMultiSignEvent"}, params.TxHash, sink.Bytes())
 	} else {
 		err = addSigToTx(multiSignInfo, addrs, redeemScript, mtx, pkScripts)
 		if err != nil {
@@ -128,7 +128,7 @@ func (this *BTCHandler) MultiSign(service *native.NativeContract, params *scom.M
 				hex.EncodeToString(params.TxHash), err)
 		}
 		putStxos(service, params.ChainID, params.RedeemKey, stxos)
-		service.AddNotify(scom.ABI, []string{"btcTxToRelay"}, btcFromTxInfo.FromChainID, params.ChainID,
+		service.AddNotify(scom.ABI, []string{"btcTxToRelayEvent"}, btcFromTxInfo.FromChainID, params.ChainID,
 			hex.EncodeToString(buf.Bytes()), hex.EncodeToString(btcFromTxInfo.FromTxHash), params.RedeemKey)
 	}
 	return nil
@@ -282,7 +282,7 @@ func makeBtcTx(service *native.NativeContract, chainID uint64, amounts map[strin
 		return fmt.Errorf("makeBtcTx, putBtcFromInfo failed: %v", err)
 	}
 
-	if err = service.AddNotify(scom.ABI, []string{"makeBtcTx"}, hex.EncodeToString(rk), hex.EncodeToString(buf.Bytes()), amts); err != nil {
+	if err = service.AddNotify(scom.ABI, []string{"makeBtcTxEvent"}, hex.EncodeToString(rk), hex.EncodeToString(buf.Bytes()), amts); err != nil {
 		return fmt.Errorf("makeBtcTx, AddNotify failed: %v", err)
 	}
 
