@@ -10,7 +10,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
@@ -92,15 +91,12 @@ func (h *Handler) SyncGenesisHeader(native *native.NativeContract) (err error) {
 	}
 
 	// Get current epoch operator
-	operatorAddress, err := node_manager.GetCurConOperator(native)
+	ok, err := node_manager.CheckConsensusSigns(native, scom.MethodSyncGenesisHeader, ctx.Payload, native.ContractRef().MsgSender())
 	if err != nil {
-		return fmt.Errorf("bsc Handler SyncGenesisHeader, get current consensus operator address error: %v", err)
+		return fmt.Errorf("SyncGenesisHeader, CheckConsensusSigns error: %v", err)
 	}
-
-	//check witness
-	err = contract.ValidateOwner(native, operatorAddress)
-	if err != nil {
-		return fmt.Errorf("bsc Handler SyncGenesisHeader, checkWitness error: %v", err)
+	if !ok {
+		return nil
 	}
 
 	// can only store once

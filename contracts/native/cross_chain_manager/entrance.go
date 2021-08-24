@@ -20,7 +20,6 @@ package cross_chain_manager
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/btc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
@@ -167,15 +166,12 @@ func BlackChain(native *native.NativeContract) ([]byte, error) {
 	}
 
 	// Get current epoch operator
-	operatorAddress, err := node_manager.GetCurConOperator(native)
+	ok, err := node_manager.CheckConsensusSigns(native, scom.MethodBlackChain, utils.GetUint64Bytes(params.ChainID), native.ContractRef().MsgSender())
 	if err != nil {
-		return nil, fmt.Errorf("BlackChain, get current consensus operator address error: %v", err)
+		return nil, fmt.Errorf("BlackChain, CheckConsensusSigns error: %v", err)
 	}
-
-	//check witness
-	err = contract.ValidateOwner(native, operatorAddress)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+	if !ok {
+		return utils.PackOutputs(scom.ABI, scom.MethodBlackChain, true)
 	}
 
 	PutBlackChain(native, params.ChainID)
@@ -190,15 +186,12 @@ func WhiteChain(native *native.NativeContract) ([]byte, error) {
 	}
 
 	// Get current epoch operator
-	operatorAddress, err := node_manager.GetCurConOperator(native)
+	ok, err := node_manager.CheckConsensusSigns(native, scom.MethodWhiteChain, ctx.Payload, native.ContractRef().MsgSender())
 	if err != nil {
-		return nil, fmt.Errorf("BlackChain, get current consensus operator address error: %v", err)
+		return nil, fmt.Errorf("WhiteChain, CheckConsensusSigns error: %v", err)
 	}
-
-	//check witness
-	err = contract.ValidateOwner(native, operatorAddress)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+	if !ok {
+		return utils.PackOutputs(scom.ABI, scom.MethodWhiteChain, true)
 	}
 
 	RemoveBlackChain(native, params.ChainID)
