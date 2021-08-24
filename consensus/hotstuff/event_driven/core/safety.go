@@ -33,7 +33,7 @@ type SafetyRules struct {
 	lockQC      *hotstuff.QuorumCert
 	lockQCRound *big.Int
 
-	lastVoteMsg   *VoteMsg
+	lastVoteMsg   *Vote
 	lastVoteRound *big.Int
 
 	lastCommittedQC    *hotstuff.QuorumCert

@@ -17,3 +17,9 @@
  */
 
 package core
+
+import "github.com/ethereum/go-ethereum/rlp"
+
+func Encode(val interface{}) ([]byte, error) {
+	return rlp.EncodeToBytes(val)
+}

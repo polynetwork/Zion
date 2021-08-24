@@ -17,3 +17,14 @@
  */
 
 package core
+
+import (
+	"math/big"
+	"testing"
+)
+
+func TestVoteString(t *testing.T) {
+	n := big.NewInt(3)
+	t.Log(n)
+	t.Log(n.String())
+}

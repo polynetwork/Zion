@@ -46,7 +46,7 @@ func (e *EventDrivenEngine) ProcessProposal(proposal *types.Block) error {
 }
 
 // ProcessVoteMsg validate vote message and try to assemble qc
-func (e *EventDrivenEngine) ProcessVoteMsg(vote *VoteMsg) error {
+func (e *EventDrivenEngine) ProcessVoteMsg(vote *Vote) error {
 	return nil
 }
 
