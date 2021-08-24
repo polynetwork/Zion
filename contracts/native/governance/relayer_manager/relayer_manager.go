@@ -133,7 +133,7 @@ func ApproveRegisterRelayer(native *native.NativeContract) ([]byte, error) {
 
 	native.GetCacheDB().Delete(utils.ConcatKey(utils.RelayerManagerContractAddress, []byte(RELAYER_APPLY), utils.GetUint64Bytes(params.ID)))
 
-	err = native.AddNotify(ABI, []string{MethodApproveRegisterRelayer}, params.ID)
+	err = native.AddNotify(ABI, []string{EventApproveRegisterRelayer}, params.ID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterRelayer, AddNotify error: %v", err)
 	}
@@ -191,7 +191,7 @@ func ApproveRemoveRelayer(native *native.NativeContract) ([]byte, error) {
 	for _, address := range relayerListParam.AddressList {
 		native.GetCacheDB().Delete(utils.ConcatKey(utils.RelayerManagerContractAddress, []byte(RELAYER), address[:]))
 	}
-	err = native.AddNotify(ABI, []string{MethodApproveRemoveRelayer}, params.ID)
+	err = native.AddNotify(ABI, []string{EventApproveRemoveRelayer}, params.ID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRemoveRelayer, AddNotify error: %v", err)
 	}

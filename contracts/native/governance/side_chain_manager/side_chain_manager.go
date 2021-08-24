@@ -137,7 +137,7 @@ func RegisterSideChain(native *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("RegisterSideChain, putRegisterSideChain error: %v", err)
 	}
 
-	err = native.AddNotify(ABI, []string{MethodRegisterSideChain}, params.ChainId, params.Router, params.Name, params.BlocksToWait)
+	err = native.AddNotify(ABI, []string{EventRegisterSideChain}, params.ChainId, params.Router, params.Name, params.BlocksToWait)
 	if err != nil {
 		return nil, fmt.Errorf("RegisterSideChain, AddNotify error: %v", err)
 	}
@@ -180,7 +180,7 @@ func ApproveRegisterSideChain(native *native.NativeContract) ([]byte, error) {
 	}
 
 	native.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(SIDE_CHAIN_APPLY), utils.GetUint64Bytes(params.Chainid)))
-	err = native.AddNotify(ABI, []string{MethodApproveRegisterSideChain}, params.Chainid)
+	err = native.AddNotify(ABI, []string{EventApproveRegisterSideChain}, params.Chainid)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, AddNotify error: %v", err)
 	}
@@ -223,7 +223,7 @@ func UpdateSideChain(native *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UpdateSideChain, putUpdateSideChain error: %v", err)
 	}
-	err = native.AddNotify(ABI, []string{MethodUpdateSideChain}, params.ChainId, params.Router, params.Name, params.BlocksToWait)
+	err = native.AddNotify(ABI, []string{EventUpdateSideChain}, params.ChainId, params.Router, params.Name, params.BlocksToWait)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateSideChain, AddNotify error: %v", err)
 	}
@@ -269,7 +269,7 @@ func ApproveUpdateSideChain(native *native.NativeContract) ([]byte, error) {
 	chainidByte := utils.GetUint64Bytes(params.Chainid)
 	native.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(UPDATE_SIDE_CHAIN_REQUEST), chainidByte))
 
-	err = native.AddNotify(ABI, []string{MethodApproveUpdateSideChain}, params.Chainid)
+	err = native.AddNotify(ABI, []string{EventApproveUpdateSideChain}, params.Chainid)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, AddNotify error: %v", err)
 	}
@@ -305,7 +305,7 @@ func QuitSideChain(native *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("QuitSideChain, putUpdateSideChain error: %v", err)
 	}
 
-	err = native.AddNotify(ABI, []string{MethodQuitSideChain}, params.Chainid)
+	err = native.AddNotify(ABI, []string{EventQuitSideChain}, params.Chainid)
 	if err != nil {
 		return nil, fmt.Errorf("QuitSideChain, AddNotify error: %v", err)
 	}
@@ -344,7 +344,7 @@ func ApproveQuitSideChain(native *native.NativeContract) ([]byte, error) {
 	native.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(MethodQuitSideChain), chainidByte))
 	native.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(SIDE_CHAIN), chainidByte))
 
-	err = native.AddNotify(ABI, []string{MethodApproveQuitSideChain}, params.Chainid)
+	err = native.AddNotify(ABI, []string{EventApproveQuitSideChain}, params.Chainid)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveQuitSideChain, AddNotify error: %v", err)
 	}
@@ -401,7 +401,7 @@ func RegisterRedeem(native *native.NativeContract) ([]byte, error) {
 		if err = putBtcRedeemScript(native, hex.EncodeToString(rk), params.Redeem, params.RedeemChainID); err != nil {
 			return nil, fmt.Errorf("RegisterRedeem, failed to save redeemscript %v with key %v, error: %v", hex.EncodeToString(params.Redeem), rk, err)
 		}
-		err = native.AddNotify(ABI, []string{MethodRegisterRedeem}, hex.EncodeToString(rk), hex.EncodeToString(params.ContractAddress))
+		err = native.AddNotify(ABI, []string{EventRegisterRedeem}, hex.EncodeToString(rk), hex.EncodeToString(params.ContractAddress))
 		if err != nil {
 			return nil, fmt.Errorf("RegisterRedeem, AddNotify error: %v", err)
 		}
