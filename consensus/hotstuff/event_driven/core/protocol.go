@@ -32,9 +32,14 @@ type EventDrivenEngine struct {
 	config *hotstuff.Config
 	logger log.Logger
 
+	addr   common.Address
 	signer hotstuff.Signer
 	valset hotstuff.ValidatorSet
-	requests *requestSet
+
+	requests  *requestSet
+	paceMaker *PaceMaker
+	blkTree   *BlockTree
+	safety    *SafetyRules
 
 	backend hotstuff.Backend
 
@@ -49,22 +54,78 @@ func NewEventDrivenEngine(valset hotstuff.ValidatorSet) *EventDrivenEngine {
 	return nil
 }
 
-// ProcessCertificates validate and handle QC/TC
-func (e *EventDrivenEngine) ProcessCertificates(qc *hotstuff.QuorumCert) error {
-	return nil
+// ProcessNewRoundEvent proposer at this round get an new proposal and broadcast to all validators.
+func (e *EventDrivenEngine) ProcessNewRoundEvent() error {
+	view := e.currentView()
+	e.valset.CalcProposerByIndex(view.Round.Uint64())
+
+	if !e.isProposer() {
+		return nil
+	}
+
+	proposal := e.getCurrentPendingRequest()
+	msg := &MsgNewView{
+		View:     view,
+		Proposal: proposal,
+	}
+	return e.encodeAndBroadcast(MsgTypeNewView, msg)
 }
 
-// ProcessProposal check proposal info and vote to the next leader if the proposal is valid
+// ProcessProposal validate proposal info and vote to the next leader if the proposal is valid
 func (e *EventDrivenEngine) ProcessProposal(proposal *types.Block) error {
-	return nil
+	justifyQC, proposalRound, err := extraProposal(proposal)
+	if err != nil {
+		return err
+	}
+
+	if err := e.ProcessCertificates(justifyQC); err != nil {
+		return err
+	}
+
+	currentRound := e.paceMaker.CurrentRound()
+	if currentRound.Cmp(proposalRound) != 0 {
+		// todo: modify err type
+		return errInvalidMessage
+	}
+
+	if !e.valset.IsProposer(proposal.Coinbase()) {
+		return errNotFromProposer
+	}
+
+	if err := e.signer.VerifyQC(justifyQC, e.valset); err != nil {
+		return err
+	}
+
+	if err := e.signer.VerifyHeader(proposal.Header(), e.valset, false); err != nil {
+		return err
+	}
+
+	e.blkTree.Insert(proposal)
+
+	vote, err := e.safety.VoteRule(proposal, proposalRound, justifyQC)
+	if err != nil {
+		return err
+	}
+
+	// todo: vote to next proposal
+	return e.encodeAndBroadcast(MsgTypeVote, vote)
 }
 
 // ProcessVoteMsg validate vote message and try to assemble qc
 func (e *EventDrivenEngine) ProcessVoteMsg(vote *Vote) error {
+	e.blkTree.ProcessVote(vote)
 	return nil
 }
 
-// ProcessNewRoundEvent generate new proposal and broadcast to all validators.
-func (e *EventDrivenEngine) ProcessNewRoundEvent() error {
+// ProcessCertificates validate and handle QC/TC
+func (e *EventDrivenEngine) ProcessCertificates(qc *hotstuff.QuorumCert) error {
+	if err := e.paceMaker.AdvanceRound(qc); err != nil {
+		return err
+	}
+
+	e.safety.UpdateLockQC(qc, qc.View.Round)
+
+	// try to commit locked block and pure the `pendingBlockTree`
+	e.blkTree.ProcessCommit(qc.Hash)
 	return nil
 }

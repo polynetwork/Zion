@@ -43,7 +43,6 @@ func (e *EventDrivenEngine) subscribeEvents() {
 		// external events
 		hotstuff.RequestEvent{},
 		hotstuff.MessageEvent{},
-		// internal events
 		backlogEvent{},
 	)
 	e.timeoutSub = e.backend.EventMux().Subscribe(
@@ -89,7 +88,7 @@ func (e *EventDrivenEngine) handleEvents() {
 				logger.Error("Failed to receive timeout Event")
 				return
 			}
-			//e.handleTimeoutMsg()
+			// e.paceMaker.ProcessLocalTimeout()
 
 		case _, ok := <-e.finalCommittedSub.Chan():
 			if !ok {
@@ -132,20 +131,12 @@ func (e *EventDrivenEngine) handleMsg(payload []byte) error {
 
 func (e *EventDrivenEngine) handleCheckedMsg(msg *hotstuff.Message, src hotstuff.Validator) (err error) {
 	switch msg.Code {
-	//case MsgTypeNewView:
-	//	err = c.handleNewView(msg, src)
-	//case MsgTypePrepare:
-	//	err = c.handlePrepare(msg, src)
-	//case MsgTypePrepareVote:
-	//	err = c.handlePrepareVote(msg, src)
-	//case MsgTypePreCommit:
-	//	err = c.handlePreCommit(msg, src)
-	//case MsgTypePreCommitVote:
-	//	err = c.handlePreCommitVote(msg, src)
-	//case MsgTypeCommit:
-	//	err = c.handleCommit(msg, src)
-	//case MsgTypeCommitVote:
-	//	err = c.handleCommitVote(msg, src)
+	case MsgTypeNewView:
+		// err = e.ProcessProposal(msg.Payload())
+	case MsgTypeVote:
+		// err = e.ProcessVoteMsg()
+	case MsgTypeTimeout:
+		e.paceMaker.ProcessRemoteTimeout(src.Address(), msg.View.Round)
 	default:
 		err = errInvalidMessage
 		e.logger.Error("msg type invalid", "unknown type", msg.Code)
@@ -156,9 +147,3 @@ func (e *EventDrivenEngine) handleCheckedMsg(msg *hotstuff.Message, src hotstuff
 	}
 	return
 }
-
-//func (c *core) handleTimeoutMsg() {
-//	c.logger.Trace("handleTimeout", "state", c.currentState(), "view", c.currentView())
-//	round := new(big.Int).Add(c.current.Round(), common.Big1)
-//	c.startNewRound(round)
-//}

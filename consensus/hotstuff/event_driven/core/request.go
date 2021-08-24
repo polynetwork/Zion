@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/core/types"
 	"sync"
 	"time"
 
@@ -48,6 +49,10 @@ func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
 	//}
 
 	logger.Trace("handleRequest", "height", req.Proposal.Number(), "proposal", req.Proposal.Hash())
+	return nil
+}
+
+func (e *EventDrivenEngine) getCurrentPendingRequest() *types.Block {
 	return nil
 }
 

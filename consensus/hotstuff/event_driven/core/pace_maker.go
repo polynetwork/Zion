@@ -31,8 +31,9 @@ import (
 // `2F + 1` valid vote message or timeout message to agree that the consensus engine can be driven into
 // the next round.
 type PaceMaker struct {
-	epoch                 uint64                    // consensus epoch id
-	currentRound          *big.Int                  // current view round
+	epoch                       uint64   // consensus epoch id
+	currentHeight, currentRound *big.Int // current view round
+
 	timtoutMsgs           map[uint64]common.Address // map round to message sender collection
 	highestCommittedRound *big.Int                  // record last committed block which used to calculate timeout duration
 	timer                 *time.Timer               // internal timer
@@ -46,6 +47,18 @@ func NewPaceMaker(epoch uint64, initRound, initHighestCommittedRound *big.Int, s
 	pm.timtoutMsgs = make(map[uint64]common.Address)
 	pm.sender = sender
 	return pm
+}
+
+func (p *PaceMaker) CurrentEpoch() uint64 {
+	return p.epoch
+}
+
+func (p *PaceMaker) CurrentHeight() *big.Int {
+	return p.currentHeight
+}
+
+func (p *PaceMaker) CurrentRound() *big.Int {
+	return p.currentRound
 }
 
 // ProcessLocalTimeout broadcast timeout message to all and record the message sender and round

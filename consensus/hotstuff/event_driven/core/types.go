@@ -20,6 +20,7 @@ package core
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
 	"io"
 	"math/big"
 
@@ -67,6 +68,36 @@ func init() {
 		code := data.(uint64)
 		return MsgType(code)
 	})
+}
+
+type MsgNewView struct {
+	View     *hotstuff.View
+	Proposal hotstuff.Proposal
+}
+
+func (m *MsgNewView) EncodeRLP(w io.Writer) error {
+	block, ok := m.Proposal.(*types.Block)
+	if !ok {
+		return errInvalidProposal
+	}
+	return rlp.Encode(w, []interface{}{m.View, block})
+}
+
+func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
+	var proposal struct {
+		View     *hotstuff.View
+		Proposal *types.Block
+	}
+
+	if err := s.Decode(&proposal); err != nil {
+		return err
+	}
+	m.View, m.Proposal = proposal.View, proposal.Proposal
+	return nil
+}
+
+func (m *MsgNewView) String() string {
+	return fmt.Sprintf("{NewView Height: %v Round: %v Hash: %v}", m.View.Height, m.View.Round, m.Proposal.Hash())
 }
 
 type Vote struct {

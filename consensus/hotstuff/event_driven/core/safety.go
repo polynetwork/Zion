@@ -57,12 +57,12 @@ func (sr *SafetyRules) UpdateLockQC(qc *hotstuff.QuorumCert, round *big.Int) {
 // we should ensure that only one vote in different round with first two items,
 // and the last item used to make sure that there were `2F + 1` votes have been locked last in 3-chain round,
 // and the proposal of that round should be current proposal's grand pa or justifyQC's parent.
-func (sr *SafetyRules) VoteRule(proposalRound *big.Int, justifyQC *hotstuff.QuorumCert) bool {
-	return false
+func (sr *SafetyRules) VoteRule(block *types.Block, proposalRound *big.Int, justifyQC *hotstuff.QuorumCert) (*Vote, error) {
+	return nil, nil
 }
 
 // CommitRule validator should find out the parent block and grand pa block of the committed block by parent hash,
 // and their height should be decreased by one.
-func (sr *SafetyRules) CommitRule(block *types.Block, propoosalRound *big.Int, justifyQC *hotstuff.QuorumCert) bool {
+func (sr *SafetyRules) CommitRule(block *types.Block, proposalRound *big.Int, justifyQC *hotstuff.QuorumCert) bool {
 	return false
 }
