@@ -25,16 +25,27 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+const (
+	EventRegisterCandidate   = "registerCandidate"
+	EventUnRegisterCandidate = "unRegisterCandidate"
+	EventApproveCandidate    = "approveCandidate"
+	EventBlackNode           = "blackNode"
+	EventWhiteNode           = "whiteNode"
+	EventQuitNode            = "quitNode"
+	EventUpdateConfig        = "updateConfig"
+	EventCommitDpos          = "commitDpos"
+)
+
 const abijson = `[
-	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"int256","name":"signs","type":"int256"}],"name":"CheckConsensusSigns","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + MethodApproveCandidate + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string[]","name":"PubkeyList","type":"string[]"}],"name":"` + MethodBlackNode + `","type":"event"},
-    {"anonymous":false,"inputs":[],"name":"` + MethodCommitDpos + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + MethodQuitNode + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + MethodRegisterCandidate + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + MethodUnRegisterCandidate + `","type":"event"},
-    {"anonymous":false,"inputs":[{"components":[{"internalType":"uint32","name":"BlockMsgDelay","type":"uint32"},{"internalType":"uint32","name":"HashMsgDelay","type":"uint32"},{"internalType":"uint32","name":"PeerHandshakeTimeout","type":"uint32"},{"internalType":"uint32","name":"MaxBlockChangeView","type":"uint32"}],"indexed":false,"internalType":"struct node_manager.Configuration","name":"Config","type":"tuple"}],"name":"` + MethodUpdateConfig + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + MethodWhiteNode + `","type":"event"},
+	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"int256","name":"signs","type":"int256"}],"name":"CheckConsensusSignsEvent","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventApproveCandidate + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string[]","name":"PubkeyList","type":"string[]"}],"name":"` + EventBlackNode + `","type":"event"},
+    {"anonymous":false,"inputs":[],"name":"` + EventCommitDpos + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventQuitNode + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventRegisterCandidate + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventUnRegisterCandidate + `","type":"event"},
+    {"anonymous":false,"inputs":[{"components":[{"internalType":"uint32","name":"BlockMsgDelay","type":"uint32"},{"internalType":"uint32","name":"HashMsgDelay","type":"uint32"},{"internalType":"uint32","name":"PeerHandshakeTimeout","type":"uint32"},{"internalType":"uint32","name":"MaxBlockChangeView","type":"uint32"}],"indexed":false,"internalType":"struct node_manager.Configuration","name":"Config","type":"tuple"}],"name":"` + EventUpdateConfig + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventWhiteNode + `","type":"event"},
     {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveCandidate + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"string[]","name":"PeerPubkeyList","type":"string[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodBlackNode + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[],"name":"` + MethodCommitDpos + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},

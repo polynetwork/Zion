@@ -26,11 +26,18 @@ import (
 	polycomm "github.com/polynetwork/poly/common"
 )
 
+const (
+	EventRegisterRelayer        = "registerRelayer"
+	EventApproveRegisterRelayer = "approveRegisterRelayer"
+	EventRemoveRelayer          = "removeRelayer"
+	EventApproveRemoveRelayer   = "approveRemoveRelayer"
+)
+
 const abijson = `[
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + MethodApproveRegisterRelayer + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + MethodApproveRemoveRelayer + `","type":"event"},
-	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"applyID","type":"uint64"}],"name":"` + MethodRegisterRelayer + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"removeID","type":"uint64"}],"name":"` + MethodRemoveRelayer + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRegisterRelayer + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRemoveRelayer + `","type":"event"},
+	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"applyID","type":"uint64"}],"name":"` + EventRegisterRelayer + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"removeID","type":"uint64"}],"name":"` + EventRemoveRelayer + `","type":"event"},
     {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRegisterRelayer + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRemoveRelayer + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},

@@ -26,15 +26,26 @@ import (
 	polycomm "github.com/polynetwork/poly/common"
 )
 
+const (
+	EventRegisterSideChain        = "registerSideChain"
+	EventApproveRegisterSideChain = "approveRegisterSideChain"
+	EventUpdateSideChain          = "updateSideChain"
+	EventApproveUpdateSideChain   = "approveUpdateSideChain"
+	EventQuitSideChain            = "quitSideChain"
+	EventApproveQuitSideChain     = "approveQuitSideChain"
+	EventRegisterRedeem           = "registerRedeem"
+	EventSetBtcTxParam            = "setBtcTxParam"
+)
+
 const abijson = `[
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + MethodApproveQuitSideChain + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + MethodApproveRegisterSideChain + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + MethodApproveUpdateSideChain + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + MethodQuitSideChain + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"rk","type":"string"},{"indexed":false,"internalType":"string","name":"ContractAddress","type":"string"}],"name":"` + MethodRegisterRedeem + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"Router","type":"uint64"},{"indexed":false,"internalType":"string","name":"Name","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlocksToWait","type":"uint64"}],"name":"` + MethodRegisterSideChain + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"rk","type":"string"},{"indexed":false,"internalType":"uint64","name":"RedeemChainId","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"FeeRate","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"MinChange","type":"uint64"}],"name":"` + MethodSetBtcTxParam + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"Router","type":"uint64"},{"indexed":false,"internalType":"string","name":"Name","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlocksToWait","type":"uint64"}],"name":"` + MethodUpdateSideChain + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + EventApproveQuitSideChain + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + EventApproveRegisterSideChain + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + EventApproveUpdateSideChain + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + EventQuitSideChain + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"rk","type":"string"},{"indexed":false,"internalType":"string","name":"ContractAddress","type":"string"}],"name":"` + EventRegisterRedeem + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"Router","type":"uint64"},{"indexed":false,"internalType":"string","name":"Name","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlocksToWait","type":"uint64"}],"name":"` + EventRegisterSideChain + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"rk","type":"string"},{"indexed":false,"internalType":"uint64","name":"RedeemChainId","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"FeeRate","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"MinChange","type":"uint64"}],"name":"` + EventSetBtcTxParam + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"Router","type":"uint64"},{"indexed":false,"internalType":"string","name":"Name","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlocksToWait","type":"uint64"}],"name":"` + EventUpdateSideChain + `","type":"event"},
     {"inputs":[{"internalType":"uint64","name":"Chainid","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveQuitSideChain + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"uint64","name":"Chainid","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRegisterSideChain + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"uint64","name":"Chainid","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveUpdateSideChain + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
