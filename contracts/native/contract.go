@@ -114,7 +114,7 @@ func (s *NativeContract) AddNotify(abi *abi.ABI, topics []string, data ...interf
 
 	var topicIDs []common.Hash
 	for _, topic := range topics {
-		eventInfo, ok := abi.Events[topic]
+		eventInfo, ok := abi.Events[topic+"Event"]
 		if !ok {
 			err = fmt.Errorf("topic %s not exists", topic)
 			return
@@ -122,7 +122,7 @@ func (s *NativeContract) AddNotify(abi *abi.ABI, topics []string, data ...interf
 		topicIDs = append(topicIDs, eventInfo.ID)
 	}
 
-	packedData, err := utils.PackEvents(abi, topics[0], data...)
+	packedData, err := utils.PackEvents(abi, topics[0]+"Event", data...)
 	if err != nil {
 		err = fmt.Errorf("AddNotify, PackEvents error: %v", err)
 		return
