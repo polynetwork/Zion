@@ -1,7 +1,6 @@
 package core
 
 import (
-	"bytes"
 	"fmt"
 	"io"
 
@@ -15,6 +14,13 @@ var (
 	EmptyHash    = common.Hash{}
 	EmptyAddress = common.Address{}
 )
+
+func init() {
+	hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
+		code := data.(uint64)
+		return MsgType(code)
+	})
+}
 
 type CoreEngine interface {
 	Start() error
@@ -112,94 +118,6 @@ func (s State) Cmp(y State) int {
 		return 1
 	}
 	return 0
-}
-
-type message struct {
-	Code          MsgType
-	View          *hotstuff.View
-	Msg           []byte
-	Address       common.Address
-	Signature     []byte
-	CommittedSeal []byte
-}
-
-// ==============================================
-//
-// define the functions that needs to be provided for rlp Encoder/Decoder.
-
-// EncodeRLP serializes m into the Ethereum RLP format.
-func (m *message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code, m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (m *message) DecodeRLP(s *rlp.Stream) error {
-	var msg struct {
-		Code          MsgType
-		View          *hotstuff.View
-		Msg           []byte
-		Address       common.Address
-		Signature     []byte
-		CommittedSeal []byte
-	}
-
-	if err := s.Decode(&msg); err != nil {
-		return err
-	}
-	m.Code, m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal = msg.Code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
-	return nil
-}
-
-// ==============================================
-//
-// define the functions that needs to be provided for core.
-
-func (m *message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
-	// Decode message
-	err := rlp.DecodeBytes(b, &m)
-	if err != nil {
-		return err
-	}
-
-	// Validate message (on a message without Signature)
-	if validateFn != nil {
-		var payload []byte
-		payload, err = m.PayloadNoSig()
-		if err != nil {
-			return err
-		}
-
-		signerAdd, err := validateFn(payload, m.Signature)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(signerAdd.Bytes(), m.Address.Bytes()) {
-			return errInvalidSigner
-		}
-	}
-	return nil
-}
-
-func (m *message) Payload() ([]byte, error) {
-	return rlp.EncodeToBytes(m)
-}
-
-func (m *message) PayloadNoSig() ([]byte, error) {
-	return rlp.EncodeToBytes(&message{
-		Code:      m.Code,
-		View:      m.View,
-		Msg:       m.Msg,
-		Address:   m.Address,
-		Signature: []byte{},
-	})
-}
-
-func (m *message) Decode(val interface{}) error {
-	return rlp.DecodeBytes(m.Msg, val)
-}
-
-func (m *message) String() string {
-	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
 }
 
 type MsgNewView struct {
@@ -323,7 +241,7 @@ func (b *Vote) String() string {
 type timeoutEvent struct{}
 type backlogEvent struct {
 	src hotstuff.Validator
-	msg *message
+	msg *hotstuff.Message
 }
 
 func Encode(val interface{}) ([]byte, error) {

@@ -5,7 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) handleCommitVote(data *message, src hotstuff.Validator) error {
+func (c *core) handleCommitVote(data *hotstuff.Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
