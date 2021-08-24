@@ -28,6 +28,47 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+var (
+	EmptyHash    = common.Hash{}
+	EmptyAddress = common.Address{}
+)
+
+type MsgType uint64
+
+const (
+	MsgTypeNewView MsgType = 1
+	MsgTypeVote    MsgType = 2
+	MsgTypeTimeout MsgType = 3
+	MsgTypeCommit  MsgType = 4
+)
+
+func (m MsgType) String() string {
+	switch m {
+	case MsgTypeNewView:
+		return "NEW_VIEW"
+	case MsgTypeVote:
+		return "VOTE"
+	case MsgTypeTimeout:
+		return "TIMEOUT"
+	case MsgTypeCommit:
+		return "COMMIT"
+	default:
+		return "UNKNOWN"
+	}
+}
+
+func (m MsgType) Value() uint64 {
+	return uint64(m)
+}
+
+// todo: set in start function
+func init() {
+	hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
+		code := data.(uint64)
+		return MsgType(code)
+	})
+}
+
 type Vote struct {
 	Epoch     uint64
 	Hash      common.Hash

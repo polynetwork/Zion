@@ -19,16 +19,30 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // EventDrivenEngine implement event-driven hotstuff protocol, it obtains:
 // 1.validator set which represent consensus participants
-// 2.timer which used to
-
 type EventDrivenEngine struct {
+	config *hotstuff.Config
+	logger log.Logger
+
+	signer hotstuff.Signer
 	valset hotstuff.ValidatorSet
+	requests *requestSet
+
+	backend hotstuff.Backend
+
+	events            *event.TypeMuxSubscription
+	timeoutSub        *event.TypeMuxSubscription
+	finalCommittedSub *event.TypeMuxSubscription
+
+	validateFn func([]byte, []byte) (common.Address, error)
 }
 
 func NewEventDrivenEngine(valset hotstuff.ValidatorSet) *EventDrivenEngine {

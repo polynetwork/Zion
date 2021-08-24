@@ -72,7 +72,7 @@ func (m MsgType) String() string {
 	case MsgTypeDecide:
 		return "DECIDE"
 	default:
-		panic("unknown msg type")
+		return "UNKNOWN"
 	}
 }
 
