@@ -35,7 +35,7 @@ func CheckConsensusSigns(native *native.NativeContract, method string, input []b
 	}
 	consensusSigns.SignsMap[address] = true
 
-	native.AddNotify(ABI, []string{"CheckConsensusSigns"}, len(consensusSigns.SignsMap))
+	native.AddNotify(ABI, []string{"CheckConsensusSignsEvent"}, len(consensusSigns.SignsMap))
 
 	//check signs num
 	//get view
