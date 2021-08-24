@@ -29,6 +29,7 @@ import (
 )
 
 type Vote struct {
+	Epoch     uint64
 	Hash      common.Hash
 	Round     *big.Int
 	StateRoot common.Hash
@@ -39,12 +40,13 @@ type Vote struct {
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (v *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{v.Hash, v.Round, v.StateRoot, v.ParentHash, v.ParentRound})
+	return rlp.Encode(w, []interface{}{v.Epoch, v.Hash, v.Round, v.StateRoot, v.ParentHash, v.ParentRound})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
+		Epoch     uint64
 		Hash      common.Hash
 		Round     *big.Int
 		StateRoot common.Hash
@@ -57,26 +59,26 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	v.Hash, v.Round, v.StateRoot, v.ParentHash, v.ParentRound = subject.Hash, subject.Round, subject.StateRoot, subject.ParentHash, subject.ParentRound
+	v.Epoch, v.Hash, v.Round, v.StateRoot, v.ParentHash, v.ParentRound = subject.Epoch, subject.Hash, subject.Round, subject.StateRoot, subject.ParentHash, subject.ParentRound
 	return nil
 }
 
 func (v *Vote) String() string {
-	return fmt.Sprintf("{Hash: %v, Round: %v, ParentHash: %v, ParentRound: %v}", v.Hash, v.Round, v.ParentHash, v.ParentRound)
+	return fmt.Sprintf("{Epoch: %v, Hash: %v, Round: %v, ParentHash: %v, ParentRound: %v}", v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound)
 }
 
 type Timeout struct {
-	Hash  common.Hash
+	Epoch uint64
 	Round *big.Int
 }
 
 func (tm *Timeout) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{tm.Hash, tm.Round})
+	return rlp.Encode(w, []interface{}{tm.Epoch, tm.Round})
 }
 
 func (tm *Timeout) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
-		Hash  common.Hash
+		Epoch uint64
 		Round *big.Int
 	}
 
@@ -84,12 +86,12 @@ func (tm *Timeout) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	tm.Hash, tm.Round = subject.Hash, subject.Round
+	tm.Epoch, tm.Round = subject.Epoch, subject.Round
 	return nil
 }
 
 func (tm *Timeout) String() string {
-	return fmt.Sprintf("{Hash: %v, Round: %v}", tm.Hash, tm.Round)
+	return fmt.Sprintf("{Epoch: %v, Round: %v}", tm.Epoch, tm.Round)
 }
 
 type backlogEvent struct {

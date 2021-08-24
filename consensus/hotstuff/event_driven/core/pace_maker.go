@@ -19,10 +19,11 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"math/big"
 	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
 // PaceMaker paceMaker is an standalone module which used to keep consensus liveness.
@@ -30,12 +31,21 @@ import (
 // `2F + 1` valid vote message or timeout message to agree that the consensus engine can be driven into
 // the next round.
 type PaceMaker struct {
-	currentRound *big.Int			// current view round
-	tmoSet map[uint64]common.Address // map round to message sender collection
+	epoch                 uint64                    // consensus epoch id
+	currentRound          *big.Int                  // current view round
+	timtoutMsgs           map[uint64]common.Address // map round to message sender collection
+	highestCommittedRound *big.Int                  // record last committed block which used to calculate timeout duration
+	timer                 *time.Timer               // internal timer
+	sender                *EventSender
 }
 
-func NewPaceMaker() *PaceMaker {
-	return nil
+func NewPaceMaker(epoch uint64, initRound, initHighestCommittedRound *big.Int, sender *EventSender) *PaceMaker {
+	pm := new(PaceMaker)
+	pm.currentRound = initRound
+	pm.highestCommittedRound = initHighestCommittedRound
+	pm.timtoutMsgs = make(map[uint64]common.Address)
+	pm.sender = sender
+	return pm
 }
 
 // ProcessLocalTimeout broadcast timeout message to all and record the message sender and round
@@ -56,4 +66,34 @@ func (p *PaceMaker) AdvanceRound(qc *hotstuff.QuorumCert) error {
 
 func (p *PaceMaker) GetDeltaTime(round *big.Int) time.Duration {
 	return 0
+}
+
+func (p *PaceMaker) stopTimer() {
+	if p.timer != nil {
+		p.timer.Stop()
+	}
+}
+
+// todo: add in config
+const standardTmoDuration = time.Second * 4
+
+func (p *PaceMaker) newRoundChangeTimer() {
+	p.stopTimer()
+
+	index := p.currentRound.Uint64() - 1
+	if p.highestCommittedRound.Uint64() != 0 {
+		if p.currentRound.Uint64()-p.highestCommittedRound.Uint64() < 3 {
+			index = 0
+		} else {
+			index = p.currentRound.Uint64() - p.highestCommittedRound.Uint64() - 3
+		}
+	}
+
+	tmoDuration := time.Duration(index) * standardTmoDuration
+	p.timer = time.AfterFunc(tmoDuration, func() {
+		p.sender.sendEvent(Timeout{
+			Epoch: p.epoch,
+			Round: nil,
+		})
+	})
 }
