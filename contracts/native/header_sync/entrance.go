@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/bsc"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/btc"
 	hscommon "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
@@ -153,6 +154,8 @@ func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
 		return btc.NewBTCHandler(), nil
 	case utils.BSC_ROUTER:
 		return bsc.NewHandler(), nil
+	case utils.ETH_ROUTER:
+		return eth.NewETHHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}
