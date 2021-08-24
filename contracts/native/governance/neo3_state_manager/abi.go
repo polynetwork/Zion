@@ -25,9 +25,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+const (
+	EventApproveRegisterStateValidator = "approveRegisterStateValidator"
+	EventApproveRemoveStateValidator   = "approveRemoveStateValidator"
+)
+
 const abijson = `[
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + MethodApproveRegisterStateValidator + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + MethodApproveRemoveStateValidator + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRegisterStateValidator + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRemoveStateValidator + `","type":"event"},
     {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRegisterStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRemoveStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
