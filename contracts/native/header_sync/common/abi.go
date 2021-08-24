@@ -32,6 +32,7 @@ const (
 )
 
 const abijson = `[
+	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"chainID","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"height","type":"uint64"},{"indexed":false,"internalType":"string","name":"blockHash","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlockHeight","type":"uint64"}],"name":"` + SYNC_HEADER_NAME_EVENT + `","type":"event"},
     {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"uint64","name":"ChainID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"},{"internalType":"bytes[]","name":"Headers","type":"bytes[]"}],"name":"` + MethodSyncBlockHeader + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
     {"inputs":[{"internalType":"uint64","name":"ChainID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"},{"internalType":"bytes[]","name":"CrossChainMsgs","type":"bytes[]"}],"name":"` + MethodSyncCrossChainMsg + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},

@@ -22,7 +22,7 @@ const (
 	GENESIS_HEADER              = "genesisHeader"
 	MAIN_CHAIN                  = "mainChain"
 	EPOCH_SWITCH                = "epochSwitch"
-	SYNC_HEADER_NAME            = "syncHeader"
+	SYNC_HEADER_NAME_EVENT      = "syncHeader"
 	SYNC_CROSSCHAIN_MSG         = "syncCrossChainMsg"
 	POLYGON_SPAN                = "polygonSpan"
 )
@@ -145,7 +145,7 @@ func (this *SyncCrossChainMsgParam) Deserialization(source *polycomm.ZeroCopySou
 
 func NotifyPutHeader(native *native.NativeContract, chainID uint64, height uint64, blockHash string) {
 
-	err := native.AddNotify(ABI, []string{SYNC_HEADER_NAME}, chainID, height, blockHash, native.ContractRef().BlockHeight())
+	err := native.AddNotify(ABI, []string{SYNC_HEADER_NAME_EVENT}, chainID, height, blockHash, native.ContractRef().BlockHeight())
 	if err != nil {
 		panic(fmt.Sprintf("NotifyPutHeader failed: %v", err))
 	}
