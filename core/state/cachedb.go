@@ -17,7 +17,7 @@ func (c *CacheDB) Put(key []byte, value []byte) {
 	s := (*StateDB)(c)
 	so := s.GetOrNewStateObject(common.BytesToAddress(key[:common.AddressLength]))
 	if so != nil {
-		slot := c.key2Slot(key[common.AddressLength:])
+		slot := Key2Slot(key[common.AddressLength:])
 		if len(value) <= common.HashLength-1 {
 			c.putValue(so, slot, value, false)
 			value = nil
@@ -62,7 +62,7 @@ func (c *CacheDB) putValue(so *stateObject, slot common.Hash, value []byte, more
 	so.SetState(s.db, slot, hashValue)
 }
 
-func (c *CacheDB) key2Slot(key []byte) common.Hash {
+func Key2Slot(key []byte) common.Hash {
 	key = crypto.Keccak256(key)
 	return common.BytesToHash(key)
 }
@@ -76,7 +76,7 @@ func (c *CacheDB) nextSlot(slot common.Hash) common.Hash {
 		}
 	}
 
-	return c.key2Slot(slotBytes)
+	return Key2Slot(slotBytes)
 }
 
 func (c *CacheDB) Get(key []byte) ([]byte, error) {
@@ -88,7 +88,7 @@ func (c *CacheDB) Get(key []byte) ([]byte, error) {
 	so := s.getStateObject(common.BytesToAddress(key[:common.AddressLength]))
 	if so != nil {
 		var result []byte
-		slot := c.key2Slot(key[common.AddressLength:])
+		slot := Key2Slot(key[common.AddressLength:])
 		value := so.GetState(s.db, slot)
 		meta := value[:][0]
 		more := meta&1 == 1
@@ -127,7 +127,7 @@ func (c *CacheDB) Delete(key []byte) {
 	s := (*StateDB)(c)
 	so := s.GetOrNewStateObject(common.BytesToAddress(key[:common.AddressLength]))
 	if so != nil {
-		slot := c.key2Slot(key[common.AddressLength:])
+		slot := Key2Slot(key[common.AddressLength:])
 		value := so.GetState(s.db, slot)
 		so.SetState(s.db, slot, common.Hash{})
 		more := value[:][0]&1 == 1
