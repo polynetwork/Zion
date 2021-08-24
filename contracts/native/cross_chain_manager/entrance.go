@@ -21,6 +21,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/btc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -62,7 +63,14 @@ func RegisterCrossChainManagerContract(s *native.NativeContract) {
 }
 
 func GetChainHandler(router uint64) (scom.ChainHandler, error) {
-	return nil, nil
+	switch router {
+	case utils.BTC_ROUTER:
+		return btc.NewBTCHandler(), nil
+	case utils.BSC_ROUTER:
+		return bsc.NewHandler(), nil
+	default:
+		return nil, fmt.Errorf("not a supported router:%d", router)
+	}
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {

@@ -2,11 +2,16 @@ package common
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	cstates "github.com/polynetwork/poly/core/states"
 )
+
+func Replace0x(s string) string {
+	return strings.Replace(strings.ToLower(s), "0x", "", 1)
+}
 
 func PutDoneTx(native *native.NativeContract, crossChainID []byte, chainID uint64) error {
 	contract := utils.CrossChainManagerContractAddress

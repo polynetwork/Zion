@@ -22,6 +22,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/bsc"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/btc"
 	hscommon "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
@@ -146,5 +148,12 @@ func SyncCrossChainMsg(native *native.NativeContract) ([]byte, error) {
 }
 
 func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
-	return nil, nil
+	switch router {
+	case utils.BTC_ROUTER:
+		return btc.NewBTCHandler(), nil
+	case utils.BSC_ROUTER:
+		return bsc.NewHandler(), nil
+	default:
+		return nil, fmt.Errorf("not a supported router:%d", router)
+	}
 }
