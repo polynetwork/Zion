@@ -27,7 +27,7 @@ var (
 )
 
 // CrossChainManagerABI is the input ABI used to generate the binding from.
-const CrossChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"MultiSign\",\"type\":\"bytes\"}],\"name\":\"btcTxMultiSign\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"FromChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"FromTxHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"}],\"name\":\"btcTxToRelay\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"amts\",\"type\":\"uint64[]\"}],\"name\":\"makeBtcTx\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"MethodBlackChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MethodContractName\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"SourceChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"Height\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"Proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"RelayerAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"Extra\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"HeaderOrCrossChainMsg\",\"type\":\"bytes\"}],\"name\":\"MethodImportOuterTransfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"internalType\":\"string\",\"name\":\"Address\",\"type\":\"string\"},{\"internalType\":\"bytes[]\",\"name\":\"Signs\",\"type\":\"bytes[]\"}],\"name\":\"MethodMultiSign\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"MethodWhiteChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const CrossChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"MultiSign\",\"type\":\"bytes\"}],\"name\":\"btcTxMultiSignEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"FromChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"FromTxHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"}],\"name\":\"btcTxToRelayEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"amts\",\"type\":\"uint64[]\"}],\"name\":\"makeBtcTxEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"MethodBlackChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MethodContractName\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"SourceChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"Height\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"Proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"RelayerAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"Extra\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"HeaderOrCrossChainMsg\",\"type\":\"bytes\"}],\"name\":\"MethodImportOuterTransfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"internalType\":\"string\",\"name\":\"Address\",\"type\":\"string\"},{\"internalType\":\"bytes[]\",\"name\":\"Signs\",\"type\":\"bytes[]\"}],\"name\":\"MethodMultiSign\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"MethodWhiteChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // CrossChainManagerFuncSigs maps the 4-byte function signature to its string representation.
 var CrossChainManagerFuncSigs = map[string]string{
@@ -39,7 +39,7 @@ var CrossChainManagerFuncSigs = map[string]string{
 }
 
 // CrossChainManagerBin is the compiled bytecode used for deploying new contracts.
-var CrossChainManagerBin = "0x608060405234801561001057600080fd5b50610471806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80630d2ff8001461005c5780632ae0b4bd1461005c5780634dbb371c146100855780639921164e1461009e578063e50f8f44146100b8575b600080fd5b61007061006a366004610168565b50600090565b60405190151581526020015b60405180910390f35b61007061009336600461018a565b600095945050505050565b6100706100ac3660046102d2565b60009695505050505050565b606060405161007c919061039f565b600082601f8301126100d857600080fd5b813567ffffffffffffffff8111156100f2576100f2610425565b610105601f8201601f19166020016103f4565b81815284602083860101111561011a57600080fd5b816020850160208301376000918101602001919091529392505050565b803563ffffffff8116811461014b57600080fd5b919050565b803567ffffffffffffffff8116811461014b57600080fd5b60006020828403121561017a57600080fd5b61018382610150565b9392505050565b600080600080600060a086880312156101a257600080fd5b6101ab86610150565b945060208087013567ffffffffffffffff808211156101c957600080fd5b6101d58a838b016100c7565b965060408901359150808211156101eb57600080fd5b6101f78a838b016100c7565b9550606089013591508082111561020d57600080fd5b6102198a838b016100c7565b9450608089013591508082111561022f57600080fd5b818901915089601f83011261024357600080fd5b81358181111561025557610255610425565b8060051b6102648582016103f4565b8281528581019085870183870188018f101561027f57600080fd5b600093505b848410156102bd57858135111561029a57600080fd5b6102a98f8983358a01016100c7565b835260019390930192918701918701610284565b50809750505050505050509295509295909350565b60008060008060008060c087890312156102eb57600080fd5b6102f487610150565b955061030260208801610137565b9450604087013567ffffffffffffffff8082111561031f57600080fd5b61032b8a838b016100c7565b9550606089013591508082111561034157600080fd5b61034d8a838b016100c7565b9450608089013591508082111561036357600080fd5b61036f8a838b016100c7565b935060a089013591508082111561038557600080fd5b5061039289828a016100c7565b9150509295509295509295565b600060208083528351808285015260005b818110156103cc578581018301518582016040015282016103b0565b818111156103de576000604083870101525b50601f01601f1916929092016040019392505050565b604051601f8201601f1916810167ffffffffffffffff8111828210171561041d5761041d610425565b604052919050565b634e487b7160e01b600052604160045260246000fdfea2646970667358221220614c7e824901dd4adbd6826657ab71dd56bac973fae26fac5157e09356d3757e64736f6c63430008060033"
+var CrossChainManagerBin = "0x608060405234801561001057600080fd5b50610471806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80630d2ff8001461005c5780632ae0b4bd1461005c5780634dbb371c146100855780639921164e1461009e578063e50f8f44146100b8575b600080fd5b61007061006a366004610168565b50600090565b60405190151581526020015b60405180910390f35b61007061009336600461018a565b600095945050505050565b6100706100ac3660046102d2565b60009695505050505050565b606060405161007c919061039f565b600082601f8301126100d857600080fd5b813567ffffffffffffffff8111156100f2576100f2610425565b610105601f8201601f19166020016103f4565b81815284602083860101111561011a57600080fd5b816020850160208301376000918101602001919091529392505050565b803563ffffffff8116811461014b57600080fd5b919050565b803567ffffffffffffffff8116811461014b57600080fd5b60006020828403121561017a57600080fd5b61018382610150565b9392505050565b600080600080600060a086880312156101a257600080fd5b6101ab86610150565b945060208087013567ffffffffffffffff808211156101c957600080fd5b6101d58a838b016100c7565b965060408901359150808211156101eb57600080fd5b6101f78a838b016100c7565b9550606089013591508082111561020d57600080fd5b6102198a838b016100c7565b9450608089013591508082111561022f57600080fd5b818901915089601f83011261024357600080fd5b81358181111561025557610255610425565b8060051b6102648582016103f4565b8281528581019085870183870188018f101561027f57600080fd5b600093505b848410156102bd57858135111561029a57600080fd5b6102a98f8983358a01016100c7565b835260019390930192918701918701610284565b50809750505050505050509295509295909350565b60008060008060008060c087890312156102eb57600080fd5b6102f487610150565b955061030260208801610137565b9450604087013567ffffffffffffffff8082111561031f57600080fd5b61032b8a838b016100c7565b9550606089013591508082111561034157600080fd5b61034d8a838b016100c7565b9450608089013591508082111561036357600080fd5b61036f8a838b016100c7565b935060a089013591508082111561038557600080fd5b5061039289828a016100c7565b9150509295509295509295565b600060208083528351808285015260005b818110156103cc578581018301518582016040015282016103b0565b818111156103de576000604083870101525b50601f01601f1916929092016040019392505050565b604051601f8201601f1916810167ffffffffffffffff8111828210171561041d5761041d610425565b604052919050565b634e487b7160e01b600052604160045260246000fdfea264697066735822122055ee56d683357c754fc090d6da5ff5a5aa54e9613fe52c14c5b599739ee154a164736f6c63430008060033"
 
 // DeployCrossChainManager deploys a new Ethereum contract, binding an instance of CrossChainManager to it.
 func DeployCrossChainManager(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CrossChainManager, error) {
@@ -302,9 +302,9 @@ func (_CrossChainManager *CrossChainManagerTransactorSession) MethodWhiteChain(C
 	return _CrossChainManager.Contract.MethodWhiteChain(&_CrossChainManager.TransactOpts, ChainID)
 }
 
-// CrossChainManagerBtcTxMultiSignIterator is returned from FilterBtcTxMultiSign and is used to iterate over the raw logs and unpacked data for BtcTxMultiSign events raised by the CrossChainManager contract.
-type CrossChainManagerBtcTxMultiSignIterator struct {
-	Event *CrossChainManagerBtcTxMultiSign // Event containing the contract specifics and raw log
+// CrossChainManagerBtcTxMultiSignEventIterator is returned from FilterBtcTxMultiSignEvent and is used to iterate over the raw logs and unpacked data for BtcTxMultiSignEvent events raised by the CrossChainManager contract.
+type CrossChainManagerBtcTxMultiSignEventIterator struct {
+	Event *CrossChainManagerBtcTxMultiSignEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -318,7 +318,7 @@ type CrossChainManagerBtcTxMultiSignIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *CrossChainManagerBtcTxMultiSignIterator) Next() bool {
+func (it *CrossChainManagerBtcTxMultiSignEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -327,7 +327,7 @@ func (it *CrossChainManagerBtcTxMultiSignIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(CrossChainManagerBtcTxMultiSign)
+			it.Event = new(CrossChainManagerBtcTxMultiSignEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -342,7 +342,7 @@ func (it *CrossChainManagerBtcTxMultiSignIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(CrossChainManagerBtcTxMultiSign)
+		it.Event = new(CrossChainManagerBtcTxMultiSignEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -358,42 +358,42 @@ func (it *CrossChainManagerBtcTxMultiSignIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *CrossChainManagerBtcTxMultiSignIterator) Error() error {
+func (it *CrossChainManagerBtcTxMultiSignEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *CrossChainManagerBtcTxMultiSignIterator) Close() error {
+func (it *CrossChainManagerBtcTxMultiSignEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// CrossChainManagerBtcTxMultiSign represents a BtcTxMultiSign event raised by the CrossChainManager contract.
-type CrossChainManagerBtcTxMultiSign struct {
+// CrossChainManagerBtcTxMultiSignEvent represents a BtcTxMultiSignEvent event raised by the CrossChainManager contract.
+type CrossChainManagerBtcTxMultiSignEvent struct {
 	TxHash    []byte
 	MultiSign []byte
 	Raw       types.Log // Blockchain specific contextual infos
 }
 
-// FilterBtcTxMultiSign is a free log retrieval operation binding the contract event 0xbeedc12eb04eccd8847997e1a99a11384e4a1a4e09515f090ace88c2a349337c.
+// FilterBtcTxMultiSignEvent is a free log retrieval operation binding the contract event 0x62fb550ff7fa48f759b0e56ea24757e77b5612d11efbcbdbed9545982cfe1770.
 //
-// Solidity: event btcTxMultiSign(bytes TxHash, bytes MultiSign)
-func (_CrossChainManager *CrossChainManagerFilterer) FilterBtcTxMultiSign(opts *bind.FilterOpts) (*CrossChainManagerBtcTxMultiSignIterator, error) {
+// Solidity: event btcTxMultiSignEvent(bytes TxHash, bytes MultiSign)
+func (_CrossChainManager *CrossChainManagerFilterer) FilterBtcTxMultiSignEvent(opts *bind.FilterOpts) (*CrossChainManagerBtcTxMultiSignEventIterator, error) {
 
-	logs, sub, err := _CrossChainManager.contract.FilterLogs(opts, "btcTxMultiSign")
+	logs, sub, err := _CrossChainManager.contract.FilterLogs(opts, "btcTxMultiSignEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &CrossChainManagerBtcTxMultiSignIterator{contract: _CrossChainManager.contract, event: "btcTxMultiSign", logs: logs, sub: sub}, nil
+	return &CrossChainManagerBtcTxMultiSignEventIterator{contract: _CrossChainManager.contract, event: "btcTxMultiSignEvent", logs: logs, sub: sub}, nil
 }
 
-// WatchBtcTxMultiSign is a free log subscription operation binding the contract event 0xbeedc12eb04eccd8847997e1a99a11384e4a1a4e09515f090ace88c2a349337c.
+// WatchBtcTxMultiSignEvent is a free log subscription operation binding the contract event 0x62fb550ff7fa48f759b0e56ea24757e77b5612d11efbcbdbed9545982cfe1770.
 //
-// Solidity: event btcTxMultiSign(bytes TxHash, bytes MultiSign)
-func (_CrossChainManager *CrossChainManagerFilterer) WatchBtcTxMultiSign(opts *bind.WatchOpts, sink chan<- *CrossChainManagerBtcTxMultiSign) (event.Subscription, error) {
+// Solidity: event btcTxMultiSignEvent(bytes TxHash, bytes MultiSign)
+func (_CrossChainManager *CrossChainManagerFilterer) WatchBtcTxMultiSignEvent(opts *bind.WatchOpts, sink chan<- *CrossChainManagerBtcTxMultiSignEvent) (event.Subscription, error) {
 
-	logs, sub, err := _CrossChainManager.contract.WatchLogs(opts, "btcTxMultiSign")
+	logs, sub, err := _CrossChainManager.contract.WatchLogs(opts, "btcTxMultiSignEvent")
 	if err != nil {
 		return nil, err
 	}
@@ -403,8 +403,8 @@ func (_CrossChainManager *CrossChainManagerFilterer) WatchBtcTxMultiSign(opts *b
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(CrossChainManagerBtcTxMultiSign)
-				if err := _CrossChainManager.contract.UnpackLog(event, "btcTxMultiSign", log); err != nil {
+				event := new(CrossChainManagerBtcTxMultiSignEvent)
+				if err := _CrossChainManager.contract.UnpackLog(event, "btcTxMultiSignEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -425,21 +425,21 @@ func (_CrossChainManager *CrossChainManagerFilterer) WatchBtcTxMultiSign(opts *b
 	}), nil
 }
 
-// ParseBtcTxMultiSign is a log parse operation binding the contract event 0xbeedc12eb04eccd8847997e1a99a11384e4a1a4e09515f090ace88c2a349337c.
+// ParseBtcTxMultiSignEvent is a log parse operation binding the contract event 0x62fb550ff7fa48f759b0e56ea24757e77b5612d11efbcbdbed9545982cfe1770.
 //
-// Solidity: event btcTxMultiSign(bytes TxHash, bytes MultiSign)
-func (_CrossChainManager *CrossChainManagerFilterer) ParseBtcTxMultiSign(log types.Log) (*CrossChainManagerBtcTxMultiSign, error) {
-	event := new(CrossChainManagerBtcTxMultiSign)
-	if err := _CrossChainManager.contract.UnpackLog(event, "btcTxMultiSign", log); err != nil {
+// Solidity: event btcTxMultiSignEvent(bytes TxHash, bytes MultiSign)
+func (_CrossChainManager *CrossChainManagerFilterer) ParseBtcTxMultiSignEvent(log types.Log) (*CrossChainManagerBtcTxMultiSignEvent, error) {
+	event := new(CrossChainManagerBtcTxMultiSignEvent)
+	if err := _CrossChainManager.contract.UnpackLog(event, "btcTxMultiSignEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// CrossChainManagerBtcTxToRelayIterator is returned from FilterBtcTxToRelay and is used to iterate over the raw logs and unpacked data for BtcTxToRelay events raised by the CrossChainManager contract.
-type CrossChainManagerBtcTxToRelayIterator struct {
-	Event *CrossChainManagerBtcTxToRelay // Event containing the contract specifics and raw log
+// CrossChainManagerBtcTxToRelayEventIterator is returned from FilterBtcTxToRelayEvent and is used to iterate over the raw logs and unpacked data for BtcTxToRelayEvent events raised by the CrossChainManager contract.
+type CrossChainManagerBtcTxToRelayEventIterator struct {
+	Event *CrossChainManagerBtcTxToRelayEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -453,7 +453,7 @@ type CrossChainManagerBtcTxToRelayIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *CrossChainManagerBtcTxToRelayIterator) Next() bool {
+func (it *CrossChainManagerBtcTxToRelayEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -462,7 +462,7 @@ func (it *CrossChainManagerBtcTxToRelayIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(CrossChainManagerBtcTxToRelay)
+			it.Event = new(CrossChainManagerBtcTxToRelayEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -477,7 +477,7 @@ func (it *CrossChainManagerBtcTxToRelayIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(CrossChainManagerBtcTxToRelay)
+		it.Event = new(CrossChainManagerBtcTxToRelayEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -493,19 +493,19 @@ func (it *CrossChainManagerBtcTxToRelayIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *CrossChainManagerBtcTxToRelayIterator) Error() error {
+func (it *CrossChainManagerBtcTxToRelayEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *CrossChainManagerBtcTxToRelayIterator) Close() error {
+func (it *CrossChainManagerBtcTxToRelayEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// CrossChainManagerBtcTxToRelay represents a BtcTxToRelay event raised by the CrossChainManager contract.
-type CrossChainManagerBtcTxToRelay struct {
+// CrossChainManagerBtcTxToRelayEvent represents a BtcTxToRelayEvent event raised by the CrossChainManager contract.
+type CrossChainManagerBtcTxToRelayEvent struct {
 	FromChainID uint64
 	ChainID     uint64
 	Buf         string
@@ -514,24 +514,24 @@ type CrossChainManagerBtcTxToRelay struct {
 	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterBtcTxToRelay is a free log retrieval operation binding the contract event 0xeeb7b1af98fdd8d6254c5fcb89482fe06f22f848e896b82d681a6cf9d9f225cf.
+// FilterBtcTxToRelayEvent is a free log retrieval operation binding the contract event 0x59c070ab5215dda625f463061a0ad421505b2cca1066a8597411c72a5ecac51b.
 //
-// Solidity: event btcTxToRelay(uint64 FromChainID, uint64 ChainID, string buf, string FromTxHash, string RedeemKey)
-func (_CrossChainManager *CrossChainManagerFilterer) FilterBtcTxToRelay(opts *bind.FilterOpts) (*CrossChainManagerBtcTxToRelayIterator, error) {
+// Solidity: event btcTxToRelayEvent(uint64 FromChainID, uint64 ChainID, string buf, string FromTxHash, string RedeemKey)
+func (_CrossChainManager *CrossChainManagerFilterer) FilterBtcTxToRelayEvent(opts *bind.FilterOpts) (*CrossChainManagerBtcTxToRelayEventIterator, error) {
 
-	logs, sub, err := _CrossChainManager.contract.FilterLogs(opts, "btcTxToRelay")
+	logs, sub, err := _CrossChainManager.contract.FilterLogs(opts, "btcTxToRelayEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &CrossChainManagerBtcTxToRelayIterator{contract: _CrossChainManager.contract, event: "btcTxToRelay", logs: logs, sub: sub}, nil
+	return &CrossChainManagerBtcTxToRelayEventIterator{contract: _CrossChainManager.contract, event: "btcTxToRelayEvent", logs: logs, sub: sub}, nil
 }
 
-// WatchBtcTxToRelay is a free log subscription operation binding the contract event 0xeeb7b1af98fdd8d6254c5fcb89482fe06f22f848e896b82d681a6cf9d9f225cf.
+// WatchBtcTxToRelayEvent is a free log subscription operation binding the contract event 0x59c070ab5215dda625f463061a0ad421505b2cca1066a8597411c72a5ecac51b.
 //
-// Solidity: event btcTxToRelay(uint64 FromChainID, uint64 ChainID, string buf, string FromTxHash, string RedeemKey)
-func (_CrossChainManager *CrossChainManagerFilterer) WatchBtcTxToRelay(opts *bind.WatchOpts, sink chan<- *CrossChainManagerBtcTxToRelay) (event.Subscription, error) {
+// Solidity: event btcTxToRelayEvent(uint64 FromChainID, uint64 ChainID, string buf, string FromTxHash, string RedeemKey)
+func (_CrossChainManager *CrossChainManagerFilterer) WatchBtcTxToRelayEvent(opts *bind.WatchOpts, sink chan<- *CrossChainManagerBtcTxToRelayEvent) (event.Subscription, error) {
 
-	logs, sub, err := _CrossChainManager.contract.WatchLogs(opts, "btcTxToRelay")
+	logs, sub, err := _CrossChainManager.contract.WatchLogs(opts, "btcTxToRelayEvent")
 	if err != nil {
 		return nil, err
 	}
@@ -541,8 +541,8 @@ func (_CrossChainManager *CrossChainManagerFilterer) WatchBtcTxToRelay(opts *bin
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(CrossChainManagerBtcTxToRelay)
-				if err := _CrossChainManager.contract.UnpackLog(event, "btcTxToRelay", log); err != nil {
+				event := new(CrossChainManagerBtcTxToRelayEvent)
+				if err := _CrossChainManager.contract.UnpackLog(event, "btcTxToRelayEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -563,21 +563,21 @@ func (_CrossChainManager *CrossChainManagerFilterer) WatchBtcTxToRelay(opts *bin
 	}), nil
 }
 
-// ParseBtcTxToRelay is a log parse operation binding the contract event 0xeeb7b1af98fdd8d6254c5fcb89482fe06f22f848e896b82d681a6cf9d9f225cf.
+// ParseBtcTxToRelayEvent is a log parse operation binding the contract event 0x59c070ab5215dda625f463061a0ad421505b2cca1066a8597411c72a5ecac51b.
 //
-// Solidity: event btcTxToRelay(uint64 FromChainID, uint64 ChainID, string buf, string FromTxHash, string RedeemKey)
-func (_CrossChainManager *CrossChainManagerFilterer) ParseBtcTxToRelay(log types.Log) (*CrossChainManagerBtcTxToRelay, error) {
-	event := new(CrossChainManagerBtcTxToRelay)
-	if err := _CrossChainManager.contract.UnpackLog(event, "btcTxToRelay", log); err != nil {
+// Solidity: event btcTxToRelayEvent(uint64 FromChainID, uint64 ChainID, string buf, string FromTxHash, string RedeemKey)
+func (_CrossChainManager *CrossChainManagerFilterer) ParseBtcTxToRelayEvent(log types.Log) (*CrossChainManagerBtcTxToRelayEvent, error) {
+	event := new(CrossChainManagerBtcTxToRelayEvent)
+	if err := _CrossChainManager.contract.UnpackLog(event, "btcTxToRelayEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// CrossChainManagerMakeBtcTxIterator is returned from FilterMakeBtcTx and is used to iterate over the raw logs and unpacked data for MakeBtcTx events raised by the CrossChainManager contract.
-type CrossChainManagerMakeBtcTxIterator struct {
-	Event *CrossChainManagerMakeBtcTx // Event containing the contract specifics and raw log
+// CrossChainManagerMakeBtcTxEventIterator is returned from FilterMakeBtcTxEvent and is used to iterate over the raw logs and unpacked data for MakeBtcTxEvent events raised by the CrossChainManager contract.
+type CrossChainManagerMakeBtcTxEventIterator struct {
+	Event *CrossChainManagerMakeBtcTxEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -591,7 +591,7 @@ type CrossChainManagerMakeBtcTxIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *CrossChainManagerMakeBtcTxIterator) Next() bool {
+func (it *CrossChainManagerMakeBtcTxEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -600,7 +600,7 @@ func (it *CrossChainManagerMakeBtcTxIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(CrossChainManagerMakeBtcTx)
+			it.Event = new(CrossChainManagerMakeBtcTxEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -615,7 +615,7 @@ func (it *CrossChainManagerMakeBtcTxIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(CrossChainManagerMakeBtcTx)
+		it.Event = new(CrossChainManagerMakeBtcTxEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -631,43 +631,43 @@ func (it *CrossChainManagerMakeBtcTxIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *CrossChainManagerMakeBtcTxIterator) Error() error {
+func (it *CrossChainManagerMakeBtcTxEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *CrossChainManagerMakeBtcTxIterator) Close() error {
+func (it *CrossChainManagerMakeBtcTxEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// CrossChainManagerMakeBtcTx represents a MakeBtcTx event raised by the CrossChainManager contract.
-type CrossChainManagerMakeBtcTx struct {
+// CrossChainManagerMakeBtcTxEvent represents a MakeBtcTxEvent event raised by the CrossChainManager contract.
+type CrossChainManagerMakeBtcTxEvent struct {
 	Rk   string
 	Buf  string
 	Amts []uint64
 	Raw  types.Log // Blockchain specific contextual infos
 }
 
-// FilterMakeBtcTx is a free log retrieval operation binding the contract event 0x71d90dd173a40c7c7202b489bd2e5e8b26fa0fe646b0edb4173839e1071291e7.
+// FilterMakeBtcTxEvent is a free log retrieval operation binding the contract event 0xa00d721fd040a2b479d1adf886244de04bdbb3e3e310dc75f1036e2602726234.
 //
-// Solidity: event makeBtcTx(string rk, string buf, uint64[] amts)
-func (_CrossChainManager *CrossChainManagerFilterer) FilterMakeBtcTx(opts *bind.FilterOpts) (*CrossChainManagerMakeBtcTxIterator, error) {
+// Solidity: event makeBtcTxEvent(string rk, string buf, uint64[] amts)
+func (_CrossChainManager *CrossChainManagerFilterer) FilterMakeBtcTxEvent(opts *bind.FilterOpts) (*CrossChainManagerMakeBtcTxEventIterator, error) {
 
-	logs, sub, err := _CrossChainManager.contract.FilterLogs(opts, "makeBtcTx")
+	logs, sub, err := _CrossChainManager.contract.FilterLogs(opts, "makeBtcTxEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &CrossChainManagerMakeBtcTxIterator{contract: _CrossChainManager.contract, event: "makeBtcTx", logs: logs, sub: sub}, nil
+	return &CrossChainManagerMakeBtcTxEventIterator{contract: _CrossChainManager.contract, event: "makeBtcTxEvent", logs: logs, sub: sub}, nil
 }
 
-// WatchMakeBtcTx is a free log subscription operation binding the contract event 0x71d90dd173a40c7c7202b489bd2e5e8b26fa0fe646b0edb4173839e1071291e7.
+// WatchMakeBtcTxEvent is a free log subscription operation binding the contract event 0xa00d721fd040a2b479d1adf886244de04bdbb3e3e310dc75f1036e2602726234.
 //
-// Solidity: event makeBtcTx(string rk, string buf, uint64[] amts)
-func (_CrossChainManager *CrossChainManagerFilterer) WatchMakeBtcTx(opts *bind.WatchOpts, sink chan<- *CrossChainManagerMakeBtcTx) (event.Subscription, error) {
+// Solidity: event makeBtcTxEvent(string rk, string buf, uint64[] amts)
+func (_CrossChainManager *CrossChainManagerFilterer) WatchMakeBtcTxEvent(opts *bind.WatchOpts, sink chan<- *CrossChainManagerMakeBtcTxEvent) (event.Subscription, error) {
 
-	logs, sub, err := _CrossChainManager.contract.WatchLogs(opts, "makeBtcTx")
+	logs, sub, err := _CrossChainManager.contract.WatchLogs(opts, "makeBtcTxEvent")
 	if err != nil {
 		return nil, err
 	}
@@ -677,8 +677,8 @@ func (_CrossChainManager *CrossChainManagerFilterer) WatchMakeBtcTx(opts *bind.W
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(CrossChainManagerMakeBtcTx)
-				if err := _CrossChainManager.contract.UnpackLog(event, "makeBtcTx", log); err != nil {
+				event := new(CrossChainManagerMakeBtcTxEvent)
+				if err := _CrossChainManager.contract.UnpackLog(event, "makeBtcTxEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -699,12 +699,12 @@ func (_CrossChainManager *CrossChainManagerFilterer) WatchMakeBtcTx(opts *bind.W
 	}), nil
 }
 
-// ParseMakeBtcTx is a log parse operation binding the contract event 0x71d90dd173a40c7c7202b489bd2e5e8b26fa0fe646b0edb4173839e1071291e7.
+// ParseMakeBtcTxEvent is a log parse operation binding the contract event 0xa00d721fd040a2b479d1adf886244de04bdbb3e3e310dc75f1036e2602726234.
 //
-// Solidity: event makeBtcTx(string rk, string buf, uint64[] amts)
-func (_CrossChainManager *CrossChainManagerFilterer) ParseMakeBtcTx(log types.Log) (*CrossChainManagerMakeBtcTx, error) {
-	event := new(CrossChainManagerMakeBtcTx)
-	if err := _CrossChainManager.contract.UnpackLog(event, "makeBtcTx", log); err != nil {
+// Solidity: event makeBtcTxEvent(string rk, string buf, uint64[] amts)
+func (_CrossChainManager *CrossChainManagerFilterer) ParseMakeBtcTxEvent(log types.Log) (*CrossChainManagerMakeBtcTxEvent, error) {
+	event := new(CrossChainManagerMakeBtcTxEvent)
+	if err := _CrossChainManager.contract.UnpackLog(event, "makeBtcTxEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
