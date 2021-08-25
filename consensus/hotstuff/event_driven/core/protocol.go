@@ -20,14 +20,15 @@ package core
 
 import (
 	"fmt"
+	"math/big"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"math/big"
-	"time"
 )
 
 // EventDrivenEngine implement event-driven hotstuff protocol, it obtains:
@@ -58,8 +59,8 @@ type EventDrivenEngine struct {
 
 	backend hotstuff.Backend
 
-	events            *event.TypeMuxSubscription
-	timeoutSub        *event.TypeMuxSubscription
+	events *event.TypeMuxSubscription
+	//timeoutSub        *event.TypeMuxSubscription
 	finalCommittedSub *event.TypeMuxSubscription
 
 	validateFn func([]byte, []byte) (common.Address, error)
@@ -77,12 +78,18 @@ func (e *EventDrivenEngine) handleNewRound() error {
 		return nil
 	}
 
-	// todo: add high qc as justifyQC into pending request
-	proposal := e.getCurrentPendingRequest()
+	// todo: add fields of high qc as justifyQC and current round into pending request
+	proposal, err := e.getCurrentPendingRequest()
+	if err != nil {
+		return err
+	}
+
 	msg := &MsgProposal{
 		View:     view,
 		Proposal: proposal,
 	}
+
+	// broadcast to all in current round
 	return e.encodeAndBroadcast(MsgTypeProposal, msg)
 }
 
@@ -218,6 +225,22 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 	e.blkTree.UpdateHighQC(qc)
 
 	return nil
+}
+
+func (e *EventDrivenEngine) handleCertificate(src hotstuff.Validator, data *hotstuff.Message) error {
+	var (
+		certEvt *CertificateEvent
+	)
+
+	if err := data.Decode(&certEvt); err != nil {
+		return err
+	}
+
+	if err := e.signer.VerifyQC(certEvt.Cert, e.valset); err != nil {
+		return err
+	}
+
+	return e.ProcessCertificates(certEvt.Cert)
 }
 
 // todo: add this function into handleProposal

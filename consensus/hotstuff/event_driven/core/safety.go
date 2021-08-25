@@ -20,9 +20,10 @@ package core
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
-	"math/big"
 )
 
 // IncreaseLastVoteRound commit not to vote in rounds lower than target
@@ -128,4 +129,3 @@ return nil
 func (e *EventDrivenEngine) CommitRule(proposalJustifyQCRound, proposalJustifyQCParentRound *big.Int) bool {
 	return false
 }
-

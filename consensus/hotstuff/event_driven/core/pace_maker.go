@@ -28,25 +28,18 @@ import (
 )
 
 // todo input message decode
-func (e *EventDrivenEngine) handleLocalTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
-	var (
-		evt *TimeoutEvent
-	)
-	if err := data.Decode(&evt); err != nil {
-		return err
-	}
+//func (e *EventDrivenEngine) handleLocalTimeout(evt *TimeoutEvent) error {
+//	round := evt.Round
+//	if err := e.messages.AddTimeout(round.Uint64(), data); err != nil {
+//		return err
+//	}
+//
+//	e.IncreaseLastVoteRound(round)
+//
+//	return e.broadcast(data)
+//}
 
-	round := evt.Round
-	if err := e.messages.AddTimeout(round.Uint64(), data); err != nil {
-		return err
-	}
-
-	e.IncreaseLastVoteRound(round)
-
-	return e.broadcast(data)
-}
-
-func (e *EventDrivenEngine) handleRemoteTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
+func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
 	var (
 		evt *TimeoutEvent
 	)
@@ -54,8 +47,13 @@ func (e *EventDrivenEngine) handleRemoteTimeout(src hotstuff.Validator, data *ho
 		return err
 	}
 	round := evt.Round
+
 	if err := e.messages.AddTimeout(round.Uint64(), data); err != nil {
 		return err
+	}
+
+	if e.isSelf(src.Address()) {
+		e.IncreaseLastVoteRound(round)
 	}
 
 	if e.messages.TimeoutSize(round.Uint64()) == e.Q() {
@@ -73,7 +71,7 @@ func (e *EventDrivenEngine) advanceRound(qc *hotstuff.QuorumCert) error {
 	}
 
 	// current round increase
-	e.curRound = new(big.Int).Add(e.curRound, common.Big1)
+	e.curRound = new(big.Int).Add(qcRound, common.Big1)
 
 	// recalculate proposer
 	e.valset.CalcProposerByIndex(e.curRound.Uint64())
@@ -120,9 +118,15 @@ func (e *EventDrivenEngine) newRoundChangeTimer() {
 
 	tmoDuration := time.Duration(index) * standardTmoDuration
 	e.timer = time.AfterFunc(tmoDuration, func() {
-		e.sendEvent(TimeoutEvent{
+		evt := &TimeoutEvent{
 			Epoch: e.epoch,
-			Round: nil,
-		})
+			Round: e.curRound,
+		}
+		if payload, err := Encode(evt); err == nil {
+			e.broadcast(&hotstuff.Message{
+				Code: MsgTypeTimeout,
+				Msg:  payload,
+			})
+		}
 	})
 }

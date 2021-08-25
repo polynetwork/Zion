@@ -163,16 +163,29 @@ func (tm *TimeoutEvent) String() string {
 	return fmt.Sprintf("{Epoch: %v, Round: %v}", tm.Epoch, tm.Round)
 }
 
-type TimeoutCertificate struct {
+type CertificateEvent struct {
 	Cert *hotstuff.QuorumCert
 }
 
-func (tm *TimeoutCertificate) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{tm.Cert})
+func (ce *CertificateEvent) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{ce.Cert})
 }
 
-func (tm *TimeoutCertificate) DecodeRLP(s *rlp.Stream) error {
+func (ce *CertificateEvent) DecodeRLP(s *rlp.Stream) error {
+	var subject struct {
+		Cert *hotstuff.QuorumCert
+	}
 
+	if err := s.Decode(&subject); err != nil {
+		return err
+	}
+
+	ce.Cert = subject.Cert
+	return nil
+}
+
+func (ce *CertificateEvent) String() string {
+	return fmt.Sprintf("{Hash: %v, View: %v, Proposer: %v}", ce.Cert.Hash, ce.Cert.View, ce.Cert.Proposer)
 }
 
 type backlogEvent struct {

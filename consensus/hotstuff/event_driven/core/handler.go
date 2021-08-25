@@ -45,9 +45,9 @@ func (e *EventDrivenEngine) subscribeEvents() {
 		hotstuff.MessageEvent{},
 		backlogEvent{},
 	)
-	e.timeoutSub = e.backend.EventMux().Subscribe(
-		TimeoutEvent{},
-	)
+	//e.timeoutSub = e.backend.EventMux().Subscribe(
+	//	TimeoutEvent{},
+	//)
 	e.finalCommittedSub = e.backend.EventMux().Subscribe(
 		hotstuff.FinalCommittedEvent{},
 	)
@@ -56,7 +56,7 @@ func (e *EventDrivenEngine) subscribeEvents() {
 // Unsubscribe all events
 func (e *EventDrivenEngine) unsubscribeEvents() {
 	e.events.Unsubscribe()
-	e.timeoutSub.Unsubscribe()
+	//e.timeoutSub.Unsubscribe()
 	e.finalCommittedSub.Unsubscribe()
 }
 
@@ -81,14 +81,6 @@ func (e *EventDrivenEngine) handleEvents() {
 			case backlogEvent:
 				e.handleCheckedMsg(ev.src, ev.msg)
 			}
-
-		case _, ok := <-e.timeoutSub.Chan():
-			//logger.Trace("handle timeout Event")
-			if !ok {
-				logger.Error("Failed to receive timeout Event")
-				return
-			}
-			// e.paceMaker.ProcessLocalTimeout()
 
 		case _, ok := <-e.finalCommittedSub.Chan():
 			if !ok {
@@ -135,8 +127,10 @@ func (e *EventDrivenEngine) handleCheckedMsg(src hotstuff.Validator, msg *hotstu
 		err = e.handleProposal(src, msg)
 	case MsgTypeVote:
 		err = e.handleVote(src, msg)
+	case MsgTypeQC:
+		err = e.handleCertificate(src, msg)
 	case MsgTypeTimeout:
-		e.paceMaker.ProcessRemoteTimeout(src.Address(), msg.View.Round)
+		err = e.handleTimeout(src, msg)
 	default:
 		err = errInvalidMessage
 		e.logger.Error("msg type invalid", "unknown type", msg.Code)

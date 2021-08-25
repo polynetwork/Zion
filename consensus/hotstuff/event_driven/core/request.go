@@ -19,41 +19,41 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/core/types"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
 	logger := e.newLogger()
 
-	//if err := e.requests.checkRequest(e.currentView(), req); err != nil {
-	//	if err == errFutureMessage {
-	//		c.requests.StoreRequest(req)
-	//		return nil
-	//	} else {
-	//		logger.Warn("receive request", "err", err)
-	//		return err
-	//	}
-	//} else {
-	//	e.requests.StoreRequest(req)
-	//}
-
-	//if c.currentState() == StateAcceptRequest &&
-	//	c.current.highQC != nil &&
-	//	c.current.highQC.View.Cmp(c.currentView()) == 0 {
-	//	c.sendPrepare()
-	//}
+	if err := e.requests.checkRequest(e.currentView(), req); err != nil {
+		if err == errFutureMessage {
+			e.requests.StoreRequest(req)
+			return nil
+		} else {
+			logger.Warn("receive request", "err", err)
+			return err
+		}
+	} else {
+		e.requests.StoreRequest(req)
+	}
 
 	logger.Trace("handleRequest", "height", req.Proposal.Number(), "proposal", req.Proposal.Hash())
 	return nil
 }
 
-func (e *EventDrivenEngine) getCurrentPendingRequest() *types.Block {
-	return nil
+func (e *EventDrivenEngine) getCurrentPendingRequest() (*types.Block, error) {
+	req := e.requests.GetRequest(e.currentView())
+	block, ok := req.Proposal.(*types.Block)
+	if !ok {
+		return nil, errProposalConvert
+	}
+
+	return block, nil
 }
 
 type requestSet struct {

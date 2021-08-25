@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -52,6 +53,10 @@ func (e *EventDrivenEngine) isProposer() bool {
 		return true
 	}
 	return false
+}
+
+func (e *EventDrivenEngine) isSelf(addr common.Address) bool {
+	return e.addr == addr
 }
 
 func (e *EventDrivenEngine) currentView() *hotstuff.View {
@@ -120,7 +125,7 @@ func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) 
 
 	msg := &hotstuff.Message{
 		Code: msgTyp,
-		Msg: payload,
+		Msg:  payload,
 	}
 
 	return e.broadcast(msg)
@@ -181,4 +186,11 @@ func extraProposal(proposal hotstuff.Proposal) (*hotstuff.QuorumCert, *big.Int, 
 	qc.Proposer = h.Coinbase
 	qc.Extra = h.Extra
 	return qc, big.NewInt(0), nil
+}
+
+func isTC(qc *hotstuff.QuorumCert) bool {
+	if qc.Hash == utils.EmptyHash {
+		return true
+	}
+	return false
 }
