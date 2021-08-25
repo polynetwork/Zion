@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/msc"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
@@ -162,6 +163,8 @@ func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
 		return heco.NewHecoHandler(), nil
 	case utils.MSC_ROUTER:
 		return msc.NewHandler(), nil
+	case utils.QUORUM_ROUTER:
+		return quorum.NewQuorumHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}

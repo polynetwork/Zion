@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 
@@ -76,6 +77,8 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return heco.NewHecoHandler(), nil
 	case utils.MSC_ROUTER:
 		return msc.NewHandler(), nil
+	case utils.QUORUM_ROUTER:
+		return quorum.NewQuorumHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}
