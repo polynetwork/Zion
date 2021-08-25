@@ -19,6 +19,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -107,6 +108,10 @@ func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message) ([]byte, erro
 //	return seals
 //}
 
+func (e *EventDrivenEngine) Q() int {
+	return e.valset.Q()
+}
+
 func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) error {
 	payload, err := Encode(val)
 	if err != nil {
@@ -136,7 +141,7 @@ func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message) error {
 			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
 			return err
 		}
-	case MsgTypeNewView, MsgTypeTimeout:
+	case MsgTypeProposal, MsgTypeTimeout:
 		if err := e.backend.Broadcast(e.valset, payload); err != nil {
 			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
 			return err
@@ -144,6 +149,21 @@ func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message) error {
 	default:
 		logger.Error("invalid msg type", "msg", msg)
 		return errInvalidMessage
+	}
+	return nil
+}
+
+func (e *EventDrivenEngine) checkBlockExist(hash common.Hash, round *big.Int) error {
+	block := e.blkTree.GetBlockByHash(hash)
+	if block == nil {
+		return fmt.Errorf("proposal parent %v not exist", hash)
+	}
+	_, blockRd, err := extraProposal(block)
+	if err != nil {
+		return err
+	}
+	if blockRd.Cmp(round) != 0 {
+		return fmt.Errorf("round expect %v got %v", blockRd, round)
 	}
 	return nil
 }

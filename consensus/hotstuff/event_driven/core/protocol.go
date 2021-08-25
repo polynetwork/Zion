@@ -19,6 +19,10 @@
 package core
 
 import (
+	"fmt"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -37,9 +41,10 @@ type EventDrivenEngine struct {
 	valset hotstuff.ValidatorSet
 
 	requests  *requestSet
-	paceMaker *PaceMaker
+	messages *MessagePool
 	blkTree   *BlockTree
 	safety    *SafetyRules
+	paceMaker *PaceMaker
 
 	backend hotstuff.Backend
 
@@ -63,28 +68,47 @@ func (e *EventDrivenEngine) ProcessNewRoundEvent() error {
 		return nil
 	}
 
+	// todo: add high qc as justifyQC into pending request
 	proposal := e.getCurrentPendingRequest()
-	msg := &MsgNewView{
+	msg := &MsgProposal{
 		View:     view,
 		Proposal: proposal,
 	}
-	return e.encodeAndBroadcast(MsgTypeNewView, msg)
+	return e.encodeAndBroadcast(MsgTypeProposal, msg)
 }
 
-// ProcessProposal validate proposal info and vote to the next leader if the proposal is valid
-func (e *EventDrivenEngine) ProcessProposal(proposal *types.Block) error {
+// handleProposal validate proposal info and vote to the next leader if the proposal is valid
+// todo: modify err type
+func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuff.Message) error {
+	logger := e.newLogger()
+
+	var (
+		msg    *MsgProposal
+		msgTyp = MsgTypeProposal
+	)
+
+	if err := data.Decode(&msg); err != nil {
+		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
+		return errFailedDecodePrepare
+	}
+	proposal, ok := msg.Proposal.(*types.Block)
+	if !ok {
+		logger.Trace("Failed to decode", "convert err", "not block")
+		return errProposalConvert
+	}
+
 	justifyQC, proposalRound, err := extraProposal(proposal)
 	if err != nil {
 		return err
 	}
 
+	// allow the validator get into the new round before vote
 	if err := e.ProcessCertificates(justifyQC); err != nil {
 		return err
 	}
 
 	currentRound := e.paceMaker.CurrentRound()
 	if currentRound.Cmp(proposalRound) != 0 {
-		// todo: modify err type
 		return errInvalidMessage
 	}
 
@@ -95,25 +119,74 @@ func (e *EventDrivenEngine) ProcessProposal(proposal *types.Block) error {
 	if err := e.signer.VerifyQC(justifyQC, e.valset); err != nil {
 		return err
 	}
-
 	if err := e.signer.VerifyHeader(proposal.Header(), e.valset, false); err != nil {
 		return err
 	}
 
 	e.blkTree.Insert(proposal)
 
-	vote, err := e.safety.VoteRule(proposal, proposalRound, justifyQC)
-	if err != nil {
+	// check parent block existing
+	parentHash := justifyQC.Hash
+	parentRound := justifyQC.View.Round
+	if err := e.checkBlockExist(parentHash, parentRound); err != nil {
 		return err
 	}
+
+	// proposal round should be increase by 1
+	if new(big.Int).Sub(proposalRound, parentRound).Cmp(common.Big1) != 0 {
+		return fmt.Errorf("proposal round != parent round + 1, proposalRound %v, parentRound %v", proposalRound, parentRound)
+	}
+	if !e.safety.VoteRule(proposalRound, justifyQC.View.Round) {
+		return fmt.Errorf("voteRule failed")
+	}
+
+	// todo: vote是否应该包含commitInfo用来证明整个3阶段都是有效的
+	vote := &Vote{
+		Epoch:       e.paceMaker.CurrentEpoch(),
+		Hash:        proposal.Hash(),
+		Round:       proposalRound,
+		ParentHash:  justifyQC.Hash,
+		ParentRound: justifyQC.View.Round,
+	}
+
+	e.safety.IncreaseLastVoteRound(proposalRound)
 
 	// todo: vote to next proposal
 	return e.encodeAndBroadcast(MsgTypeVote, vote)
 }
 
 // ProcessVoteMsg validate vote message and try to assemble qc
-func (e *EventDrivenEngine) ProcessVoteMsg(vote *Vote) error {
-	e.blkTree.ProcessVote(vote)
+func (e *EventDrivenEngine) ProcessVoteMsg(src hotstuff.Validator, data *hotstuff.Message) error {
+	var (
+		vote *Vote
+		msgType = MsgTypeVote
+	)
+
+	logger := e.newLogger()
+	if err := data.Decode(&vote); err != nil {
+		logger.Trace("Failed to decode", "type", msgType, "err", err)
+		return errFailedDecodeNewView
+ 	}
+
+ 	// todo: first two blocks
+ 	if vote.Hash == utils.EmptyHash || vote.ParentHash == utils.EmptyHash || vote.Round == nil || vote.ParentRound == nil {
+ 		return fmt.Errorf("invalid vote")
+	}
+
+	if err := e.checkBlockExist(vote.Hash, vote.Round); err != nil {
+		return err
+	}
+	if err := e.checkBlockExist(vote.ParentHash, vote.ParentRound); err != nil {
+		return err
+	}
+
+	if err := e.messages.AddVote(vote.Hash, data); err != nil {
+		return err
+	}
+
+	if e.messages.VoteSize(vote.Hash) >= e.Q() {
+		// todo: format highQC and set block tree high qc
+	}
 	return nil
 }
 
@@ -123,7 +196,7 @@ func (e *EventDrivenEngine) ProcessCertificates(qc *hotstuff.QuorumCert) error {
 		return err
 	}
 
-	e.safety.UpdateLockQC(qc, qc.View.Round)
+	e.safety.UpdateLockQCRound(qc.View.Round)
 
 	// try to commit locked block and pure the `pendingBlockTree`
 	e.blkTree.ProcessCommit(qc.Hash)

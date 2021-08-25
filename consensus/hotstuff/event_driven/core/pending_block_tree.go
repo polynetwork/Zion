@@ -91,7 +91,11 @@ func (tr *PendingBlockTree) Branch(block *types.Block) []*types.Block {
 }
 
 func (tr *PendingBlockTree) GetBlockByHash(hash common.Hash) *types.Block {
-	return nil
+	node, ok := tr.nodeHashs[hash.Hex()]
+	if !ok {
+		return nil
+	}
+	return node.block
 }
 
 // Pure delete the forked branches in this tree and reset an new root which always is an locked block.

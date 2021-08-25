@@ -131,8 +131,8 @@ func (e *EventDrivenEngine) handleMsg(payload []byte) error {
 
 func (e *EventDrivenEngine) handleCheckedMsg(msg *hotstuff.Message, src hotstuff.Validator) (err error) {
 	switch msg.Code {
-	case MsgTypeNewView:
-		// err = e.ProcessProposal(msg.Payload())
+	case MsgTypeProposal:
+		err = e.handleProposal(msg.Payload())
 	case MsgTypeVote:
 		// err = e.ProcessVoteMsg()
 	case MsgTypeTimeout:

@@ -21,7 +21,6 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/message_set"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -29,7 +28,10 @@ import (
 type BlockTree struct {
 	tree *PendingBlockTree
 	highQC *hotstuff.QuorumCert		// the highest qc
-	pendingVotes *message_set.MessageSet
+}
+
+func (tr *BlockTree) GetBlockByHash(hash common.Hash) *types.Block {
+	return tr.tree.GetBlockByHash(hash)
 }
 
 // Insert insert new block into pending block tree, calculate and return the highestQC
@@ -37,10 +39,15 @@ func (tr *BlockTree) Insert(block *types.Block) *hotstuff.QuorumCert {
 	return nil
 }
 
-// ProcessVote caching participants votes and drive `paceMaker` into next round if the
-// vote message number arrived the quorum size.
-func (tr *BlockTree) ProcessVote(vote *Vote) {
-
+func (tr *BlockTree) UpdateHighQC(qc *hotstuff.QuorumCert) {
+	if qc == nil || qc.View == nil {
+		return
+	}
+	if tr.highQC == nil || tr.highQC.View == nil {
+		tr.highQC = qc
+	} else if tr.highQC.View.Round.Cmp(qc.View.Round) < 0 {
+		tr.highQC = qc
+	}
 }
 
 // ProcessCommit commit the block into ledger and pure the `pendingBlockTree`

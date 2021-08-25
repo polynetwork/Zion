@@ -63,7 +63,7 @@ func newTestValidatorSet(n int) (hotstuff.ValidatorSet, []*ecdsa.PrivateKey) {
 func TestMessageSetWithNewView(t *testing.T) {
 	valSet, _ := newTestValidatorSet(4)
 
-	ms := MewMessageSet(valSet)
+	ms := NewMessageSet(valSet)
 
 	view := &hotstuff.View{
 		Round:  new(big.Int),
@@ -98,7 +98,7 @@ func TestMessageSetWithNewView(t *testing.T) {
 func TestMessageSetVote(t *testing.T) {
 	valSet, _ := newTestValidatorSet(4)
 
-	ms := MewMessageSet(valSet)
+	ms := NewMessageSet(valSet)
 
 	view := &hotstuff.View{
 		Round:  new(big.Int),

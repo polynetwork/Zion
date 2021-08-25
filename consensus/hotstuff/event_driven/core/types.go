@@ -37,16 +37,16 @@ var (
 type MsgType uint64
 
 const (
-	MsgTypeNewView MsgType = 1
-	MsgTypeVote    MsgType = 2
-	MsgTypeTimeout MsgType = 3
-	MsgTypeCommit  MsgType = 4
+	MsgTypeProposal MsgType = 1
+	MsgTypeVote     MsgType = 2
+	MsgTypeTimeout  MsgType = 3
+	MsgTypeCommit   MsgType = 4
 )
 
 func (m MsgType) String() string {
 	switch m {
-	case MsgTypeNewView:
-		return "NEW_VIEW"
+	case MsgTypeProposal:
+		return "PROPOSAL"
 	case MsgTypeVote:
 		return "VOTE"
 	case MsgTypeTimeout:
@@ -70,12 +70,12 @@ func init() {
 	})
 }
 
-type MsgNewView struct {
+type MsgProposal struct {
 	View     *hotstuff.View
 	Proposal hotstuff.Proposal
 }
 
-func (m *MsgNewView) EncodeRLP(w io.Writer) error {
+func (m *MsgProposal) EncodeRLP(w io.Writer) error {
 	block, ok := m.Proposal.(*types.Block)
 	if !ok {
 		return errInvalidProposal
@@ -83,7 +83,7 @@ func (m *MsgNewView) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.View, block})
 }
 
-func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
+func (m *MsgProposal) DecodeRLP(s *rlp.Stream) error {
 	var proposal struct {
 		View     *hotstuff.View
 		Proposal *types.Block
@@ -96,7 +96,7 @@ func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (m *MsgNewView) String() string {
+func (m *MsgProposal) String() string {
 	return fmt.Sprintf("{NewView Height: %v Round: %v Hash: %v}", m.View.Height, m.View.Round, m.Proposal.Hash())
 }
 
@@ -104,7 +104,6 @@ type Vote struct {
 	Epoch     uint64
 	Hash      common.Hash
 	Round     *big.Int
-	StateRoot common.Hash
 
 	ParentHash  common.Hash
 	ParentRound *big.Int
@@ -112,7 +111,7 @@ type Vote struct {
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (v *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{v.Epoch, v.Hash, v.Round, v.StateRoot, v.ParentHash, v.ParentRound})
+	return rlp.Encode(w, []interface{}{v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
@@ -121,8 +120,6 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 		Epoch     uint64
 		Hash      common.Hash
 		Round     *big.Int
-		StateRoot common.Hash
-
 		ParentHash  common.Hash
 		ParentRound *big.Int
 	}
@@ -131,7 +128,7 @@ func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	v.Epoch, v.Hash, v.Round, v.StateRoot, v.ParentHash, v.ParentRound = subject.Epoch, subject.Hash, subject.Round, subject.StateRoot, subject.ParentHash, subject.ParentRound
+	v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound = subject.Epoch, subject.Hash, subject.Round, subject.ParentHash, subject.ParentRound
 	return nil
 }
 
