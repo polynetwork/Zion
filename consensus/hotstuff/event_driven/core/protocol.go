@@ -186,6 +186,17 @@ func (e *EventDrivenEngine) ProcessVoteMsg(src hotstuff.Validator, data *hotstuf
 
 	if e.messages.VoteSize(vote.Hash) >= e.Q() {
 		// todo: format highQC and set block tree high qc
+		// todo(fuk): instance qc and broadcast to all validators
+		//view := &hotstuff.View{
+		//	Round:  e.paceMaker.CurrentRound(),
+		//	Height: e.paceMaker.CurrentHeight(),
+		//}
+		//qc := &hotstuff.QuorumCert{
+		//	View:     view,
+		//	Hash:     vote.Hash,
+		//	Proposer: common.Address{},
+		//	Extra:    nil,
+		//}
 	}
 	return nil
 }
