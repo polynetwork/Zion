@@ -20,14 +20,14 @@ package core
 
 import (
 	"fmt"
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"math/big"
+	"time"
 )
 
 // EventDrivenEngine implement event-driven hotstuff protocol, it obtains:
@@ -35,22 +35,30 @@ import (
 type EventDrivenEngine struct {
 	config *hotstuff.Config
 	logger log.Logger
+	epoch uint64
 
 	addr   common.Address
 	signer hotstuff.Signer
 	valset hotstuff.ValidatorSet
 
+	curRound,
+	curHeight *big.Int
+
 	requests  *requestSet
 	messages  *MessagePool
 	blkTree   *BlockTree
 	safety    *SafetyRules
-	paceMaker *PaceMaker
+	//paceMaker *PaceMaker
 
 	backend hotstuff.Backend
 
 	events            *event.TypeMuxSubscription
 	timeoutSub        *event.TypeMuxSubscription
 	finalCommittedSub *event.TypeMuxSubscription
+
+	// pace maker
+	highestCommitRound *big.Int
+	timer *time.Timer
 
 	validateFn func([]byte, []byte) (common.Address, error)
 }
@@ -107,7 +115,7 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 		return err
 	}
 
-	currentRound := e.paceMaker.CurrentRound()
+	currentRound := e.curRound
 	if currentRound.Cmp(proposalRound) != 0 {
 		return errInvalidMessage
 	}
@@ -125,28 +133,32 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 
 	e.blkTree.Insert(proposal)
 
-	// check parent block existing
-	parentHash := justifyQC.Hash
-	parentRound := justifyQC.View.Round
-	if err := e.checkBlockExist(parentHash, parentRound); err != nil {
+	//// check parent block existing
+	//parentHash := justifyQC.Hash
+	//parentRound := justifyQC.View.Round
+	//if err := e.checkBlockExist(parentHash, parentRound); err != nil {
+	//	return err
+	//}
+	//
+	//// proposal round should be increase by 1
+	//if new(big.Int).Sub(proposalRound, parentRound).Cmp(common.Big1) != 0 {
+	//	return fmt.Errorf("proposal round != parent round + 1, proposalRound %v, parentRound %v", proposalRound, parentRound)
+	//}
+	//if !e.safety.VoteRule(proposalRound, justifyQC.View.Round) {
+	//	return fmt.Errorf("voteRule failed")
+	//}
+	//
+	//// todo: vote是否应该包含commitInfo用来证明整个3阶段都是有效的
+	//vote := &Vote{
+	//	Epoch:       e.paceMaker.CurrentEpoch(),
+	//	Hash:        proposal.Hash(),
+	//	Round:       proposalRound,
+	//	ParentHash:  justifyQC.Hash,
+	//	ParentRound: justifyQC.View.Round,
+	//}
+	vote, err := e.safety.MakeVote(proposal)
+	if err != nil {
 		return err
-	}
-
-	// proposal round should be increase by 1
-	if new(big.Int).Sub(proposalRound, parentRound).Cmp(common.Big1) != 0 {
-		return fmt.Errorf("proposal round != parent round + 1, proposalRound %v, parentRound %v", proposalRound, parentRound)
-	}
-	if !e.safety.VoteRule(proposalRound, justifyQC.View.Round) {
-		return fmt.Errorf("voteRule failed")
-	}
-
-	// todo: vote是否应该包含commitInfo用来证明整个3阶段都是有效的
-	vote := &Vote{
-		Epoch:       e.paceMaker.CurrentEpoch(),
-		Hash:        proposal.Hash(),
-		Round:       proposalRound,
-		ParentHash:  justifyQC.Hash,
-		ParentRound: justifyQC.View.Round,
 	}
 
 	e.safety.IncreaseLastVoteRound(proposalRound)
@@ -190,10 +202,7 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 
 	// todo: format highQC and set block tree high qc
 	// todo(fuk): instance qc and broadcast to all validators
-	view := &hotstuff.View{
-		Round:  e.paceMaker.CurrentRound(),
-		Height: e.paceMaker.CurrentHeight(),
-	}
+	view := e.currentView()
 	qc := &hotstuff.QuorumCert{
 		View:     view,
 		Hash:     vote.Hash,
@@ -202,7 +211,7 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 	}
 
 	// paceMaker send qc to next leader
-	if err := e.paceMaker.AdvanceRound(qc); err != nil {
+	if err := e.advanceRound(qc); err != nil {
 		return err
 	}
 	e.blkTree.UpdateHighQC(qc)
@@ -210,18 +219,22 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 	return nil
 }
 
-func (e *EventDrivenEngine) handleLocalTimeout() error {
-	return nil
-}
-
-func (e *EventDrivenEngine) handleRemoteTimeout() error {
-	return nil
-}
+//func (e *EventDrivenEngine) handleLocalTimeout() error {
+//	return nil
+//}
+//
+//func (e *EventDrivenEngine) handleRemoteTimeout() error {
+//	return nil
+//}
+//
+//func (e *EventDrivenEngine) advanceRound() error {
+//	return nil
+//}
 
 // todo: add this function into handleProposal
 // ProcessCertificates validate and handle QC/TC
 func (e *EventDrivenEngine) ProcessCertificates(qc *hotstuff.QuorumCert) error {
-	if err := e.paceMaker.AdvanceRound(qc); err != nil {
+	if err := e.advanceRound(qc); err != nil {
 		return err
 	}
 

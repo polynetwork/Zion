@@ -19,6 +19,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -26,86 +27,101 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-// PaceMaker paceMaker is an standalone module which used to keep consensus liveness.
-// it driven the proposal round in sequence by an `QC` or `TC` which means that the consensus need at least
-// `2F + 1` valid vote message or timeout message to agree that the consensus engine can be driven into
-// the next round.
-type PaceMaker struct {
-	epoch                       uint64   // consensus epoch id
-	currentHeight, currentRound *big.Int // current view round
+// todo input message decode
+func (e *EventDrivenEngine) handleLocalTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
+	var (
+		evt *TimeoutEvent
+	)
+	if err := data.Decode(&evt); err != nil {
+		return err
+	}
 
-	timtoutMsgs           map[uint64]common.Address // map round to message sender collection
-	highestCommittedRound *big.Int                  // record last committed block which used to calculate timeout duration
-	timer                 *time.Timer               // internal timer
-	sender                *EventSender
+	round := evt.Round
+	if err := e.messages.AddTimeout(round.Uint64(), data); err != nil {
+		return err
+	}
+
+	e.safety.IncreaseLastVoteRound(round)
+
+	return e.broadcast(data)
 }
 
-func NewPaceMaker(epoch uint64, initRound, initHighestCommittedRound *big.Int, sender *EventSender) *PaceMaker {
-	pm := new(PaceMaker)
-	pm.currentRound = initRound
-	pm.highestCommittedRound = initHighestCommittedRound
-	pm.timtoutMsgs = make(map[uint64]common.Address)
-	pm.sender = sender
-	return pm
-}
+func (e *EventDrivenEngine) handleRemoteTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
+	var (
+		evt *TimeoutEvent
+	)
+	if err := data.Decode(&evt); err != nil {
+		return err
+	}
+	round := evt.Round
+	if err := e.messages.AddTimeout(round.Uint64(), data); err != nil {
+		return err
+	}
 
-func (p *PaceMaker) CurrentEpoch() uint64 {
-	return p.epoch
-}
+	if e.messages.TimeoutSize(round.Uint64()) == e.Q() {
+		tc := &hotstuff.QuorumCert{}
+		return e.advanceRound(tc)
+	}
 
-func (p *PaceMaker) CurrentHeight() *big.Int {
-	return p.currentHeight
-}
-
-func (p *PaceMaker) CurrentRound() *big.Int {
-	return p.currentRound
-}
-
-// ProcessLocalTimeout broadcast timeout message to all and record the message sender and round
-func (p *PaceMaker) ProcessLocalTimeout(sender common.Address, round *big.Int) {
-
-}
-
-// ProcessRemoteTimeout record timeout info and drive consensus into next round
-// if timeout message count arrived an quorum size.
-func (p *PaceMaker) ProcessRemoteTimeout(sender common.Address, round *big.Int) {
-
-}
-
-// AdvanceRound drive the consensus to the next round by qc/tc
-func (p *PaceMaker) AdvanceRound(qc *hotstuff.QuorumCert) error {
 	return nil
 }
 
-func (p *PaceMaker) GetDeltaTime(round *big.Int) time.Duration {
-	return 0
+func (e *EventDrivenEngine) advanceRound(qc *hotstuff.QuorumCert) error {
+	qcRound := qc.View.Round
+	if qcRound.Cmp(e.curRound) < 0 {
+		return fmt.Errorf("qcRound < currentRound, (%v, %v)", qcRound, e.curRound)
+	}
+
+	// current round increase
+	e.curRound = new(big.Int).Add(e.curRound, common.Big1)
+
+	// recalculate proposer
+	e.valset.CalcProposerByIndex(e.curRound.Uint64())
+
+	if !e.isProposer() {
+		// send qc to next leader
+		payload, err := Encode(qc)
+		if err != nil {
+			return err
+		}
+		if err := e.broadcast(&hotstuff.Message{
+			Code: MsgTypeQC,
+			Msg:  payload,
+		}); err != nil {
+			return err
+		}
+	}
+
+	e.newRoundChangeTimer()
+
+	return e.handleNewRound()
 }
 
-func (p *PaceMaker) stopTimer() {
-	if p.timer != nil {
-		p.timer.Stop()
+func (e *EventDrivenEngine) stopTimer() {
+	if e.timer != nil {
+		e.timer.Stop()
 	}
 }
 
 // todo: add in config
 const standardTmoDuration = time.Second * 4
 
-func (p *PaceMaker) newRoundChangeTimer() {
-	p.stopTimer()
+func (e *EventDrivenEngine) newRoundChangeTimer() {
+	e.stopTimer()
 
-	index := p.currentRound.Uint64() - 1
-	if p.highestCommittedRound.Uint64() != 0 {
-		if p.currentRound.Uint64()-p.highestCommittedRound.Uint64() < 3 {
+	index := e.curRound.Uint64() - 1
+	if e.highestCommitRound.Uint64() != 0 {
+		if e.curRound.Uint64()-e.highestCommitRound.Uint64() < 3 {
 			index = 0
 		} else {
-			index = p.currentRound.Uint64() - p.highestCommittedRound.Uint64() - 3
+			index = e.curRound.Uint64() - e.highestCommitRound.Uint64() - 3
 		}
 	}
 
 	tmoDuration := time.Duration(index) * standardTmoDuration
-	p.timer = time.AfterFunc(tmoDuration, func() {
-		p.sender.sendEvent(Timeout{
-			Epoch: p.epoch,
+	e.timer = time.AfterFunc(tmoDuration, func() {
+		e.sendEvent(TimeoutEvent{
+			Epoch: e.epoch,
 			Round: nil,
 		})
 	})

@@ -56,8 +56,8 @@ func (e *EventDrivenEngine) isProposer() bool {
 
 func (e *EventDrivenEngine) currentView() *hotstuff.View {
 	return &hotstuff.View{
-		Round:  e.paceMaker.CurrentRound(),
-		Height: e.paceMaker.CurrentHeight(),
+		Round:  new(big.Int).Set(e.curRound),
+		Height: new(big.Int).Set(e.curHeight),
 	}
 }
 

@@ -46,7 +46,7 @@ func (e *EventDrivenEngine) subscribeEvents() {
 		backlogEvent{},
 	)
 	e.timeoutSub = e.backend.EventMux().Subscribe(
-		Timeout{},
+		TimeoutEvent{},
 	)
 	e.finalCommittedSub = e.backend.EventMux().Subscribe(
 		hotstuff.FinalCommittedEvent{},

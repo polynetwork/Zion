@@ -22,12 +22,39 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
 )
 
 // todo: if actually need it
 type BlockTree struct {
 	tree *PendingBlockTree
 	highQC *hotstuff.QuorumCert		// the highest qc
+}
+
+func (tr *BlockTree) GetBlockAndCheckHeight(hash common.Hash, height *big.Int) *types.Block {
+	parentBlock := tr.GetBlockByHash(hash)
+	if parentBlock == nil {
+		return nil
+	}
+	if parentBlock.Number().Cmp(height) != 0 {
+		return nil
+	}
+	return parentBlock
+}
+
+func (tr *BlockTree) GetBlockAndCheckRound(hash common.Hash, round *big.Int) *types.Block {
+	parentBlock := tr.GetBlockByHash(hash)
+	if parentBlock == nil {
+		return nil
+	}
+	_, parentRound, err := extraProposal(parentBlock)
+	if err != nil {
+		return  nil
+	}
+	if parentRound.Cmp(round) != 0 {
+		return nil
+	}
+	return parentBlock
 }
 
 func (tr *BlockTree) GetBlockByHash(hash common.Hash) *types.Block {

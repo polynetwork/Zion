@@ -20,18 +20,13 @@ package core
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/types"
 	"io"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-)
-
-var (
-	EmptyHash    = common.Hash{}
-	EmptyAddress = common.Address{}
 )
 
 type MsgType uint64
@@ -40,21 +35,21 @@ const (
 	MsgTypeProposal MsgType = 1
 	MsgTypeVote     MsgType = 2
 	MsgTypeTimeout  MsgType = 3
-	MsgTypeCommit   MsgType = 4
+	MsgTypeQC       MsgType = 4
 )
 
 func (m MsgType) String() string {
 	switch m {
 	case MsgTypeProposal:
-		return "PROPOSAL"
+		return "MSG_PROPOSAL"
 	case MsgTypeVote:
-		return "VOTE"
+		return "MSG_VOTE"
 	case MsgTypeTimeout:
-		return "TIMEOUT"
-	case MsgTypeCommit:
-		return "COMMIT"
+		return "MSG_TIMEOUT"
+	case MsgTypeQC:
+		return "MSG_QC"
 	default:
-		return "UNKNOWN"
+		return "MSG_UNKNOWN"
 	}
 }
 
@@ -101,34 +96,39 @@ func (m *MsgProposal) String() string {
 }
 
 type Vote struct {
-	Epoch     uint64
-	Hash      common.Hash
-	Round     *big.Int
+	Epoch uint64
+	Hash  common.Hash
+	Round *big.Int
 
 	ParentHash  common.Hash
 	ParentRound *big.Int
+
+	GrandHash  common.Hash
+	GrandRound *big.Int
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (v *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound})
+	return rlp.Encode(w, []interface{}{v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound, v.GrandHash, v.GrandRound})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
-		Epoch     uint64
-		Hash      common.Hash
-		Round     *big.Int
+		Epoch       uint64
+		Hash        common.Hash
+		Round       *big.Int
 		ParentHash  common.Hash
 		ParentRound *big.Int
+		GrandHash   common.Hash
+		GrandRound  *big.Int
 	}
 
 	if err := s.Decode(&subject); err != nil {
 		return err
 	}
 
-	v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound = subject.Epoch, subject.Hash, subject.Round, subject.ParentHash, subject.ParentRound
+	v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound, v.GrandHash, v.GrandRound = subject.Epoch, subject.Hash, subject.Round, subject.ParentHash, subject.ParentRound, subject.GrandHash, subject.GrandRound
 	return nil
 }
 
@@ -136,16 +136,16 @@ func (v *Vote) String() string {
 	return fmt.Sprintf("{Epoch: %v, Hash: %v, Round: %v, ParentHash: %v, ParentRound: %v}", v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound)
 }
 
-type Timeout struct {
+type TimeoutEvent struct {
 	Epoch uint64
 	Round *big.Int
 }
 
-func (tm *Timeout) EncodeRLP(w io.Writer) error {
+func (tm *TimeoutEvent) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{tm.Epoch, tm.Round})
 }
 
-func (tm *Timeout) DecodeRLP(s *rlp.Stream) error {
+func (tm *TimeoutEvent) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
 		Epoch uint64
 		Round *big.Int
@@ -159,8 +159,20 @@ func (tm *Timeout) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func (tm *Timeout) String() string {
+func (tm *TimeoutEvent) String() string {
 	return fmt.Sprintf("{Epoch: %v, Round: %v}", tm.Epoch, tm.Round)
+}
+
+type TimeoutCertificate struct {
+	Cert *hotstuff.QuorumCert
+}
+
+func (tm *TimeoutCertificate) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{tm.Cert})
+}
+
+func (tm *TimeoutCertificate) DecodeRLP(s *rlp.Stream) error {
+
 }
 
 type backlogEvent struct {
