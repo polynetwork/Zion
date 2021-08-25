@@ -14,6 +14,7 @@ require (
 	github.com/cespare/cp v0.1.0
 	github.com/cloudflare/cloudflare-go v0.14.0
 	github.com/consensys/gnark-crypto v0.4.1-0.20210426202927-39ac3d4b3f1f
+	github.com/cosmos/cosmos-sdk v0.39.1
 	github.com/davecgh/go-spew v1.1.1
 	github.com/deckarep/golang-set v0.0.0-20180603214616-504e848d77ea
 	github.com/docker/docker v1.4.2-0.20180625184442-8e610b2b55bf
@@ -46,6 +47,7 @@ require (
 	github.com/olekukonko/tablewriter v0.0.5
 	github.com/ontio/ontology-crypto v1.0.9
 	github.com/peterh/liner v1.1.1-0.20190123174540-a2c9a5303de7
+	github.com/pkg/errors v0.9.1
 	github.com/polynetwork/poly v1.7.3-0.20210804073726-5d4f4d4a9371
 	github.com/prometheus/tsdb v0.7.1
 	github.com/rjeczalik/notify v0.9.1
@@ -54,6 +56,7 @@ require (
 	github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
+	github.com/tendermint/tendermint v0.33.7
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/zhiqiangxu/go-ethereum v1.9.16-0.20210824055606-be91cfdebc48
 	golang.org/x/crypto v0.0.0-20210322153248-0c34fe9e7dc2
