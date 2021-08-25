@@ -12,7 +12,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	hscommon "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/polynetwork/poly/common/log"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 type BTCHandler struct {

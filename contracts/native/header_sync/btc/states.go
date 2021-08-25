@@ -23,8 +23,8 @@ import (
 	"math/big"
 
 	"github.com/btcsuite/btcd/wire"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/polynetwork/poly/common"
-	"github.com/polynetwork/poly/common/log"
 )
 
 type StoredHeader struct {

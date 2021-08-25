@@ -16,8 +16,8 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/rlp"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
-	"github.com/polynetwork/poly/common/log"
 	"github.com/zhiqiangxu/go-ethereum/common"
 	"golang.org/x/crypto/sha3"
 )

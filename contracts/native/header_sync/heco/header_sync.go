@@ -29,7 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/polynetwork/poly/common/log"
+	"github.com/ethereum/go-ethereum/log"
 	cstates "github.com/polynetwork/poly/core/states"
 	ecommon "github.com/zhiqiangxu/go-ethereum/common"
 	"github.com/zhiqiangxu/go-ethereum/core/types"

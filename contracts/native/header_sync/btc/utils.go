@@ -15,8 +15,8 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/log"
 	polycomm "github.com/polynetwork/poly/common"
-	"github.com/polynetwork/poly/common/log"
 	cstates "github.com/polynetwork/poly/core/states"
 )
 
