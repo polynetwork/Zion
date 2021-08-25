@@ -12,14 +12,14 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/bsc"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/crypto"
 	polycomm "github.com/polynetwork/poly/common"
 	"github.com/polynetwork/poly/common/log"
-	ocommon "github.com/zhiqiangxu/go-ethereum/common"
-	otypes "github.com/zhiqiangxu/go-ethereum/core/types"
+	"github.com/zhiqiangxu/go-ethereum/common"
+	"github.com/zhiqiangxu/go-ethereum/core/types"
+	"github.com/zhiqiangxu/go-ethereum/crypto"
 	"github.com/zhiqiangxu/go-ethereum/light"
 	"github.com/zhiqiangxu/go-ethereum/rlp"
-	otrie "github.com/zhiqiangxu/go-ethereum/trie"
+	"github.com/zhiqiangxu/go-ethereum/trie"
 )
 
 // Handler ...
@@ -128,28 +128,28 @@ type StorageProof struct {
 type ProofAccount struct {
 	Nounce   *big.Int
 	Balance  *big.Int
-	Storage  ocommon.Hash
-	Codehash ocommon.Hash
+	Storage  common.Hash
+	Codehash common.Hash
 }
 
-func verifyMerkleProof(bscProof *Proof, blockData *otypes.Header, contractAddr []byte) ([]byte, error) {
+func verifyMerkleProof(bscProof *Proof, blockData *types.Header, contractAddr []byte) ([]byte, error) {
 	//1. prepare verify account
 	nodeList := new(light.NodeList)
 
 	for _, s := range bscProof.AccountProof {
 		p := scom.Replace0x(s)
-		nodeList.Put(nil, ocommon.Hex2Bytes(p))
+		nodeList.Put(nil, common.Hex2Bytes(p))
 	}
 	ns := nodeList.NodeSet()
 
-	addr := ocommon.Hex2Bytes(scom.Replace0x(bscProof.Address))
+	addr := common.Hex2Bytes(scom.Replace0x(bscProof.Address))
 	if !bytes.Equal(addr, contractAddr) {
 		return nil, fmt.Errorf("verifyMerkleProof, contract address is error, proof address: %s, side chain address: %s", bscProof.Address, hex.EncodeToString(contractAddr))
 	}
 	acctKey := crypto.Keccak256(addr)
 
 	//2. verify account proof
-	acctVal, err := otrie.VerifyProof(blockData.Root, acctKey, ns)
+	acctVal, err := trie.VerifyProof(blockData.Root, acctKey, ns)
 	if err != nil {
 		return nil, fmt.Errorf("verifyMerkleProof, verify account proof error:%s", err)
 	}
@@ -166,8 +166,8 @@ func verifyMerkleProof(bscProof *Proof, blockData *otypes.Header, contractAddr [
 		return nil, fmt.Errorf("verifyMerkleProof, invalid format of balance:%s", bscProof.Balance)
 	}
 
-	storageHash := ocommon.HexToHash(scom.Replace0x(bscProof.StorageHash))
-	codeHash := ocommon.HexToHash(scom.Replace0x(bscProof.CodeHash))
+	storageHash := common.HexToHash(scom.Replace0x(bscProof.StorageHash))
+	codeHash := common.HexToHash(scom.Replace0x(bscProof.CodeHash))
 
 	acct := &ProofAccount{
 		Nounce:   nounce,
@@ -192,14 +192,14 @@ func verifyMerkleProof(bscProof *Proof, blockData *otypes.Header, contractAddr [
 	}
 
 	sp := bscProof.StorageProofs[0]
-	storageKey := crypto.Keccak256(ocommon.HexToHash(scom.Replace0x(sp.Key)).Bytes())
+	storageKey := crypto.Keccak256(common.HexToHash(scom.Replace0x(sp.Key)).Bytes())
 
 	for _, prf := range sp.Proof {
-		nodeList.Put(nil, ocommon.Hex2Bytes(scom.Replace0x(prf)))
+		nodeList.Put(nil, common.Hex2Bytes(scom.Replace0x(prf)))
 	}
 
 	ns = nodeList.NodeSet()
-	val, err := otrie.VerifyProof(storageHash, storageKey, ns)
+	val, err := trie.VerifyProof(storageHash, storageKey, ns)
 	if err != nil {
 		return nil, fmt.Errorf("verifyMerkleProof, verify storage proof error:%s", err)
 	}

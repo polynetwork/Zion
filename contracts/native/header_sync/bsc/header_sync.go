@@ -8,19 +8,18 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/polynetwork/poly/common/log"
 	cstates "github.com/polynetwork/poly/core/states"
-	ocommon "github.com/zhiqiangxu/go-ethereum/common"
-	otypes "github.com/zhiqiangxu/go-ethereum/core/types"
-	oparams "github.com/zhiqiangxu/go-ethereum/params"
-	orlp "github.com/zhiqiangxu/go-ethereum/rlp"
+	"github.com/zhiqiangxu/go-ethereum/common"
+	"github.com/zhiqiangxu/go-ethereum/core/types"
+	"github.com/zhiqiangxu/go-ethereum/crypto"
+	"github.com/zhiqiangxu/go-ethereum/params"
+	"github.com/zhiqiangxu/go-ethereum/rlp"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -35,22 +34,22 @@ func NewHandler() *Handler {
 
 // GenesisHeader ...
 type GenesisHeader struct {
-	Header         otypes.Header
+	Header         types.Header
 	PrevValidators []HeightAndValidators
 }
 
 // HeightAndValidators ...
 type HeightAndValidators struct {
 	Height     *big.Int
-	Validators []ocommon.Address
-	Hash       *ocommon.Hash
+	Validators []common.Address
+	Hash       *common.Hash
 }
 
 // HeaderWithDifficultySum ...
 type HeaderWithDifficultySum struct {
-	Header          *otypes.Header `json:"header"`
-	DifficultySum   *big.Int       `json:"difficultySum"`
-	EpochParentHash *ocommon.Hash  `json:"epochParentHash"`
+	Header          *types.Header `json:"header"`
+	DifficultySum   *big.Int      `json:"difficultySum"`
+	EpochParentHash *common.Hash  `json:"epochParentHash"`
 }
 
 // ExtraInfo ...
@@ -73,11 +72,11 @@ type HeaderWithChainID struct {
 var (
 	inMemoryHeaders = 400
 	inMemoryGenesis = 40
-	extraVanity     = 32                        // Fixed number of extra-data prefix bytes reserved for signer vanity
-	extraSeal       = crypto.SignatureLength    // Fixed number of extra-data suffix bytes reserved for signer seal
-	uncleHash       = otypes.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
-	diffInTurn      = big.NewInt(2)             // Block difficulty for in-turn signatures
-	diffNoTurn      = big.NewInt(1)             // Block difficulty for out-of-turn signatures
+	extraVanity     = 32                       // Fixed number of extra-data prefix bytes reserved for signer vanity
+	extraSeal       = crypto.SignatureLength   // Fixed number of extra-data suffix bytes reserved for signer seal
+	uncleHash       = types.CalcUncleHash(nil) // Always Keccak256(RLP([])) as uncles are meaningless outside of PoW.
+	diffInTurn      = big.NewInt(2)            // Block difficulty for in-turn signatures
+	diffNoTurn      = big.NewInt(1)            // Block difficulty for out-of-turn signatures
 
 	GasLimitBoundDivisor uint64 = 256 // The bound divisor of the gas limit, used in update calculations.
 )
@@ -164,7 +163,7 @@ func (h *Handler) SyncBlockHeader(native *native.NativeContract) error {
 	ctx := &Context{ExtraInfo: extraInfo, ChainID: headerParams.ChainID}
 
 	for _, v := range headerParams.Headers {
-		var header otypes.Header
+		var header types.Header
 		err := json.Unmarshal(v, &header)
 		if err != nil {
 			return fmt.Errorf("bsc Handler SyncBlockHeader, deserialize header err: %v", err)
@@ -258,7 +257,7 @@ func (h *Handler) SyncCrossChainMsg(native *native.NativeContract) error {
 	return nil
 }
 
-func isHeaderExist(native *native.NativeContract, headerHash ocommon.Hash, ctx *Context) (bool, error) {
+func isHeaderExist(native *native.NativeContract, headerHash common.Hash, ctx *Context) (bool, error) {
 	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
 		[]byte(scom.HEADER_INDEX), utils.GetUint64Bytes(ctx.ChainID), headerHash.Bytes()))
 	if err != nil {
@@ -268,11 +267,11 @@ func isHeaderExist(native *native.NativeContract, headerHash ocommon.Hash, ctx *
 	return headerStore != nil, nil
 }
 
-func verifySignature(native *native.NativeContract, header *otypes.Header, ctx *Context) (signer ocommon.Address, err error) {
+func verifySignature(native *native.NativeContract, header *types.Header, ctx *Context) (signer common.Address, err error) {
 	return verifyHeader(native, header, ctx)
 }
 
-func verifyHeader(native *native.NativeContract, header *otypes.Header, ctx *Context) (signer ocommon.Address, err error) {
+func verifyHeader(native *native.NativeContract, header *types.Header, ctx *Context) (signer common.Address, err error) {
 
 	// Don't waste time checking blocks from the future
 	if header.Time > uint64(time.Now().Unix()) {
@@ -293,13 +292,13 @@ func verifyHeader(native *native.NativeContract, header *otypes.Header, ctx *Con
 	// Ensure that the extra-data contains a signer list on checkpoint, but none otherwise
 	signersBytes := len(header.Extra) - extraVanity - extraSeal
 
-	if signersBytes%ocommon.AddressLength != 0 {
+	if signersBytes%common.AddressLength != 0 {
 		err = errors.New("invalid signer list")
 		return
 	}
 
 	// Ensure that the mix digest is zero as we don't have fork protection currently
-	if header.MixDigest != (ocommon.Hash{}) {
+	if header.MixDigest != (common.Hash{}) {
 		err = errors.New("non-zero mix digest")
 		return
 	}
@@ -320,7 +319,7 @@ func verifyHeader(native *native.NativeContract, header *otypes.Header, ctx *Con
 	return verifyCascadingFields(native, header, ctx)
 }
 
-func verifyCascadingFields(native *native.NativeContract, header *otypes.Header, ctx *Context) (signer ocommon.Address, err error) {
+func verifyCascadingFields(native *native.NativeContract, header *types.Header, ctx *Context) (signer common.Address, err error) {
 
 	number := header.Number.Uint64()
 
@@ -353,7 +352,7 @@ func verifyCascadingFields(native *native.NativeContract, header *otypes.Header,
 	}
 	limit := parent.Header.GasLimit / GasLimitBoundDivisor
 
-	if uint64(diff) >= limit || header.GasLimit < oparams.MinGasLimit {
+	if uint64(diff) >= limit || header.GasLimit < params.MinGasLimit {
 		err = fmt.Errorf("invalid gas limit: have %d, want %d += %d", header.GasLimit, parent.Header.GasLimit, limit)
 		return
 	}
@@ -362,9 +361,9 @@ func verifyCascadingFields(native *native.NativeContract, header *otypes.Header,
 }
 
 // for test
-var mockSigner ocommon.Address
+var mockSigner common.Address
 
-func verifySeal(native *native.NativeContract, header *otypes.Header, ctx *Context) (signer ocommon.Address, err error) {
+func verifySeal(native *native.NativeContract, header *types.Header, ctx *Context) (signer common.Address, err error) {
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -372,7 +371,7 @@ func verifySeal(native *native.NativeContract, header *otypes.Header, ctx *Conte
 		return
 	}
 
-	if mockSigner != (ocommon.Address{}) {
+	if mockSigner != (common.Address{}) {
 		return mockSigner, nil
 	}
 	// Resolve the authorization key and check against validators
@@ -390,34 +389,34 @@ func verifySeal(native *native.NativeContract, header *otypes.Header, ctx *Conte
 }
 
 // ecrecover extracts the Ethereum account address from a signed header.
-func ecrecover(header *otypes.Header, chainID *big.Int) (ocommon.Address, error) {
+func ecrecover(header *types.Header, chainID *big.Int) (common.Address, error) {
 	// Retrieve the signature from the header extra-data
 	if len(header.Extra) < extraSeal {
-		return ocommon.Address{}, errors.New("extra-data 65 byte signature suffix missing")
+		return common.Address{}, errors.New("extra-data 65 byte signature suffix missing")
 	}
 	signature := header.Extra[len(header.Extra)-extraSeal:]
 
 	// Recover the public key and the Ethereum address
 	pubkey, err := crypto.Ecrecover(SealHash(header, chainID).Bytes(), signature)
 	if err != nil {
-		return ocommon.Address{}, err
+		return common.Address{}, err
 	}
-	var signer ocommon.Address
+	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
 
 	return signer, nil
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
-func SealHash(header *otypes.Header, chainID *big.Int) (hash ocommon.Hash) {
+func SealHash(header *types.Header, chainID *big.Int) (hash common.Hash) {
 	hasher := sha3.NewLegacyKeccak256()
 	encodeSigHeader(hasher, header, chainID)
 	hasher.Sum(hash[:0])
 	return hash
 }
 
-func encodeSigHeader(w io.Writer, header *otypes.Header, chainID *big.Int) {
-	err := orlp.Encode(w, []interface{}{
+func encodeSigHeader(w io.Writer, header *types.Header, chainID *big.Int) {
+	err := rlp.Encode(w, []interface{}{
 		chainID,
 		header.ParentHash,
 		header.UncleHash,
@@ -506,16 +505,16 @@ func storeGenesis(native *native.NativeContract, params *scom.SyncGenesisHeaderP
 }
 
 // ParseValidators ...
-func ParseValidators(validatorsBytes []byte) ([]ocommon.Address, error) {
+func ParseValidators(validatorsBytes []byte) ([]common.Address, error) {
 	if len(validatorsBytes)%common.AddressLength != 0 {
 		return nil, errors.New("invalid validators bytes")
 	}
 	n := len(validatorsBytes) / common.AddressLength
-	result := make([]ocommon.Address, n)
+	result := make([]common.Address, n)
 	for i := 0; i < n; i++ {
 		address := make([]byte, common.AddressLength)
 		copy(address, validatorsBytes[i*common.AddressLength:(i+1)*common.AddressLength])
-		result[i] = ocommon.BytesToAddress(address)
+		result[i] = common.BytesToAddress(address)
 	}
 	return result, nil
 }
@@ -539,12 +538,12 @@ func putCanonicalHeight(native *native.NativeContract, chainID uint64, height ui
 		cstates.GenRawStorageItem(utils.GetUint64Bytes(uint64(height))))
 }
 
-func putCanonicalHash(native *native.NativeContract, chainID uint64, height uint64, hash ocommon.Hash) {
+func putCanonicalHash(native *native.NativeContract, chainID uint64, height uint64, hash common.Hash) {
 	native.GetCacheDB().Put(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.MAIN_CHAIN), utils.GetUint64Bytes(chainID), utils.GetUint64Bytes(height)),
 		cstates.GenRawStorageItem(hash.Bytes()))
 }
 
-func addHeader(native *native.NativeContract, header *otypes.Header, phv *HeightAndValidators, ctx *Context) (err error) {
+func addHeader(native *native.NativeContract, header *types.Header, phv *HeightAndValidators, ctx *Context) (err error) {
 
 	parentHeader, err := getHeader(native, header.ParentHash, ctx.ChainID)
 	if err != nil {
@@ -590,7 +589,7 @@ func addHeader(native *native.NativeContract, header *otypes.Header, phv *Height
 
 		// Overwrite any stale canonical number assignments
 		var (
-			hash       ocommon.Hash
+			hash       common.Hash
 			headHeader *HeaderWithDifficultySum
 		)
 		cheight := header.Number.Uint64() - 1
@@ -622,7 +621,7 @@ func addHeader(native *native.NativeContract, header *otypes.Header, phv *Height
 	return nil
 }
 
-func getPrevHeightAndValidators(native *native.NativeContract, header *otypes.Header, ctx *Context) (phv, pphv *HeightAndValidators, lastSeenHeight int64, err error) {
+func getPrevHeightAndValidators(native *native.NativeContract, header *types.Header, ctx *Context) (phv, pphv *HeightAndValidators, lastSeenHeight int64, err error) {
 
 	genesis, err := getGenesis(native, ctx.ChainID)
 	if err != nil {
@@ -692,8 +691,8 @@ func getPrevHeightAndValidators(native *native.NativeContract, header *otypes.He
 	}
 
 	var (
-		validators     []ocommon.Address
-		nextParentHash ocommon.Hash
+		validators     []common.Address
+		nextParentHash common.Hash
 	)
 
 	currentPV := &phv
@@ -752,7 +751,7 @@ func getPrevHeightAndValidators(native *native.NativeContract, header *otypes.He
 	}
 }
 
-func getHeader(native *native.NativeContract, hash ocommon.Hash, chainID uint64) (headerWithSum *HeaderWithDifficultySum, err error) {
+func getHeader(native *native.NativeContract, hash common.Hash, chainID uint64) (headerWithSum *HeaderWithDifficultySum, err error) {
 
 	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
 		[]byte(scom.HEADER_INDEX), utils.GetUint64Bytes(chainID), hash.Bytes()))
@@ -800,7 +799,7 @@ func GetCanonicalHeader(native *native.NativeContract, chainID uint64, height ui
 		return
 	}
 
-	if hash == (ocommon.Hash{}) {
+	if hash == (common.Hash{}) {
 		return
 	}
 
@@ -808,7 +807,7 @@ func GetCanonicalHeader(native *native.NativeContract, chainID uint64, height ui
 	return
 }
 
-func getCanonicalHash(native *native.NativeContract, chainID uint64, height uint64) (hash ocommon.Hash, err error) {
+func getCanonicalHash(native *native.NativeContract, chainID uint64, height uint64) (hash common.Hash, err error) {
 	hashBytesStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.MAIN_CHAIN), utils.GetUint64Bytes(chainID), utils.GetUint64Bytes(height)))
 	if err != nil {
 		return
@@ -824,7 +823,7 @@ func getCanonicalHash(native *native.NativeContract, chainID uint64, height uint
 		return
 	}
 
-	hash = ocommon.BytesToHash(hashBytes)
+	hash = common.BytesToHash(hashBytes)
 	return
 }
 
