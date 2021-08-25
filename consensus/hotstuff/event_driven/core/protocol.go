@@ -35,7 +35,7 @@ import (
 type EventDrivenEngine struct {
 	config *hotstuff.Config
 	logger log.Logger
-	epoch uint64
+	epoch  uint64
 
 	addr   common.Address
 	signer hotstuff.Signer
@@ -44,21 +44,23 @@ type EventDrivenEngine struct {
 	curRound,
 	curHeight *big.Int
 
-	requests  *requestSet
-	messages  *MessagePool
-	blkTree   *BlockTree
-	safety    *SafetyRules
-	//paceMaker *PaceMaker
+	requests *requestSet
+	messages *MessagePool
+	blkTree  *BlockTree
+
+	// pace maker
+	highestCommitRound *big.Int
+	timer              *time.Timer
+
+	// safety
+	lockQCRound   *big.Int
+	lastVoteRound *big.Int
 
 	backend hotstuff.Backend
 
 	events            *event.TypeMuxSubscription
 	timeoutSub        *event.TypeMuxSubscription
 	finalCommittedSub *event.TypeMuxSubscription
-
-	// pace maker
-	highestCommitRound *big.Int
-	timer *time.Timer
 
 	validateFn func([]byte, []byte) (common.Address, error)
 }
@@ -70,7 +72,6 @@ func NewEventDrivenEngine(valset hotstuff.ValidatorSet) *EventDrivenEngine {
 // handleNewRound proposer at this round get an new proposal and broadcast to all validators.
 func (e *EventDrivenEngine) handleNewRound() error {
 	view := e.currentView()
-	e.valset.CalcProposerByIndex(view.Round.Uint64())
 
 	if !e.isProposer() {
 		return nil
@@ -156,12 +157,12 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 	//	ParentHash:  justifyQC.Hash,
 	//	ParentRound: justifyQC.View.Round,
 	//}
-	vote, err := e.safety.MakeVote(proposal)
+	vote, err := e.MakeVote(proposal)
 	if err != nil {
 		return err
 	}
 
-	e.safety.IncreaseLastVoteRound(proposalRound)
+	e.IncreaseLastVoteRound(proposalRound)
 
 	// todo: vote to next proposal
 	return e.encodeAndBroadcast(MsgTypeVote, vote)
@@ -219,18 +220,6 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 	return nil
 }
 
-//func (e *EventDrivenEngine) handleLocalTimeout() error {
-//	return nil
-//}
-//
-//func (e *EventDrivenEngine) handleRemoteTimeout() error {
-//	return nil
-//}
-//
-//func (e *EventDrivenEngine) advanceRound() error {
-//	return nil
-//}
-
 // todo: add this function into handleProposal
 // ProcessCertificates validate and handle QC/TC
 func (e *EventDrivenEngine) ProcessCertificates(qc *hotstuff.QuorumCert) error {
@@ -238,7 +227,7 @@ func (e *EventDrivenEngine) ProcessCertificates(qc *hotstuff.QuorumCert) error {
 		return err
 	}
 
-	e.safety.UpdateLockQCRound(qc.View.Round)
+	e.UpdateLockQCRound(qc.View.Round)
 
 	// try to commit locked block and pure the `pendingBlockTree`
 	e.blkTree.ProcessCommit(qc.Hash)

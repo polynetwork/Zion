@@ -73,7 +73,7 @@ func (e *EventDrivenEngine) handleEvents() {
 			// A real Event arrived, process interesting content
 			switch ev := evt.Data.(type) {
 			case hotstuff.RequestEvent:
-				//e.handleRequest(&hotstuff.Request{Proposal: ev.Proposal})
+				e.handleRequest(&hotstuff.Request{Proposal: ev.Proposal})
 
 			case hotstuff.MessageEvent:
 				e.handleMsg(ev.Payload)

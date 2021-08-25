@@ -41,7 +41,7 @@ func (e *EventDrivenEngine) handleLocalTimeout(src hotstuff.Validator, data *hot
 		return err
 	}
 
-	e.safety.IncreaseLastVoteRound(round)
+	e.IncreaseLastVoteRound(round)
 
 	return e.broadcast(data)
 }

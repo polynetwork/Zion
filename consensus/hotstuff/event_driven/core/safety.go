@@ -23,39 +23,18 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
-
-	"github.com/ethereum/go-ethereum/log"
 )
 
-// SafetyRules contains 3 group variables which used to judge that if the new proposal can be voted or committed.
-// lockQC denotes an 2-chain header's qc, and the proposal which related by it can be committed in the next round.
-// lastVote recorded the latest vote and round which used to ensure that there are only one vote in single round.
-// lastCommittedQC represent an 3-chain header which have already been committed into pendingBlockTree/chain.
-type SafetyRules struct {
-	epoch uint64
-
-	logger log.Logger
-
-	lockQCRound   *big.Int
-	lastVoteRound *big.Int
-
-	blkTree *BlockTree
-}
-
-func NewSafetyRules(epoch uint64, blkTree *BlockTree) *SafetyRules {
-	return &SafetyRules{logger: log.New()}
-}
-
 // IncreaseLastVoteRound commit not to vote in rounds lower than target
-func (sr *SafetyRules) IncreaseLastVoteRound(rd *big.Int) {
-	if sr.lastVoteRound.Cmp(rd) < 0 {
-		sr.lastVoteRound = rd
+func (e *EventDrivenEngine) IncreaseLastVoteRound(rd *big.Int) {
+	if e.lastVoteRound.Cmp(rd) < 0 {
+		e.lastVoteRound = rd
 	}
 }
 
 // UpdateLockQC update the latest quorum certificate after voteRule judgement succeed.
-func (sr *SafetyRules) UpdateLockQCRound(round *big.Int) {
-	sr.lockQCRound = round
+func (e *EventDrivenEngine) UpdateLockQCRound(round *big.Int) {
+	e.lockQCRound = round
 }
 
 // VoteRule validator should check vote in consensus round:
@@ -65,25 +44,25 @@ func (sr *SafetyRules) UpdateLockQCRound(round *big.Int) {
 // we should ensure that only one vote in different round with first two items,
 // and the last item used to make sure that there were `2F + 1` votes have been locked last in 3-chain round,
 // and the proposal of that round should be current proposal's grand pa or justifyQC's parent.
-func (sr *SafetyRules) VoteRule(proposalRound, proposalJustifyQCRound *big.Int) bool {
+func (e *EventDrivenEngine) VoteRule(proposalRound, proposalJustifyQCRound *big.Int) bool {
 	if proposalRound == nil || proposalJustifyQCRound == nil {
-		sr.logger.Error("[safety voteRule]", "some params invalid", "nil")
+		e.logger.Error("[safety voteRule]", "some params invalid", "nil")
 		return false
 	}
 
-	if proposalRound.Cmp(sr.lastVoteRound) <= 0 {
-		sr.logger.Error("[safety voteRule]", "this round already voted, proposalRound ", proposalRound, "lastVoteRound", sr.lastVoteRound)
+	if proposalRound.Cmp(e.lastVoteRound) <= 0 {
+		e.logger.Error("[safety voteRule]", "this round already voted, proposalRound ", proposalRound, "lastVoteRound", e.lastVoteRound)
 		return false
 	}
-	if proposalJustifyQCRound.Cmp(sr.lockQCRound) < 0 {
-		sr.logger.Error("[safety voteRule]", "proposal parent qc round should be greater, justifyQCRound ", proposalJustifyQCRound, "lockQCRound", sr.lockQCRound)
+	if proposalJustifyQCRound.Cmp(e.lockQCRound) < 0 {
+		e.logger.Error("[safety voteRule]", "proposal parent qc round should be greater, justifyQCRound ", proposalJustifyQCRound, "lockQCRound", e.lockQCRound)
 		return false
 	}
 
 	return true
 }
 
-func (sr *SafetyRules) MakeVote(proposal *types.Block) (*Vote, error) {
+func (e *EventDrivenEngine) MakeVote(proposal *types.Block) (*Vote, error) {
 	justifyQC, proposalRound, err := extraProposal(proposal)
 	if err != nil {
 		return nil, err
@@ -91,24 +70,24 @@ func (sr *SafetyRules) MakeVote(proposal *types.Block) (*Vote, error) {
 	justifyQCRound := justifyQC.View.Round
 	justifyQCHeight := justifyQC.View.Height
 
-	justifyQCBlock := sr.blkTree.GetBlockAndCheckHeight(justifyQC.Hash, justifyQCHeight)
+	justifyQCBlock := e.blkTree.GetBlockAndCheckHeight(justifyQC.Hash, justifyQCHeight)
 	if justifyQCBlock == nil {
 		return nil, fmt.Errorf("justifyQC block (hash, height)not exist, (%v, %v)", justifyQC.Hash, justifyQCHeight)
 	}
 
-	if proposalRound.Cmp(sr.lastVoteRound) <= 0 {
+	if proposalRound.Cmp(e.lastVoteRound) <= 0 {
 		//sr.logger.Error("[safety voteRule]", "this round already voted, proposalRound ", proposalRound, "lastVoteRound", sr.lastVoteRound)
-		return nil, fmt.Errorf("proposalRound <= lastVoteRound, (%v, %v)", proposalRound, sr.lastVoteRound)
+		return nil, fmt.Errorf("proposalRound <= lastVoteRound, (%v, %v)", proposalRound, e.lastVoteRound)
 	}
-	if justifyQCRound.Cmp(sr.lockQCRound) < 0 {
+	if justifyQCRound.Cmp(e.lockQCRound) < 0 {
 		//sr.logger.Error("[safety voteRule]", "proposal parent qc round should be greater, justifyQCRound ", proposalJustifyQCRound, "lockQCRound", sr.lockQCRound)
-		return nil, fmt.Errorf("justifyQCRound < lockQCRound, (%v, %v)", justifyQCRound, sr.lockQCRound)
+		return nil, fmt.Errorf("justifyQCRound < lockQCRound, (%v, %v)", justifyQCRound, e.lockQCRound)
 	}
 
 	// qc.parent.round + 1 == qc.round
 	qcParentHash := justifyQCBlock.ParentHash()
 	qcParentHeight := new(big.Int).Sub(justifyQCHeight, common.Big1)
-	qcParentBlock := sr.blkTree.GetBlockAndCheckHeight(qcParentHash, qcParentHeight)
+	qcParentBlock := e.blkTree.GetBlockAndCheckHeight(qcParentHash, qcParentHeight)
 	_, qcParentRound, err := extraProposal(qcParentBlock)
 	if err != nil {
 		return nil, err
@@ -119,13 +98,13 @@ func (sr *SafetyRules) MakeVote(proposal *types.Block) (*Vote, error) {
 
 	qcGrandHash := qcParentBlock.ParentHash()
 	qcGrandHeight := new(big.Int).Sub(qcParentHeight, common.Big1)
-	qcGrandBlock := sr.blkTree.GetBlockAndCheckHeight(qcGrandHash, qcGrandHeight)
+	qcGrandBlock := e.blkTree.GetBlockAndCheckHeight(qcGrandHash, qcGrandHeight)
 	if qcGrandBlock == nil {
 		return nil, fmt.Errorf("justifyQC grand-pa (hash, height) not exist, (%v, %v)", qcGrandHash, qcGrandHeight)
 	}
 
 	vote := &Vote{
-		Epoch:       sr.epoch,
+		Epoch:       e.epoch,
 		Hash:        proposal.Hash(),
 		Round:       proposalRound,
 		ParentHash:  justifyQC.Hash,
@@ -146,6 +125,7 @@ else
 return nil
 */
 // todo: useless
-func (sr *SafetyRules) CommitRule(proposalJustifyQCRound, proposalJustifyQCParentRound *big.Int) bool {
+func (e *EventDrivenEngine) CommitRule(proposalJustifyQCRound, proposalJustifyQCParentRound *big.Int) bool {
 	return false
 }
+
