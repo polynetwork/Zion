@@ -18,6 +18,7 @@
 package cross_chain_manager
 
 import (
+	"encoding/hex"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
@@ -30,9 +31,11 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	polycomm "github.com/polynetwork/poly/common"
 )
 
 const contractName = "cross chain manager"
@@ -152,7 +155,47 @@ func ImportOuterTransfer(native *native.NativeContract) ([]byte, error) {
 		return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
 	}
 
+	//NOTE, you need to store the tx in this
+	err = MakeTransaction(native, txParam, chainID)
+	if err != nil {
+		return nil, err
+	}
+
 	return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
+}
+
+func genMerkleTxHash(params *scom.MakeTxParam, fromChainID uint64) []byte {
+	sink := polycomm.NewZeroCopySink(nil)
+	sink.WriteUint64(fromChainID)
+	params.Serialization(sink)
+	return crypto.Keccak256(sink.Bytes())
+}
+
+func MakeTransaction(service *native.NativeContract, params *scom.MakeTxParam, fromChainID uint64) error {
+
+	merkleValue := &scom.ToMerkleValue{
+		TxHash:      genMerkleTxHash(params, fromChainID),
+		FromChainID: fromChainID,
+		MakeTxParam: params,
+	}
+
+	sink := polycomm.NewZeroCopySink(nil)
+	merkleValue.Serialization(sink)
+	err := PutRequest(service, merkleValue.TxHash, params.ToChainID, sink.Bytes())
+	if err != nil {
+		return fmt.Errorf("MakeTransaction, putRequest error:%s", err)
+	}
+	chainIDBytes := utils.GetUint64Bytes(params.ToChainID)
+	key := hex.EncodeToString(utils.ConcatKey(utils.CrossChainManagerContractAddress, []byte(scom.REQUEST), chainIDBytes, merkleValue.TxHash))
+	scom.NotifyMakeProof(service, fromChainID, params.ToChainID, hex.EncodeToString(params.TxHash), key)
+	return nil
+}
+
+func PutRequest(native *native.NativeContract, txHash []byte, chainID uint64, request []byte) error {
+	contract := utils.CrossChainManagerContractAddress
+	chainIDBytes := utils.GetUint64Bytes(chainID)
+	scom.PutBytes(native, utils.ConcatKey(contract, []byte(scom.REQUEST), chainIDBytes, txHash), request)
+	return nil
 }
 
 func MultiSign(native *native.NativeContract) ([]byte, error) {

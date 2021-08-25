@@ -33,3 +33,12 @@ func CheckDoneTx(native *native.NativeContract, crossChainID []byte, chainID uin
 	}
 	return nil
 }
+
+func PutBytes(native *native.NativeContract, key []byte, value []byte) {
+	native.GetCacheDB().Put(key, cstates.GenRawStorageItem(value))
+}
+
+func NotifyMakeProof(native *native.NativeContract, fromChainID, toChainID uint64, txHash string, key string) {
+
+	native.AddNotify(ABI, []string{NOTIFY_MAKE_PROOF}, fromChainID, toChainID, txHash, native.ContractRef().BlockHeight(), key)
+}
