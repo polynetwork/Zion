@@ -20,11 +20,11 @@ package core
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -41,7 +41,7 @@ type EventDrivenEngine struct {
 	valset hotstuff.ValidatorSet
 
 	requests  *requestSet
-	messages *MessagePool
+	messages  *MessagePool
 	blkTree   *BlockTree
 	safety    *SafetyRules
 	paceMaker *PaceMaker
@@ -59,8 +59,8 @@ func NewEventDrivenEngine(valset hotstuff.ValidatorSet) *EventDrivenEngine {
 	return nil
 }
 
-// ProcessNewRoundEvent proposer at this round get an new proposal and broadcast to all validators.
-func (e *EventDrivenEngine) ProcessNewRoundEvent() error {
+// handleNewRound proposer at this round get an new proposal and broadcast to all validators.
+func (e *EventDrivenEngine) handleNewRound() error {
 	view := e.currentView()
 	e.valset.CalcProposerByIndex(view.Round.Uint64())
 
@@ -155,10 +155,10 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 	return e.encodeAndBroadcast(MsgTypeVote, vote)
 }
 
-// ProcessVoteMsg validate vote message and try to assemble qc
-func (e *EventDrivenEngine) ProcessVoteMsg(src hotstuff.Validator, data *hotstuff.Message) error {
+// handleVote validate vote message and try to assemble qc
+func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Message) error {
 	var (
-		vote *Vote
+		vote    *Vote
 		msgType = MsgTypeVote
 	)
 
@@ -166,11 +166,11 @@ func (e *EventDrivenEngine) ProcessVoteMsg(src hotstuff.Validator, data *hotstuf
 	if err := data.Decode(&vote); err != nil {
 		logger.Trace("Failed to decode", "type", msgType, "err", err)
 		return errFailedDecodeNewView
- 	}
+	}
 
- 	// todo: first two blocks
- 	if vote.Hash == utils.EmptyHash || vote.ParentHash == utils.EmptyHash || vote.Round == nil || vote.ParentRound == nil {
- 		return fmt.Errorf("invalid vote")
+	// todo: first two blocks
+	if vote.Hash == utils.EmptyHash || vote.ParentHash == utils.EmptyHash || vote.Round == nil || vote.ParentRound == nil {
+		return fmt.Errorf("invalid vote")
 	}
 
 	if err := e.checkBlockExist(vote.Hash, vote.Round); err != nil {
@@ -184,23 +184,41 @@ func (e *EventDrivenEngine) ProcessVoteMsg(src hotstuff.Validator, data *hotstuf
 		return err
 	}
 
-	if e.messages.VoteSize(vote.Hash) >= e.Q() {
-		// todo: format highQC and set block tree high qc
-		// todo(fuk): instance qc and broadcast to all validators
-		//view := &hotstuff.View{
-		//	Round:  e.paceMaker.CurrentRound(),
-		//	Height: e.paceMaker.CurrentHeight(),
-		//}
-		//qc := &hotstuff.QuorumCert{
-		//	View:     view,
-		//	Hash:     vote.Hash,
-		//	Proposer: common.Address{},
-		//	Extra:    nil,
-		//}
+	if e.messages.VoteSize(vote.Hash) < e.Q() {
+		return nil
 	}
+
+	// todo: format highQC and set block tree high qc
+	// todo(fuk): instance qc and broadcast to all validators
+	view := &hotstuff.View{
+		Round:  e.paceMaker.CurrentRound(),
+		Height: e.paceMaker.CurrentHeight(),
+	}
+	qc := &hotstuff.QuorumCert{
+		View:     view,
+		Hash:     vote.Hash,
+		Proposer: common.Address{},
+		Extra:    nil,
+	}
+
+	// paceMaker send qc to next leader
+	if err := e.paceMaker.AdvanceRound(qc); err != nil {
+		return err
+	}
+	e.blkTree.UpdateHighQC(qc)
+
 	return nil
 }
 
+func (e *EventDrivenEngine) handleLocalTimeout() error {
+	return nil
+}
+
+func (e *EventDrivenEngine) handleRemoteTimeout() error {
+	return nil
+}
+
+// todo: add this function into handleProposal
 // ProcessCertificates validate and handle QC/TC
 func (e *EventDrivenEngine) ProcessCertificates(qc *hotstuff.QuorumCert) error {
 	if err := e.paceMaker.AdvanceRound(qc); err != nil {

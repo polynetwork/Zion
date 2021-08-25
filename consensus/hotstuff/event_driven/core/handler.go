@@ -65,13 +65,13 @@ func (e *EventDrivenEngine) handleEvents() {
 
 	for {
 		select {
-		case event, ok := <-e.events.Chan():
+		case evt, ok := <-e.events.Chan():
 			if !ok {
 				logger.Error("Failed to receive msg Event")
 				return
 			}
 			// A real Event arrived, process interesting content
-			switch ev := event.Data.(type) {
+			switch ev := evt.Data.(type) {
 			case hotstuff.RequestEvent:
 				//e.handleRequest(&hotstuff.Request{Proposal: ev.Proposal})
 
@@ -79,7 +79,7 @@ func (e *EventDrivenEngine) handleEvents() {
 				e.handleMsg(ev.Payload)
 
 			case backlogEvent:
-				e.handleCheckedMsg(ev.msg, ev.src)
+				e.handleCheckedMsg(ev.src, ev.msg)
 			}
 
 		case _, ok := <-e.timeoutSub.Chan():
@@ -123,18 +123,18 @@ func (e *EventDrivenEngine) handleMsg(payload []byte) error {
 	}
 
 	// handle checked Message
-	if err := e.handleCheckedMsg(msg, src); err != nil {
+	if err := e.handleCheckedMsg(src, msg); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (e *EventDrivenEngine) handleCheckedMsg(msg *hotstuff.Message, src hotstuff.Validator) (err error) {
+func (e *EventDrivenEngine) handleCheckedMsg(src hotstuff.Validator, msg *hotstuff.Message) (err error) {
 	switch msg.Code {
 	case MsgTypeProposal:
-		err = e.handleProposal(msg.Payload())
+		err = e.handleProposal(src, msg)
 	case MsgTypeVote:
-		// err = e.ProcessVoteMsg()
+		err = e.handleVote(src, msg)
 	case MsgTypeTimeout:
 		e.paceMaker.ProcessRemoteTimeout(src.Address(), msg.View.Round)
 	default:
