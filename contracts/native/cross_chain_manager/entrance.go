@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -180,14 +181,15 @@ func MakeTransaction(service *native.NativeContract, params *scom.MakeTxParam, f
 	}
 	chainIDBytes := utils.GetUint64Bytes(params.ToChainID)
 	key := hex.EncodeToString(utils.ConcatKey(utils.CrossChainManagerContractAddress, []byte(scom.REQUEST), chainIDBytes, merkleValue.TxHash))
-	scom.NotifyMakeProof(service, fromChainID, params.ToChainID, hex.EncodeToString(params.TxHash), key)
+	scom.NotifyMakeProof(service, hex.EncodeToString(sink.Bytes()), key)
 	return nil
 }
 
 func PutRequest(native *native.NativeContract, txHash []byte, chainID uint64, request []byte) error {
+	hash := crypto.Keccak256(request)
 	contract := utils.CrossChainManagerContractAddress
 	chainIDBytes := utils.GetUint64Bytes(chainID)
-	scom.PutBytes(native, utils.ConcatKey(contract, []byte(scom.REQUEST), chainIDBytes, txHash), request)
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.REQUEST), chainIDBytes, txHash), hash)
 	return nil
 }
 
