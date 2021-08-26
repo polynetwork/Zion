@@ -129,7 +129,7 @@ func (c *core) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
 	// Add proof of consensus
 	proposal := c.current.Proposal()
 	if msg.Code == MsgTypePrepareVote && proposal != nil {
-		seal, err := c.signer.SignVote(proposal)
+		seal, err := c.signer.SignHash(proposal.Hash())
 		if err != nil {
 			return nil, err
 		}

@@ -41,7 +41,7 @@ type mockBackend struct {
 	id  uint64
 	sys *testSystem
 
-	engine CoreEngine
+	engine hotstuff.CoreEngine
 	signer hotstuff.Signer
 	peers  hotstuff.ValidatorSet
 	events *event.TypeMux
@@ -195,7 +195,7 @@ func (m *mockSinger) SigHash(header *types.Header) (hash common.Hash) {
 	return header.Hash()
 }
 
-func (m *mockSinger) SignVote(p hotstuff.Proposal) ([]byte, error) {
+func (m *mockSinger) SignHash(hash common.Hash) ([]byte, error) {
 	return nil, nil
 }
 

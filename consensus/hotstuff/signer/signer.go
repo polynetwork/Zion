@@ -45,8 +45,7 @@ func (s *SignerImpl) Sign(data []byte) ([]byte, error) {
 	return crypto.Sign(hashData, s.privateKey)
 }
 
-func (s *SignerImpl) SignVote(proposal hotstuff.Proposal) ([]byte, error) {
-	hash := proposal.Hash()
+func (s *SignerImpl) SignHash(hash common.Hash) ([]byte, error) {
 	voteHash := s.wrapCommittedSeal(hash)
 	return s.Sign(voteHash)
 }

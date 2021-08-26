@@ -14,8 +14,8 @@ type Signer interface {
 	// SigHash generate header hash without signature
 	SigHash(header *types.Header) (hash common.Hash)
 
-	// SignVote returns an signature of wrapped proposal hash which used as an vote
-	SignVote(proposal Proposal) ([]byte, error)
+	// SignHash returns an signature of wrapped proposal hash which used as an vote
+	SignHash(hash common.Hash) ([]byte, error)
 
 	// Recover extracts the proposer address from a signed header.
 	Recover(h *types.Header) (common.Address, error)
