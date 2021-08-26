@@ -27,7 +27,7 @@ var (
 )
 
 // CrossChainManagerABI is the input ABI used to generate the binding from.
-const CrossChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"MultiSign\",\"type\":\"bytes\"}],\"name\":\"btcTxMultiSignEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"FromChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"FromTxHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"}],\"name\":\"btcTxToRelayEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"amts\",\"type\":\"uint64[]\"}],\"name\":\"makeBtcTxEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"MethodBlackChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MethodContractName\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"SourceChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"Height\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"Proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"RelayerAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"Extra\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"HeaderOrCrossChainMsg\",\"type\":\"bytes\"}],\"name\":\"MethodImportOuterTransfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"internalType\":\"string\",\"name\":\"Address\",\"type\":\"string\"},{\"internalType\":\"bytes[]\",\"name\":\"Signs\",\"type\":\"bytes[]\"}],\"name\":\"MethodMultiSign\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"MethodWhiteChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const CrossChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"merkleValueHex\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlockHeight\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"}],\"name\":\"NOTIFY_MAKE_PROOF_EVENT\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"MultiSign\",\"type\":\"bytes\"}],\"name\":\"btcTxMultiSignEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"FromChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"FromTxHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"}],\"name\":\"btcTxToRelayEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"amts\",\"type\":\"uint64[]\"}],\"name\":\"makeBtcTxEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"MethodBlackChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MethodContractName\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"SourceChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"Height\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"Proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"RelayerAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"Extra\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"HeaderOrCrossChainMsg\",\"type\":\"bytes\"}],\"name\":\"MethodImportOuterTransfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"internalType\":\"string\",\"name\":\"Address\",\"type\":\"string\"},{\"internalType\":\"bytes[]\",\"name\":\"Signs\",\"type\":\"bytes[]\"}],\"name\":\"MethodMultiSign\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"MethodWhiteChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // CrossChainManagerFuncSigs maps the 4-byte function signature to its string representation.
 var CrossChainManagerFuncSigs = map[string]string{
@@ -39,7 +39,7 @@ var CrossChainManagerFuncSigs = map[string]string{
 }
 
 // CrossChainManagerBin is the compiled bytecode used for deploying new contracts.
-var CrossChainManagerBin = "0x608060405234801561001057600080fd5b50610471806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80630d2ff8001461005c5780632ae0b4bd1461005c5780634dbb371c146100855780639921164e1461009e578063e50f8f44146100b8575b600080fd5b61007061006a366004610168565b50600090565b60405190151581526020015b60405180910390f35b61007061009336600461018a565b600095945050505050565b6100706100ac3660046102d2565b60009695505050505050565b606060405161007c919061039f565b600082601f8301126100d857600080fd5b813567ffffffffffffffff8111156100f2576100f2610425565b610105601f8201601f19166020016103f4565b81815284602083860101111561011a57600080fd5b816020850160208301376000918101602001919091529392505050565b803563ffffffff8116811461014b57600080fd5b919050565b803567ffffffffffffffff8116811461014b57600080fd5b60006020828403121561017a57600080fd5b61018382610150565b9392505050565b600080600080600060a086880312156101a257600080fd5b6101ab86610150565b945060208087013567ffffffffffffffff808211156101c957600080fd5b6101d58a838b016100c7565b965060408901359150808211156101eb57600080fd5b6101f78a838b016100c7565b9550606089013591508082111561020d57600080fd5b6102198a838b016100c7565b9450608089013591508082111561022f57600080fd5b818901915089601f83011261024357600080fd5b81358181111561025557610255610425565b8060051b6102648582016103f4565b8281528581019085870183870188018f101561027f57600080fd5b600093505b848410156102bd57858135111561029a57600080fd5b6102a98f8983358a01016100c7565b835260019390930192918701918701610284565b50809750505050505050509295509295909350565b60008060008060008060c087890312156102eb57600080fd5b6102f487610150565b955061030260208801610137565b9450604087013567ffffffffffffffff8082111561031f57600080fd5b61032b8a838b016100c7565b9550606089013591508082111561034157600080fd5b61034d8a838b016100c7565b9450608089013591508082111561036357600080fd5b61036f8a838b016100c7565b935060a089013591508082111561038557600080fd5b5061039289828a016100c7565b9150509295509295509295565b600060208083528351808285015260005b818110156103cc578581018301518582016040015282016103b0565b818111156103de576000604083870101525b50601f01601f1916929092016040019392505050565b604051601f8201601f1916810167ffffffffffffffff8111828210171561041d5761041d610425565b604052919050565b634e487b7160e01b600052604160045260246000fdfea264697066735822122055ee56d683357c754fc090d6da5ff5a5aa54e9613fe52c14c5b599739ee154a164736f6c63430008060033"
+var CrossChainManagerBin = "0x608060405234801561001057600080fd5b50610471806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80630d2ff8001461005c5780632ae0b4bd1461005c5780634dbb371c146100855780639921164e1461009e578063e50f8f44146100b8575b600080fd5b61007061006a366004610168565b50600090565b60405190151581526020015b60405180910390f35b61007061009336600461018a565b600095945050505050565b6100706100ac3660046102d2565b60009695505050505050565b606060405161007c919061039f565b600082601f8301126100d857600080fd5b813567ffffffffffffffff8111156100f2576100f2610425565b610105601f8201601f19166020016103f4565b81815284602083860101111561011a57600080fd5b816020850160208301376000918101602001919091529392505050565b803563ffffffff8116811461014b57600080fd5b919050565b803567ffffffffffffffff8116811461014b57600080fd5b60006020828403121561017a57600080fd5b61018382610150565b9392505050565b600080600080600060a086880312156101a257600080fd5b6101ab86610150565b945060208087013567ffffffffffffffff808211156101c957600080fd5b6101d58a838b016100c7565b965060408901359150808211156101eb57600080fd5b6101f78a838b016100c7565b9550606089013591508082111561020d57600080fd5b6102198a838b016100c7565b9450608089013591508082111561022f57600080fd5b818901915089601f83011261024357600080fd5b81358181111561025557610255610425565b8060051b6102648582016103f4565b8281528581019085870183870188018f101561027f57600080fd5b600093505b848410156102bd57858135111561029a57600080fd5b6102a98f8983358a01016100c7565b835260019390930192918701918701610284565b50809750505050505050509295509295909350565b60008060008060008060c087890312156102eb57600080fd5b6102f487610150565b955061030260208801610137565b9450604087013567ffffffffffffffff8082111561031f57600080fd5b61032b8a838b016100c7565b9550606089013591508082111561034157600080fd5b61034d8a838b016100c7565b9450608089013591508082111561036357600080fd5b61036f8a838b016100c7565b935060a089013591508082111561038557600080fd5b5061039289828a016100c7565b9150509295509295509295565b600060208083528351808285015260005b818110156103cc578581018301518582016040015282016103b0565b818111156103de576000604083870101525b50601f01601f1916929092016040019392505050565b604051601f8201601f1916810167ffffffffffffffff8111828210171561041d5761041d610425565b604052919050565b634e487b7160e01b600052604160045260246000fdfea26469706673582212201a059f44d01f274f24f461ee3c212b8be9d81765a8258a100dc0f0b31ae8579164736f6c63430008060033"
 
 // DeployCrossChainManager deploys a new Ethereum contract, binding an instance of CrossChainManager to it.
 func DeployCrossChainManager(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CrossChainManager, error) {
@@ -300,6 +300,142 @@ func (_CrossChainManager *CrossChainManagerSession) MethodWhiteChain(ChainID uin
 // Solidity: function MethodWhiteChain(uint64 ChainID) returns(bool success)
 func (_CrossChainManager *CrossChainManagerTransactorSession) MethodWhiteChain(ChainID uint64) (*types.Transaction, error) {
 	return _CrossChainManager.Contract.MethodWhiteChain(&_CrossChainManager.TransactOpts, ChainID)
+}
+
+// CrossChainManagerNOTIFYMAKEPROOFEVENTIterator is returned from FilterNOTIFYMAKEPROOFEVENT and is used to iterate over the raw logs and unpacked data for NOTIFYMAKEPROOFEVENT events raised by the CrossChainManager contract.
+type CrossChainManagerNOTIFYMAKEPROOFEVENTIterator struct {
+	Event *CrossChainManagerNOTIFYMAKEPROOFEVENT // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *CrossChainManagerNOTIFYMAKEPROOFEVENTIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(CrossChainManagerNOTIFYMAKEPROOFEVENT)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(CrossChainManagerNOTIFYMAKEPROOFEVENT)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *CrossChainManagerNOTIFYMAKEPROOFEVENTIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *CrossChainManagerNOTIFYMAKEPROOFEVENTIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// CrossChainManagerNOTIFYMAKEPROOFEVENT represents a NOTIFYMAKEPROOFEVENT event raised by the CrossChainManager contract.
+type CrossChainManagerNOTIFYMAKEPROOFEVENT struct {
+	MerkleValueHex string
+	BlockHeight    uint64
+	Key            string
+	Raw            types.Log // Blockchain specific contextual infos
+}
+
+// FilterNOTIFYMAKEPROOFEVENT is a free log retrieval operation binding the contract event 0xa01d1b38777d1877e6b1d5aac0794b6b3e700651b963abcfd2849d4cc843f186.
+//
+// Solidity: event NOTIFY_MAKE_PROOF_EVENT(string merkleValueHex, uint64 BlockHeight, string key)
+func (_CrossChainManager *CrossChainManagerFilterer) FilterNOTIFYMAKEPROOFEVENT(opts *bind.FilterOpts) (*CrossChainManagerNOTIFYMAKEPROOFEVENTIterator, error) {
+
+	logs, sub, err := _CrossChainManager.contract.FilterLogs(opts, "NOTIFY_MAKE_PROOF_EVENT")
+	if err != nil {
+		return nil, err
+	}
+	return &CrossChainManagerNOTIFYMAKEPROOFEVENTIterator{contract: _CrossChainManager.contract, event: "NOTIFY_MAKE_PROOF_EVENT", logs: logs, sub: sub}, nil
+}
+
+// WatchNOTIFYMAKEPROOFEVENT is a free log subscription operation binding the contract event 0xa01d1b38777d1877e6b1d5aac0794b6b3e700651b963abcfd2849d4cc843f186.
+//
+// Solidity: event NOTIFY_MAKE_PROOF_EVENT(string merkleValueHex, uint64 BlockHeight, string key)
+func (_CrossChainManager *CrossChainManagerFilterer) WatchNOTIFYMAKEPROOFEVENT(opts *bind.WatchOpts, sink chan<- *CrossChainManagerNOTIFYMAKEPROOFEVENT) (event.Subscription, error) {
+
+	logs, sub, err := _CrossChainManager.contract.WatchLogs(opts, "NOTIFY_MAKE_PROOF_EVENT")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(CrossChainManagerNOTIFYMAKEPROOFEVENT)
+				if err := _CrossChainManager.contract.UnpackLog(event, "NOTIFY_MAKE_PROOF_EVENT", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseNOTIFYMAKEPROOFEVENT is a log parse operation binding the contract event 0xa01d1b38777d1877e6b1d5aac0794b6b3e700651b963abcfd2849d4cc843f186.
+//
+// Solidity: event NOTIFY_MAKE_PROOF_EVENT(string merkleValueHex, uint64 BlockHeight, string key)
+func (_CrossChainManager *CrossChainManagerFilterer) ParseNOTIFYMAKEPROOFEVENT(log types.Log) (*CrossChainManagerNOTIFYMAKEPROOFEVENT, error) {
+	event := new(CrossChainManagerNOTIFYMAKEPROOFEVENT)
+	if err := _CrossChainManager.contract.UnpackLog(event, "NOTIFY_MAKE_PROOF_EVENT", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 
 // CrossChainManagerBtcTxMultiSignEventIterator is returned from FilterBtcTxMultiSignEvent and is used to iterate over the raw logs and unpacked data for BtcTxMultiSignEvent events raised by the CrossChainManager contract.

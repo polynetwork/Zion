@@ -40,5 +40,5 @@ func PutBytes(native *native.NativeContract, key []byte, value []byte) {
 
 func NotifyMakeProof(native *native.NativeContract, fromChainID, toChainID uint64, txHash string, key string) {
 
-	native.AddNotify(ABI, []string{NOTIFY_MAKE_PROOF}, fromChainID, toChainID, txHash, native.ContractRef().BlockHeight(), key)
+	native.AddNotify(ABI, []string{NOTIFY_MAKE_PROOF_EVENT}, fromChainID, toChainID, txHash, native.ContractRef().BlockHeight(), key)
 }
