@@ -80,7 +80,7 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 
 	// add validators in snapshot to extraData's validators section
 	valset := s.snap()
-	extra, err := s.signer.PrepareExtra(header, valset)
+	extra, err := s.core.PrepareExtra(header, valset)
 	if err != nil {
 		return err
 	}

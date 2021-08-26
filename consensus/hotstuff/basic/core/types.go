@@ -37,6 +37,7 @@ type CoreEngine interface {
 	// to avoid any race condition of coming propagated blocks
 	IsCurrentProposal(blockHash common.Hash) bool
 
+	PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error)
 	// CurrentRoundState() *roundState
 }
 

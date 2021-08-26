@@ -21,7 +21,7 @@ type Signer interface {
 	Recover(h *types.Header) (common.Address, error)
 
 	// PrepareExtra returns a extra-data of the given header and validators, without `Seal` and `CommittedSeal`
-	PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
+	// PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
 
 	// SealBeforeCommit writes the extra-data field of a block header with given seal.
 	SealBeforeCommit(h *types.Header) error
