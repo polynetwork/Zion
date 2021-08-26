@@ -27,18 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-// todo input message decode
-//func (e *EventDrivenEngine) handleLocalTimeout(evt *TimeoutEvent) error {
-//	round := evt.Round
-//	if err := e.messages.AddTimeout(round.Uint64(), data); err != nil {
-//		return err
-//	}
-//
-//	e.IncreaseLastVoteRound(round)
-//
-//	return e.broadcast(data)
-//}
-
 func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
 	var (
 		evt *TimeoutEvent
@@ -53,21 +41,36 @@ func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff
 	}
 
 	if e.isSelf(src.Address()) {
-		e.IncreaseLastVoteRound(round)
+		e.increaseLastVoteRound(round)
 	}
 
 	if e.messages.TimeoutSize(round.Uint64()) == e.Q() {
 		tc := &hotstuff.QuorumCert{}
-		return e.advanceRound(tc)
+		return e.advanceRound(tc, true)
 	}
 
 	return nil
 }
 
-func (e *EventDrivenEngine) advanceRound(qc *hotstuff.QuorumCert) error {
+// advanceRound
+// 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
+// 一般而言只有leader才能收到qc，
+func (e *EventDrivenEngine) advanceRound(qc *hotstuff.QuorumCert, broadcast bool) error {
 	qcRound := qc.View.Round
 	if qcRound.Cmp(e.curRound) < 0 {
 		return fmt.Errorf("qcRound < currentRound, (%v, %v)", qcRound, e.curRound)
+	}
+
+	// broadcast to next leader first, we will use `curRound` again in broadcasting.
+	if !e.IsProposer() && broadcast {
+		payload, err := Encode(qc)
+		if err != nil {
+			return err
+		}
+		_ = e.broadcast(&hotstuff.Message{
+			Code: MsgTypeQC,
+			Msg:  payload,
+		})
 	}
 
 	// current round increase
@@ -76,22 +79,10 @@ func (e *EventDrivenEngine) advanceRound(qc *hotstuff.QuorumCert) error {
 	// recalculate proposer
 	e.valset.CalcProposerByIndex(e.curRound.Uint64())
 
-	if !e.isProposer() {
-		// send qc to next leader
-		payload, err := Encode(qc)
-		if err != nil {
-			return err
-		}
-		if err := e.broadcast(&hotstuff.Message{
-			Code: MsgTypeQC,
-			Msg:  payload,
-		}); err != nil {
-			return err
-		}
-	}
-
+	// reset timer
 	e.newRoundChangeTimer()
 
+	// get into new consensus round
 	return e.handleNewRound()
 }
 

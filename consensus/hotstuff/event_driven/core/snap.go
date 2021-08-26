@@ -17,3 +17,29 @@
  */
 
 package core
+
+import (
+	"github.com/ethereum/go-ethereum/core/types"
+	"math/big"
+)
+
+type Snapshot struct {
+	Epoch uint64
+
+	CurrentRound       *big.Int
+	CurrentHeight      *big.Int
+	LastVoteRound      *big.Int
+	HighestCommitRound *big.Int
+
+	Blocks []*types.Block
+}
+
+// storeSnapshot generate snapshot with consensus info and marshal and store the structure.
+func (e *EventDrivenEngine) storeSnapshot() ([]byte, error) {
+	return nil, nil
+}
+
+// loadSnapshot load snapshot info from db and unmarshal to structure.
+func (e *EventDrivenEngine) loadSnapshot() (*Snapshot, error) {
+	return nil, nil
+}

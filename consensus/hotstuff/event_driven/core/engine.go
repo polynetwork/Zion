@@ -17,3 +17,50 @@
  */
 
 package core
+
+import (
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
+)
+
+// todo:
+func (e *EventDrivenEngine) Start() error {
+	return nil
+}
+
+// todo:
+func (e *EventDrivenEngine) Stop() error {
+	return nil
+}
+
+func (e *EventDrivenEngine) IsProposer() bool {
+	if e.valset.IsProposer(e.address()) {
+		return true
+	}
+	return false
+}
+
+// verify if a hash is the same as the proposed block in the current pending request
+//
+// this is useful when the engine is currently the speaker
+//
+// pending request is populated right at the request stage so this would give us the earliest verification
+// to avoid any race condition of coming propagated blocks
+// 判断是否已经提交或者正在提交, 这样一来，request必须在一开始就写入到blockTree
+func (e *EventDrivenEngine) IsCurrentProposal(blockHash common.Hash) bool {
+	block := e.blkTree.GetBlockByHash(blockHash)
+	if block == nil {
+		return false
+	}
+
+	if block.NumberU64() != e.curHeight.Uint64() {
+		return false
+	}
+
+	return true
+}
+
+func (e *EventDrivenEngine) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
+	return generateExtra(header, valSet, e.epoch, e.curRound)
+}

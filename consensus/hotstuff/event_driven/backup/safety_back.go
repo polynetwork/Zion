@@ -47,26 +47,26 @@ package backup
 //	return &SafetyRules{logger: log.New()}
 //}
 //
-//// IncreaseLastVoteRound commit not to vote in rounds lower than target
-//func (sr *SafetyRules) IncreaseLastVoteRound(rd *big.Int) {
+//// increaseLastVoteRound commit not to vote in rounds lower than target
+//func (sr *SafetyRules) increaseLastVoteRound(rd *big.Int) {
 //	if sr.lastVoteRound.Cmp(rd) < 0 {
 //		sr.lastVoteRound = rd
 //	}
 //}
 //
 //// UpdateLockQC update the latest quorum certificate after voteRule judgement succeed.
-//func (sr *SafetyRules) UpdateLockQCRound(round *big.Int) {
+//func (sr *SafetyRules) updateLockQCRound(round *big.Int) {
 //	sr.lockQCRound = round
 //}
 //
-//// VoteRule validator should check vote in consensus round:
+//// voteRule validator should check vote in consensus round:
 //// first, the proposal should be exist in the `PendingBlockTree`
 //// second, the proposal round should be greater than `lastVoteRound`
 //// third, the proposal's justify qc round should NOT be smaller than `lockQCRound`
 //// we should ensure that only one vote in different round with first two items,
 //// and the last item used to make sure that there were `2F + 1` votes have been locked last in 3-chain round,
 //// and the proposal of that round should be current proposal's grand pa or justifyQC's parent.
-//func (sr *SafetyRules) VoteRule(proposalRound, proposalJustifyQCRound *big.Int) bool {
+//func (sr *SafetyRules) voteRule(proposalRound, proposalJustifyQCRound *big.Int) bool {
 //	if proposalRound == nil || proposalJustifyQCRound == nil {
 //		sr.logger.Error("[safety voteRule]", "some params invalid", "nil")
 //		return false
@@ -84,7 +84,7 @@ package backup
 //	return true
 //}
 //
-//func (sr *SafetyRules) MakeVote(proposal *types.Block) (*core.Vote, error) {
+//func (sr *SafetyRules) makeVote(proposal *types.Block) (*core.Vote, error) {
 //	justifyQC, proposalRound, err := core.extraProposal(proposal)
 //	if err != nil {
 //		return nil, err

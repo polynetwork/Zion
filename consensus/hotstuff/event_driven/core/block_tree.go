@@ -28,6 +28,7 @@ import (
 
 // todo: if actually need it
 type BlockTree struct {
+	// todo: qc cache
 	tree   *PendingBlockTree
 	highQC *hotstuff.QuorumCert // the highest qc
 }

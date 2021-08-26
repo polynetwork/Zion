@@ -66,28 +66,28 @@ func init() {
 }
 
 type MsgProposal struct {
-	View     *hotstuff.View
-	Proposal hotstuff.Proposal
+	Epoch     uint64
+	View      *hotstuff.View
+	Proposal  *types.Block
+	JustifyQC *hotstuff.QuorumCert
 }
 
 func (m *MsgProposal) EncodeRLP(w io.Writer) error {
-	block, ok := m.Proposal.(*types.Block)
-	if !ok {
-		return errInvalidProposal
-	}
-	return rlp.Encode(w, []interface{}{m.View, block})
+	return rlp.Encode(w, []interface{}{m.Epoch, m.View, m.Proposal, m.JustifyQC})
 }
 
 func (m *MsgProposal) DecodeRLP(s *rlp.Stream) error {
-	var proposal struct {
-		View     *hotstuff.View
-		Proposal *types.Block
+	var subject struct {
+		Epoch     uint64
+		View      *hotstuff.View
+		Proposal  *types.Block
+		JustifyQC *hotstuff.QuorumCert
 	}
 
-	if err := s.Decode(&proposal); err != nil {
+	if err := s.Decode(&subject); err != nil {
 		return err
 	}
-	m.View, m.Proposal = proposal.View, proposal.Proposal
+	m.Epoch, m.View, m.Proposal, m.JustifyQC = subject.Epoch, subject.View, subject.Proposal, subject.JustifyQC
 	return nil
 }
 
@@ -96,44 +96,55 @@ func (m *MsgProposal) String() string {
 }
 
 type Vote struct {
-	Epoch uint64
-	Hash  common.Hash
-	Round *big.Int
-
-	ParentHash  common.Hash
-	ParentRound *big.Int
-
-	GrandHash  common.Hash
-	GrandRound *big.Int
+	Epoch          uint64
+	Hash           common.Hash
+	View           *hotstuff.View
+	ParentHash     common.Hash
+	ParentView     *hotstuff.View
+	GrandHash      common.Hash
+	GrandView      *hotstuff.View
+	GreatGrandHash common.Hash
+	GreatGrandView *hotstuff.View
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (v *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound, v.GrandHash, v.GrandRound})
+	return rlp.Encode(w, []interface{}{v.Epoch, v.Hash, v.View, v.ParentHash, v.View, v.GrandHash, v.View, v.GreatGrandHash, v.GreatGrandView})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (v *Vote) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
-		Epoch       uint64
-		Hash        common.Hash
-		Round       *big.Int
-		ParentHash  common.Hash
-		ParentRound *big.Int
-		GrandHash   common.Hash
-		GrandRound  *big.Int
+		Epoch          uint64
+		Hash           common.Hash
+		View           *hotstuff.View
+		ParentHash     common.Hash
+		ParentView     *hotstuff.View
+		GrandHash      common.Hash
+		GrandView      *hotstuff.View
+		GreatGrandHash common.Hash
+		GreatGrandView *hotstuff.View
 	}
 
 	if err := s.Decode(&subject); err != nil {
 		return err
 	}
 
-	v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound, v.GrandHash, v.GrandRound = subject.Epoch, subject.Hash, subject.Round, subject.ParentHash, subject.ParentRound, subject.GrandHash, subject.GrandRound
+	v.Epoch, v.Hash, v.View, v.ParentHash, v.ParentView,
+		v.GrandHash, v.GrandView, v.GreatGrandHash, v.GreatGrandView =
+		subject.Epoch, subject.Hash, subject.View, subject.ParentHash, subject.ParentView,
+		subject.GrandHash, subject.GrandView, subject.GreatGrandHash, subject.GreatGrandView
 	return nil
 }
 
 func (v *Vote) String() string {
-	return fmt.Sprintf("{Epoch: %v, Hash: %v, Round: %v, ParentHash: %v, ParentRound: %v}", v.Epoch, v.Hash, v.Round, v.ParentHash, v.ParentRound)
+	if v.GrandView == nil {
+		return fmt.Sprintf("{Epoch: %v, Hash: %v, View: %v, ParentHash: %v, ParentView: %v}", v.Epoch, v.Hash, v.View, v.ParentHash, v.ParentView)
+	} else if v.GreatGrandView == nil {
+		return fmt.Sprintf("{Epoch: %v, Hash: %v, View: %v, ParentHash: %v, ParentView: %v, GrandHash: %v, GrandView: %v}", v.Epoch, v.Hash, v.View, v.ParentHash, v.ParentView, v.GrandHash, v.GrandView)
+	} else {
+		return fmt.Sprintf("{Epoch: %v, Hash: %v, View: %v, ParentHash: %v, ParentView: %v, GrandHash: %v, GrandView: %v, GreateGrandHash: %v, GreateGrandView: %v}", v.Epoch, v.Hash, v.View, v.ParentHash, v.ParentView, v.GrandHash, v.GrandView, v.GreatGrandHash, v.GreatGrandView)
+	}
 }
 
 type TimeoutEvent struct {
@@ -186,6 +197,33 @@ func (ce *CertificateEvent) DecodeRLP(s *rlp.Stream) error {
 
 func (ce *CertificateEvent) String() string {
 	return fmt.Sprintf("{Hash: %v, View: %v, Proposer: %v}", ce.Cert.Hash, ce.Cert.View, ce.Cert.Proposer)
+}
+
+type ExtraSalt struct {
+	Epoch uint64
+	Round *big.Int
+}
+
+func (es *ExtraSalt) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{es.Epoch, es.Round})
+}
+
+func (es *ExtraSalt) DecodeRLP(s *rlp.Stream) error {
+	var subject struct {
+		Epoch uint64
+		Round *big.Int
+	}
+
+	if err := s.Decode(&subject); err != nil {
+		return err
+	}
+
+	es.Epoch, es.Round = subject.Epoch, subject.Round
+	return nil
+}
+
+func (es *ExtraSalt) String() string {
+	return fmt.Sprintf("{Epoch: %v, Round: %v}", es.Epoch, es.Round)
 }
 
 type backlogEvent struct {

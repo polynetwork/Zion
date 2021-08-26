@@ -19,12 +19,12 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/core/types"
 	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
@@ -46,14 +46,24 @@ func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
 	return nil
 }
 
-func (e *EventDrivenEngine) getCurrentPendingRequest() (*types.Block, error) {
+func (e *EventDrivenEngine) generateProposalMessage() (*MsgProposal, error) {
 	req := e.requests.GetRequest(e.currentView())
-	block, ok := req.Proposal.(*types.Block)
+	proposal, ok := req.Proposal.(*types.Block)
 	if !ok {
 		return nil, errProposalConvert
 	}
+	_, justifyQC, err := extraHeader(req.Parent)
+	if err != nil {
+		return nil, errExtraHeader
+	}
 
-	return block, nil
+	msg := &MsgProposal{
+		Epoch:     e.epoch,
+		View:      e.currentView(),
+		Proposal:  proposal,
+		JustifyQC: justifyQC,
+	}
+	return msg, nil
 }
 
 type requestSet struct {

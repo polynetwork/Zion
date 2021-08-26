@@ -26,7 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -34,16 +34,20 @@ import (
 // EventDrivenEngine implement event-driven hotstuff protocol, it obtains:
 // 1.validator set which represent consensus participants
 type EventDrivenEngine struct {
-	config *hotstuff.Config
-	logger log.Logger
-	epoch  uint64
+	config  *hotstuff.Config
+	logger  log.Logger
+	db      ethdb.Database
+	backend hotstuff.Backend
 
 	addr   common.Address
 	signer hotstuff.Signer
 	valset hotstuff.ValidatorSet
 
-	curRound,
-	curHeight *big.Int
+	epoch            uint64
+	epochHeightStart *big.Int
+	epochHeightEnd   *big.Int
+	curRound  *big.Int // 从genesis block 0开始
+	curHeight *big.Int // 从genesis block 0开始
 
 	requests *requestSet
 	messages *MessagePool
@@ -56,8 +60,6 @@ type EventDrivenEngine struct {
 	// safety
 	lockQCRound   *big.Int
 	lastVoteRound *big.Int
-
-	backend hotstuff.Backend
 
 	events *event.TypeMuxSubscription
 	//timeoutSub        *event.TypeMuxSubscription
@@ -72,29 +74,17 @@ func NewEventDrivenEngine(valset hotstuff.ValidatorSet) *EventDrivenEngine {
 
 // handleNewRound proposer at this round get an new proposal and broadcast to all validators.
 func (e *EventDrivenEngine) handleNewRound() error {
-	view := e.currentView()
-
-	if !e.isProposer() {
+	if !e.IsProposer() {
 		return nil
 	}
-
-	// todo: add fields of high qc as justifyQC and current round into pending request
-	proposal, err := e.getCurrentPendingRequest()
+	msg, err := e.generateProposalMessage()
 	if err != nil {
 		return err
 	}
-
-	msg := &MsgProposal{
-		View:     view,
-		Proposal: proposal,
-	}
-
-	// broadcast to all in current round
 	return e.encodeAndBroadcast(MsgTypeProposal, msg)
 }
 
 // handleProposal validate proposal info and vote to the next leader if the proposal is valid
-// todo: modify err type
 func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuff.Message) error {
 	logger := e.newLogger()
 
@@ -102,36 +92,18 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 		msg    *MsgProposal
 		msgTyp = MsgTypeProposal
 	)
-
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
 		return errFailedDecodePrepare
 	}
-	proposal, ok := msg.Proposal.(*types.Block)
-	if !ok {
-		logger.Trace("Failed to decode", "convert err", "not block")
-		return errProposalConvert
-	}
+	proposal := msg.Proposal
+	view := msg.View
+	justifyQC := msg.JustifyQC
+	epoch := msg.Epoch
 
-	justifyQC, proposalRound, err := extraProposal(proposal)
-	if err != nil {
-		return err
+	if epoch != e.epoch {
+		return errEpochInvalid
 	}
-
-	// allow the validator get into the new round before vote
-	if err := e.ProcessCertificates(justifyQC); err != nil {
-		return err
-	}
-
-	currentRound := e.curRound
-	if currentRound.Cmp(proposalRound) != 0 {
-		return errInvalidMessage
-	}
-
-	if !e.valset.IsProposer(proposal.Coinbase()) {
-		return errNotFromProposer
-	}
-
 	if err := e.signer.VerifyQC(justifyQC, e.valset); err != nil {
 		return err
 	}
@@ -139,39 +111,30 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 		return err
 	}
 
-	e.blkTree.Insert(proposal)
+	// try to advance into new round, it will update proposer and current view
+	if err := e.advanceRound(justifyQC, false); err != nil {
+		logger.Trace("Failed to advance new round", "err", err)
+	} else {
+		e.updateLockQCRound(justifyQC.View.Round)
+		e.blkTree.ProcessCommit(justifyQC.Hash)
+	}
 
-	//// check parent block existing
-	//parentHash := justifyQC.Hash
-	//parentRound := justifyQC.View.Round
-	//if err := e.checkBlockExist(parentHash, parentRound); err != nil {
-	//	return err
-	//}
-	//
-	//// proposal round should be increase by 1
-	//if new(big.Int).Sub(proposalRound, parentRound).Cmp(common.Big1) != 0 {
-	//	return fmt.Errorf("proposal round != parent round + 1, proposalRound %v, parentRound %v", proposalRound, parentRound)
-	//}
-	//if !e.safety.VoteRule(proposalRound, justifyQC.View.Round) {
-	//	return fmt.Errorf("voteRule failed")
-	//}
-	//
-	//// todo: vote是否应该包含commitInfo用来证明整个3阶段都是有效的
-	//vote := &Vote{
-	//	Epoch:       e.paceMaker.CurrentEpoch(),
-	//	Hash:        proposal.Hash(),
-	//	Round:       proposalRound,
-	//	ParentHash:  justifyQC.Hash,
-	//	ParentRound: justifyQC.View.Round,
-	//}
-	vote, err := e.MakeVote(proposal)
+	if err := e.checkProposer(proposal.Coinbase()); err != nil {
+		return err
+	}
+	if err := e.checkView(view); err != nil {
+		return err
+	}
+
+	e.blkTree.Insert(proposal)
+	
+	vote, err := e.makeVote(proposal.Hash(), view, justifyQC)
 	if err != nil {
 		return err
 	}
 
-	e.IncreaseLastVoteRound(proposalRound)
+	e.increaseLastVoteRound(view.Round)
 
-	// todo: vote to next proposal
 	return e.encodeAndBroadcast(MsgTypeVote, vote)
 }
 
@@ -219,7 +182,7 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 	}
 
 	// paceMaker send qc to next leader
-	if err := e.advanceRound(qc); err != nil {
+	if err := e.advanceRound(qc, false); err != nil {
 		return err
 	}
 	e.blkTree.UpdateHighQC(qc)
@@ -235,22 +198,16 @@ func (e *EventDrivenEngine) handleCertificate(src hotstuff.Validator, data *hots
 	if err := data.Decode(&certEvt); err != nil {
 		return err
 	}
-
-	if err := e.signer.VerifyQC(certEvt.Cert, e.valset); err != nil {
+	qc := certEvt.Cert
+	if err := e.signer.VerifyQC(qc, e.valset); err != nil {
 		return err
 	}
 
-	return e.ProcessCertificates(certEvt.Cert)
-}
-
-// todo: add this function into handleProposal
-// ProcessCertificates validate and handle QC/TC
-func (e *EventDrivenEngine) ProcessCertificates(qc *hotstuff.QuorumCert) error {
-	if err := e.advanceRound(qc); err != nil {
+	if err := e.advanceRound(qc, false); err != nil {
 		return err
 	}
 
-	e.UpdateLockQCRound(qc.View.Round)
+	e.updateLockQCRound(qc.View.Round)
 
 	// try to commit locked block and pure the `pendingBlockTree`
 	e.blkTree.ProcessCommit(qc.Hash)

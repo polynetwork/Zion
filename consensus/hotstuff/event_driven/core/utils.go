@@ -20,12 +20,12 @@ package core
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -46,13 +46,6 @@ func (e *EventDrivenEngine) newLogger() log.Logger {
 
 func (e *EventDrivenEngine) address() common.Address {
 	return e.addr
-}
-
-func (e *EventDrivenEngine) isProposer() bool {
-	if e.valset.IsProposer(e.address()) {
-		return true
-	}
-	return false
 }
 
 func (e *EventDrivenEngine) isSelf(addr common.Address) bool {
@@ -141,18 +134,35 @@ func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message) error {
 	}
 
 	switch msg.Code {
-	case MsgTypeVote:
-		if err := e.backend.Unicast(e.valset, payload); err != nil {
-			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
-			return err
-		}
 	case MsgTypeProposal, MsgTypeTimeout:
 		if err := e.backend.Broadcast(e.valset, payload); err != nil {
 			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
 			return err
 		}
+	case MsgTypeQC, MsgTypeVote:
+		// vote to next round leader
+		nextRoundVals := e.valset.Copy()
+		nextRoundVals.CalcProposerByIndex(e.curRound.Uint64() + 1)
+		if err := e.backend.Unicast(nextRoundVals, payload); err != nil {
+			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
+			return err
+		}
 	default:
 		logger.Error("invalid msg type", "msg", msg)
+		return errInvalidMessage
+	}
+	return nil
+}
+
+func (e *EventDrivenEngine) checkProposer(proposer common.Address) error {
+	if !e.valset.IsProposer(proposer) {
+		return errNotFromProposer
+	}
+	return nil
+}
+
+func (e *EventDrivenEngine) checkView(view *hotstuff.View) error {
+	if e.curRound.Cmp(view.Round) != 0 || e.curHeight.Cmp(view.Height) != 0 {
 		return errInvalidMessage
 	}
 	return nil
@@ -171,21 +181,6 @@ func (e *EventDrivenEngine) checkBlockExist(hash common.Hash, round *big.Int) er
 		return fmt.Errorf("round expect %v got %v", blockRd, round)
 	}
 	return nil
-}
-
-// todo: extra block into justifyQC and round
-func extraProposal(proposal hotstuff.Proposal) (*hotstuff.QuorumCert, *big.Int, error) {
-	block := proposal.(*types.Block)
-	h := block.Header()
-	qc := new(hotstuff.QuorumCert)
-	qc.View = &hotstuff.View{
-		Height: block.Number(),
-		Round:  big.NewInt(0),
-	}
-	qc.Hash = h.Hash()
-	qc.Proposer = h.Coinbase
-	qc.Extra = h.Extra
-	return qc, big.NewInt(0), nil
 }
 
 func isTC(qc *hotstuff.QuorumCert) bool {
