@@ -22,6 +22,7 @@ func init() {
 }
 
 const abijson = `[
+	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"merkleValueHex","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlockHeight","type":"uint64"},{"indexed":false,"internalType":"string","name":"key","type":"string"}],"name":"` + NOTIFY_MAKE_PROOF_EVENT + `","type":"event"},
 	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"TxHash","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"sink","type":"bytes"}],"name":"btcTxMultiSignEvent","type":"event"},
     {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"FromChainID","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"ChainID","type":"uint64"},{"indexed":false,"internalType":"string","name":"buf","type":"string"},{"indexed":false,"internalType":"string","name":"FromTxHash","type":"string"},{"indexed":false,"internalType":"string","name":"RedeemKey","type":"string"}],"name":"btcTxToRelayEvent","type":"event"},
     {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"rk","type":"string"},{"indexed":false,"internalType":"string","name":"buf","type":"string"},{"indexed":false,"internalType":"uint64[]","name":"amts","type":"uint64[]"}],"name":"makeBtcTxEvent","type":"event"},

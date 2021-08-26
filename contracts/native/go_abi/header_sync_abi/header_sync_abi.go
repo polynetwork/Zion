@@ -27,7 +27,7 @@ var (
 )
 
 // HeaderSyncABI is the input ABI used to generate the binding from.
-const HeaderSyncABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"height\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"blockHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlockHeight\",\"type\":\"uint64\"}],\"name\":\"SYNC_HEADER_NAME_EVENT\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"MethodContractName\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"},{\"internalType\":\"bytes[]\",\"name\":\"Headers\",\"type\":\"bytes[]\"}],\"name\":\"MethodSyncBlockHeader\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"},{\"internalType\":\"bytes[]\",\"name\":\"CrossChainMsgs\",\"type\":\"bytes[]\"}],\"name\":\"MethodSyncCrossChainMsg\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"GenesisHeader\",\"type\":\"bytes\"}],\"name\":\"MethodSyncGenesisHeader\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const HeaderSyncABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"BlockHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Height\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"NextValidatorsHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"InfoChainID\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlockHeight\",\"type\":\"uint64\"}],\"name\":\"OKEpochSwitchInfoEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"height\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"blockHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlockHeight\",\"type\":\"uint64\"}],\"name\":\"SYNC_HEADER_NAME_EVENT\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"MethodContractName\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"},{\"internalType\":\"bytes[]\",\"name\":\"Headers\",\"type\":\"bytes[]\"}],\"name\":\"MethodSyncBlockHeader\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"},{\"internalType\":\"bytes[]\",\"name\":\"CrossChainMsgs\",\"type\":\"bytes[]\"}],\"name\":\"MethodSyncCrossChainMsg\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"GenesisHeader\",\"type\":\"bytes\"}],\"name\":\"MethodSyncGenesisHeader\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // HeaderSyncFuncSigs maps the 4-byte function signature to its string representation.
 var HeaderSyncFuncSigs = map[string]string{
@@ -38,7 +38,7 @@ var HeaderSyncFuncSigs = map[string]string{
 }
 
 // HeaderSyncBin is the compiled bytecode used for deploying new contracts.
-var HeaderSyncBin = "0x608060405234801561001057600080fd5b50610347806100206000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c8063294a473e14610051578063ce2e02631461007d578063e50f8f4414610093578063eaab8a2614610051575b600080fd5b61006861005f36600461012f565b60009392505050565b60405190151581526020015b60405180910390f35b61006861008b366004610227565b600092915050565b60606040516100749190610275565b600082601f8301126100b357600080fd5b813567ffffffffffffffff8111156100cd576100cd6102fb565b6100e0601f8201601f19166020016102ca565b8181528460208386010111156100f557600080fd5b816020850160208301376000918101602001919091529392505050565b803567ffffffffffffffff8116811461012a57600080fd5b919050565b60008060006060848603121561014457600080fd5b61014d84610112565b92506020848101356001600160a01b038116811461016a57600080fd5b9250604085013567ffffffffffffffff8082111561018757600080fd5b818701915087601f83011261019b57600080fd5b8135818111156101ad576101ad6102fb565b8060051b6101bc8582016102ca565b8281528581019085870183870188018d10156101d757600080fd5b60009350835b85811015610214578135878111156101f3578586fd5b6102018f8b838c01016100a2565b85525092880192908801906001016101dd565b5050809750505050505050509250925092565b6000806040838503121561023a57600080fd5b61024383610112565b9150602083013567ffffffffffffffff81111561025f57600080fd5b61026b858286016100a2565b9150509250929050565b600060208083528351808285015260005b818110156102a257858101830151858201604001528201610286565b818111156102b4576000604083870101525b50601f01601f1916929092016040019392505050565b604051601f8201601f1916810167ffffffffffffffff811182821017156102f3576102f36102fb565b604052919050565b634e487b7160e01b600052604160045260246000fdfea26469706673582212208f0e12be48e6ff70d99474d7dba5048b9ccc465abde901cb9d71dbbce2ade47b64736f6c63430008060033"
+var HeaderSyncBin = "0x608060405234801561001057600080fd5b50610347806100206000396000f3fe608060405234801561001057600080fd5b506004361061004c5760003560e01c8063294a473e14610051578063ce2e02631461007d578063e50f8f4414610093578063eaab8a2614610051575b600080fd5b61006861005f36600461012f565b60009392505050565b60405190151581526020015b60405180910390f35b61006861008b366004610227565b600092915050565b60606040516100749190610275565b600082601f8301126100b357600080fd5b813567ffffffffffffffff8111156100cd576100cd6102fb565b6100e0601f8201601f19166020016102ca565b8181528460208386010111156100f557600080fd5b816020850160208301376000918101602001919091529392505050565b803567ffffffffffffffff8116811461012a57600080fd5b919050565b60008060006060848603121561014457600080fd5b61014d84610112565b92506020848101356001600160a01b038116811461016a57600080fd5b9250604085013567ffffffffffffffff8082111561018757600080fd5b818701915087601f83011261019b57600080fd5b8135818111156101ad576101ad6102fb565b8060051b6101bc8582016102ca565b8281528581019085870183870188018d10156101d757600080fd5b60009350835b85811015610214578135878111156101f3578586fd5b6102018f8b838c01016100a2565b85525092880192908801906001016101dd565b5050809750505050505050509250925092565b6000806040838503121561023a57600080fd5b61024383610112565b9150602083013567ffffffffffffffff81111561025f57600080fd5b61026b858286016100a2565b9150509250929050565b600060208083528351808285015260005b818110156102a257858101830151858201604001528201610286565b818111156102b4576000604083870101525b50601f01601f1916929092016040019392505050565b604051601f8201601f1916810167ffffffffffffffff811182821017156102f3576102f36102fb565b604052919050565b634e487b7160e01b600052604160045260246000fdfea2646970667358221220498e0c33f2402d5706d00a868c49bcd1906ab719d25c07036ab3e80c96b0a1b164736f6c63430008060033"
 
 // DeployHeaderSync deploys a new Ethereum contract, binding an instance of HeaderSync to it.
 func DeployHeaderSync(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *HeaderSync, error) {
@@ -278,6 +278,145 @@ func (_HeaderSync *HeaderSyncSession) MethodSyncGenesisHeader(ChainID uint64, Ge
 // Solidity: function MethodSyncGenesisHeader(uint64 ChainID, bytes GenesisHeader) returns(bool success)
 func (_HeaderSync *HeaderSyncTransactorSession) MethodSyncGenesisHeader(ChainID uint64, GenesisHeader []byte) (*types.Transaction, error) {
 	return _HeaderSync.Contract.MethodSyncGenesisHeader(&_HeaderSync.TransactOpts, ChainID, GenesisHeader)
+}
+
+// HeaderSyncOKEpochSwitchInfoEventIterator is returned from FilterOKEpochSwitchInfoEvent and is used to iterate over the raw logs and unpacked data for OKEpochSwitchInfoEvent events raised by the HeaderSync contract.
+type HeaderSyncOKEpochSwitchInfoEventIterator struct {
+	Event *HeaderSyncOKEpochSwitchInfoEvent // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *HeaderSyncOKEpochSwitchInfoEventIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(HeaderSyncOKEpochSwitchInfoEvent)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(HeaderSyncOKEpochSwitchInfoEvent)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *HeaderSyncOKEpochSwitchInfoEventIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *HeaderSyncOKEpochSwitchInfoEventIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// HeaderSyncOKEpochSwitchInfoEvent represents a OKEpochSwitchInfoEvent event raised by the HeaderSync contract.
+type HeaderSyncOKEpochSwitchInfoEvent struct {
+	ChainID            uint64
+	BlockHash          string
+	Height             uint64
+	NextValidatorsHash string
+	InfoChainID        string
+	BlockHeight        uint64
+	Raw                types.Log // Blockchain specific contextual infos
+}
+
+// FilterOKEpochSwitchInfoEvent is a free log retrieval operation binding the contract event 0xbfd2d7144ec37c6f85850914f6d172957dd090c508f40d540062f1cd06c0852a.
+//
+// Solidity: event OKEpochSwitchInfoEvent(uint64 chainID, string BlockHash, uint64 Height, string NextValidatorsHash, string InfoChainID, uint64 BlockHeight)
+func (_HeaderSync *HeaderSyncFilterer) FilterOKEpochSwitchInfoEvent(opts *bind.FilterOpts) (*HeaderSyncOKEpochSwitchInfoEventIterator, error) {
+
+	logs, sub, err := _HeaderSync.contract.FilterLogs(opts, "OKEpochSwitchInfoEvent")
+	if err != nil {
+		return nil, err
+	}
+	return &HeaderSyncOKEpochSwitchInfoEventIterator{contract: _HeaderSync.contract, event: "OKEpochSwitchInfoEvent", logs: logs, sub: sub}, nil
+}
+
+// WatchOKEpochSwitchInfoEvent is a free log subscription operation binding the contract event 0xbfd2d7144ec37c6f85850914f6d172957dd090c508f40d540062f1cd06c0852a.
+//
+// Solidity: event OKEpochSwitchInfoEvent(uint64 chainID, string BlockHash, uint64 Height, string NextValidatorsHash, string InfoChainID, uint64 BlockHeight)
+func (_HeaderSync *HeaderSyncFilterer) WatchOKEpochSwitchInfoEvent(opts *bind.WatchOpts, sink chan<- *HeaderSyncOKEpochSwitchInfoEvent) (event.Subscription, error) {
+
+	logs, sub, err := _HeaderSync.contract.WatchLogs(opts, "OKEpochSwitchInfoEvent")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(HeaderSyncOKEpochSwitchInfoEvent)
+				if err := _HeaderSync.contract.UnpackLog(event, "OKEpochSwitchInfoEvent", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseOKEpochSwitchInfoEvent is a log parse operation binding the contract event 0xbfd2d7144ec37c6f85850914f6d172957dd090c508f40d540062f1cd06c0852a.
+//
+// Solidity: event OKEpochSwitchInfoEvent(uint64 chainID, string BlockHash, uint64 Height, string NextValidatorsHash, string InfoChainID, uint64 BlockHeight)
+func (_HeaderSync *HeaderSyncFilterer) ParseOKEpochSwitchInfoEvent(log types.Log) (*HeaderSyncOKEpochSwitchInfoEvent, error) {
+	event := new(HeaderSyncOKEpochSwitchInfoEvent)
+	if err := _HeaderSync.contract.UnpackLog(event, "OKEpochSwitchInfoEvent", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 
 // HeaderSyncSYNCHEADERNAMEEVENTIterator is returned from FilterSYNCHEADERNAMEEVENT and is used to iterate over the raw logs and unpacked data for SYNCHEADERNAMEEVENT events raised by the HeaderSync contract.

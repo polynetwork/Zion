@@ -14,7 +14,7 @@ var (
 	REQUEST             = "request"
 	DONE_TX             = "doneTx"
 
-	NOTIFY_MAKE_PROOF = "makeProof"
+	NOTIFY_MAKE_PROOF_EVENT = "makeProof"
 )
 
 type ChainHandler interface {
