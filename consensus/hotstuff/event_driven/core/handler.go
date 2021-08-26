@@ -141,3 +141,84 @@ func (e *EventDrivenEngine) handleCheckedMsg(src hotstuff.Validator, msg *hotstu
 	}
 	return
 }
+
+func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
+	var err error
+
+	// Add sender address
+	msg.Address = e.address()
+	msg.View = e.currentView()
+
+	// Add proof of consensus
+	// todo: sign proposal into committed seal
+	//proposal := c.current.Proposal()
+	//if msg.Code == MsgTypePrepareVote && proposal != nil {
+	//	seal, err := c.signer.SignVote(proposal)
+	//	if err != nil {
+	//		return nil, err
+	//	}
+	//	msg.CommittedSeal = seal
+	//}
+
+	// Sign Message
+	data, err := msg.PayloadNoSig()
+	if err != nil {
+		return nil, err
+	}
+	msg.Signature, err = e.signer.Sign(data)
+	if err != nil {
+		return nil, err
+	}
+
+	// Convert to payload
+	payload, err := msg.Payload()
+	if err != nil {
+		return nil, err
+	}
+
+	return payload, nil
+}
+
+func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) error {
+	payload, err := Encode(val)
+	if err != nil {
+		return err
+	}
+
+	msg := &hotstuff.Message{
+		Code: msgTyp,
+		Msg:  payload,
+	}
+
+	return e.broadcast(msg)
+}
+
+func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message) error {
+	logger := e.newLogger()
+
+	payload, err := e.finalizeMessage(msg)
+	if err != nil {
+		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
+		return err
+	}
+
+	switch msg.Code {
+	case MsgTypeProposal, MsgTypeTimeout:
+		if err := e.backend.Broadcast(e.valset, payload); err != nil {
+			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
+			return err
+		}
+	case MsgTypeQC, MsgTypeVote:
+		// vote to next round leader
+		nextRoundVals := e.valset.Copy()
+		nextRoundVals.CalcProposerByIndex(e.curRound.Uint64() + 1)
+		if err := e.backend.Unicast(nextRoundVals, payload); err != nil {
+			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
+			return err
+		}
+	default:
+		logger.Error("invalid msg type", "msg", msg)
+		return errInvalidMessage
+	}
+	return nil
+}

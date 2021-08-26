@@ -30,10 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func Encode(val interface{}) ([]byte, error) {
-	return rlp.EncodeToBytes(val)
-}
-
 func (e *EventDrivenEngine) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
 	return e.signer.CheckSignature(e.valset, data, sig)
 }
@@ -59,101 +55,6 @@ func (e *EventDrivenEngine) currentView() *hotstuff.View {
 	}
 }
 
-func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
-	var err error
-
-	// Add sender address
-	msg.Address = e.address()
-	msg.View = e.currentView()
-
-	// Add proof of consensus
-	// todo: sign proposal into committed seal
-	//proposal := c.current.Proposal()
-	//if msg.Code == MsgTypePrepareVote && proposal != nil {
-	//	seal, err := c.signer.SignVote(proposal)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	msg.CommittedSeal = seal
-	//}
-
-	// Sign Message
-	data, err := msg.PayloadNoSig()
-	if err != nil {
-		return nil, err
-	}
-	msg.Signature, err = e.signer.Sign(data)
-	if err != nil {
-		return nil, err
-	}
-
-	// Convert to payload
-	payload, err := msg.Payload()
-	if err != nil {
-		return nil, err
-	}
-
-	return payload, nil
-}
-
-//func (c *EventDrivenEngine) getMessageSeals(n int) [][]byte {
-//	seals := make([][]byte, n)
-//	for i, data := range c.current.PrepareVotes() {
-//		if i < n {
-//			seals[i] = data.CommittedSeal
-//		}
-//	}
-//	return seals
-//}
-
-func (e *EventDrivenEngine) Q() int {
-	return e.valset.Q()
-}
-
-func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) error {
-	payload, err := Encode(val)
-	if err != nil {
-		return err
-	}
-
-	msg := &hotstuff.Message{
-		Code: msgTyp,
-		Msg:  payload,
-	}
-
-	return e.broadcast(msg)
-}
-
-func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message) error {
-	logger := e.newLogger()
-
-	payload, err := e.finalizeMessage(msg)
-	if err != nil {
-		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
-		return err
-	}
-
-	switch msg.Code {
-	case MsgTypeProposal, MsgTypeTimeout:
-		if err := e.backend.Broadcast(e.valset, payload); err != nil {
-			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
-			return err
-		}
-	case MsgTypeQC, MsgTypeVote:
-		// vote to next round leader
-		nextRoundVals := e.valset.Copy()
-		nextRoundVals.CalcProposerByIndex(e.curRound.Uint64() + 1)
-		if err := e.backend.Unicast(nextRoundVals, payload); err != nil {
-			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
-			return err
-		}
-	default:
-		logger.Error("invalid msg type", "msg", msg)
-		return errInvalidMessage
-	}
-	return nil
-}
-
 func (e *EventDrivenEngine) checkProposer(proposer common.Address) error {
 	if !e.valset.IsProposer(proposer) {
 		return errNotFromProposer
@@ -168,19 +69,58 @@ func (e *EventDrivenEngine) checkView(view *hotstuff.View) error {
 	return nil
 }
 
-func (e *EventDrivenEngine) checkBlockExist(hash common.Hash, round *big.Int) error {
-	block := e.blkTree.GetBlockByHash(hash)
-	if block == nil {
-		return fmt.Errorf("proposal parent %v not exist", hash)
+func (e *EventDrivenEngine) getMessageSeals(hash common.Hash, n int) [][]byte {
+	seals := make([][]byte, n)
+	for i, data := range e.messages.Votes(hash) {
+		if i < n {
+			seals[i] = data.CommittedSeal
+		}
 	}
-	_, blockRd, err := extraProposal(block)
+	return seals
+}
+
+func (e *EventDrivenEngine) Q() int {
+	return e.valset.Q()
+}
+
+func (e *EventDrivenEngine) chain2Height() *big.Int {
+	return new(big.Int).Add(e.epochHeightStart, common.Big2)
+}
+
+func (e *EventDrivenEngine) chain3Height() *big.Int {
+	return new(big.Int).Add(e.epochHeightStart, common.Big3)
+}
+
+func (e *EventDrivenEngine) aggregate(vote *Vote, size int) (*hotstuff.QuorumCert, error) {
+	proposal := e.blkTree.GetBlockAndCheckHeight(vote.Hash, vote.View.Height)
+	if proposal == nil {
+		return nil, fmt.Errorf("last proposal %v not exist", vote.Hash)
+	}
+
+	seals := e.getMessageSeals(vote.Hash, size)
+	sealedProposal, err := e.backend.PreCommit(proposal, seals)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if blockRd.Cmp(round) != 0 {
-		return fmt.Errorf("round expect %v got %v", blockRd, round)
+
+	sealedBlock, ok := sealedProposal.(*types.Block)
+	if !ok {
+		return nil, errProposalConvert
 	}
-	return nil
+
+	extra := sealedBlock.Header().Extra
+	qc := &hotstuff.QuorumCert{
+		View:     vote.View,
+		Hash:     sealedProposal.Hash(),
+		Proposer: sealedProposal.Coinbase(),
+		Extra:    extra,
+	}
+
+	return qc, nil
+}
+
+func Encode(val interface{}) ([]byte, error) {
+	return rlp.EncodeToBytes(val)
 }
 
 func isTC(qc *hotstuff.QuorumCert) bool {

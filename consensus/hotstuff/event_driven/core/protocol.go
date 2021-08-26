@@ -19,13 +19,11 @@
 package core
 
 import (
-	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -46,8 +44,8 @@ type EventDrivenEngine struct {
 	epoch            uint64
 	epochHeightStart *big.Int
 	epochHeightEnd   *big.Int
-	curRound  *big.Int // 从genesis block 0开始
-	curHeight *big.Int // 从genesis block 0开始
+	curRound         *big.Int // 从genesis block 0开始
+	curHeight        *big.Int // 从genesis block 0开始
 
 	requests *requestSet
 	messages *MessagePool
@@ -96,18 +94,22 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
 		return errFailedDecodePrepare
 	}
-	proposal := msg.Proposal
+
 	view := msg.View
-	justifyQC := msg.JustifyQC
 	epoch := msg.Epoch
+	proposal := msg.Proposal
+	hash := proposal.Hash()
+	proposer := proposal.Coinbase()
+	header := proposal.Header()
+	justifyQC := msg.JustifyQC
 
 	if epoch != e.epoch {
-		return errEpochInvalid
+		return errInvalidEpoch
 	}
 	if err := e.signer.VerifyQC(justifyQC, e.valset); err != nil {
 		return err
 	}
-	if err := e.signer.VerifyHeader(proposal.Header(), e.valset, false); err != nil {
+	if err := e.signer.VerifyHeader(header, e.valset, false); err != nil {
 		return err
 	}
 
@@ -119,7 +121,7 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 		e.blkTree.ProcessCommit(justifyQC.Hash)
 	}
 
-	if err := e.checkProposer(proposal.Coinbase()); err != nil {
+	if err := e.checkProposer(proposer); err != nil {
 		return err
 	}
 	if err := e.checkView(view); err != nil {
@@ -127,8 +129,8 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 	}
 
 	e.blkTree.Insert(proposal)
-	
-	vote, err := e.makeVote(proposal.Hash(), view, justifyQC)
+
+	vote, err := e.makeVote(hash, proposer, view, justifyQC)
 	if err != nil {
 		return err
 	}
@@ -151,34 +153,21 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 		return errFailedDecodeNewView
 	}
 
-	// todo: first two blocks
-	if vote.Hash == utils.EmptyHash || vote.ParentHash == utils.EmptyHash || vote.Round == nil || vote.ParentRound == nil {
-		return fmt.Errorf("invalid vote")
-	}
-
-	if err := e.checkBlockExist(vote.Hash, vote.Round); err != nil {
+	if err := e.validateVote(vote); err != nil {
 		return err
 	}
-	if err := e.checkBlockExist(vote.ParentHash, vote.ParentRound); err != nil {
-		return err
-	}
-
 	if err := e.messages.AddVote(vote.Hash, data); err != nil {
 		return err
 	}
 
-	if e.messages.VoteSize(vote.Hash) < e.Q() {
+	size := e.messages.VoteSize(vote.Hash)
+	if size != e.Q() {
 		return nil
 	}
 
-	// todo: format highQC and set block tree high qc
-	// todo(fuk): instance qc and broadcast to all validators
-	view := e.currentView()
-	qc := &hotstuff.QuorumCert{
-		View:     view,
-		Hash:     vote.Hash,
-		Proposer: common.Address{},
-		Extra:    nil,
+	qc, err := e.aggregate(vote, size)
+	if err != nil {
+		return err
 	}
 
 	// paceMaker send qc to next leader
@@ -194,10 +183,10 @@ func (e *EventDrivenEngine) handleCertificate(src hotstuff.Validator, data *hots
 	var (
 		certEvt *CertificateEvent
 	)
-
 	if err := data.Decode(&certEvt); err != nil {
 		return err
 	}
+
 	qc := certEvt.Cert
 	if err := e.signer.VerifyQC(qc, e.valset); err != nil {
 		return err

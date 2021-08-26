@@ -43,10 +43,12 @@ var (
 	// errFailedDecodeNewView is returned when the NEWVIEW Message is malformed.
 	errFailedDecodeNewView = errors.New("failed to decode NEWVIEW")
 	// errFailedDecodePrepare is returned when the PREPARE Message is malformed.
-	errFailedDecodePrepare = errors.New("failed to decode PREPARE")
-	errProposalConvert     = errors.New("failed to convert proposal to types.block")
-	errExtraHeader 		   = errors.New("failed to extract header")
-	errEpochInvalid 		= errors.New("epoch invalid")
+	errFailedDecodePrepare     = errors.New("failed to decode PREPARE")
+	errProposalConvert         = errors.New("failed to convert proposal to types.block")
+	errExtraHeader             = errors.New("failed to extract header")
+	errInvalidEpoch            = errors.New("invalid epoch")
+	errInvalidVote             = errors.New("invalid vote")
+	
 	errFailedDecodePrepareVote = errors.New("failed to decode PREPARE_VOTE")
 	// errFailedDecodePreCommit is returned when the PRECOMMIT Message is malformed.
 	errFailedDecodePreCommit     = errors.New("failed to decode PRECOMMIT")
