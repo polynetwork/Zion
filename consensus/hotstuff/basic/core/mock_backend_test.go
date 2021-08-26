@@ -182,8 +182,8 @@ type mockSinger struct {
 	address common.Address
 }
 
-func (s *mockSinger) Address() common.Address {
-	return s.address
+func (m *mockSinger) Address() common.Address {
+	return m.address
 }
 
 func (m *mockSinger) Sign(data []byte) ([]byte, error) {
@@ -199,19 +199,19 @@ func (m *mockSinger) SignHash(hash common.Hash) ([]byte, error) {
 	return nil, nil
 }
 
-func (s *mockSinger) Recover(h *types.Header) (common.Address, error) {
+func (m *mockSinger) Recover(h *types.Header) (common.Address, error) {
 	return h.Coinbase, nil
 }
 
-func (s *mockSinger) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
+func (m *mockSinger) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
 	return nil, nil
 }
 
-func (s *mockSinger) SealBeforeCommit(h *types.Header) error {
+func (m *mockSinger) SealBeforeCommit(h *types.Header) error {
 	return nil
 }
 
-func (s *mockSinger) SealAfterCommit(h *types.Header, committedSeals [][]byte) error {
+func (m *mockSinger) SealAfterCommit(h *types.Header, committedSeals [][]byte) error {
 	return nil
 }
 
@@ -219,11 +219,11 @@ func (m *mockSinger) VerifyHeader(header *types.Header, valSet hotstuff.Validato
 	return nil
 }
 
-func (s *mockSinger) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.ValidatorSet) error {
+func (m *mockSinger) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.ValidatorSet) error {
 	return nil
 }
 
-func (s *mockSinger) CheckQCParticipant(qc *hotstuff.QuorumCert, signer common.Address) error {
+func (m *mockSinger) CheckQCParticipant(qc *hotstuff.QuorumCert, signer common.Address) error {
 	return nil
 }
 
@@ -231,8 +231,16 @@ func (m *mockSinger) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, s
 	return common.BytesToAddress(signature), nil
 }
 
-func (s *mockSinger) WrapCommittedSeal(hash common.Hash) []byte {
+func (m *mockSinger) WrapCommittedSeal(hash common.Hash) []byte {
 	return hash.Bytes()
+}
+
+func (m *mockSinger) VerifyHash(valSet hotstuff.ValidatorSet, hash common.Hash, sig []byte) error {
+	return nil
+}
+
+func (m *mockSinger) VerifyCommittedSeal(valSet hotstuff.ValidatorSet, hash common.Hash, committedSeals [][]byte) error {
+	return nil
 }
 
 // ==============================================

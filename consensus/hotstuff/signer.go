@@ -40,4 +40,8 @@ type Signer interface {
 
 	// CheckSignature extract address from signature and check if the address exist in validator set
 	CheckSignature(valSet ValidatorSet, data []byte, signature []byte) (common.Address, error)
+
+	VerifyHash(valSet ValidatorSet, hash common.Hash, sig []byte) error
+
+	VerifyCommittedSeal(valSet ValidatorSet, hash common.Hash, committedSeals [][]byte) error
 }

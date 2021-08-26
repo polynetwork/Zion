@@ -267,6 +267,28 @@ func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, s
 	return common.Address{}, errUnauthorizedAddress
 }
 
+func (s *SignerImpl) VerifyHash(valSet hotstuff.ValidatorSet, hash common.Hash, sig []byte) error {
+	data := s.wrapCommittedSeal(hash)
+	signer, err := getSignatureAddress(data, sig)
+	if err != nil {
+		return err
+	}
+
+	if _, val := valSet.GetByAddress(signer); val == nil {
+		return errUnauthorizedAddress
+	}
+
+	return nil
+}
+
+func (s *SignerImpl) VerifyCommittedSeal(valSet hotstuff.ValidatorSet, hash common.Hash, committedSeals [][]byte) error {
+	signers, err := s.GetSignersFromCommittedSeals(hash, committedSeals)
+	if err != nil {
+		return err
+	}
+	return checkValidatorQuorum(signers, valSet)
+}
+
 // wrapCommittedSeal returns a committed seal for the given hash
 func (s *SignerImpl) wrapCommittedSeal(hash common.Hash) []byte {
 	var (
