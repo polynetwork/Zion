@@ -18,11 +18,12 @@ package vm
 
 import (
 	"errors"
-	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/core/state"
 	"math/big"
 	"sync/atomic"
 	"time"
+
+	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/core/state"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -103,6 +104,7 @@ type TxContext struct {
 	// Message information
 	Origin   common.Address // Provides information for ORIGIN
 	GasPrice *big.Int       // Provides information for GASPRICE
+	TxHash   common.Hash
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -437,7 +439,8 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 func (evm *EVM) nativeCall(caller, addr common.Address, input []byte, suppliedGas uint64) (ret []byte, leftOverGas uint64, err error) {
 	sdb := evm.StateDB.(*state.StateDB)
 	blockNumber := evm.Context.BlockNumber
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, suppliedGas, evm.Callback)
+	txHash := evm.TxContext.TxHash
+	contractRef := native.NewContractRef(sdb, caller, blockNumber, txHash, suppliedGas, evm.Callback)
 	ret, leftOverGas, err = contractRef.NativeCall(caller, addr, input)
 	return
 }

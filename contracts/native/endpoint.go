@@ -15,6 +15,7 @@ type ContractRef struct {
 
 	stateDB     *state.StateDB
 	blockHeight *big.Int
+	txHash      common.Hash
 	msgSender   common.Address
 	evmHandler  EVMHandler
 	gasLeft     uint64
@@ -24,6 +25,7 @@ func NewContractRef(
 	db *state.StateDB,
 	sender common.Address,
 	blockHeight *big.Int,
+	txHash common.Hash,
 	suppliedGas uint64,
 	evmHandler EVMHandler) *ContractRef {
 
@@ -32,6 +34,7 @@ func NewContractRef(
 		stateDB:     db,
 		msgSender:   sender,
 		blockHeight: blockHeight,
+		txHash:      txHash,
 		gasLeft:     suppliedGas,
 		evmHandler:  evmHandler,
 	}
@@ -69,6 +72,10 @@ func (s *ContractRef) StateDB() *state.StateDB {
 
 func (s *ContractRef) BlockHeight() *big.Int {
 	return s.blockHeight
+}
+
+func (s *ContractRef) TxHash() common.Hash {
+	return s.txHash
 }
 
 func (s *ContractRef) MsgSender() common.Address {

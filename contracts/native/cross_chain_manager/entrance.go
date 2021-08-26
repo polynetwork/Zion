@@ -31,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -164,17 +163,11 @@ func ImportOuterTransfer(native *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
 }
 
-func genMerkleTxHash(params *scom.MakeTxParam, fromChainID uint64) []byte {
-	sink := polycomm.NewZeroCopySink(nil)
-	sink.WriteUint64(fromChainID)
-	params.Serialization(sink)
-	return crypto.Keccak256(sink.Bytes())
-}
-
 func MakeTransaction(service *native.NativeContract, params *scom.MakeTxParam, fromChainID uint64) error {
 
+	txHash := service.ContractRef().TxHash()
 	merkleValue := &scom.ToMerkleValue{
-		TxHash:      genMerkleTxHash(params, fromChainID),
+		TxHash:      txHash[:],
 		FromChainID: fromChainID,
 		MakeTxParam: params,
 	}
