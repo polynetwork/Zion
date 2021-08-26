@@ -71,7 +71,7 @@ func TestRegisterRelayer(t *testing.T) {
 
 		blockNumber := big.NewInt(1)
 		extra := uint64(10)
-		contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, gasTable[MethodRegisterRelayer]+extra, nil)
+		contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, common.Hash{}, gasTable[MethodRegisterRelayer]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.RelayerManagerContractAddress, input)
 
 		assert.Nil(t, err)
@@ -99,7 +99,7 @@ func TestRegisterRelayer(t *testing.T) {
 
 		blockNumber := big.NewInt(1)
 		extra := uint64(10)
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, gasTable[MethodApproveRegisterRelayer]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, gasTable[MethodApproveRegisterRelayer]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.RelayerManagerContractAddress, input)
 
 		assert.Nil(t, err)
@@ -127,7 +127,7 @@ func TestRemoveRelayer(t *testing.T) {
 
 		blockNumber := big.NewInt(1)
 		extra := uint64(10)
-		contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, gasTable[MethodRemoveRelayer]+extra, nil)
+		contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, common.Hash{}, gasTable[MethodRemoveRelayer]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.RelayerManagerContractAddress, input)
 
 		assert.Nil(t, err)
@@ -154,7 +154,7 @@ func TestRemoveRelayer(t *testing.T) {
 
 		blockNumber := big.NewInt(1)
 		extra := uint64(10)
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, gasTable[MethodApproveRemoveRelayer]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, gasTable[MethodApproveRemoveRelayer]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.RelayerManagerContractAddress, input)
 
 		assert.Nil(t, err)

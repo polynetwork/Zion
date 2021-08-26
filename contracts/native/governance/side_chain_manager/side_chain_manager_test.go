@@ -74,7 +74,7 @@ func TestRegisterSideChainManager(t *testing.T) {
 
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, gasTable[MethodRegisterSideChain]+extra, nil)
+	contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, common.Hash{}, gasTable[MethodRegisterSideChain]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
 
 	assert.Nil(t, err)
@@ -107,7 +107,7 @@ func TestApproveRegisterSideChain(t *testing.T) {
 
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, gasTable[MethodApproveRegisterSideChain]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, gasTable[MethodApproveRegisterSideChain]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
 
 	assert.Nil(t, err)
@@ -133,7 +133,7 @@ func TestUpdateSideChain(t *testing.T) {
 
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, gasTable[MethodUpdateSideChain]+extra, nil)
+	contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, common.Hash{}, gasTable[MethodUpdateSideChain]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
 
 	assert.Nil(t, err)
@@ -158,7 +158,7 @@ func TestApproveUpdateSideChain(t *testing.T) {
 
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, gasTable[MethodApproveUpdateSideChain]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, gasTable[MethodApproveUpdateSideChain]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
 
 	assert.Nil(t, err)
