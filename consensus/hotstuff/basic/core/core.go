@@ -37,7 +37,7 @@ type core struct {
 }
 
 // New creates an HotStuff consensus core
-func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer, valSet hotstuff.ValidatorSet) CoreEngine {
+func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer, valSet hotstuff.ValidatorSet) hotstuff.CoreEngine {
 	c := &core{
 		config:  config,
 		logger:  log.New("address", backend.Address()),

@@ -47,7 +47,7 @@ const (
 type backend struct {
 	config *hotstuff.Config
 	//db           ethdb.Database // Database to store and retrieve necessary information
-	core         hsc.CoreEngine
+	core         hotstuff.CoreEngine
 	signer       hotstuff.Signer
 	chain        consensus.ChainReader
 	currentBlock func() *types.Block

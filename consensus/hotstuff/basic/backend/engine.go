@@ -146,6 +146,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		// post block into Istanbul engine
 		go s.EventMux().Post(hotstuff.RequestEvent{
 			Proposal: block,
+			Parent:   parent,
 		})
 		for {
 			select {
@@ -259,7 +260,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if number == 0 {
 		return nil
 	}
-	
+
 	// Ensure that the block's timestamp isn't too close to it's parent
 	var parent *types.Header
 	if len(parents) > 0 {
