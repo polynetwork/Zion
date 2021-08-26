@@ -22,12 +22,20 @@ import (
 	"fmt"
 	"io"
 	"math/big"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
+	"golang.org/x/crypto/sha3"
 )
+
+// hasherPool holds LegacyKeccak256 hashers for rlpHash.
+var hasherPool = sync.Pool{
+	New: func() interface{} { return sha3.NewLegacyKeccak256() },
+}
 
 type MsgType uint64
 
@@ -36,6 +44,7 @@ const (
 	MsgTypeVote     MsgType = 2
 	MsgTypeTimeout  MsgType = 3
 	MsgTypeQC       MsgType = 4
+	MsgTypeTC  		MsgType = 5
 )
 
 func (m MsgType) String() string {
@@ -48,6 +57,8 @@ func (m MsgType) String() string {
 		return "MSG_TIMEOUT"
 	case MsgTypeQC:
 		return "MSG_QC"
+	case MsgTypeTC:
+		return "MSG_TC"
 	default:
 		return "MSG_UNKNOWN"
 	}
@@ -150,56 +161,114 @@ func (v *Vote) String() string {
 }
 
 type TimeoutEvent struct {
-	Epoch uint64
-	Round *big.Int
+	Epoch  uint64
+	View   *hotstuff.View
+	Digest common.Hash
+}
+
+func (tm *TimeoutEvent) Hash() common.Hash {
+	x := &TimeoutEvent{
+		Epoch: tm.Epoch,
+		View:  tm.View,
+	}
+	ret := make([]byte, 32)
+	sha := hasherPool.Get().(crypto.KeccakState)
+	defer hasherPool.Put(sha)
+	sha.Reset()
+	rlp.Encode(sha, x)
+	sha.Read(ret[:])
+	return common.BytesToHash(ret[:])
 }
 
 func (tm *TimeoutEvent) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{tm.Epoch, tm.Round})
+	return rlp.Encode(w, []interface{}{tm.Epoch, tm.View, tm.Hash})
 }
 
 func (tm *TimeoutEvent) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
-		Epoch uint64
-		Round *big.Int
+		Epoch  uint64
+		View   *hotstuff.View
+		Digest common.Hash
 	}
 
 	if err := s.Decode(&subject); err != nil {
 		return err
 	}
 
-	tm.Epoch, tm.Round = subject.Epoch, subject.Round
+	tm.Epoch, tm.View, tm.Digest = subject.Epoch, subject.View, subject.Digest
 	return nil
 }
 
 func (tm *TimeoutEvent) String() string {
-	return fmt.Sprintf("{Epoch: %v, Round: %v}", tm.Epoch, tm.Round)
+	return fmt.Sprintf("{Epoch: %v, View: %v}", tm.Epoch, tm.View)
 }
 
-type CertificateEvent struct {
-	Cert *hotstuff.QuorumCert
+type TimeoutCert struct {
+	View     *hotstuff.View
+	Hash     common.Hash
+	Seals    [][]byte
 }
 
-func (ce *CertificateEvent) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{ce.Cert})
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (tc *TimeoutCert) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{tc.View, tc.Hash, tc.Seals})
 }
 
-func (ce *CertificateEvent) DecodeRLP(s *rlp.Stream) error {
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (tc *TimeoutCert) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
-		Cert *hotstuff.QuorumCert
+		View     *hotstuff.View
+		Hash     common.Hash
+		Seals    [][]byte
 	}
 
 	if err := s.Decode(&subject); err != nil {
 		return err
 	}
-
-	ce.Cert = subject.Cert
+	tc.View, tc.Hash, tc.Seals = subject.View, subject.Hash, subject.Seals
 	return nil
 }
 
-func (ce *CertificateEvent) String() string {
-	return fmt.Sprintf("{Hash: %v, View: %v, Proposer: %v}", ce.Cert.Hash, ce.Cert.View, ce.Cert.Proposer)
+func (tc *TimeoutCert) String() string {
+	return fmt.Sprintf("{TimeoutCert View: %v, Hash: %v}", tc.View, tc.Hash)
 }
+
+func (tc *TimeoutCert) Copy() *TimeoutCert {
+	enc, err := rlp.EncodeToBytes(tc)
+	if err != nil {
+		return nil
+	}
+	newTc := new(TimeoutCert)
+	if err := rlp.DecodeBytes(enc, &newTc); err != nil {
+		return nil
+	}
+	return newTc
+}
+//
+//type CertificateEvent struct {
+//	Cert *hotstuff.QuorumCert
+//}
+//
+//func (ce *CertificateEvent) EncodeRLP(w io.Writer) error {
+//	return rlp.Encode(w, []interface{}{ce.Cert})
+//}
+//
+//func (ce *CertificateEvent) DecodeRLP(s *rlp.Stream) error {
+//	var subject struct {
+//		Cert *hotstuff.QuorumCert
+//	}
+//
+//	if err := s.Decode(&subject); err != nil {
+//		return err
+//	}
+//
+//	ce.Cert = subject.Cert
+//	return nil
+//}
+//
+//func (ce *CertificateEvent) String() string {
+//	return fmt.Sprintf("{Hash: %v, View: %v, Proposer: %v}", ce.Cert.Hash, ce.Cert.View, ce.Cert.Proposer)
+//}
 
 type ExtraSalt struct {
 	Epoch uint64

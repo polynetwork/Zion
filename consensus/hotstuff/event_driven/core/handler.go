@@ -19,6 +19,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/event"
 )
@@ -128,7 +130,9 @@ func (e *EventDrivenEngine) handleCheckedMsg(src hotstuff.Validator, msg *hotstu
 	case MsgTypeVote:
 		err = e.handleVote(src, msg)
 	case MsgTypeQC:
-		err = e.handleCertificate(src, msg)
+		err = e.handleQuorumCertificate(src, msg)
+	case MsgTypeTC:
+		err = e.handleTimeoutCertificate(src, msg)
 	case MsgTypeTimeout:
 		err = e.handleTimeout(src, msg)
 	default:
@@ -142,23 +146,38 @@ func (e *EventDrivenEngine) handleCheckedMsg(src hotstuff.Validator, msg *hotstu
 	return
 }
 
-func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
+func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message, val interface{}) ([]byte, error) {
 	var err error
 
 	// Add sender address
 	msg.Address = e.address()
 	msg.View = e.currentView()
 
-	// Add proof of consensus
-	// todo: sign proposal into committed seal
-	//proposal := c.current.Proposal()
-	//if msg.Code == MsgTypePrepareVote && proposal != nil {
-	//	seal, err := c.signer.SignVote(proposal)
-	//	if err != nil {
-	//		return nil, err
-	//	}
-	//	msg.CommittedSeal = seal
-	//}
+	if msg.Code == MsgTypeVote {
+		vote, ok := val.(*Vote)
+		if !ok {
+			return nil, fmt.Errorf("msg is not vote")
+		}
+		seal, err := e.signer.SignHash(vote.Hash)
+		if err != nil {
+			return nil, err
+		}
+		msg.CommittedSeal = seal
+	}
+
+	if msg.Code == MsgTypeTimeout {
+		tm, ok := val.(*TimeoutEvent)
+		if !ok {
+			return nil, fmt.Errorf("msg is not timeout")
+		}
+		digest := tm.Hash()
+		tm.Digest = digest
+		seal, err := e.signer.SignHash(tm.Digest)
+		if err != nil {
+			return nil, err
+		}
+		msg.CommittedSeal = seal
+	}
 
 	// Sign Message
 	data, err := msg.PayloadNoSig()
@@ -190,13 +209,13 @@ func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) 
 		Msg:  payload,
 	}
 
-	return e.broadcast(msg)
+	return e.broadcast(msg, val)
 }
 
-func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message) error {
+func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message, val interface{}) error {
 	logger := e.newLogger()
 
-	payload, err := e.finalizeMessage(msg)
+	payload, err := e.finalizeMessage(msg, val)
 	if err != nil {
 		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
 		return err

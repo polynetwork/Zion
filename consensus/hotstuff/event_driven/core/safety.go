@@ -39,31 +39,6 @@ func (e *EventDrivenEngine) updateLockQCRound(round *big.Int) {
 	e.lockQCRound = round
 }
 
-// voteRule validator should check vote in consensus round:
-// first, the proposal should be exist in the `PendingBlockTree`
-// second, the proposal round should be greater than `lastVoteRound`
-// third, the proposal's justify qc round should NOT be smaller than `lockQCRound`
-// we should ensure that only one vote in different round with first two items,
-// and the last item used to make sure that there were `2F + 1` votes have been locked last in 3-chain round,
-// and the proposal of that round should be current proposal's grand pa or justifyQC's parent.
-func (e *EventDrivenEngine) voteRule(proposalRound, proposalJustifyQCRound *big.Int) bool {
-	if proposalRound == nil || proposalJustifyQCRound == nil {
-		e.logger.Error("[safety voteRule]", "some params invalid", "nil")
-		return false
-	}
-
-	if proposalRound.Cmp(e.lastVoteRound) <= 0 {
-		e.logger.Error("[safety voteRule]", "this round already voted, proposalRound ", proposalRound, "lastVoteRound", e.lastVoteRound)
-		return false
-	}
-	if proposalJustifyQCRound.Cmp(e.lockQCRound) < 0 {
-		e.logger.Error("[safety voteRule]", "proposal parent qc round should be greater, justifyQCRound ", proposalJustifyQCRound, "lockQCRound", e.lockQCRound)
-		return false
-	}
-
-	return true
-}
-
 func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address, view *hotstuff.View, justifyQC *hotstuff.QuorumCert) (*Vote, error) {
 	justifyQCRound := justifyQC.View.Round
 	justifyQCHeight := justifyQC.View.Height

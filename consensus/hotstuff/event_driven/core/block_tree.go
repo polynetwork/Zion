@@ -30,7 +30,11 @@ import (
 type BlockTree struct {
 	// todo: qc cache
 	tree   *PendingBlockTree
-	highQC *hotstuff.QuorumCert // the highest qc
+	highQC *hotstuff.QuorumCert // the highest qc, 从genesis 0开始
+}
+
+func (tr *BlockTree) GetHighQC() *hotstuff.QuorumCert {
+	return tr.highQC
 }
 
 func (tr *BlockTree) GetBlockAndCheckHeight(hash common.Hash, height *big.Int) *types.Block {
@@ -39,21 +43,6 @@ func (tr *BlockTree) GetBlockAndCheckHeight(hash common.Hash, height *big.Int) *
 		return nil
 	}
 	if parentBlock.Number().Cmp(height) != 0 {
-		return nil
-	}
-	return parentBlock
-}
-
-func (tr *BlockTree) GetBlockAndCheckRound(hash common.Hash, round *big.Int) *types.Block {
-	parentBlock := tr.GetBlockByHash(hash)
-	if parentBlock == nil {
-		return nil
-	}
-	_, parentRound, err := extraProposal(parentBlock)
-	if err != nil {
-		return nil
-	}
-	if parentRound.Cmp(round) != 0 {
 		return nil
 	}
 	return parentBlock

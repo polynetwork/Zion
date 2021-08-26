@@ -20,12 +20,12 @@ package core
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -69,9 +69,19 @@ func (e *EventDrivenEngine) checkView(view *hotstuff.View) error {
 	return nil
 }
 
-func (e *EventDrivenEngine) getMessageSeals(hash common.Hash, n int) [][]byte {
+func (e *EventDrivenEngine) getVoteSeals(hash common.Hash, n int) [][]byte {
 	seals := make([][]byte, n)
 	for i, data := range e.messages.Votes(hash) {
+		if i < n {
+			seals[i] = data.CommittedSeal
+		}
+	}
+	return seals
+}
+
+func (e *EventDrivenEngine) getTimeoutSeals(round uint64, n int) [][]byte {
+	seals := make([][]byte, n)
+	for i, data := range e.messages.Timeouts(round) {
 		if i < n {
 			seals[i] = data.CommittedSeal
 		}
@@ -91,13 +101,20 @@ func (e *EventDrivenEngine) chain3Height() *big.Int {
 	return new(big.Int).Add(e.epochHeightStart, common.Big3)
 }
 
-func (e *EventDrivenEngine) aggregate(vote *Vote, size int) (*hotstuff.QuorumCert, error) {
+func (e *EventDrivenEngine) generateTimeoutEvent() *TimeoutEvent {
+	return &TimeoutEvent{
+		Epoch: e.epoch,
+		View:  e.currentView(),
+	}
+}
+
+func (e *EventDrivenEngine) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumCert, error) {
 	proposal := e.blkTree.GetBlockAndCheckHeight(vote.Hash, vote.View.Height)
 	if proposal == nil {
 		return nil, fmt.Errorf("last proposal %v not exist", vote.Hash)
 	}
 
-	seals := e.getMessageSeals(vote.Hash, size)
+	seals := e.getVoteSeals(vote.Hash, size)
 	sealedProposal, err := e.backend.PreCommit(proposal, seals)
 	if err != nil {
 		return nil, err
@@ -117,6 +134,16 @@ func (e *EventDrivenEngine) aggregate(vote *Vote, size int) (*hotstuff.QuorumCer
 	}
 
 	return qc, nil
+}
+
+func (e *EventDrivenEngine) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
+	seals := e.getTimeoutSeals(event.View.Round.Uint64(), size)
+	tc := &TimeoutCert{
+		View:  event.View,
+		Hash:  common.Hash{},
+		Seals: seals,
+	}
+	return tc
 }
 
 func Encode(val interface{}) ([]byte, error) {

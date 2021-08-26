@@ -34,8 +34,11 @@ func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff
 	if err := data.Decode(&evt); err != nil {
 		return err
 	}
-	round := evt.Round
+	if err := e.signer.VerifyHash(e.valset, evt.Digest, data.CommittedSeal); err != nil {
+		return err
+	}
 
+	round := evt.View.Round
 	if err := e.messages.AddTimeout(round.Uint64(), data); err != nil {
 		return err
 	}
@@ -44,18 +47,18 @@ func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff
 		e.increaseLastVoteRound(round)
 	}
 
-	if e.messages.TimeoutSize(round.Uint64()) == e.Q() {
-		tc := &hotstuff.QuorumCert{}
-		return e.advanceRound(tc, true)
+	if size := e.messages.TimeoutSize(round.Uint64()); size == e.Q() {
+		tc := e.aggregateTC(evt, size)
+		return e.advanceRoundByTC(tc, true)
 	}
 
 	return nil
 }
 
-// advanceRound
+// advanceRoundByQC
 // 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
 // 一般而言只有leader才能收到qc，
-func (e *EventDrivenEngine) advanceRound(qc *hotstuff.QuorumCert, broadcast bool) error {
+func (e *EventDrivenEngine) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast bool) error {
 	qcRound := qc.View.Round
 	if qcRound.Cmp(e.curRound) < 0 {
 		return fmt.Errorf("qcRound < currentRound, (%v, %v)", qcRound, e.curRound)
@@ -70,11 +73,39 @@ func (e *EventDrivenEngine) advanceRound(qc *hotstuff.QuorumCert, broadcast bool
 		_ = e.broadcast(&hotstuff.Message{
 			Code: MsgTypeQC,
 			Msg:  payload,
-		})
+		}, qc)
 	}
 
+	return e.advance(qcRound)
+}
+
+// advanceRoundByQC
+// 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
+// 一般而言只有leader才能收到qc，
+func (e *EventDrivenEngine) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
+	tcRound := tc.View.Round
+	if tcRound.Cmp(e.curRound) < 0 {
+		return fmt.Errorf("tcRound < currentRound, (%v, %v)", tcRound, e.curRound)
+	}
+
+	// broadcast to next leader first, we will use `curRound` again in broadcasting.
+	if !e.IsProposer() && broadcast {
+		payload, err := Encode(tc)
+		if err != nil {
+			return err
+		}
+		_ = e.broadcast(&hotstuff.Message{
+			Code: MsgTypeTC,
+			Msg:  payload,
+		}, tc)
+	}
+
+	return e.advance(tcRound)
+}
+
+func (e *EventDrivenEngine) advance(round *big.Int) error {
 	// current round increase
-	e.curRound = new(big.Int).Add(qcRound, common.Big1)
+	e.curRound = new(big.Int).Add(round, common.Big1)
 
 	// recalculate proposer
 	e.valset.CalcProposerByIndex(e.curRound.Uint64())
@@ -98,26 +129,29 @@ const standardTmoDuration = time.Second * 4
 func (e *EventDrivenEngine) newRoundChangeTimer() {
 	e.stopTimer()
 
+	curRd := e.curRound.Uint64()
+	hgRd := e.highestCommitRound.Uint64()
 	index := e.curRound.Uint64() - 1
-	if e.highestCommitRound.Uint64() != 0 {
-		if e.curRound.Uint64()-e.highestCommitRound.Uint64() < 3 {
+
+	if hgRd != 0 {
+		if curRd-hgRd < 3 {
 			index = 0
 		} else {
-			index = e.curRound.Uint64() - e.highestCommitRound.Uint64() - 3
+			index = curRd - hgRd - 3
 		}
 	}
 
 	tmoDuration := time.Duration(index) * standardTmoDuration
 	e.timer = time.AfterFunc(tmoDuration, func() {
-		evt := &TimeoutEvent{
-			Epoch: e.epoch,
-			Round: e.curRound,
+		evt := e.generateTimeoutEvent()
+		payload, err := Encode(evt)
+		if err != nil {
+			e.logger.Error("failed to encode timeout event, err %v", err)
+			return
 		}
-		if payload, err := Encode(evt); err == nil {
-			e.broadcast(&hotstuff.Message{
-				Code: MsgTypeTimeout,
-				Msg:  payload,
-			})
-		}
+		_ = e.broadcast(&hotstuff.Message{
+			Code: MsgTypeTimeout,
+			Msg:  payload,
+		}, evt)
 	})
 }

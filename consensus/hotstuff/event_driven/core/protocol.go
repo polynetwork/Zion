@@ -101,7 +101,8 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 	hash := proposal.Hash()
 	proposer := proposal.Coinbase()
 	header := proposal.Header()
-	justifyQC := msg.JustifyQC
+	// todo: delete MsgProposal justifyQC
+	justifyQC := e.blkTree.highQC
 
 	if epoch != e.epoch {
 		return errInvalidEpoch
@@ -114,7 +115,7 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 	}
 
 	// try to advance into new round, it will update proposer and current view
-	if err := e.advanceRound(justifyQC, false); err != nil {
+	if err := e.advanceRoundByQC(justifyQC, false); err != nil {
 		logger.Trace("Failed to advance new round", "err", err)
 	} else {
 		e.updateLockQCRound(justifyQC.View.Round)
@@ -165,34 +166,35 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 		return nil
 	}
 
-	qc, err := e.aggregate(vote, size)
+	qc, err := e.aggregateQC(vote, size)
 	if err != nil {
 		return err
 	}
 
+	e.blkTree.UpdateHighQC(qc)
+	highQC := e.blkTree.GetHighQC()
+
 	// paceMaker send qc to next leader
-	if err := e.advanceRound(qc, false); err != nil {
+	if err := e.advanceRoundByQC(highQC, false); err != nil {
 		return err
 	}
-	e.blkTree.UpdateHighQC(qc)
 
 	return nil
 }
 
-func (e *EventDrivenEngine) handleCertificate(src hotstuff.Validator, data *hotstuff.Message) error {
+func (e *EventDrivenEngine) handleQuorumCertificate(src hotstuff.Validator, data *hotstuff.Message) error {
 	var (
-		certEvt *CertificateEvent
+		qc *hotstuff.QuorumCert
 	)
-	if err := data.Decode(&certEvt); err != nil {
+	if err := data.Decode(&qc); err != nil {
 		return err
 	}
 
-	qc := certEvt.Cert
 	if err := e.signer.VerifyQC(qc, e.valset); err != nil {
 		return err
 	}
 
-	if err := e.advanceRound(qc, false); err != nil {
+	if err := e.advanceRoundByQC(qc, false); err != nil {
 		return err
 	}
 
@@ -201,4 +203,28 @@ func (e *EventDrivenEngine) handleCertificate(src hotstuff.Validator, data *hots
 	// try to commit locked block and pure the `pendingBlockTree`
 	e.blkTree.ProcessCommit(qc.Hash)
 	return nil
+}
+
+func (e *EventDrivenEngine) handleTimeoutCertificate(src hotstuff.Validator, data *hotstuff.Message) error {
+	var (
+		tc *TimeoutCert
+	)
+	if err := data.Decode(&tc); err != nil {
+		return err
+	}
+
+	if err := e.signer.VerifyCommittedSeal(e.valset, tc.Hash, tc.Seals); err != nil {
+		return err
+	}
+
+	if err := e.advanceRoundByTC(tc, false); err != nil {
+		return err
+	}
+
+	return nil
+	//e.updateLockQCRound(tc.View.Round)
+	//
+	//// try to commit locked block and pure the `pendingBlockTree`
+	//e.blkTree.ProcessCommit(tc.Hash)
+	//return nil
 }
