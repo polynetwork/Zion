@@ -45,7 +45,7 @@ func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address,
 	justifyQCRound := justifyQC.View.Round
 	justifyQCHeight := justifyQC.View.Height
 
-	justifyQCBlock := e.blkTree.GetBlockAndCheckHeight(justifyQC.Hash, justifyQCHeight)
+	justifyQCBlock := e.blkPool.GetBlockAndCheckHeight(justifyQC.Hash, justifyQCHeight)
 	if justifyQCBlock == nil {
 		return nil, fmt.Errorf("justifyQC block (hash, height)not exist, (%v, %v)", justifyQC.Hash, justifyQCHeight)
 	}
@@ -69,7 +69,7 @@ func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address,
 	if e.curHeight.Cmp(e.chain2Height()) >= 0 {
 		qcParentHash := justifyQCBlock.ParentHash()
 		qcParentHeight := new(big.Int).Sub(justifyQCHeight, common.Big1)
-		qcParentBlock := e.blkTree.GetBlockAndCheckHeight(qcParentHash, qcParentHeight)
+		qcParentBlock := e.blkPool.GetBlockAndCheckHeight(qcParentHash, qcParentHeight)
 		if qcParentBlock == nil {
 			return nil, fmt.Errorf("justifyQC parent (hash, height) not exist, (%v, %v)", qcParentHash, qcParentHeight)
 		}
@@ -88,7 +88,7 @@ func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address,
 	if e.curHeight.Cmp(e.chain3Height()) >= 0 {
 		qcGrandHash := vote.GrandHash
 		qcGrandHeight := new(big.Int).Sub(vote.GrandView.Height, common.Big1)
-		qcGrandBlock := e.blkTree.GetBlockAndCheckHeight(qcGrandHash, qcGrandHeight)
+		qcGrandBlock := e.blkPool.GetBlockAndCheckHeight(qcGrandHash, qcGrandHeight)
 		if qcGrandBlock == nil {
 			return nil, fmt.Errorf("justifyQC grand-pa (hash, height) not exist, (%v, %v)", qcGrandHash, qcGrandHeight)
 		}
@@ -149,7 +149,7 @@ func (e *EventDrivenEngine) validateVote(vote *Vote) error {
 }
 
 func (e *EventDrivenEngine) validateSingleChain(hash common.Hash, view *hotstuff.View, checkParent bool, childParent common.Hash) error {
-	block := e.blkTree.GetBlockAndCheckHeight(hash, view.Height)
+	block := e.blkPool.GetBlockAndCheckHeight(hash, view.Height)
 	if block == nil {
 		return fmt.Errorf("proposal %v not exist", hash)
 	}

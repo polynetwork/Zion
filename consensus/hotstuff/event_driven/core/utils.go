@@ -103,7 +103,7 @@ func (e *EventDrivenEngine) checkJustifyQC(proposal hotstuff.Proposal, justifyQC
 		return fmt.Errorf("invalid proposer")
 	}
 
-	highQC := e.blkTree.GetHighQC()
+	highQC := e.blkPool.GetHighQC()
 	return e.compareQC(highQC, justifyQC)
 }
 
@@ -135,7 +135,7 @@ func (e *EventDrivenEngine) checkVote(vote *Vote) error {
 	}
 
 	// vote view MUST be highQC view
-	highQC := e.blkTree.GetHighQC()
+	highQC := e.blkPool.GetHighQC()
 	if vote.View.Cmp(highQC.View) != 0 {
 		return errInvalidVote
 	}
@@ -182,7 +182,7 @@ func (e *EventDrivenEngine) generateTimeoutEvent() *TimeoutEvent {
 }
 
 func (e *EventDrivenEngine) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumCert, error) {
-	proposal := e.blkTree.GetBlockAndCheckHeight(vote.Hash, vote.View.Height)
+	proposal := e.blkPool.GetBlockAndCheckHeight(vote.Hash, vote.View.Height)
 	if proposal == nil {
 		return nil, fmt.Errorf("last proposal %v not exist", vote.Hash)
 	}

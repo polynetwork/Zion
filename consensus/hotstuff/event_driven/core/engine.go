@@ -49,7 +49,7 @@ func (e *EventDrivenEngine) IsProposer() bool {
 // to avoid any race condition of coming propagated blocks
 // 判断是否已经提交或者正在提交, 这样一来，request必须在一开始就写入到blockTree
 func (e *EventDrivenEngine) IsCurrentProposal(blockHash common.Hash) bool {
-	block := e.blkTree.GetBlockByHash(blockHash)
+	block := e.blkPool.GetBlockByHash(blockHash)
 	if block == nil {
 		return false
 	}

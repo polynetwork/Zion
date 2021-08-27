@@ -19,6 +19,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -50,7 +51,7 @@ type EventDrivenEngine struct {
 
 	requests *requestSet
 	messages *MessagePool
-	blkTree  *BlockTree
+	blkPool  *BlockPool
 
 	// pace maker
 	highestCommitRound *big.Int    // used to calculate timeout duration
@@ -85,7 +86,7 @@ func (e *EventDrivenEngine) handleNewRound() error {
 		return errProposalConvert
 	}
 
-	justifyQC := e.blkTree.GetHighQC()
+	justifyQC := e.blkPool.GetHighQC()
 	view := e.currentView()
 	msg := &MsgProposal{
 		Epoch:     e.epoch,
@@ -131,11 +132,8 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 	}
 
 	// try to advance into new round, it will update proposer and current view
-	if err := e.advanceRoundByQC(justifyQC, false); err != nil {
-		logger.Trace("Failed to advance new round", "err", err)
-	} else {
-		e.updateLockQCRound(justifyQC.View.Round)
-		e.blkTree.ProcessCommit(justifyQC.Hash)
+	if err := e.processQC(justifyQC); err != nil {
+		logger.Error("Failed to process qc", "err", err)
 	}
 
 	if err := e.checkProposer(proposer); err != nil {
@@ -145,8 +143,8 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 		return err
 	}
 
-	e.blkTree.UpdateHighQC(justifyQC)
-	if err := e.blkTree.Insert(proposal, view.Round); err != nil {
+	e.blkPool.UpdateHighQC(justifyQC)
+	if err := e.blkPool.Insert(proposal, view.Round); err != nil {
 		return err
 	}
 
@@ -196,8 +194,8 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 		return err
 	}
 
-	e.blkTree.UpdateHighQC(qc)
-	highQC := e.blkTree.GetHighQC()
+	e.blkPool.UpdateHighQC(qc)
+	highQC := e.blkPool.GetHighQC()
 
 	if err := e.advanceRoundByQC(highQC, false); err != nil {
 		return err
@@ -206,7 +204,7 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 	return nil
 }
 
-func (e *EventDrivenEngine) handleQuorumCertificate(src hotstuff.Validator, data *hotstuff.Message) error {
+func (e *EventDrivenEngine) handleQC(src hotstuff.Validator, data *hotstuff.Message) error {
 	var (
 		qc *hotstuff.QuorumCert
 	)
@@ -218,18 +216,10 @@ func (e *EventDrivenEngine) handleQuorumCertificate(src hotstuff.Validator, data
 		return err
 	}
 
-	if err := e.advanceRoundByQC(qc, false); err != nil {
-		return err
-	}
-
-	e.updateLockQCRound(qc.View.Round)
-
-	// try to commit locked block and pure the `pendingBlockTree`
-	e.blkTree.ProcessCommit(qc.Hash)
-	return nil
+	return e.processQC(qc)
 }
 
-func (e *EventDrivenEngine) handleTimeoutCertificate(src hotstuff.Validator, data *hotstuff.Message) error {
+func (e *EventDrivenEngine) handleTC(src hotstuff.Validator, data *hotstuff.Message) error {
 	var (
 		tc *TimeoutCert
 	)
@@ -245,5 +235,24 @@ func (e *EventDrivenEngine) handleTimeoutCertificate(src hotstuff.Validator, dat
 		return err
 	}
 
+	return nil
+}
+
+// try to advance into new round, it will update proposer and current view
+// commit the proposal
+func (e *EventDrivenEngine) processQC(qc *hotstuff.QuorumCert) error {
+	if err := e.advanceRoundByQC(qc, false); err != nil {
+		return err
+	}
+	e.updateLockQCRound(qc.View.Round)
+	committedBlock := e.blkPool.GetCommitBlock(qc.Hash)
+	if committedBlock == nil {
+		return fmt.Errorf("committed block is nil")
+	}
+	// todo: 如果节点此时宕机怎么办？还是说允许所有的节点一起提交区块
+	if e.isSelf(committedBlock.Coinbase()) {
+		e.backend.Commit(committedBlock)
+	}
+	e.blkPool.Pure(committedBlock.Hash())
 	return nil
 }

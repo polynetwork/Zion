@@ -130,9 +130,9 @@ func (e *EventDrivenEngine) handleCheckedMsg(src hotstuff.Validator, msg *hotstu
 	case MsgTypeVote:
 		err = e.handleVote(src, msg)
 	case MsgTypeQC:
-		err = e.handleQuorumCertificate(src, msg)
+		err = e.handleQC(src, msg)
 	case MsgTypeTC:
-		err = e.handleTimeoutCertificate(src, msg)
+		err = e.handleTC(src, msg)
 	case MsgTypeTimeout:
 		err = e.handleTimeout(src, msg)
 	default:
