@@ -43,7 +43,7 @@ type EventDrivenEngine struct {
 	valset hotstuff.ValidatorSet
 
 	epoch            uint64
-	epochHeightStart *big.Int
+	epochHeightStart *big.Int // [epochHeightStart, epochHeightEnd] is an closed interval
 	epochHeightEnd   *big.Int
 	curRound         *big.Int // 从genesis block 0开始
 	curHeight        *big.Int // 从genesis block 0开始
@@ -86,13 +86,10 @@ func (e *EventDrivenEngine) handleNewRound() error {
 	}
 
 	justifyQC := e.blkTree.GetHighQC()
-	if err := e.checkHighQC(proposal, justifyQC); err != nil {
-		return err
-	}
-
+	view := e.currentView()
 	msg := &MsgProposal{
 		Epoch:     e.epoch,
-		View:      e.currentView(),
+		View:      view,
 		Proposal:  proposal,
 		JustifyQC: justifyQC,
 	}
@@ -114,16 +111,17 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 	}
 
 	view := msg.View
-	epoch := msg.Epoch
 	proposal := msg.Proposal
 	hash := proposal.Hash()
 	proposer := proposal.Coinbase()
 	header := proposal.Header()
-	// todo: delete MsgProposal justifyQC
-	justifyQC := e.blkTree.highQC
+	justifyQC := msg.JustifyQC
 
-	if epoch != e.epoch {
-		return errInvalidEpoch
+	if err := e.checkEpoch(msg.Epoch, proposal.Number()); err != nil {
+		return err
+	}
+	if err := e.checkJustifyQC(proposal, justifyQC); err != nil {
+		return err
 	}
 	if err := e.signer.VerifyQC(justifyQC, e.valset); err != nil {
 		return err

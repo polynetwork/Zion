@@ -19,6 +19,7 @@
 package core
 
 import (
+	"bytes"
 	"fmt"
 	"math/big"
 
@@ -62,6 +63,19 @@ func (e *EventDrivenEngine) checkProposer(proposer common.Address) error {
 	return nil
 }
 
+func (e *EventDrivenEngine) checkEpoch(epoch uint64, height *big.Int) error {
+	if e.epoch != epoch {
+		return errInvalidHighQC
+	}
+	if height.Cmp(e.epochHeightStart) < 0 {
+		return errInvalidEpoch
+	}
+	if height.Cmp(e.epochHeightEnd) > 0 {
+		return errInvalidEpoch
+	}
+	return nil
+}
+
 func (e *EventDrivenEngine) checkView(view *hotstuff.View) error {
 	if e.curRound.Cmp(view.Round) != 0 || e.curHeight.Cmp(view.Height) != 0 {
 		return errInvalidMessage
@@ -69,27 +83,47 @@ func (e *EventDrivenEngine) checkView(view *hotstuff.View) error {
 	return nil
 }
 
-func (e *EventDrivenEngine) checkHighQC(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
-	if highQC == nil || highQC.View == nil || highQC.Hash == utils.EmptyHash || highQC.Proposer == utils.EmptyAddress {
-		return fmt.Errorf("highQC fields may be empty or nil")
+func (e *EventDrivenEngine) checkJustifyQC(proposal hotstuff.Proposal, justifyQC *hotstuff.QuorumCert) error {
+	if justifyQC == nil || justifyQC.View == nil || justifyQC.Hash == utils.EmptyHash || justifyQC.Proposer == utils.EmptyAddress {
+		return fmt.Errorf("justifyQC fields may be empty or nil")
 	}
 
-	if highQC.View.Height.Cmp(new(big.Int).Sub(proposal.Number(), common.Big1)) != 0 {
+	if justifyQC.View.Height.Cmp(new(big.Int).Sub(proposal.Number(), common.Big1)) != 0 {
 		return fmt.Errorf("high qc height invalid")
 	}
 
-	if highQC.Hash != proposal.ParentHash() {
-		return fmt.Errorf("highQC hash invalid")
+	if justifyQC.Hash != proposal.ParentHash() {
+		return fmt.Errorf("justifyQC hash invalid")
 	}
 
 	vs := e.valset.Copy()
-	vs.CalcProposerByIndex(highQC.View.Round.Uint64())
+	vs.CalcProposerByIndex(justifyQC.View.Round.Uint64())
 	proposer := vs.GetProposer().Address()
-	if proposer != highQC.Proposer {
+	if proposer != justifyQC.Proposer {
 		return fmt.Errorf("invalid proposer")
 	}
 
+	highQC := e.blkTree.GetHighQC()
+	return e.compareQC(highQC, justifyQC)
+}
+
+func (e *EventDrivenEngine) compareQC(expect, src *hotstuff.QuorumCert) error {
+	if expect.Hash != src.Hash {
+		return fmt.Errorf("qc hash expect %v, got %v", expect.Hash, src.Hash)
+	}
+	if expect.View.Cmp(src.View) != 0 {
+		return fmt.Errorf("qc view expect %v, got %v", expect.View, src.View)
+	}
+	if expect.Proposer != src.Proposer {
+		return fmt.Errorf("qc proposer expect %v, got %v", expect.Proposer, src.Proposer)
+	}
+	if bytes.Equal(expect.Extra, src.Extra) {
+		return fmt.Errorf("qc extra not same")
+	}
 	return nil
+	// if !reflect.DeepEqual(expect, src) {
+	//     return fmt.Errorf("qc not same")
+	// }
 }
 
 func (e *EventDrivenEngine) getVoteSeals(hash common.Hash, n int) [][]byte {
