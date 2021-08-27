@@ -82,6 +82,7 @@ func (e *EventDrivenEngine) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast 
 		}, qc)
 	}
 
+	e.curHeight = new(big.Int).Add(e.curHeight, common.Big1)
 	return e.advance(qcRound)
 }
 

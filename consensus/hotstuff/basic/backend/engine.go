@@ -146,7 +146,6 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		// post block into Istanbul engine
 		go s.EventMux().Post(hotstuff.RequestEvent{
 			Proposal: block,
-			Parent:   parent,
 		})
 		for {
 			select {
