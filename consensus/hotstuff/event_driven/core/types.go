@@ -121,7 +121,7 @@ type Vote struct {
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (v *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{v.Epoch, v.Hash, v.Proposer, v.View, v.ParentHash, v.View, v.GrandHash, v.View, v.GreatGrandHash, v.GreatGrandView})
+	return rlp.Encode(w, []interface{}{v.Epoch, v.Hash, v.Proposer, v.View, v.ParentHash, v.ParentView, v.GrandHash, v.GrandView, v.GreatGrandHash, v.GreatGrandView})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
