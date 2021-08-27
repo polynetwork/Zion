@@ -69,6 +69,29 @@ func (e *EventDrivenEngine) checkView(view *hotstuff.View) error {
 	return nil
 }
 
+func (e *EventDrivenEngine) checkHighQC(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
+	if highQC == nil || highQC.View == nil || highQC.Hash == utils.EmptyHash || highQC.Proposer == utils.EmptyAddress {
+		return fmt.Errorf("highQC fields may be empty or nil")
+	}
+
+	if highQC.View.Height.Cmp(new(big.Int).Sub(proposal.Number(), common.Big1)) != 0 {
+		return fmt.Errorf("high qc height invalid")
+	}
+
+	if highQC.Hash != proposal.ParentHash() {
+		return fmt.Errorf("highQC hash invalid")
+	}
+
+	vs := e.valset.Copy()
+	vs.CalcProposerByIndex(highQC.View.Round.Uint64())
+	proposer := vs.GetProposer().Address()
+	if proposer != highQC.Proposer {
+		return fmt.Errorf("invalid proposer")
+	}
+
+	return nil
+}
+
 func (e *EventDrivenEngine) getVoteSeals(hash common.Hash, n int) [][]byte {
 	seals := make([][]byte, n)
 	for i, data := range e.messages.Votes(hash) {

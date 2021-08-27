@@ -48,7 +48,7 @@ var (
 	errExtraHeader             = errors.New("failed to extract header")
 	errInvalidEpoch            = errors.New("invalid epoch")
 	errInvalidVote             = errors.New("invalid vote")
-	
+	errInvalidHighQC           = errors.New("invalid highQC")
 	errFailedDecodePrepareVote = errors.New("failed to decode PREPARE_VOTE")
 	// errFailedDecodePreCommit is returned when the PRECOMMIT Message is malformed.
 	errFailedDecodePreCommit     = errors.New("failed to decode PRECOMMIT")

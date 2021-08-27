@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -52,8 +53,8 @@ type EventDrivenEngine struct {
 	blkTree  *BlockTree
 
 	// pace maker
-	highestCommitRound *big.Int
-	timer              *time.Timer
+	highestCommitRound *big.Int    // used to calculate timeout duration
+	timer              *time.Timer // drive consensus round
 
 	// safety
 	lockQCRound   *big.Int
@@ -67,6 +68,7 @@ type EventDrivenEngine struct {
 }
 
 func NewEventDrivenEngine(valset hotstuff.ValidatorSet) *EventDrivenEngine {
+	// todo: e.highQC from genesis block 0
 	return nil
 }
 
@@ -75,10 +77,26 @@ func (e *EventDrivenEngine) handleNewRound() error {
 	if !e.IsProposer() {
 		return nil
 	}
-	msg, err := e.generateProposalMessage()
-	if err != nil {
+
+	// todo: do not need request's parent
+	req := e.requests.GetRequest(e.currentView())
+	proposal, ok := req.Proposal.(*types.Block)
+	if !ok {
+		return errProposalConvert
+	}
+
+	justifyQC := e.blkTree.GetHighQC()
+	if err := e.checkHighQC(proposal, justifyQC); err != nil {
 		return err
 	}
+
+	msg := &MsgProposal{
+		Epoch:     e.epoch,
+		View:      e.currentView(),
+		Proposal:  proposal,
+		JustifyQC: justifyQC,
+	}
+
 	return e.encodeAndBroadcast(MsgTypeProposal, msg)
 }
 
@@ -222,9 +240,4 @@ func (e *EventDrivenEngine) handleTimeoutCertificate(src hotstuff.Validator, dat
 	}
 
 	return nil
-	//e.updateLockQCRound(tc.View.Round)
-	//
-	//// try to commit locked block and pure the `pendingBlockTree`
-	//e.blkTree.ProcessCommit(tc.Hash)
-	//return nil
 }

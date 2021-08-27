@@ -19,7 +19,6 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/core/types"
 	"sync"
 	"time"
 
@@ -44,26 +43,6 @@ func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
 
 	logger.Trace("handleRequest", "height", req.Proposal.Number(), "proposal", req.Proposal.Hash())
 	return nil
-}
-
-func (e *EventDrivenEngine) generateProposalMessage() (*MsgProposal, error) {
-	req := e.requests.GetRequest(e.currentView())
-	proposal, ok := req.Proposal.(*types.Block)
-	if !ok {
-		return nil, errProposalConvert
-	}
-	_, justifyQC, err := extraHeader(req.Parent)
-	if err != nil {
-		return nil, errExtraHeader
-	}
-
-	msg := &MsgProposal{
-		Epoch:     e.epoch,
-		View:      e.currentView(),
-		Proposal:  proposal,
-		JustifyQC: justifyQC,
-	}
-	return msg, nil
 }
 
 type requestSet struct {

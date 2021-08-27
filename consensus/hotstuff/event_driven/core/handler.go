@@ -227,7 +227,7 @@ func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message, val interface{}) er
 			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
 			return err
 		}
-	case MsgTypeQC, MsgTypeVote:
+	case MsgTypeVote, MsgTypeQC, MsgTypeTC:
 		// vote to next round leader
 		nextRoundVals := e.valset.Copy()
 		nextRoundVals.CalcProposerByIndex(e.curRound.Uint64() + 1)

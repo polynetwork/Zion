@@ -27,6 +27,12 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
+func (e *EventDrivenEngine) updateHighestCommittedRound(round *big.Int) {
+	if e.highestCommitRound.Cmp(round) < 0 {
+		e.highestCommitRound = round
+	}
+}
+
 func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
 	var (
 		evt *TimeoutEvent
