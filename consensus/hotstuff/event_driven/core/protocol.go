@@ -145,7 +145,10 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 		return err
 	}
 
-	e.blkTree.Insert(proposal)
+	e.blkTree.UpdateHighQC(justifyQC)
+	if err := e.blkTree.Insert(proposal, view.Round); err != nil {
+		return err
+	}
 
 	vote, err := e.makeVote(hash, proposer, view, justifyQC)
 	if err != nil {
@@ -170,6 +173,12 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 		return errFailedDecodeNewView
 	}
 
+	if err := e.checkVote(vote); err != nil {
+		return err
+	}
+	if err := e.checkEpoch(vote.Epoch, vote.View.Height); err != nil {
+		return err
+	}
 	if err := e.validateVote(vote); err != nil {
 		return err
 	}
@@ -190,7 +199,6 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 	e.blkTree.UpdateHighQC(qc)
 	highQC := e.blkTree.GetHighQC()
 
-	// paceMaker send qc to next leader
 	if err := e.advanceRoundByQC(highQC, false); err != nil {
 		return err
 	}

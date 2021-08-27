@@ -126,6 +126,22 @@ func (e *EventDrivenEngine) compareQC(expect, src *hotstuff.QuorumCert) error {
 	// }
 }
 
+func (e *EventDrivenEngine) checkVote(vote *Vote) error {
+	if vote.View == nil || vote.Hash == utils.EmptyHash {
+		return errInvalidVote
+	}
+	if vote.ParentHash == utils.EmptyHash || vote.ParentView == nil {
+		return errInvalidVote
+	}
+
+	// vote view MUST be highQC view
+	highQC := e.blkTree.GetHighQC()
+	if vote.View.Cmp(highQC.View) != 0 {
+		return errInvalidVote
+	}
+	return nil
+}
+
 func (e *EventDrivenEngine) getVoteSeals(hash common.Hash, n int) [][]byte {
 	seals := make([][]byte, n)
 	for i, data := range e.messages.Votes(hash) {

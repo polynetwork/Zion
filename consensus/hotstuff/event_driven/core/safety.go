@@ -39,7 +39,9 @@ func (e *EventDrivenEngine) updateLockQCRound(round *big.Int) {
 	e.lockQCRound = round
 }
 
-func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address, view *hotstuff.View, justifyQC *hotstuff.QuorumCert) (*Vote, error) {
+func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address,
+	view *hotstuff.View, justifyQC *hotstuff.QuorumCert) (*Vote, error) {
+
 	justifyQCRound := justifyQC.View.Round
 	justifyQCHeight := justifyQC.View.Height
 
@@ -106,18 +108,11 @@ func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address, 
 }
 
 func (e *EventDrivenEngine) validateVote(vote *Vote) error {
-	// validate current proposal
-	if vote.View == nil || vote.Hash == utils.EmptyHash {
-		return errInvalidVote
-	}
 	if err := e.validateSingleChain(vote.Hash, vote.View, false, utils.EmptyHash); err != nil {
 		return err
 	}
 
 	// validate parent block
-	if vote.ParentHash == utils.EmptyHash || vote.ParentView == nil {
-		return errInvalidVote
-	}
 	if new(big.Int).Add(vote.ParentView.Height, common.Big1).Cmp(vote.View.Height) != 0 {
 		return errInvalidVote
 	}

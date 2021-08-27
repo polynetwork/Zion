@@ -29,17 +29,17 @@ import (
 type TreeNode struct {
 	block    *types.Block
 	round    *big.Int
-	clildren []string
+	children []common.Hash
 }
 
-func (n *TreeNode) HasChild(childHash string) bool {
+func (n *TreeNode) HasChild(childHash common.Hash) bool {
 	if n == nil {
 		return false
 	}
-	if n.clildren == nil || len(n.clildren) == 0 {
+	if n.children == nil || len(n.children) == 0 {
 		return false
 	}
-	for _, v := range n.clildren {
+	for _, v := range n.children {
 		if v == childHash {
 			return true
 		}
@@ -48,9 +48,9 @@ func (n *TreeNode) HasChild(childHash string) bool {
 }
 
 type PendingBlockTree struct {
-	root      *TreeNode
-	nodeHashs map[string]*TreeNode
-	capacity  int
+	root     *TreeNode
+	nodes    map[common.Hash]*TreeNode
+	capacity int
 }
 
 // todo:
@@ -60,20 +60,20 @@ func NewPendingBlockTree() *PendingBlockTree {
 }
 
 func (tr *PendingBlockTree) Add(block *types.Block, round *big.Int) error {
-	blockHash := block.Hash().Hex()
-	parentHash := block.ParentHash().Hex()
-	parentNode, ok := tr.nodeHashs[parentHash]
+	blockHash := block.Hash()
+	parentHash := block.ParentHash()
+	parentNode, ok := tr.nodes[parentHash]
 	if !ok {
 		return fmt.Errorf("tree node %s parent node %s not exist", blockHash, parentHash)
 	}
 
-	if parentNode.clildren == nil || len(parentNode.clildren) == 0 {
-		parentNode.clildren = []string{blockHash}
+	if parentNode.children == nil || len(parentNode.children) == 0 {
+		parentNode.children = []common.Hash{blockHash}
 	} else if !parentNode.HasChild(blockHash) {
-		parentNode.clildren = append(parentNode.clildren, blockHash)
+		parentNode.children = append(parentNode.children, blockHash)
 	} else {
-		// todo: child already exist
 		return nil
+		// return fmt.Errorf("tree node %v already exist", blockHash)
 	}
 
 	node := &TreeNode{
@@ -81,7 +81,7 @@ func (tr *PendingBlockTree) Add(block *types.Block, round *big.Int) error {
 		round: new(big.Int).Set(round),
 	}
 
-	tr.nodeHashs[blockHash] = node
+	tr.nodes[blockHash] = node
 	return nil
 }
 
@@ -91,7 +91,7 @@ func (tr *PendingBlockTree) Branch(block *types.Block) []*types.Block {
 }
 
 func (tr *PendingBlockTree) GetBlockByHash(hash common.Hash) *types.Block {
-	node, ok := tr.nodeHashs[hash.Hex()]
+	node, ok := tr.nodes[hash]
 	if !ok {
 		return nil
 	}

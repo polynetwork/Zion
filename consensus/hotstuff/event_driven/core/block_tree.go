@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// todo: if actually need it
 type BlockTree struct {
 	// todo: qc cache
 	tree   *PendingBlockTree
@@ -53,8 +52,8 @@ func (tr *BlockTree) GetBlockByHash(hash common.Hash) *types.Block {
 }
 
 // Insert insert new block into pending block tree, calculate and return the highestQC
-func (tr *BlockTree) Insert(block *types.Block) *hotstuff.QuorumCert {
-	return nil
+func (tr *BlockTree) Insert(block *types.Block, round *big.Int) error {
+	return tr.tree.Add(block, round)
 }
 
 func (tr *BlockTree) UpdateHighQC(qc *hotstuff.QuorumCert) {
