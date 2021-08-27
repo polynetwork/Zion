@@ -7,7 +7,7 @@ import (
 	polycomm "github.com/polynetwork/poly/common"
 )
 
-var (
+const (
 	KEY_PREFIX_BTC = "btc"
 
 	KEY_PREFIX_BTC_VOTE = "btcVote"
