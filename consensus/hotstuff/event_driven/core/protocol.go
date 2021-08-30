@@ -104,6 +104,7 @@ func New(
 
 // handleNewRound proposer at this round get an new proposal and broadcast to all validators.
 func (e *EventDrivenEngine) handleNewRound() error {
+	logger := e.newLogger()
 	e.state = StateAcceptRequest
 
 	if !e.IsProposer() {
@@ -128,6 +129,8 @@ func (e *EventDrivenEngine) handleNewRound() error {
 		JustifyQC: justifyQC,
 	}
 	e.state = StateAcceptProposal
+
+	logger.Debug("----------New round", "state", e.currentState(), "newRound", e.curRound, "new_proposer", e.valset.GetProposer(), "valSet", e.valset.List(), "size", e.valset.Size(), "IsProposer", e.IsProposer())
 
 	return e.encodeAndBroadcast(MsgTypeProposal, msg)
 }

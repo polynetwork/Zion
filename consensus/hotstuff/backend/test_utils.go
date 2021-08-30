@@ -137,7 +137,7 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 		panic(err)
 	}
 
-	b.Start(blockchain, blockchain.CurrentBlock, nil)
+	b.Start(blockchain, blockchain.CurrentBlock, blockchain.GetBlockByHash, nil)
 
 	return blockchain, b
 }

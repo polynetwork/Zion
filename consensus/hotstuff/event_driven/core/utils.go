@@ -35,9 +35,8 @@ func (e *EventDrivenEngine) checkValidatorSignature(data []byte, sig []byte) (co
 	return e.signer.CheckSignature(e.valset, data, sig)
 }
 
-// todo
 func (e *EventDrivenEngine) newLogger() log.Logger {
-	logger := e.logger.New("state")
+	logger := e.logger.New("state", e.currentState(), "view", e.currentView())
 	return logger
 }
 
@@ -54,6 +53,10 @@ func (e *EventDrivenEngine) currentView() *hotstuff.View {
 		Round:  new(big.Int).Set(e.curRound),
 		Height: new(big.Int).Set(e.curHeight),
 	}
+}
+
+func (e *EventDrivenEngine) currentState() State {
+	return e.state
 }
 
 func (e *EventDrivenEngine) checkProposer(proposer common.Address) error {

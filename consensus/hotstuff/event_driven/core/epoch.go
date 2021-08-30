@@ -30,6 +30,7 @@ import (
 func (e *EventDrivenEngine) initialize() error {
 	lastBlock, _ := e.backend.LastProposal()
 
+	fmt.Println("-------------- start to initialize event-driven hotstuff")
 	//todo:
 	e.epoch = 0
 	e.epochHeightStart = big.NewInt(0)
