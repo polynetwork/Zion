@@ -10,7 +10,7 @@ import (
 
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core -run TestNewRound
 func TestNewRound(t *testing.T) {
-	N := uint64(4)
+	N := uint64(1)
 	F := uint64(1)
 	H := uint64(1)
 	R := uint64(0)

@@ -47,10 +47,11 @@ const (
 type backend struct {
 	config *hotstuff.Config
 	//db           ethdb.Database // Database to store and retrieve necessary information
-	core         hsc.CoreEngine
+	core         hotstuff.CoreEngine
 	signer       hotstuff.Signer
 	chain        consensus.ChainReader
 	currentBlock func() *types.Block
+	getBlockByHash  func(hash common.Hash) *types.Block
 	hasBadBlock  func(hash common.Hash) bool
 	logger       log.Logger
 
@@ -340,6 +341,10 @@ func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 
 	// Return header only block here since we don't need block body
 	return block, proposer
+}
+
+func (s *backend) GetProposal(hash common.Hash) hotstuff.Proposal {
+	return s.getBlockByHash(hash)
 }
 
 // HasProposal implements hotstuff.Backend.HashBlock

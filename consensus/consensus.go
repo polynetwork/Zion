@@ -54,6 +54,8 @@ type ChainReader interface {
 
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
+
+	GetBlockByHash(hash common.Hash) *types.Block
 }
 
 // Engine is an algorithm agnostic consensus engine.
@@ -143,7 +145,7 @@ type HotStuff interface {
 
 	// Authorize(signer common.Address, signFn func(accounts.Account, string, []byte) ([]byte, error))
 	// Start starts the engine
-	Start(chain ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error
+	Start(chain ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
 
 	// Stop stops the engine
 	Stop() error

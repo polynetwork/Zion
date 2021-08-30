@@ -102,7 +102,7 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 		extra.Seal = []byte{}
 	}
 	extra.CommittedSeal = [][]byte{}
-	extra.Salt = []byte{}
+	//extra.Salt = []byte{}
 
 	payload, err := rlp.EncodeToBytes(&extra)
 	if err != nil {

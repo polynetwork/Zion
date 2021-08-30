@@ -288,7 +288,7 @@ func (w *worker) pendingBlock() *types.Block {
 func (w *worker) start() {
 	atomic.StoreInt32(&w.running, 1)
 	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
-		istanbul.Start(w.chain, w.chain.CurrentBlock, nil)
+		istanbul.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil)
 	}
 	w.startCh <- struct{}{}
 }

@@ -45,8 +45,7 @@ func (s *SignerImpl) Sign(data []byte) ([]byte, error) {
 	return crypto.Sign(hashData, s.privateKey)
 }
 
-func (s *SignerImpl) SignVote(proposal hotstuff.Proposal) ([]byte, error) {
-	hash := proposal.Hash()
+func (s *SignerImpl) SignHash(hash common.Hash) ([]byte, error) {
 	voteHash := s.wrapCommittedSeal(hash)
 	return s.Sign(voteHash)
 }
@@ -92,32 +91,6 @@ func (s *SignerImpl) Recover(header *types.Header) (common.Address, error) {
 		s.signatures.Add(hash, addr)
 	}
 	return addr, nil
-}
-
-func (s *SignerImpl) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
-	var (
-		buf  bytes.Buffer
-		vals = valSet.AddressList()
-	)
-
-	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
-	if len(header.Extra) < types.HotstuffExtraVanity {
-		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity-len(header.Extra))...)
-	}
-	buf.Write(header.Extra[:types.HotstuffExtraVanity])
-
-	ist := &types.HotstuffExtra{
-		Validators:    vals,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	}
-
-	payload, err := rlp.EncodeToBytes(&ist)
-	if err != nil {
-		return nil, err
-	}
-
-	return append(buf.Bytes(), payload...), nil
 }
 
 // SignerSeal proposer sign the header hash and fill extra seal with signature.
@@ -292,6 +265,28 @@ func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, s
 	}
 
 	return common.Address{}, errUnauthorizedAddress
+}
+
+func (s *SignerImpl) VerifyHash(valSet hotstuff.ValidatorSet, hash common.Hash, sig []byte) error {
+	data := s.wrapCommittedSeal(hash)
+	signer, err := getSignatureAddress(data, sig)
+	if err != nil {
+		return err
+	}
+
+	if _, val := valSet.GetByAddress(signer); val == nil {
+		return errUnauthorizedAddress
+	}
+
+	return nil
+}
+
+func (s *SignerImpl) VerifyCommittedSeal(valSet hotstuff.ValidatorSet, hash common.Hash, committedSeals [][]byte) error {
+	signers, err := s.GetSignersFromCommittedSeals(hash, committedSeals)
+	if err != nil {
+		return err
+	}
+	return checkValidatorQuorum(signers, valSet)
 }
 
 // wrapCommittedSeal returns a committed seal for the given hash

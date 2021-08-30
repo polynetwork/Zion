@@ -1,6 +1,9 @@
 package core
 
 import (
+	"bytes"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"math"
 	"math/big"
 	"math/rand"
@@ -34,7 +37,7 @@ type core struct {
 }
 
 // New creates an HotStuff consensus core
-func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer, valSet hotstuff.ValidatorSet) CoreEngine {
+func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer, valSet hotstuff.ValidatorSet) hotstuff.CoreEngine {
 	c := &core{
 		config:  config,
 		logger:  log.New("address", backend.Address()),
@@ -70,6 +73,32 @@ func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 		return true
 	}
 	return false
+}
+
+func (c *core) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
+	var (
+		buf  bytes.Buffer
+		vals = valSet.AddressList()
+	)
+
+	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
+	if len(header.Extra) < types.HotstuffExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:types.HotstuffExtraVanity])
+
+	ist := &types.HotstuffExtra{
+		Validators:    vals,
+		Seal:          []byte{},
+		CommittedSeal: [][]byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return nil, err
+	}
+
+	return append(buf.Bytes(), payload...), nil
 }
 
 const maxRetry uint64 = 10

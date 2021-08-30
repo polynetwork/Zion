@@ -37,10 +37,10 @@ func newRoundState(view *hotstuff.View, validatorSet hotstuff.ValidatorSet, prep
 		round:          view.Round,
 		height:         view.Height,
 		state:          StateAcceptRequest,
-		newViews:       message_set.MewMessageSet(validatorSet),
-		prepareVotes:   message_set.MewMessageSet(validatorSet),
-		preCommitVotes: message_set.MewMessageSet(validatorSet),
-		commitVotes:    message_set.MewMessageSet(validatorSet),
+		newViews:       message_set.NewMessageSet(validatorSet),
+		prepareVotes:   message_set.NewMessageSet(validatorSet),
+		preCommitVotes: message_set.NewMessageSet(validatorSet),
+		commitVotes:    message_set.NewMessageSet(validatorSet),
 	}
 	if prepareQC != nil {
 		rs.prepareQC = prepareQC.Copy()

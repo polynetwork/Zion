@@ -17,3 +17,147 @@
  */
 
 package core
+
+import (
+	"fmt"
+	"math/big"
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+)
+
+func (e *EventDrivenEngine) updateHighestCommittedRound(round *big.Int) {
+	if e.highestCommitRound.Cmp(round) < 0 {
+		e.highestCommitRound = round
+	}
+}
+
+func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
+	var (
+		evt *TimeoutEvent
+	)
+	if err := data.Decode(&evt); err != nil {
+		return err
+	}
+	if err := e.signer.VerifyHash(e.valset, evt.Digest, data.CommittedSeal); err != nil {
+		return err
+	}
+
+	round := evt.View.Round
+	if err := e.messages.AddTimeout(round.Uint64(), data); err != nil {
+		return err
+	}
+
+	if e.isSelf(src.Address()) {
+		e.increaseLastVoteRound(round)
+	}
+
+	if size := e.messages.TimeoutSize(round.Uint64()); size == e.Q() {
+		tc := e.aggregateTC(evt, size)
+		return e.advanceRoundByTC(tc, true)
+	}
+
+	return nil
+}
+
+// advanceRoundByQC
+// 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
+// 一般而言只有leader才能收到qc，
+func (e *EventDrivenEngine) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast bool) error {
+	if qc == nil || qc.View == nil ||  qc.View.Round.Cmp(e.curRound) < 0 {
+		return fmt.Errorf("qcRound invalid")
+	}
+
+	// broadcast to next leader first, we will use `curRound` again in broadcasting.
+	if !e.IsProposer() && broadcast {
+		payload, err := Encode(qc)
+		if err != nil {
+			return err
+		}
+		_ = e.broadcast(&hotstuff.Message{
+			Code: MsgTypeQC,
+			Msg:  payload,
+		}, qc)
+	}
+
+	e.curHeight = new(big.Int).Add(e.curHeight, common.Big1)
+	return e.advance(qc.View.Round)
+}
+
+// advanceRoundByQC
+// 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
+// 一般而言只有leader才能收到qc，
+func (e *EventDrivenEngine) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
+	tcRound := tc.View.Round
+	if tcRound.Cmp(e.curRound) < 0 {
+		return fmt.Errorf("tcRound < currentRound, (%v, %v)", tcRound, e.curRound)
+	}
+
+	// broadcast to next leader first, we will use `curRound` again in broadcasting.
+	if !e.IsProposer() && broadcast {
+		payload, err := Encode(tc)
+		if err != nil {
+			return err
+		}
+		_ = e.broadcast(&hotstuff.Message{
+			Code: MsgTypeTC,
+			Msg:  payload,
+		}, tc)
+	}
+
+	return e.advance(tcRound)
+}
+
+func (e *EventDrivenEngine) advance(round *big.Int) error {
+	// current round increase
+	e.curRound = new(big.Int).Add(round, common.Big1)
+
+	// recalculate proposer
+	e.valset.CalcProposerByIndex(e.curRound.Uint64())
+
+	// reset timer
+	e.newRoundChangeTimer()
+
+	// get into new consensus round
+	return e.handleNewRound()
+}
+
+func (e *EventDrivenEngine) stopTimer() {
+	if e.timer != nil {
+		e.timer.Stop()
+	}
+}
+
+// todo: add in config
+const standardTmoDuration = time.Second * 4
+
+func (e *EventDrivenEngine) newRoundChangeTimer() {
+	e.stopTimer()
+
+	curRd := e.curRound.Uint64()
+	hgRd := e.highestCommitRound.Uint64()
+	index := e.curRound.Uint64() - 1
+
+	if hgRd != 0 {
+		if curRd-hgRd < 3 {
+			index = 0
+		} else {
+			index = curRd - hgRd - 3
+		}
+	}
+
+	tmoDuration := time.Duration(index) * standardTmoDuration
+	e.timer = time.AfterFunc(tmoDuration, func() {
+		evt := e.generateTimeoutEvent()
+		payload, err := Encode(evt)
+		if err != nil {
+			e.logger.Error("failed to encode timeout event, err %v", err)
+			return
+		}
+		_ = e.broadcast(&hotstuff.Message{
+			Code: MsgTypeTimeout,
+			Msg:  payload,
+		}, evt)
+	})
+}

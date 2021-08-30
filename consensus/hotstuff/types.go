@@ -37,6 +37,8 @@ type Proposal interface {
 	// Hash retrieves the hash of this proposal.
 	Hash() common.Hash
 
+	ParentHash() common.Hash
+
 	Coinbase() common.Address
 
 	Time() uint64
@@ -59,6 +61,11 @@ type Request struct {
 type View struct {
 	Round  *big.Int
 	Height *big.Int
+}
+
+var EmptyView = &View{
+	Round:  big.NewInt(0),
+	Height: big.NewInt(0),
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.

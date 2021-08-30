@@ -29,7 +29,7 @@ import (
 )
 
 // Construct a new message set to accumulate messages for given height/view number.
-func MewMessageSet(valSet hotstuff.ValidatorSet) *MessageSet {
+func NewMessageSet(valSet hotstuff.ValidatorSet) *MessageSet {
 	return &MessageSet{
 		view: &hotstuff.View{
 			Round:  new(big.Int),

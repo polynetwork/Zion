@@ -80,7 +80,7 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 
 	// add validators in snapshot to extraData's validators section
 	valset := s.snap()
-	extra, err := s.signer.PrepareExtra(header, valset)
+	extra, err := s.core.PrepareExtra(header, valset)
 	if err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 }
 
 // Start implements consensus.Istanbul.Start
-func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
+func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if s.coreStarted {
@@ -200,6 +200,7 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 
 	s.chain = chain
 	s.currentBlock = currentBlock
+	s.getBlockByHash = getBlockByHash
 	s.hasBadBlock = hasBadBlock
 
 	if err := s.core.Start(); err != nil {
@@ -259,7 +260,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if number == 0 {
 		return nil
 	}
-	
+
 	// Ensure that the block's timestamp isn't too close to it's parent
 	var parent *types.Header
 	if len(parents) > 0 {
