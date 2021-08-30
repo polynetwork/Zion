@@ -117,7 +117,7 @@ func (e *EventDrivenEngine) compareQC(expect, src *hotstuff.QuorumCert) error {
 	if expect.Proposer != src.Proposer {
 		return fmt.Errorf("qc proposer expect %v, got %v", expect.Proposer, src.Proposer)
 	}
-	if bytes.Equal(expect.Extra, src.Extra) {
+	if !bytes.Equal(expect.Extra, src.Extra) {
 		return fmt.Errorf("qc extra not same")
 	}
 	return nil
@@ -126,6 +126,7 @@ func (e *EventDrivenEngine) compareQC(expect, src *hotstuff.QuorumCert) error {
 	// }
 }
 
+// vote to highQC round + 1
 func (e *EventDrivenEngine) checkVote(vote *Vote) error {
 	if vote.View == nil || vote.Hash == utils.EmptyHash {
 		return errInvalidVote
@@ -136,7 +137,8 @@ func (e *EventDrivenEngine) checkVote(vote *Vote) error {
 
 	// vote view MUST be highQC view
 	highQC := e.blkPool.GetHighQC()
-	if vote.View.Cmp(highQC.View) != 0 {
+	if new(big.Int).Sub(vote.View.Height, highQC.View.Height).Cmp(common.Big1) != 0 &&
+		new(big.Int).Sub(vote.View.Round, highQC.View.Round).Cmp(common.Big1) != 0 {
 		return errInvalidVote
 	}
 	return nil
@@ -228,4 +230,8 @@ func isTC(qc *hotstuff.QuorumCert) bool {
 		return true
 	}
 	return false
+}
+
+func sub1(num *big.Int) *big.Int {
+	return new(big.Int).Sub(num, common.Big1)
 }

@@ -63,6 +63,11 @@ type View struct {
 	Height *big.Int
 }
 
+var EmptyView = &View{
+	Round:  big.NewInt(0),
+	Height: big.NewInt(0),
+}
+
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (v *View) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{v.Round, v.Height})

@@ -63,6 +63,8 @@ type Backend interface {
 	// LastProposal retrieves latest committed proposal and the address of proposer
 	LastProposal() (Proposal, common.Address)
 
+	GetProposal(hash common.Hash) Proposal
+
 	// HasProposal checks if the combination of the given hash and height matches any existing blocks
 	HasProposal(hash common.Hash, number *big.Int) bool
 
@@ -95,4 +97,8 @@ type CoreEngine interface {
 
 	PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
 	// CurrentRoundState() *roundState
+}
+
+type Extra interface {
+
 }

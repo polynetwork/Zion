@@ -24,13 +24,19 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// todo:
 func (e *EventDrivenEngine) Start() error {
+	e.handleNewRound()
+
+	// Tests will handle events itself, so we have to make subscribeEvents()
+	// be able to call in test.
+	e.subscribeEvents()
+	go e.handleEvents()
 	return nil
 }
 
-// todo:
 func (e *EventDrivenEngine) Stop() error {
+	e.stopTimer()
+	e.unsubscribeEvents()
 	return nil
 }
 
@@ -63,4 +69,8 @@ func (e *EventDrivenEngine) IsCurrentProposal(blockHash common.Hash) bool {
 
 func (e *EventDrivenEngine) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
 	return generateExtra(header, valSet, e.epoch, e.curRound)
+}
+
+func (e *EventDrivenEngine) Address() common.Address {
+	return e.signer.Address()
 }

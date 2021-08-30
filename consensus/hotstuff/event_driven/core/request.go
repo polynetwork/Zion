@@ -19,11 +19,9 @@
 package core
 
 import (
-	"sync"
-	"time"
-
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"sync"
 )
 
 func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
@@ -42,12 +40,24 @@ func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
 	}
 
 	logger.Trace("handleRequest", "height", req.Proposal.Number(), "proposal", req.Proposal.Hash())
-	return nil
+
+	if e.state != StateAcceptRequest {
+		return nil
+	}
+
+	return e.handleNewRound()
+	//if req := e.requests.GetRequest(e.currentView()); req != nil {
+	//	e.requests.SetCurrentRequest(req)
+	//	return e.handleNewRound()
+	//}
+	//
+	//return nil
 }
 
 type requestSet struct {
 	mtx *sync.RWMutex
 
+	current *hotstuff.Request
 	pendingRequest *prque.Prque
 }
 
@@ -73,6 +83,10 @@ func (s *requestSet) checkRequest(view *hotstuff.View, req *hotstuff.Request) er
 	}
 }
 
+//func (s *requestSet) GetCurrentRequest() *hotstuff.Request {
+//	return s.current
+//}
+
 func (s *requestSet) StoreRequest(req *hotstuff.Request) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
@@ -85,8 +99,6 @@ func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
-	maxRetry := 20
-retry:
 	for !s.pendingRequest.Empty() {
 		m, prior := s.pendingRequest.Pop()
 		req, ok := m.(*hotstuff.Request)
@@ -105,11 +117,33 @@ retry:
 		}
 		return req
 	}
-	if maxRetry -= 1; maxRetry > 0 {
-		time.Sleep(500 * time.Millisecond)
-		goto retry
-	}
+
 	return nil
+//	maxRetry := 20
+//retry:
+//	for !s.pendingRequest.Empty() {
+//		m, prior := s.pendingRequest.Pop()
+//		req, ok := m.(*hotstuff.Request)
+//		if !ok {
+//			continue
+//		}
+//
+//		// push back if it's future message
+//		if err := s.checkRequest(view, req); err != nil {
+//			if err == errFutureMessage {
+//				s.pendingRequest.Push(m, prior)
+//				// todo: 是否为continue
+//				break
+//			}
+//			continue
+//		}
+//		return req
+//	}
+//	if maxRetry -= 1; maxRetry > 0 {
+//		time.Sleep(500 * time.Millisecond)
+//		goto retry
+//	}
+//	return nil
 }
 
 func (s *requestSet) Size() int {

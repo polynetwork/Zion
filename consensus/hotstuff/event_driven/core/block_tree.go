@@ -62,7 +62,7 @@ type BlockTree struct {
 }
 
 //NewBlockTree init a block tree with root, rootQC and maxPrunedSize
-func NewBlockTree(rootBlock *types.Block, rootRound uint64, maxPrunedSize int) *BlockTree {
+func NewBlockTree(rootBlock *types.Block, rootRound uint64, maxPrunedSize int) (*BlockTree, error) {
 	rootNode := generateNode(rootBlock, rootRound)
 	blockTree := &BlockTree{
 		nodes:         make(map[common.Hash]*Node, 10),
@@ -73,29 +73,45 @@ func NewBlockTree(rootBlock *types.Block, rootRound uint64, maxPrunedSize int) *
 	}
 	blockTree.nodes[rootBlock.Hash()] = rootNode
 	blockTree.roundTable[rootRound] = append(blockTree.roundTable[rootRound], rootNode)
-	return blockTree
+	if err := blockTree.Add(rootBlock, rootRound); err != nil {
+		return nil, err
+	}
+	return blockTree, nil
 }
 
 //Add insert block to tree
 func (bt *BlockTree) Add(block *types.Block, round uint64) error {
-	if block == nil || block.Hash() == common.EmptyHash || block.ParentHash() == common.EmptyHash {
+	if block == nil || block.Hash() == common.EmptyHash {
 		return fmt.Errorf("block is invalid")
 	}
+	if round > 0 && block.ParentHash() == common.EmptyHash {
+		return fmt.Errorf("block parent hash is empty")
+	}
 
-	hash := block.Hash()
-	parentHash := block.ParentHash()
-	if _, ok := bt.nodes[hash]; ok {
+	var (
+		ok     bool
+		hash   = block.Hash()
+		parent *Node
+	)
+
+	if _, ok = bt.nodes[hash]; ok {
 		return nil
 	}
-	parent, ok := bt.nodes[parentHash]
-	if !ok {
-		return fmt.Errorf("block's parent not exist")
+
+	if round > 0 {
+		parentHash := block.ParentHash()
+		if parent, ok = bt.nodes[parentHash]; !ok {
+			return fmt.Errorf("block's parent not exist")
+		}
 	}
 
 	node := generateNode(block, round)
 	bt.nodes[hash] = node
 	bt.roundTable[round] = append(bt.roundTable[round], node)
-	parent.children = append(parent.children, node)
+	if parent != nil {
+		parent.children = append(parent.children, node)
+	}
+
 	return nil
 }
 

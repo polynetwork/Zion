@@ -19,11 +19,11 @@
 package core
 
 import (
-	"fmt"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -37,8 +37,10 @@ type EventDrivenEngine struct {
 	config  *hotstuff.Config
 	logger  log.Logger
 	db      ethdb.Database
+	chain   consensus.ChainReader
 	backend hotstuff.Backend
 
+	state  State
 	addr   common.Address
 	signer hotstuff.Signer
 	valset hotstuff.ValidatorSet
@@ -58,7 +60,8 @@ type EventDrivenEngine struct {
 	timer              *time.Timer // drive consensus round
 
 	// safety
-	lockQCRound   *big.Int
+	//lockQCRound   *big.Int
+	lockQC        *hotstuff.QuorumCert
 	lastVoteRound *big.Int
 
 	events *event.TypeMuxSubscription
@@ -68,19 +71,51 @@ type EventDrivenEngine struct {
 	validateFn func([]byte, []byte) (common.Address, error)
 }
 
-func NewEventDrivenEngine(valset hotstuff.ValidatorSet) *EventDrivenEngine {
-	// todo: e.highQC from genesis block 0
-	return nil
+func NewEventDrivenEngine(
+	c *hotstuff.Config,
+	db ethdb.Database,
+	chain consensus.ChainReader,
+	backend hotstuff.Backend,
+	signer hotstuff.Signer,
+	valset hotstuff.ValidatorSet,
+) *EventDrivenEngine {
+
+	e := &EventDrivenEngine{
+		config:  c,
+		logger:  log.New("address", backend.Address()),
+		backend: backend,
+		db:      db,
+		chain:   chain,
+	}
+	e.addr = backend.Address()
+	e.requests = newRequestSet()
+	e.valset = valset
+	e.signer = signer
+	e.state = StateAcceptRequest
+	e.requests = newRequestSet()
+	e.messages = NewMessagePool(valset)
+	e.validateFn = e.checkValidatorSignature
+
+	if err := e.initialize(); err != nil {
+		e.logger.Error("initialize event-driven hotstuff protocol", "err", err)
+		return nil
+	}
+	return e
 }
 
 // handleNewRound proposer at this round get an new proposal and broadcast to all validators.
 func (e *EventDrivenEngine) handleNewRound() error {
+	e.state = StateAcceptRequest
+
 	if !e.IsProposer() {
 		return nil
 	}
 
 	// todo: do not need request's parent
 	req := e.requests.GetRequest(e.currentView())
+	if req == nil {
+		return nil
+	}
 	proposal, ok := req.Proposal.(*types.Block)
 	if !ok {
 		return errProposalConvert
@@ -94,6 +129,7 @@ func (e *EventDrivenEngine) handleNewRound() error {
 		Proposal:  proposal,
 		JustifyQC: justifyQC,
 	}
+	e.state = StateAcceptProposal
 
 	return e.encodeAndBroadcast(MsgTypeProposal, msg)
 }
@@ -200,6 +236,7 @@ func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Me
 	if err := e.advanceRoundByQC(highQC, false); err != nil {
 		return err
 	}
+	e.state = StateVoted
 
 	return nil
 }
@@ -241,18 +278,20 @@ func (e *EventDrivenEngine) handleTC(src hotstuff.Validator, data *hotstuff.Mess
 // try to advance into new round, it will update proposer and current view
 // commit the proposal
 func (e *EventDrivenEngine) processQC(qc *hotstuff.QuorumCert) error {
-	if err := e.advanceRoundByQC(qc, false); err != nil {
-		return err
+	// try to advance consensus into next round
+	e.advanceRoundByQC(qc, false)
+
+	// commit qc grand (proposal's great-grand parent block)
+	lastLockQC := e.getLockQC()
+	if committedBlock := e.blkPool.GetCommitBlock(lastLockQC.Hash); committedBlock != nil {
+		if existProposal := e.backend.GetProposal(committedBlock.Hash()); existProposal == nil {
+			// todo: 如果节点此时宕机怎么办？还是说允许所有的节点一起提交区块
+			if e.isSelf(committedBlock.Coinbase()) {
+				e.backend.Commit(committedBlock)
+			}
+		}
+		e.blkPool.Pure(committedBlock.Hash())
 	}
-	e.updateLockQCRound(qc.View.Round)
-	committedBlock := e.blkPool.GetCommitBlock(qc.Hash)
-	if committedBlock == nil {
-		return fmt.Errorf("committed block is nil")
-	}
-	// todo: 如果节点此时宕机怎么办？还是说允许所有的节点一起提交区块
-	if e.isSelf(committedBlock.Coinbase()) {
-		e.backend.Commit(committedBlock)
-	}
-	e.blkPool.Pure(committedBlock.Hash())
-	return nil
+
+	return e.updateLockQC(qc)
 }

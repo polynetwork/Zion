@@ -27,9 +27,15 @@ import (
 )
 
 type BlockPool struct {
-	// todo: qc cache
 	tree   *BlockTree
 	highQC *hotstuff.QuorumCert // the highest qc, 从genesis 0开始
+}
+
+func NewBlockPool(initHighQC *hotstuff.QuorumCert, tr *BlockTree) *BlockPool {
+	return &BlockPool{
+		tree:   tr,
+		highQC: initHighQC,
+	}
 }
 
 func (tr *BlockPool) GetHighQC() *hotstuff.QuorumCert {
@@ -67,14 +73,21 @@ func (tr *BlockPool) UpdateHighQC(qc *hotstuff.QuorumCert) {
 	}
 }
 
-// GetCommitBlock commit the block into ledger and pure the `pendingBlockTree`
-func (tr *BlockPool) GetCommitBlock(qc common.Hash) *types.Block {
-	qcBlock := tr.tree.GetBlockByHash(qc)
-	if qcBlock == nil {
+// GetCommitBlock get highQC's grand-parent block which should be committed at current round
+func (tr *BlockPool) GetCommitBlock(lockQC common.Hash) *types.Block {
+	block := tr.GetBlockByHash(tr.highQC.Hash)
+	parent := tr.GetBlockAndCheckHeight(block.ParentHash(), sub1(block.Number()))
+	if parent == nil {
 		return nil
 	}
-	qcParentHash := qcBlock.ParentHash()
-	return tr.tree.GetBlockByHash(qcParentHash)
+	grand := tr.GetBlockAndCheckHeight(parent.ParentHash(), sub1(parent.Number()))
+	if grand == nil {
+		return nil
+	}
+	if grand.Hash() != lockQC {
+		return nil
+	}
+	return tr.GetBlockByHash(lockQC)
 }
 
 // Pure delete useless blocks

@@ -184,7 +184,7 @@ func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 }
 
 // Start implements consensus.Istanbul.Start
-func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, hasBadBlock func(hash common.Hash) bool) error {
+func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if s.coreStarted {
@@ -200,6 +200,7 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 
 	s.chain = chain
 	s.currentBlock = currentBlock
+	s.getBlockByHash = getBlockByHash
 	s.hasBadBlock = hasBadBlock
 
 	if err := s.core.Start(); err != nil {

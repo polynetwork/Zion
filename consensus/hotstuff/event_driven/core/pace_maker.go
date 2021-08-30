@@ -65,9 +65,8 @@ func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff
 // 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
 // 一般而言只有leader才能收到qc，
 func (e *EventDrivenEngine) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast bool) error {
-	qcRound := qc.View.Round
-	if qcRound.Cmp(e.curRound) < 0 {
-		return fmt.Errorf("qcRound < currentRound, (%v, %v)", qcRound, e.curRound)
+	if qc == nil || qc.View == nil ||  qc.View.Round.Cmp(e.curRound) < 0 {
+		return fmt.Errorf("qcRound invalid")
 	}
 
 	// broadcast to next leader first, we will use `curRound` again in broadcasting.
@@ -83,7 +82,7 @@ func (e *EventDrivenEngine) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast 
 	}
 
 	e.curHeight = new(big.Int).Add(e.curHeight, common.Big1)
-	return e.advance(qcRound)
+	return e.advance(qc.View.Round)
 }
 
 // advanceRoundByQC

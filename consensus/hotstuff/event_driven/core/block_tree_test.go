@@ -44,7 +44,8 @@ func newBlockTreeTestBlock(parentHash common.Hash, height int64) *types.Block {
 }
 
 func newTestBlockTree(pureSize int) *BlockTree {
-	return NewBlockTree(testRoot, 0, pureSize)
+	tr, _ := NewBlockTree(testRoot, 0, pureSize)
+	return tr
 }
 
 func TestBlockTree(t *testing.T) {

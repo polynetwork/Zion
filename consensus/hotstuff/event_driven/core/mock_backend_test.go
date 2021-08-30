@@ -1,18 +1,20 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 package core
 
@@ -46,9 +48,9 @@ type mockBackend struct {
 	peers  hotstuff.ValidatorSet
 	events *event.TypeMux
 
-	committedMsgs []testCommittedMsgs
+	committedMsgs   []testCommittedMsgs
 	committedMsgMap map[common.Hash]testCommittedMsgs
-	sentMsgs      [][]byte // store the messages when Send is called by core
+	sentMsgs        [][]byte // store the messages when Send is called by core
 
 	address common.Address
 	db      ethdb.Database
@@ -59,8 +61,8 @@ type testCommittedMsgs struct {
 	committedSeals [][]byte
 }
 
-func (m *mockBackend) core() *core {
-	return m.engine.(*core)
+func (m *mockBackend) core() *EventDrivenEngine {
+	return m.engine.(*EventDrivenEngine)
 }
 
 func (m *mockBackend) NewRequest(request hotstuff.Proposal) {
@@ -116,12 +118,6 @@ func (m *mockBackend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) erro
 }
 
 func (m *mockBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
-	//qc := &hotstuff.QuorumCert{
-	//	View: view,
-	//	Hash: proposal.Hash(),
-	//}
-	//qc.Proposer = proposal.(*types.Block).Header().Coinbase
-	//qc.Extra = seals[0]
 	return proposal, nil
 }
 
@@ -130,13 +126,18 @@ func (m *mockBackend) Commit(proposal hotstuff.Proposal) error {
 	msg := testCommittedMsgs{
 		commitProposal: proposal,
 	}
-	m.committedMsgs = append(m.committedMsgs, msg)
-	if m.committedMsgMap == nil {
-		m.committedMsgMap = make(map[common.Hash]testCommittedMsgs)
+	add := func(data testCommittedMsgs) {
+		m.committedMsgs = append(m.committedMsgs, data)
+		m.committedMsgMap[data.commitProposal.Hash()] = data
 	}
-	m.committedMsgMap[proposal.Hash()] = msg
-	// fake new head events
-	// go self.events.Post(istanbul.FinalCommittedEvent{})
+	if m.committedMsgs == nil || len(m.committedMsgs) == 0 {
+		add(msg)
+	}
+	for _, v := range m.committedMsgs {
+		if v.commitProposal.Hash() != msg.commitProposal.Hash() {
+			add(msg)
+		}
+	}
 	return nil
 }
 
@@ -155,7 +156,7 @@ func (m *mockBackend) HasBadProposal(hash common.Hash) bool {
 func (m *mockBackend) LastProposal() (hotstuff.Proposal, common.Address) {
 	l := len(m.committedMsgs)
 	if l == 0 {
-		return nil, EmptyAddress
+		return nil, common.EmptyAddress
 	} else {
 		proposal := m.committedMsgs[l-1].commitProposal
 		block := proposal.(*types.Block)
@@ -276,7 +277,7 @@ type testSystem struct {
 	quit                   chan struct{}
 }
 
-func (s *testSystem) getLeader() *core {
+func (s *testSystem) getLeader() *EventDrivenEngine {
 	for _, v := range s.backends {
 		if v.engine.IsProposer() {
 			return v.core()
@@ -285,7 +286,7 @@ func (s *testSystem) getLeader() *core {
 	return nil
 }
 
-func (s *testSystem) getLeaderByRound(lastProposer common.Address, round *big.Int) *core {
+func (s *testSystem) getLeaderByRound(lastProposer common.Address, round *big.Int) *EventDrivenEngine {
 	valset := s.backends[0].peers.Copy()
 	valset.CalcProposer(lastProposer, round.Uint64())
 	proposer := valset.GetProposer().Address()
@@ -298,8 +299,8 @@ func (s *testSystem) getLeaderByRound(lastProposer common.Address, round *big.In
 	return nil
 }
 
-func (s *testSystem) getRepos() []*core {
-	list := make([]*core, 0)
+func (s *testSystem) getRepos() []*EventDrivenEngine {
+	list := make([]*EventDrivenEngine, 0)
 	for _, v := range s.backends {
 		if !v.engine.IsProposer() {
 			list = append(list, v.core())
@@ -338,32 +339,21 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 
 	addrs := generateValidators(int(n))
 	sys := newTestSystem(n)
+	vset := validator.NewSet(addrs, hotstuff.RoundRobin)
 	config := hotstuff.DefaultBasicConfig
+	genesisBlock := makeGenesisBlock(vset)
 
 	for i := uint64(0); i < n; i++ {
-		vset := validator.NewSet(addrs, hotstuff.RoundRobin)
 		backend := sys.NewBackend(i)
 		backend.peers = vset
 		backend.address = vset.GetByIndex(i).Address()
-
-		signer := &mockSinger{address: backend.address}
-		backend.signer = signer
-
-		core := New(backend, config, signer, vset).(*core)
-		core.current = newRoundState(&hotstuff.View{
-			Height: new(big.Int).SetUint64(h),
-			Round:  new(big.Int).SetUint64(r),
-		}, vset, nil)
-		core.valSet = vset
-		core.logger = testLogger
-		core.backend = backend
-		core.signer = signer
-		core.validateFn = func(data []byte, sig []byte) (common.Address, error) {
-			return signer.CheckSignature(vset, data, sig)
-		}
-
-		backend.engine = core
+		backend.committedMsgMap = make(map[common.Hash]testCommittedMsgs)
+		backend.committedMsgs = make([]testCommittedMsgs, 0)
+		backend.Commit(genesisBlock)
+		backend.signer = &mockSinger{address: backend.address}
+		backend.engine = NewEventDrivenEngine(config, nil, nil, backend, backend.signer, vset)
 	}
+
 	return sys
 }
 

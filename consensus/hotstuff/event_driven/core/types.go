@@ -44,7 +44,7 @@ const (
 	MsgTypeVote     MsgType = 2
 	MsgTypeTimeout  MsgType = 3
 	MsgTypeQC       MsgType = 4
-	MsgTypeTC  		MsgType = 5
+	MsgTypeTC       MsgType = 5
 )
 
 func (m MsgType) String() string {
@@ -74,6 +74,40 @@ func init() {
 		code := data.(uint64)
 		return MsgType(code)
 	})
+}
+
+type State uint64
+
+const (
+	StateAcceptRequest  State = 1
+	StateAcceptProposal State = 2
+	StateVoted          State = 3
+)
+
+func (s State) String() string {
+	if s == StateAcceptRequest {
+		return "StateAcceptRequest"
+	} else if s == StateAcceptProposal {
+		return "StateAcceptProposal"
+	} else if s == StateVoted {
+		return "StateVoted"
+	} else {
+		return "Unknown"
+	}
+}
+
+// Cmp compares s and y and returns:
+//   -1 if s is the previous state of y
+//    0 if s and y are the same state
+//   +1 if s is the next state of y
+func (s State) Cmp(y State) int {
+	if uint64(s) < uint64(y) {
+		return -1
+	}
+	if uint64(s) > uint64(y) {
+		return 1
+	}
+	return 0
 }
 
 type MsgProposal struct {
@@ -204,9 +238,9 @@ func (tm *TimeoutEvent) String() string {
 }
 
 type TimeoutCert struct {
-	View     *hotstuff.View
-	Hash     common.Hash
-	Seals    [][]byte
+	View  *hotstuff.View
+	Hash  common.Hash
+	Seals [][]byte
 }
 
 // EncodeRLP serializes b into the Ethereum RLP format.
@@ -217,9 +251,9 @@ func (tc *TimeoutCert) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
 func (tc *TimeoutCert) DecodeRLP(s *rlp.Stream) error {
 	var subject struct {
-		View     *hotstuff.View
-		Hash     common.Hash
-		Seals    [][]byte
+		View  *hotstuff.View
+		Hash  common.Hash
+		Seals [][]byte
 	}
 
 	if err := s.Decode(&subject); err != nil {
@@ -244,6 +278,7 @@ func (tc *TimeoutCert) Copy() *TimeoutCert {
 	}
 	return newTc
 }
+
 //
 //type CertificateEvent struct {
 //	Cert *hotstuff.QuorumCert
