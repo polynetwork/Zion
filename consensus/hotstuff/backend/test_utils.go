@@ -123,7 +123,7 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
-	b, _ := New(config, nodeKeys[0], memDB, valset).(*backend)
+	b, _ := New(config, nodeKeys[0], memDB, valset, hotstuff.HOTSTUFF_PROTOCOL_BASIC).(*backend)
 	genesis.MustCommit(memDB)
 
 	txLookUpLimit := uint64(100)

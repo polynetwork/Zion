@@ -71,11 +71,11 @@ type EventDrivenEngine struct {
 	validateFn func([]byte, []byte) (common.Address, error)
 }
 
-func NewEventDrivenEngine(
+// todo: chain
+func New(
+	backend hotstuff.Backend,
 	c *hotstuff.Config,
 	db ethdb.Database,
-	chain consensus.ChainReader,
-	backend hotstuff.Backend,
 	signer hotstuff.Signer,
 	valset hotstuff.ValidatorSet,
 ) *EventDrivenEngine {
@@ -85,13 +85,12 @@ func NewEventDrivenEngine(
 		logger:  log.New("address", backend.Address()),
 		backend: backend,
 		db:      db,
-		chain:   chain,
+		//chain:   chain,
 	}
 	e.addr = backend.Address()
 	e.requests = newRequestSet()
 	e.valset = valset
 	e.signer = signer
-	e.state = StateAcceptRequest
 	e.requests = newRequestSet()
 	e.messages = NewMessagePool(valset)
 	e.validateFn = e.checkValidatorSignature
@@ -111,7 +110,6 @@ func (e *EventDrivenEngine) handleNewRound() error {
 		return nil
 	}
 
-	// todo: do not need request's parent
 	req := e.requests.GetRequest(e.currentView())
 	if req == nil {
 		return nil

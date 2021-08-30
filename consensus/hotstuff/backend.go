@@ -99,6 +99,9 @@ type CoreEngine interface {
 	// CurrentRoundState() *roundState
 }
 
-type Extra interface {
+type HotstuffProtocol string
 
-}
+const (
+	HOTSTUFF_PROTOCOL_BASIC        HotstuffProtocol = "basic"
+	HOTSTUFF_PROTOCOL_EVENT_DRIVEN HotstuffProtocol = "event_driven"
+)

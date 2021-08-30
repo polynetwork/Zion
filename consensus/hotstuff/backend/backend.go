@@ -27,7 +27,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
+	hsb "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
+	hse "github.com/ethereum/go-ethereum/consensus/hotstuff/event_driven/core"
 	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -47,13 +48,13 @@ const (
 type backend struct {
 	config *hotstuff.Config
 	//db           ethdb.Database // Database to store and retrieve necessary information
-	core         hotstuff.CoreEngine
-	signer       hotstuff.Signer
-	chain        consensus.ChainReader
-	currentBlock func() *types.Block
-	getBlockByHash  func(hash common.Hash) *types.Block
-	hasBadBlock  func(hash common.Hash) bool
-	logger       log.Logger
+	core           hotstuff.CoreEngine
+	signer         hotstuff.Signer
+	chain          consensus.ChainReader
+	currentBlock   func() *types.Block
+	getBlockByHash func(hash common.Hash) *types.Block
+	hasBadBlock    func(hash common.Hash) bool
+	logger         log.Logger
 
 	valset         hotstuff.ValidatorSet
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
@@ -77,12 +78,12 @@ type backend struct {
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet) consensus.HotStuff {
+func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet, protocol hotstuff.HotstuffProtocol) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
-	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote))
+	signer := snr.NewSigner(privateKey, byte(hsb.MsgTypePrepareVote))
 	backend := &backend{
 		config: config,
 		//db:             db,
@@ -98,7 +99,15 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		proposals:      make(map[common.Address]bool),
 	}
 
-	backend.core = hsc.New(backend, config, signer, valset)
+	switch protocol {
+	case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
+		backend.core = hsb.New(backend, config, signer, valset)
+	case hotstuff.HOTSTUFF_PROTOCOL_EVENT_DRIVEN:
+		backend.core = hse.New(backend, config, db, signer, valset)
+	default:
+		panic("unknown hotstuff protocol")
+	}
+
 	return backend
 }
 
