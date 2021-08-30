@@ -19,7 +19,6 @@
 package core
 
 import (
-	"fmt"
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -36,6 +35,10 @@ func (e *EventDrivenEngine) Start() error {
 			return MsgType(code)
 		})
 	})
+
+	if err := e.initialize(); err != nil {
+		return err
+	}
 
 	e.handleNewRound()
 
@@ -80,9 +83,6 @@ func (e *EventDrivenEngine) IsCurrentProposal(blockHash common.Hash) bool {
 }
 
 func (e *EventDrivenEngine) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
-	if e.curRound == nil {
-		fmt.Println("-----curound is nil")
-	}
 	return generateExtra(header, valSet, e.epoch, e.curRound)
 }
 

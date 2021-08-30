@@ -80,26 +80,22 @@ func New(
 	valset hotstuff.ValidatorSet,
 ) hotstuff.CoreEngine {
 
-	e := &EventDrivenEngine{
+	addr := signer.Address()
+	engine := &EventDrivenEngine{
 		config:  c,
-		logger:  log.New("address", backend.Address()),
-		backend: backend,
 		db:      db,
+		backend: backend,
 		//chain:   chain,
+		logger:  log.New("address", addr),
 	}
-	e.addr = backend.Address()
-	e.requests = newRequestSet()
-	e.valset = valset
-	e.signer = signer
-	e.requests = newRequestSet()
-	e.messages = NewMessagePool(valset)
-	e.validateFn = e.checkValidatorSignature
+	engine.addr = addr
+	engine.valset = valset
+	engine.signer = signer
+	engine.requests = newRequestSet()
+	engine.messages = NewMessagePool(valset)
+	engine.validateFn = engine.checkValidatorSignature
 
-	if err := e.initialize(); err != nil {
-		e.logger.Error("initialize event-driven hotstuff protocol", "err", err)
-		return nil
-	}
-	return e
+	return engine
 }
 
 // handleNewRound proposer at this round get an new proposal and broadcast to all validators.

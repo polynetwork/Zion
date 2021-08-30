@@ -107,7 +107,6 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 	default:
 		panic("unknown hotstuff protocol")
 	}
-
 	return backend
 }
 
@@ -337,7 +336,6 @@ func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 	}
 
 	block := s.currentBlock()
-
 	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
 		var err error
