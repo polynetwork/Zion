@@ -15,13 +15,6 @@ var (
 	EmptyAddress = common.Address{}
 )
 
-func init() {
-	hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
-		code := data.(uint64)
-		return MsgType(code)
-	})
-}
-
 type MsgType uint64
 
 const (

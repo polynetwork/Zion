@@ -20,6 +20,7 @@ package core
 
 import (
 	"bytes"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -42,21 +43,24 @@ func generateExtra(header *types.Header, valSet hotstuff.ValidatorSet, epoch uin
 		vals = valSet.AddressList()
 	)
 
+	fmt.Println("-----------2")
 	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
 	if len(header.Extra) < types.HotstuffExtraVanity {
 		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity-len(header.Extra))...)
 	}
+	fmt.Println("-----------3")
 	buf.Write(header.Extra[:types.HotstuffExtraVanity])
-
+	fmt.Println("-----------4")
 	salt := &ExtraSalt{
 		Epoch: epoch,
 		Round: round,
 	}
+	fmt.Println("-----------5")
 	saltEnc, err := Encode(salt)
 	if err != nil {
 		return nil, err
 	}
-
+	fmt.Println("-----------6")
 	ist := &types.HotstuffExtra{
 		Validators:    vals,
 		Seal:          []byte{},

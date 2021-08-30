@@ -78,7 +78,7 @@ func New(
 	db ethdb.Database,
 	signer hotstuff.Signer,
 	valset hotstuff.ValidatorSet,
-) *EventDrivenEngine {
+) hotstuff.CoreEngine {
 
 	e := &EventDrivenEngine{
 		config:  c,

@@ -18,13 +18,23 @@ package core
 
 import (
 	"math/big"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
+var once sync.Once
+
 // Start implements core.Engine.Start
 func (c *core) Start() error {
+	once.Do(func() {
+		hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
+			code := data.(uint64)
+			return MsgType(code)
+		})
+	})
+
 	// Start a new round from last sequence + 1
 	c.startNewRound(common.Big0)
 

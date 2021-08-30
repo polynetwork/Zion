@@ -351,7 +351,7 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 		backend.committedMsgs = make([]testCommittedMsgs, 0)
 		backend.Commit(genesisBlock)
 		backend.signer = &mockSinger{address: backend.address}
-		backend.engine = New(config, nil, backend, backend.signer, vset)
+		backend.engine = New(backend, config, nil, backend.signer, vset)
 	}
 
 	return sys

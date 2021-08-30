@@ -68,14 +68,6 @@ func (m MsgType) Value() uint64 {
 	return uint64(m)
 }
 
-// todo: set in start function
-func init() {
-	hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
-		code := data.(uint64)
-		return MsgType(code)
-	})
-}
-
 type State uint64
 
 const (

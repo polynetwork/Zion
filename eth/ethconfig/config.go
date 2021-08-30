@@ -18,10 +18,6 @@
 package ethconfig
 
 import (
-	"fmt"
-	"github.com/ethereum/go-ethereum/consensus/clique"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/log"
 	"math/big"
 	"os"
 	"os/user"
@@ -31,14 +27,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	hsb "github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
@@ -214,11 +213,9 @@ type Config struct {
 func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
 	// If proof-of-authority is requested, set it up
 	if chainConfig.Clique != nil {
-		fmt.Println("-------------1")
 		return clique.New(chainConfig.Clique, db)
 	}
 	if chainConfig.HotStuff != nil {
-		fmt.Println("-------------2")
 		config := hotstuff.DefaultBasicConfig
 		nodeKey := stack.Config().NodeKey()
 		genesisNodeList := stack.Config().StaticNodes()
@@ -234,16 +231,12 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 	// Otherwise assume proof-of-work
 	switch config.PowMode {
 	case ethash.ModeFake:
-		fmt.Println("-------------3")
 		log.Warn("Ethash used in fake mode")
 	case ethash.ModeTest:
-		fmt.Println("-------------4")
 		log.Warn("Ethash used in test mode")
 	case ethash.ModeShared:
-		fmt.Println("-------------5")
 		log.Warn("Ethash used in shared mode")
 	}
-	fmt.Println("-------------6")
 	engine := ethash.New(ethash.Config{
 		PowMode:          config.PowMode,
 		CacheDir:         stack.ResolvePath(config.CacheDir),

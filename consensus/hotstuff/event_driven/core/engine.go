@@ -19,12 +19,24 @@
 package core
 
 import (
+	"fmt"
+	"sync"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+var once sync.Once
+
 func (e *EventDrivenEngine) Start() error {
+	once.Do(func() {
+		hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
+			code := data.(uint64)
+			return MsgType(code)
+		})
+	})
+
 	e.handleNewRound()
 
 	// Tests will handle events itself, so we have to make subscribeEvents()
@@ -68,6 +80,9 @@ func (e *EventDrivenEngine) IsCurrentProposal(blockHash common.Hash) bool {
 }
 
 func (e *EventDrivenEngine) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
+	if e.curRound == nil {
+		fmt.Println("-----curound is nil")
+	}
 	return generateExtra(header, valSet, e.epoch, e.curRound)
 }
 
