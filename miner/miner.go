@@ -19,6 +19,7 @@ package miner
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"math/big"
 	"time"
 
@@ -57,7 +58,7 @@ type Config struct {
 // Miner creates blocks and searches for proof-of-work values.
 type Miner struct {
 	mux      *event.TypeMux
-	worker   *worker
+	worker   MinerWorker
 	coinbase common.Address
 	eth      Backend
 	engine   consensus.Engine
@@ -74,11 +75,21 @@ func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *even
 		exitCh:  make(chan struct{}),
 		startCh: make(chan common.Address),
 		stopCh:  make(chan struct{}),
-		worker:  newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true),
 	}
 
 	// hotstuff: disable pre-sealing, and waiting for p2p server connections
-	miner.EnablePreseal()
+	protocol := hotstuff.HotstuffProtocol(chainConfig.HotStuff.Protocol)
+	switch protocol {
+	case hotstuff.HOTSTUFF_PROTOCOL_EVENT_DRIVEN:
+		miner.worker = newEventDrivenWorker()
+		miner.EnablePreseal()
+	case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
+		miner.worker = newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true)
+		miner.EnablePreseal()
+	default:
+		miner.worker = newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true)
+	}
+
 	go miner.update()
 	return miner
 }
@@ -109,7 +120,7 @@ func (miner *Miner) update() {
 			switch ev.Data.(type) {
 			case downloader.StartEvent:
 				wasMining := miner.Mining()
-				miner.worker.stop()
+				miner.worker.Stop()
 				canStart = false
 				if wasMining {
 					// Resume mining after sync was finished
@@ -120,13 +131,13 @@ func (miner *Miner) update() {
 				canStart = true
 				if shouldStart {
 					miner.SetEtherbase(miner.coinbase)
-					miner.worker.start()
+					miner.worker.Start()
 				}
 			case downloader.DoneEvent:
 				canStart = true
 				if shouldStart {
 					miner.SetEtherbase(miner.coinbase)
-					miner.worker.start()
+					miner.worker.Start()
 				}
 				// Stop reacting to downloader events
 				events.Unsubscribe()
@@ -134,14 +145,14 @@ func (miner *Miner) update() {
 		case addr := <-miner.startCh:
 			miner.SetEtherbase(addr)
 			if canStart {
-				miner.worker.start()
+				miner.worker.Start()
 			}
 			shouldStart = true
 		case <-miner.stopCh:
 			shouldStart = false
-			miner.worker.stop()
+			miner.worker.Start()
 		case <-miner.exitCh:
-			miner.worker.close()
+			miner.worker.Close()
 			return
 		}
 	}
@@ -160,7 +171,7 @@ func (miner *Miner) Close() {
 }
 
 func (miner *Miner) Mining() bool {
-	return miner.worker.isRunning()
+	return miner.worker.IsRunning()
 }
 
 func (miner *Miner) Hashrate() uint64 {
@@ -174,18 +185,18 @@ func (miner *Miner) SetExtra(extra []byte) error {
 	if uint64(len(extra)) > params.MaximumExtraDataSize {
 		return fmt.Errorf("extra exceeds max length. %d > %v", len(extra), params.MaximumExtraDataSize)
 	}
-	miner.worker.setExtra(extra)
+	miner.worker.SetExtra(extra)
 	return nil
 }
 
 // SetRecommitInterval sets the interval for sealing work resubmitting.
 func (miner *Miner) SetRecommitInterval(interval time.Duration) {
-	miner.worker.setRecommitInterval(interval)
+	miner.worker.SetRecommitInterval(interval)
 }
 
 // Pending returns the currently pending block and associated state.
 func (miner *Miner) Pending() (*types.Block, *state.StateDB) {
-	return miner.worker.pending()
+	return miner.worker.Pending()
 }
 
 // PendingBlock returns the currently pending block.
@@ -194,12 +205,12 @@ func (miner *Miner) Pending() (*types.Block, *state.StateDB) {
 // simultaneously, please use Pending(), as the pending state can
 // change between multiple method calls
 func (miner *Miner) PendingBlock() *types.Block {
-	return miner.worker.pendingBlock()
+	return miner.worker.PendingBlock()
 }
 
 func (miner *Miner) SetEtherbase(addr common.Address) {
 	miner.coinbase = addr
-	miner.worker.setEtherbase(addr)
+	miner.worker.SetEtherbase(addr)
 }
 
 // EnablePreseal turns on the preseal mining feature. It's enabled by default.
@@ -207,7 +218,7 @@ func (miner *Miner) SetEtherbase(addr common.Address) {
 // (miners) to actually know the underlying detail. It's only for outside project
 // which uses this library.
 func (miner *Miner) EnablePreseal() {
-	miner.worker.enablePreseal()
+	miner.worker.EnablePreseal()
 }
 
 // DisablePreseal turns off the preseal mining feature. It's necessary for some
@@ -216,11 +227,11 @@ func (miner *Miner) EnablePreseal() {
 // (miners) to actually know the underlying detail. It's only for outside project
 // which uses this library.
 func (miner *Miner) DisablePreseal() {
-	miner.worker.disablePreseal()
+	miner.worker.DisablePreseal()
 }
 
 // SubscribePendingLogs starts delivering logs from pending transactions
 // to the given channel.
 func (miner *Miner) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription {
-	return miner.worker.pendingLogsFeed.Subscribe(ch)
+	return miner.worker.SubscribePendingLogs(ch)
 }
