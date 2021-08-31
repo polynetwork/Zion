@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -35,7 +34,7 @@ func CheckConsensusSigns(native *native.NativeContract, method string, input []b
 	}
 	consensusSigns.SignsMap[address] = true
 
-	native.AddNotify(ABI, []string{"CheckConsensusSignsEvent"}, len(consensusSigns.SignsMap))
+	native.AddNotify(ABI, []string{"CheckConsensusSignsEvent"}, uint64(len(consensusSigns.SignsMap)))
 
 	//check signs num
 	//get view
