@@ -101,18 +101,20 @@ func New(
 // handleNewRound proposer at this round get an new proposal and broadcast to all validators.
 func (e *EventDrivenEngine) handleNewRound() error {
 	logger := e.newLogger()
-	e.state = StateAcceptRequest
 
+	e.state = StateAcceptRequest
 	if !e.IsProposer() {
 		return nil
 	}
 
 	req := e.requests.GetRequest(e.currentView())
 	if req == nil {
+		logger.Trace("handleNewRound", "current request", "is nil")
 		return nil
 	}
 	proposal, ok := req.Proposal.(*types.Block)
 	if !ok {
+		logger.Error("handleNewRound", "request invalid", "convert to block failed")
 		return errProposalConvert
 	}
 
@@ -126,7 +128,7 @@ func (e *EventDrivenEngine) handleNewRound() error {
 	}
 	e.state = StateAcceptProposal
 
-	logger.Debug("----------New round", "state", e.currentState(), "newRound", e.curRound, "new_proposer", e.valset.GetProposer(), "valSet", e.valset.List(), "size", e.valset.Size(), "IsProposer", e.IsProposer())
+	logger.Trace("New round", "state", e.currentState(), "newRound", e.curRound, "new_proposer", e.valset.GetProposer(), "valSet", e.valset.List(), "size", e.valset.Size(), "IsProposer", e.IsProposer())
 
 	return e.encodeAndBroadcast(MsgTypeProposal, msg)
 }

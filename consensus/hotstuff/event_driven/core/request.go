@@ -21,7 +21,6 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"sync"
 )
 
 func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
@@ -30,12 +29,14 @@ func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
 	if err := e.requests.checkRequest(e.currentView(), req); err != nil {
 		if err == errFutureMessage {
 			e.requests.StoreRequest(req)
+			logger.Trace("handleRequest", "store future request, number", req.Proposal.Number(), "hash", req.Proposal.Hash())
 			return nil
 		} else {
 			logger.Warn("receive request", "err", err)
 			return err
 		}
 	} else {
+		logger.Trace("handleRequest", "store request, number", req.Proposal.Number(), "hash", req.Proposal.Hash())
 		e.requests.StoreRequest(req)
 	}
 
@@ -46,24 +47,14 @@ func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
 	}
 
 	return e.handleNewRound()
-	//if req := e.requests.GetRequest(e.currentView()); req != nil {
-	//	e.requests.SetCurrentRequest(req)
-	//	return e.handleNewRound()
-	//}
-	//
-	//return nil
 }
 
 type requestSet struct {
-	mtx *sync.RWMutex
-
-	current *hotstuff.Request
 	pendingRequest *prque.Prque
 }
 
 func newRequestSet() *requestSet {
 	return &requestSet{
-		mtx:            new(sync.RWMutex),
 		pendingRequest: prque.New(nil),
 	}
 }
@@ -83,22 +74,12 @@ func (s *requestSet) checkRequest(view *hotstuff.View, req *hotstuff.Request) er
 	}
 }
 
-//func (s *requestSet) GetCurrentRequest() *hotstuff.Request {
-//	return s.current
-//}
-
 func (s *requestSet) StoreRequest(req *hotstuff.Request) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
 	priority := -req.Proposal.Number().Int64()
 	s.pendingRequest.Push(req, priority)
 }
 
 func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
 	for !s.pendingRequest.Empty() {
 		m, prior := s.pendingRequest.Pop()
 		req, ok := m.(*hotstuff.Request)
@@ -119,35 +100,8 @@ func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
 	}
 
 	return nil
-//	maxRetry := 20
-//retry:
-//	for !s.pendingRequest.Empty() {
-//		m, prior := s.pendingRequest.Pop()
-//		req, ok := m.(*hotstuff.Request)
-//		if !ok {
-//			continue
-//		}
-//
-//		// push back if it's future message
-//		if err := s.checkRequest(view, req); err != nil {
-//			if err == errFutureMessage {
-//				s.pendingRequest.Push(m, prior)
-//				// todo: 是否为continue
-//				break
-//			}
-//			continue
-//		}
-//		return req
-//	}
-//	if maxRetry -= 1; maxRetry > 0 {
-//		time.Sleep(500 * time.Millisecond)
-//		goto retry
-//	}
-//	return nil
 }
 
 func (s *requestSet) Size() int {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
 	return s.pendingRequest.Size()
 }

@@ -59,3 +59,17 @@ func TestEncode(t *testing.T) {
 	assert.NoError(t, err)
 	t.Log(enc)
 }
+
+func TestEncodeSalt(t *testing.T) {
+	validators := []common.Address{
+		common.HexToAddress("0xc095448424a5ecd5ca7ccdadfaad127a9d7e88ec"),
+		common.HexToAddress("0xd47a4e56e9262543db39d9203cf1a2e53735f834"),
+		common.HexToAddress("0x258af48e28e4a6846e931ddff8e1cdf8579821e5"),
+		common.HexToAddress("0x8c09d936a1b408d6e0afaa537ba4e06c4504a0ae"),
+	}
+	valset := validator.NewSet(validators, hotstuff.RoundRobin)
+	validators = valset.AddressList()
+	enc, err := Encode(validators)
+	assert.NoError(t, err)
+	t.Log(enc)
+}

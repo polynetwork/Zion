@@ -26,14 +26,13 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// todo:
+//todo:
 func (e *EventDrivenEngine) initialize() error {
 	lastBlock, _ := e.backend.LastProposal()
 	if lastBlock == nil {
 		return fmt.Errorf("initialize event-driven engine with first block failed!")
 	}
 
-	//todo:
 	e.epoch = 0
 	e.epochHeightStart = big.NewInt(0)
 	e.epochHeightEnd = big.NewInt(100)

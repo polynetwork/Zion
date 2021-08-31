@@ -46,6 +46,8 @@ func (e *EventDrivenEngine) Start() error {
 	// be able to call in test.
 	e.subscribeEvents()
 	go e.handleEvents()
+
+	e.logger.Info("start hotstuff event-driven consensus protocol")
 	return nil
 }
 

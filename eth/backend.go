@@ -479,6 +479,7 @@ func (s *Ethereum) StartMining(threads int) error {
 		// introduced to speed sync times.
 		atomic.StoreUint32(&s.handler.acceptTxs, 1)
 
+		log.Info("Start miner with etherbase", "address", eb.Hex())
 		go s.miner.Start(eb)
 	}
 	return nil

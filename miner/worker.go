@@ -27,6 +27,7 @@ import (
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -286,10 +287,13 @@ func (w *worker) pendingBlock() *types.Block {
 
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) start() {
-	atomic.StoreInt32(&w.running, 1)
 	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
-		istanbul.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil)
+		if err := istanbul.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
+			log.Warn("Failed to start hotstuff event-driven engine", "err", err)
+			return
+		}
 	}
+	atomic.StoreInt32(&w.running, 1)
 	w.startCh <- struct{}{}
 }
 
@@ -346,6 +350,8 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		timestamp   int64      // timestamp for each round of mining.
 	)
 
+	eventDriven := hotstuff.HotstuffProtocol(w.chainConfig.HotStuff.Protocol) == hotstuff.HOTSTUFF_PROTOCOL_EVENT_DRIVEN
+
 	timer := time.NewTimer(0)
 	defer timer.Stop()
 	<-timer.C // discard the initial tick
@@ -382,21 +388,29 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
 
+		// chainHead是触发commit的主要因素，共识完成后广播区块，节点接收到新的区块头之后，进入新一轮的共识
 		case head := <-w.chainHeadCh:
 			clearPending(head.Block.NumberU64())
-			timestamp = time.Now().Unix()
-			commit(false, commitInterruptNewHead)
+			if !eventDriven {
+				timestamp = time.Now().Unix()
+				commit(false, commitInterruptNewHead)
+			}
 
 		case <-timer.C:
 			// If mining is running resubmit a new work cycle periodically to pull in
 			// higher priced transactions. Disable this overhead for pending blocks.
-			if w.isRunning() && (w.chainConfig.Clique == nil || w.chainConfig.Clique.Period > 0) {
-				// Short circuit if no new transaction arrives.
-				if atomic.LoadInt32(&w.newTxs) == 0 {
-					timer.Reset(recommit)
-					continue
+			log.Trace("is Runing", "bool", w.isRunning(), "eventDriven", eventDriven)
+			if w.isRunning() {
+				if eventDriven {
+					timestamp = time.Now().Unix()
+					commit(false, commitInterruptNewHead)
+				} else if w.chainConfig.Clique == nil || w.chainConfig.Clique.Period > 0 {
+					// Short circuit if no new transaction arrives.
+					if atomic.LoadInt32(&w.newTxs) == 0 {
+						timer.Reset(recommit)
+						continue
+					}
 				}
-				commit(true, commitInterruptResubmit)
 			}
 
 		case interval := <-w.resubmitIntervalCh:
