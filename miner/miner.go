@@ -81,7 +81,7 @@ func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *even
 	protocol := hotstuff.HotstuffProtocol(chainConfig.HotStuff.Protocol)
 	switch protocol {
 	case hotstuff.HOTSTUFF_PROTOCOL_EVENT_DRIVEN:
-		miner.worker = newEventDrivenWorker()
+		miner.worker = newEventDrivenWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true)
 		miner.EnablePreseal()
 	case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
 		miner.worker = newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true)
