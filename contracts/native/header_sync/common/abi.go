@@ -31,6 +31,13 @@ const (
 	MethodSyncCrossChainMsg = "syncCrossChainMsg"
 )
 
+var GasTable = map[string]uint64{
+	MethodContractName:      0,
+	MethodSyncGenesisHeader: 0,
+	MethodSyncBlockHeader:   100000,
+	MethodSyncCrossChainMsg: 0,
+}
+
 const abijson = `[
 	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"chainID","type":"uint64"},{"indexed":false,"internalType":"string","name":"BlockHash","type":"string"},{"indexed":false,"internalType":"uint64","name":"Height","type":"uint64"},{"indexed":false,"internalType":"string","name":"NextValidatorsHash","type":"string"},{"indexed":false,"internalType":"string","name":"InfoChainID","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlockHeight","type":"uint64"}],"name":"OKEpochSwitchInfoEvent","type":"event"},
 	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"chainID","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"height","type":"uint64"},{"indexed":false,"internalType":"string","name":"blockHash","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlockHeight","type":"uint64"}],"name":"` + SYNC_HEADER_NAME_EVENT + `","type":"event"},

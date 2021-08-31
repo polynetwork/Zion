@@ -73,7 +73,7 @@ func (s *Snapshot) Difficulty(signer common.Address) uint64 {
 }
 
 // only used in test
-func (s *Snapshot) equal(s2 *Snapshot) bool {
+func (s *Snapshot) Equal(s2 *Snapshot) bool {
 
 	return s.ValidatorSet.String() == s2.ValidatorSet.String()
 }

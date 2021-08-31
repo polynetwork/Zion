@@ -115,7 +115,7 @@ func (c *CacheDB) Get(key []byte) ([]byte, error) {
 			if value == (common.Hash{}) {
 				return nil, nil
 			}
-			result = append(result, value[1:1+meta>>1]...)
+			result = append(result, value[common.HashLength-meta>>1:]...)
 		}
 
 		for more {

@@ -36,21 +36,16 @@ import (
 const contractName = "header sync"
 
 var (
-	this     = native.NativeContractAddrMap[native.NativeSyncHeader]
-	gasTable = map[string]uint64{
-		hscommon.MethodContractName:      0,
-		hscommon.MethodSyncGenesisHeader: 0,
-		hscommon.MethodSyncBlockHeader:   100000,
-		hscommon.MethodSyncCrossChainMsg: 0,
-	}
+	this = native.NativeContractAddrMap[native.NativeSyncHeader]
 )
 
 func InitHeaderSync() {
 	native.Contracts[this] = RegisterHeaderSyncContract
+	hscommon.ABI = hscommon.GetABI()
 }
 
 func RegisterHeaderSyncContract(s *native.NativeContract) {
-	s.Prepare(hscommon.ABI, gasTable)
+	s.Prepare(hscommon.ABI, hscommon.GasTable)
 
 	s.Register(hscommon.MethodContractName, Name)
 	s.Register(hscommon.MethodSyncGenesisHeader, SyncGenesisHeader)

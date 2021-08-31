@@ -2,6 +2,7 @@ package state
 
 import (
 	"bytes"
+	"encoding/hex"
 	"math/rand"
 	"testing"
 
@@ -48,4 +49,15 @@ func TestCacheDB(t *testing.T) {
 	if !bytes.Equal(testBytes, respBytes) {
 		t.Fail()
 	}
+
+	{
+		key, _ = hex.DecodeString("864ff06ec5ffc75ab6eaf64263308ef5fa7d663773696465436861696e0200000000000000")
+		value, _ := hex.DecodeString("001b140000000000000000000000000000000000000000020000000000")
+		c.Put(key, value)
+		respBytes, _ = c.Get(key)
+		if !bytes.Equal(value, respBytes) {
+			t.Fail()
+		}
+	}
+
 }
