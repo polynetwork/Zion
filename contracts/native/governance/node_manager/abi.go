@@ -37,7 +37,7 @@ const (
 )
 
 const abijson = `[
-	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"int256","name":"signs","type":"int256"}],"name":"CheckConsensusSignsEvent","type":"event"},
+	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"signs","type":"uint64"}],"name":"CheckConsensusSignsEvent","type":"event"},
     {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventApproveCandidate + `","type":"event"},
     {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string[]","name":"PubkeyList","type":"string[]"}],"name":"` + EventBlackNode + `","type":"event"},
     {"anonymous":false,"inputs":[],"name":"` + EventCommitDpos + `","type":"event"},
