@@ -609,10 +609,10 @@ func validateHeaderExtraFieldWithSpan(native *native.NativeContract, headerWOP *
 }
 
 // only used for test
-var skipVerifySpan bool
+var SkipVerifySpan bool
 
 func validateHeaderExtraField(native *native.NativeContract, headerWOP *HeaderWithOptionalProof, ctx *Context) (err error) {
-	if skipVerifySpan {
+	if SkipVerifySpan {
 		return
 	}
 	if headerWOP.Proof == nil {
