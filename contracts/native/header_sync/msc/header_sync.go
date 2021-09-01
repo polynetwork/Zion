@@ -241,8 +241,7 @@ func (h *Handler) SyncBlockHeader(native *native.NativeContract) error {
 			return fmt.Errorf("msc Handler SyncBlockHeader, isHeaderExist ParentHash err: %v", err)
 		}
 		if !parentExist {
-			log.Warnf("msc Handler SyncBlockHeader, parent header not exist. Header: %s", string(v))
-			continue
+			return fmt.Errorf("msc Handler SyncBlockHeader, parent header not exist. Header: %s", string(v))
 		}
 
 		err = verifyHeader(native, &header, ctx)

@@ -254,8 +254,7 @@ func (h *Handler) SyncBlockHeader(native *native.NativeContract) error {
 			return fmt.Errorf("heco Handler SyncBlockHeader, isHeaderExist ParentHash err: %v", err)
 		}
 		if !parentExist {
-			log.Warnf("heco Handler SyncBlockHeader, parent header not exist. Header: %s", string(v))
-			continue
+			return fmt.Errorf("heco Handler SyncBlockHeader, parent header not exist. Header: %s", string(v))
 		}
 
 		signer, err := verifySignature(native, &header, ctx)

@@ -246,8 +246,7 @@ func (h *BorHandler) SyncBlockHeader(native *native.NativeContract) error {
 			return fmt.Errorf("bor Handler SyncBlockHeader, isHeaderExist ParentHash err: %v", err)
 		}
 		if !parentExist {
-			log.Warnf("bor Handler SyncBlockHeader, parent header not exist. Header: %s", string(v))
-			continue
+			return fmt.Errorf("bor Handler SyncBlockHeader, parent header not exist. Header: %s", string(v))
 		}
 
 		var snap *Snapshot
