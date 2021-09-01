@@ -300,7 +300,7 @@ func GetCanonicalHeader(native *native.NativeContract, chainID uint64, height ui
 		return
 	}
 
-	headerWithSum, err = getHeader(native, hash, chainID)
+	headerWithSum, err = GetHeader(native, hash, chainID)
 	return
 }
 
@@ -354,7 +354,7 @@ func putCanonicalHeight(native *native.NativeContract, chainID uint64, height ui
 
 func addHeader(native *native.NativeContract, header *types.Header, ctx *Context) (err error) {
 
-	parentHeader, err := getHeader(native, header.ParentHash, ctx.ChainID)
+	parentHeader, err := GetHeader(native, header.ParentHash, ctx.ChainID)
 	if err != nil {
 		return
 	}
@@ -427,7 +427,7 @@ func addHeader(native *native.NativeContract, header *types.Header, ctx *Context
 			}
 
 			putCanonicalHash(native, ctx.ChainID, cheight, headHash)
-			headHeader, err = getHeader(native, headHash, ctx.ChainID)
+			headHeader, err = GetHeader(native, headHash, ctx.ChainID)
 			if err != nil {
 				return
 			}
@@ -470,7 +470,7 @@ func snapshot(native *native.NativeContract, number uint64, hash ecommon.Hash, t
 
 	for snap == nil {
 
-		headerWS, err = getHeader(native, hash, ctx.ChainID)
+		headerWS, err = GetHeader(native, hash, ctx.ChainID)
 		if err != nil {
 			err = fmt.Errorf("msc Handler snapshot getHeader error: %v", err)
 			return
@@ -520,7 +520,7 @@ func snapshot(native *native.NativeContract, number uint64, hash ecommon.Hash, t
 	// try to search enough recent
 	toSearch := len(snap.Signers) / 2
 	for i := 0; i < toSearch; i++ {
-		headerWS, err = getHeader(native, startHash, ctx.ChainID)
+		headerWS, err = GetHeader(native, startHash, ctx.ChainID)
 		if err != nil {
 			err = fmt.Errorf("msc Handler snapshot getHeader error: %v", err)
 			return
@@ -547,7 +547,7 @@ func snapshot(native *native.NativeContract, number uint64, hash ecommon.Hash, t
 	return
 }
 
-func getHeader(native *native.NativeContract, hash ecommon.Hash, chainID uint64) (headerWithSum *HeaderWithDifficultySum, err error) {
+func GetHeader(native *native.NativeContract, hash ecommon.Hash, chainID uint64) (headerWithSum *HeaderWithDifficultySum, err error) {
 
 	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
 		[]byte(scom.HEADER_INDEX), utils.GetUint64Bytes(chainID), hash.Bytes()))
@@ -712,7 +712,7 @@ func verifyCascadingFields(native *native.NativeContract, header *types.Header, 
 
 	number := header.Number.Uint64()
 
-	parent, err := getHeader(native, header.ParentHash, ctx.ChainID)
+	parent, err := GetHeader(native, header.ParentHash, ctx.ChainID)
 	if err != nil {
 		return
 	}

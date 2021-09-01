@@ -56,6 +56,7 @@ require (
 	github.com/status-im/keycard-go v0.0.0-20190316090335-8537d3370df4
 	github.com/stretchr/testify v1.7.0
 	github.com/syndtr/goleveldb v1.0.1-0.20210305035536-64b5b1c73954
+	github.com/tendermint/go-amino v0.15.1
 	github.com/tendermint/tendermint v0.33.7
 	github.com/tyler-smith/go-bip39 v1.0.2
 	github.com/zhiqiangxu/go-ethereum v1.9.16-0.20210824055606-be91cfdebc48
