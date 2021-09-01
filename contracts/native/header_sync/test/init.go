@@ -143,6 +143,13 @@ func putSideChain() {
 			ChainId:   mscChainID,
 		})
 	}
+
+	{
+		side_chain_manager.PutSideChain(contract, &side_chain_manager.SideChain{
+			Router:  utils.ETH_ROUTER,
+			ChainId: ethChainID,
+		})
+	}
 }
 
 var (
@@ -152,4 +159,5 @@ var (
 	borChainID     = uint64(3)
 	quorumChainID  = uint64(4)
 	mscChainID     = uint64(5)
+	ethChainID     = uint64(6)
 )
