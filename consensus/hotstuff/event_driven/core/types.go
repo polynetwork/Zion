@@ -40,15 +40,18 @@ var hasherPool = sync.Pool{
 type MsgType uint64
 
 const (
-	MsgTypeProposal MsgType = 1
-	MsgTypeVote     MsgType = 2
-	MsgTypeTimeout  MsgType = 3
-	MsgTypeQC       MsgType = 4
-	MsgTypeTC       MsgType = 5
+	MsgTypeNewRound MsgType = 1
+	MsgTypeProposal MsgType = 2
+	MsgTypeVote     MsgType = 3
+	MsgTypeTimeout  MsgType = 4
+	MsgTypeQC       MsgType = 5
+	MsgTypeTC       MsgType = 6
 )
 
 func (m MsgType) String() string {
 	switch m {
+	case MsgTypeNewRound:
+		return "MSG_NEW_ROUND"
 	case MsgTypeProposal:
 		return "MSG_PROPOSAL"
 	case MsgTypeVote:
@@ -207,7 +210,7 @@ func (tm *TimeoutEvent) Hash() common.Hash {
 }
 
 func (tm *TimeoutEvent) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{tm.Epoch, tm.View, tm.Hash})
+	return rlp.Encode(w, []interface{}{tm.Epoch, tm.View, tm.Digest})
 }
 
 func (tm *TimeoutEvent) DecodeRLP(s *rlp.Stream) error {

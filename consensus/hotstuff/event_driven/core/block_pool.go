@@ -28,18 +28,22 @@ import (
 
 type BlockPool struct {
 	tree   *BlockTree
-	highQC *hotstuff.QuorumCert // the highest qc, 从genesis 0开始
+	qcMap  map[common.Hash]*hotstuff.QuorumCert // caches the quorum certificates
+	highQC *hotstuff.QuorumCert                 // the highest qc, 从genesis 0开始
+	highProposal *types.Block
 }
 
-func NewBlockPool(initHighQC *hotstuff.QuorumCert, tr *BlockTree) *BlockPool {
+func NewBlockPool(initHighQC *hotstuff.QuorumCert, initHighBlock *types.Block, tr *BlockTree) *BlockPool {
 	return &BlockPool{
 		tree:   tr,
 		highQC: initHighQC,
+		highProposal: initHighBlock,
+		qcMap: make(map[common.Hash]*hotstuff.QuorumCert),
 	}
 }
 
-func (tr *BlockPool) GetHighQC() *hotstuff.QuorumCert {
-	return tr.highQC
+func (tr *BlockPool) GetHighQC() (*hotstuff.QuorumCert, *types.Block) {
+	return tr.highQC, tr.highProposal
 }
 
 func (tr *BlockPool) GetBlockAndCheckHeight(hash common.Hash, height *big.Int) *types.Block {
@@ -57,19 +61,29 @@ func (tr *BlockPool) GetBlockByHash(hash common.Hash) *types.Block {
 	return tr.tree.GetBlockByHash(hash)
 }
 
-// Insert insert new block into pending block tree, calculate and return the highestQC
-func (tr *BlockPool) Insert(block *types.Block, round *big.Int) error {
+func (tr *BlockPool) GetQCByHash(hash common.Hash) *hotstuff.QuorumCert {
+	return tr.qcMap[hash]
+}
+
+// AddBlock insert new block into pending block tree, calculate and return the highestQC
+// allow to store the sealed and unsealed block with same hash.
+func (tr *BlockPool) AddBlock(block *types.Block, round *big.Int) error {
 	return tr.tree.Add(block, round.Uint64())
+}
+
+func (tr *BlockPool) AddQC(qc *hotstuff.QuorumCert) {
+	if _, ok := tr.qcMap[qc.Hash]; !ok {
+		tr.qcMap[qc.Hash] = qc
+	}
 }
 
 func (tr *BlockPool) UpdateHighQC(qc *hotstuff.QuorumCert) {
 	if qc == nil || qc.View == nil {
 		return
 	}
-	if tr.highQC == nil || tr.highQC.View == nil {
+	if tr.highQC == nil || tr.highQC.View == nil || tr.highQC.View.Round.Cmp(qc.View.Round) < 0 {
 		tr.highQC = qc
-	} else if tr.highQC.View.Round.Cmp(qc.View.Round) < 0 {
-		tr.highQC = qc
+		tr.highProposal = tr.GetBlockByHash(qc.Hash)
 	}
 }
 

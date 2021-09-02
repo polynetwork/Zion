@@ -22,34 +22,15 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/event"
 )
-
-type EventSender struct {
-	eventMtx *event.TypeMux
-}
-
-func NewEventSender(backend hotstuff.Backend) *EventSender {
-	return &EventSender{eventMtx: backend.EventMux()}
-}
-
-func (s *EventSender) sendEvent(val interface{}) {
-	s.eventMtx.Post(val)
-}
-
-// ----------------------------------------------------------------------------
 
 // Subscribe both internal and external events
 func (e *EventDrivenEngine) subscribeEvents() {
 	e.events = e.backend.EventMux().Subscribe(
-		// external events
 		hotstuff.RequestEvent{},
 		hotstuff.MessageEvent{},
 		backlogEvent{},
 	)
-	//e.timeoutSub = e.backend.EventMux().Subscribe(
-	//	TimeoutEvent{},
-	//)
 	e.finalCommittedSub = e.backend.EventMux().Subscribe(
 		hotstuff.FinalCommittedEvent{},
 	)
@@ -137,7 +118,6 @@ func (e *EventDrivenEngine) handleCheckedMsg(src hotstuff.Validator, msg *hotstu
 		err = e.handleTimeout(src, msg)
 	default:
 		err = errInvalidMessage
-		e.logger.Error("msg type invalid", "unknown type", msg.Code)
 	}
 
 	if err == errFutureMessage {
@@ -198,10 +178,12 @@ func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message, val interface
 	return payload, nil
 }
 
-func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) error {
+func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) {
+	logger := e.newLogger()
+
 	payload, err := Encode(val)
 	if err != nil {
-		return err
+		logger.Trace("Failed to encode broadcast msg payload", "msg", msgTyp, "err", err)
 	}
 
 	msg := &hotstuff.Message{
@@ -209,35 +191,24 @@ func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) 
 		Msg:  payload,
 	}
 
-	return e.broadcast(msg, val)
+	if err := e.broadcast(msg, val); err != nil {
+		logger.Trace("Failed to broadcast to peers", "msg", msgTyp, "err", err)
+	}
 }
 
 func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message, val interface{}) error {
-	logger := e.newLogger()
-
 	payload, err := e.finalizeMessage(msg, val)
 	if err != nil {
-		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
 		return err
 	}
 
 	switch msg.Code {
 	case MsgTypeProposal, MsgTypeTimeout:
-		if err := e.backend.Broadcast(e.valset, payload); err != nil {
-			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
-			return err
-		}
+		err = e.backend.Broadcast(e.valset, payload)
 	case MsgTypeVote, MsgTypeQC, MsgTypeTC:
-		// vote to next round leader
-		nextRoundVals := e.valset.Copy()
-		nextRoundVals.CalcProposerByIndex(e.curRound.Uint64() + 1)
-		if err := e.backend.Unicast(nextRoundVals, payload); err != nil {
-			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
-			return err
-		}
+		err = e.backend.Unicast(e.nextValset(), payload)
 	default:
-		logger.Error("invalid msg type", "msg", msg)
-		return errInvalidMessage
+		err = errInvalidMessage
 	}
-	return nil
+	return err
 }

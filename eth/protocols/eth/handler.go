@@ -164,7 +164,7 @@ func nodeInfo(chain *core.BlockChain, network uint64) *NodeInfo {
 func Handle(backend Backend, peer *Peer) error {
 	for {
 		if err := handleMessage(backend, peer); err != nil {
-			peer.Log().Debug("message handling failed in `eth`", "err", err)
+			peer.Log().Debug("message handling failed in `eth`", "peer", peer.Info(), "err", err)
 			return err
 		}
 	}

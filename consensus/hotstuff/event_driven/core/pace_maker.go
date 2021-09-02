@@ -20,6 +20,7 @@ package core
 
 import (
 	"fmt"
+	"math"
 	"math/big"
 	"time"
 
@@ -34,18 +35,26 @@ func (e *EventDrivenEngine) updateHighestCommittedRound(round *big.Int) {
 }
 
 func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
-	var (
-		evt *TimeoutEvent
-	)
+	var evt *TimeoutEvent
+	logger := e.newLogger()
+	msgTyp := MsgTypeTimeout
+
 	if err := data.Decode(&evt); err != nil {
+		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
+		return err
+	}
+	if err := e.checkView(evt.View); err != nil {
+		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := e.signer.VerifyHash(e.valset, evt.Digest, data.CommittedSeal); err != nil {
+		logger.Trace("Failed to verify hash", "msg", msgTyp, "err", err)
 		return err
 	}
 
 	round := evt.View.Round
 	if err := e.messages.AddTimeout(round.Uint64(), data); err != nil {
+		logger.Trace("Failed to add timeout", "msg", msgTyp, "err", err)
 		return err
 	}
 
@@ -53,9 +62,18 @@ func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff
 		e.increaseLastVoteRound(round)
 	}
 
-	if size := e.messages.TimeoutSize(round.Uint64()); size == e.Q() {
-		tc := e.aggregateTC(evt, size)
-		return e.advanceRoundByTC(tc, true)
+	size := e.messages.TimeoutSize(round.Uint64())
+	logger.Trace("Accept Timeout", "msg", msgTyp, "from", src.Address(), "size", size)
+	if size != e.Q() {
+		return nil
+	}
+
+	tc := e.aggregateTC(evt, size)
+	logger.Trace("Aggregate TC", "msg", msgTyp, "hash", tc.Hash)
+
+	if err := e.advanceRoundByTC(tc, true); err != nil {
+		logger.Trace("Failed to advance round by TC", "msg", msgTyp, "err", err)
+		return nil
 	}
 
 	return nil
@@ -65,24 +83,17 @@ func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff
 // 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
 // 一般而言只有leader才能收到qc，
 func (e *EventDrivenEngine) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast bool) error {
-	if qc == nil || qc.View == nil ||  qc.View.Round.Cmp(e.curRound) < 0 {
+	if qc == nil || qc.View == nil || qc.View.Round.Cmp(e.curRound) < 0 {
 		return fmt.Errorf("qcRound invalid")
 	}
 
 	// broadcast to next leader first, we will use `curRound` again in broadcasting.
-	if !e.IsProposer() && broadcast {
-		payload, err := Encode(qc)
-		if err != nil {
-			return err
-		}
-		_ = e.broadcast(&hotstuff.Message{
-			Code: MsgTypeQC,
-			Msg:  payload,
-		}, qc)
+	if !e.IsProposer() && broadcast && qc.View.Height.Cmp(e.epochHeightStart) > 0 {
+		e.encodeAndBroadcast(MsgTypeQC, qc)
 	}
 
 	e.curHeight = new(big.Int).Add(e.curHeight, common.Big1)
-	return e.advance(qc.View.Round)
+	return e.advance(qc.View.Round, true)
 }
 
 // advanceRoundByQC
@@ -96,20 +107,13 @@ func (e *EventDrivenEngine) advanceRoundByTC(tc *TimeoutCert, broadcast bool) er
 
 	// broadcast to next leader first, we will use `curRound` again in broadcasting.
 	if !e.IsProposer() && broadcast {
-		payload, err := Encode(tc)
-		if err != nil {
-			return err
-		}
-		_ = e.broadcast(&hotstuff.Message{
-			Code: MsgTypeTC,
-			Msg:  payload,
-		}, tc)
+		e.encodeAndBroadcast(MsgTypeTC, tc)
 	}
 
-	return e.advance(tcRound)
+	return e.advance(tcRound, false)
 }
 
-func (e *EventDrivenEngine) advance(round *big.Int) error {
+func (e *EventDrivenEngine) advance(round *big.Int, isQC bool) error {
 	// current round increase
 	e.curRound = new(big.Int).Add(round, common.Big1)
 
@@ -118,6 +122,12 @@ func (e *EventDrivenEngine) advance(round *big.Int) error {
 
 	// reset timer
 	e.newRoundChangeTimer()
+
+	if isQC {
+		e.logger.Trace("AdvanceQC", "view", e.currentView())
+	} else {
+		e.logger.Trace("AdvanceTC", "view", e.currentView())
+	}
 
 	// get into new consensus round
 	return e.handleNewRound()
@@ -137,27 +147,14 @@ func (e *EventDrivenEngine) newRoundChangeTimer() {
 
 	curRd := e.curRound.Uint64()
 	hgRd := e.highestCommitRound.Uint64()
-	index := e.curRound.Uint64() - 1
-
-	if hgRd != 0 {
-		if curRd-hgRd < 3 {
-			index = 0
-		} else {
-			index = curRd - hgRd - 3
-		}
+	index := curRd - hgRd
+	timeout := standardTmoDuration
+	if index > 0 {
+		timeout += time.Duration(math.Pow(2, float64(index))) * time.Second
 	}
 
-	tmoDuration := time.Duration(index) * standardTmoDuration
-	e.timer = time.AfterFunc(tmoDuration, func() {
+	e.timer = time.AfterFunc(timeout, func() {
 		evt := e.generateTimeoutEvent()
-		payload, err := Encode(evt)
-		if err != nil {
-			e.logger.Error("failed to encode timeout event, err %v", err)
-			return
-		}
-		_ = e.broadcast(&hotstuff.Message{
-			Code: MsgTypeTimeout,
-			Msg:  payload,
-		}, evt)
+		e.encodeAndBroadcast(MsgTypeTimeout, evt)
 	})
 }

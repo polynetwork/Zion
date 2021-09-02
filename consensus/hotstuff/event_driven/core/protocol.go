@@ -40,16 +40,18 @@ type EventDrivenEngine struct {
 	chain   consensus.ChainReader
 	backend hotstuff.Backend
 
-	state  State
-	addr   common.Address
-	signer hotstuff.Signer
-	valset hotstuff.ValidatorSet
+	state   State
+	started bool
+	addr    common.Address
+	signer  hotstuff.Signer
+	valset  hotstuff.ValidatorSet
 
 	epoch            uint64
 	epochHeightStart *big.Int // [epochHeightStart, epochHeightEnd] is an closed interval
 	epochHeightEnd   *big.Int
 	curRound         *big.Int // 从genesis block 0开始
 	curHeight        *big.Int // 从genesis block 0开始
+	curRequest 		 *types.Block
 
 	requests *requestSet
 	messages *MessagePool
@@ -64,6 +66,7 @@ type EventDrivenEngine struct {
 	lockQC        *hotstuff.QuorumCert
 	lastVoteRound *big.Int
 
+	feed event.Feed // request feed
 	events *event.TypeMuxSubscription
 	//timeoutSub        *event.TypeMuxSubscription
 	finalCommittedSub *event.TypeMuxSubscription
@@ -86,11 +89,12 @@ func New(
 		db:      db,
 		backend: backend,
 		//chain:   chain,
-		logger:  log.New("address", addr),
+		logger: log.New("address", addr),
 	}
 	engine.addr = addr
 	engine.valset = valset
 	engine.signer = signer
+	engine.started = false
 	engine.requests = newRequestSet()
 	engine.messages = NewMessagePool(valset)
 	engine.validateFn = engine.checkValidatorSignature
@@ -100,25 +104,30 @@ func New(
 
 // handleNewRound proposer at this round get an new proposal and broadcast to all validators.
 func (e *EventDrivenEngine) handleNewRound() error {
+	if !e.started {
+		return nil
+	}
+
 	logger := e.newLogger()
 
 	e.state = StateAcceptRequest
+	msgTyp := MsgTypeNewRound
+
+	logger.Trace("New round", "msg", msgTyp, "state", e.currentState(), "new_proposer", e.valset.GetProposer(), "valSet", e.valset.List(), "size", e.valset.Size(), "IsProposer", e.IsProposer())
+
 	if !e.IsProposer() {
 		return nil
 	}
 
-	req := e.requests.GetRequest(e.currentView())
-	if req == nil {
-		logger.Trace("handleNewRound", "current request", "is nil")
-		return nil
-	}
-	proposal, ok := req.Proposal.(*types.Block)
-	if !ok {
-		logger.Error("handleNewRound", "request invalid", "convert to block failed")
-		return errProposalConvert
+	// get or preparing request, although validator may be not the proposer in this round, it can fetch proposal from
+	// miner and used it in the correct round.
+	proposal := e.getRequest()
+	if proposal == nil {
+		logger.Error("Failed to get request", "msg", msgTyp, "err", "no request")
+		return errNoRequest
 	}
 
-	justifyQC := e.blkPool.GetHighQC()
+	justifyQC, _ := e.blkPool.GetHighQC()
 	view := e.currentView()
 	msg := &MsgProposal{
 		Epoch:     e.epoch,
@@ -126,11 +135,12 @@ func (e *EventDrivenEngine) handleNewRound() error {
 		Proposal:  proposal,
 		JustifyQC: justifyQC,
 	}
+
 	e.state = StateAcceptProposal
+	e.encodeAndBroadcast(MsgTypeProposal, msg)
 
-	logger.Trace("New round", "state", e.currentState(), "newRound", e.curRound, "new_proposer", e.valset.GetProposer(), "valSet", e.valset.List(), "size", e.valset.Size(), "IsProposer", e.IsProposer())
-
-	return e.encodeAndBroadcast(MsgTypeProposal, msg)
+	logger.Trace("Generate proposal", "msg", msgTyp)
+	return nil
 }
 
 // handleProposal validate proposal info and vote to the next leader if the proposal is valid
@@ -148,129 +158,167 @@ func (e *EventDrivenEngine) handleProposal(src hotstuff.Validator, data *hotstuf
 
 	view := msg.View
 	proposal := msg.Proposal
-	hash := proposal.Hash()
-	proposer := proposal.Coinbase()
-	header := proposal.Header()
 	justifyQC := msg.JustifyQC
 
 	if err := e.checkEpoch(msg.Epoch, proposal.Number()); err != nil {
+		logger.Trace("Failed to check epoch", "msg", msgTyp, "err", err)
+		return err
+	}
+	if err := e.validateProposal(proposal); err != nil {
+		logger.Trace("Failed to validate proposal", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := e.checkJustifyQC(proposal, justifyQC); err != nil {
+		logger.Trace("Failed to check justify", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := e.signer.VerifyQC(justifyQC, e.valset); err != nil {
+		logger.Trace("Failed to verify justifyQC", "msg", msgTyp, "err", err)
 		return err
 	}
-	if err := e.signer.VerifyHeader(header, e.valset, false); err != nil {
+	if err := e.checkView(view); err != nil {
+		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
 
 	// try to advance into new round, it will update proposer and current view
-	if err := e.processQC(justifyQC); err != nil {
-		logger.Error("Failed to process qc", "err", err)
-	}
+	_ = e.processQC(justifyQC)
 
-	if err := e.checkProposer(proposer); err != nil {
-		return err
-	}
-	if err := e.checkView(view); err != nil {
+	if err := e.checkProposer(proposal.Coinbase()); err != nil {
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
 
+	if err := e.blkPool.AddBlock(proposal, view.Round); err != nil {
+		logger.Trace("Failed to insert block into block pool", "msg", msgTyp, "err", err)
+		return err
+	}
 	e.blkPool.UpdateHighQC(justifyQC)
-	if err := e.blkPool.Insert(proposal, view.Round); err != nil {
-		return err
-	}
 
-	vote, err := e.makeVote(hash, proposer, view, justifyQC)
+	logger.Trace("Accept proposal", "msg", msgTyp, "proposer", src.Address(), "hash", proposal.Hash(), "height", proposal.Number())
+
+	vote, err := e.makeVote(proposal.Hash(), proposal.Coinbase(), view, justifyQC)
 	if err != nil {
+		logger.Trace("Failed to make vote", "msg", msgTyp, "err", err)
 		return err
 	}
 
 	e.increaseLastVoteRound(view.Round)
-
-	return e.encodeAndBroadcast(MsgTypeVote, vote)
+	e.encodeAndBroadcast(MsgTypeVote, vote)
+	logger.Trace("Send Vote", "msg", msgTyp, "to", e.nextProposer(), "hash", vote.Hash)
+	return nil
 }
 
 // handleVote validate vote message and try to assemble qc
 func (e *EventDrivenEngine) handleVote(src hotstuff.Validator, data *hotstuff.Message) error {
 	var (
-		vote    *Vote
-		msgType = MsgTypeVote
+		vote   *Vote
+		msgTyp = MsgTypeVote
 	)
 
 	logger := e.newLogger()
 	if err := data.Decode(&vote); err != nil {
-		logger.Trace("Failed to decode", "type", msgType, "err", err)
+		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
 		return errFailedDecodeNewView
 	}
 
 	if err := e.checkVote(vote); err != nil {
+		logger.Trace("Failed to check vote", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := e.checkEpoch(vote.Epoch, vote.View.Height); err != nil {
+		logger.Trace("Failed to check epoch", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := e.validateVote(vote); err != nil {
+		logger.Trace("Failed to validate vote", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := e.messages.AddVote(vote.Hash, data); err != nil {
+		logger.Trace("Failed to add vote", "msg", msgTyp, "err", err)
 		return err
 	}
+
+	logger.Trace("Accept Vote", "msg", msgTyp, "from", src.Address(), "hash", vote.Hash)
 
 	size := e.messages.VoteSize(vote.Hash)
 	if size != e.Q() {
 		return nil
 	}
 
-	qc, err := e.aggregateQC(vote, size)
+	qc, proposal, err := e.aggregateQC(vote, size)
 	if err != nil {
+		logger.Trace("Failed to aggregate qc", "msg", msgTyp, "err", err)
 		return err
 	}
-
+	if err := e.blkPool.AddBlock(proposal, vote.View.Round); err != nil {
+		logger.Trace("Failed to insert block into block pool", "msg", msgTyp, "err", err)
+		return err
+	}
 	e.blkPool.UpdateHighQC(qc)
-	highQC := e.blkPool.GetHighQC()
+	highQC, _ := e.blkPool.GetHighQC()
 
 	if err := e.advanceRoundByQC(highQC, false); err != nil {
+		logger.Trace("Failed to advance round", "msg", msgTyp, "err", err)
 		return err
 	}
+
 	e.state = StateVoted
+
+	logger.Trace("Aggregate QC", "msg", msgTyp, "qc", qc.Hash, "view", qc.View)
 
 	return nil
 }
 
 func (e *EventDrivenEngine) handleQC(src hotstuff.Validator, data *hotstuff.Message) error {
+	logger := e.newLogger()
+
 	var (
-		qc *hotstuff.QuorumCert
+		qc     *hotstuff.QuorumCert
+		msgTyp = MsgTypeQC
 	)
 	if err := data.Decode(&qc); err != nil {
+		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
 		return err
 	}
 
 	if err := e.signer.VerifyQC(qc, e.valset); err != nil {
+		logger.Trace("Failed to verify qc", "msg", msgTyp, "err", err)
 		return err
 	}
 
-	return e.processQC(qc)
+	if err := e.processQC(qc); err != nil {
+		logger.Trace("Failed to process qc", "msg", msgTyp, "err", err)
+		return err
+	}
+
+	logger.Trace("Accept QC", "msg", msgTyp, "src", src.Address(), "qc", qc.Hash, "view", qc.View)
+	return nil
 }
 
 func (e *EventDrivenEngine) handleTC(src hotstuff.Validator, data *hotstuff.Message) error {
+	logger := e.newLogger()
+
 	var (
-		tc *TimeoutCert
+		tc     *TimeoutCert
+		msgTyp = MsgTypeTC
 	)
 	if err := data.Decode(&tc); err != nil {
+		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
 		return err
 	}
 
 	if err := e.signer.VerifyCommittedSeal(e.valset, tc.Hash, tc.Seals); err != nil {
+		logger.Trace("Failed to verify committed seal", "msg", msgTyp, "err", err)
 		return err
 	}
 
 	if err := e.advanceRoundByTC(tc, false); err != nil {
+		logger.Trace("Failed to advance by tc", "msg", msgTyp, "err", err)
 		return err
 	}
 
+	logger.Trace("Accept TC", "msg", msgTyp, "src", src.Address(), "tc", tc.Hash, "view", tc.View)
 	return nil
 }
 

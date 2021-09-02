@@ -19,9 +19,7 @@
 package miner
 
 import (
-	"bytes"
 	"errors"
-	"math/big"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -29,7 +27,6 @@ import (
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -39,10 +36,15 @@ import (
 	"github.com/ethereum/go-ethereum/trie"
 )
 
+const (
+	// requestChanSize is the size of channel listening to askRequestEvent.
+	requestChanSize = 10
+)
+
 type eventDrivenWorker struct {
 	config      *Config
 	chainConfig *params.ChainConfig
-	engine      consensus.Engine
+	engine      consensus.HotStuff
 	eth         Backend
 	chain       *core.BlockChain
 
@@ -55,22 +57,21 @@ type eventDrivenWorker struct {
 	txsSub       event.Subscription
 	chainHeadCh  chan core.ChainHeadEvent
 	chainHeadSub event.Subscription
-	chainSideCh  chan core.ChainSideEvent
-	chainSideSub event.Subscription
+	requestCh    chan consensus.AskRequest
+	requestSub   event.Subscription
 
 	// Channels
-	newWorkCh          chan *newWorkReq
-	taskCh             chan *task
-	resultCh           chan *types.Block
-	startCh            chan struct{}
-	exitCh             chan struct{}
-	resubmitIntervalCh chan time.Duration
-	resubmitAdjustCh   chan *intervalAdjust
+	newWorkCh chan *newWorkReq
+	taskCh    chan *task
+	resultCh  chan *types.Block
+	//startCh          chan struct{}
+	exitCh           chan struct{}
+	resubmitAdjustCh chan *intervalAdjust
 
-	current      *environment                 // An environment for current running cycle.
-	localUncles  map[common.Hash]*types.Block // A set of side blocks generated locally as the possible uncle blocks.
-	remoteUncles map[common.Hash]*types.Block // A set of side blocks as the possible uncle blocks.
-	unconfirmed  *unconfirmedBlocks           // A set of locally mined blocks pending canonicalness confirmations.
+	current      *environment // An environment for current running cycle.
+	currentBlock *types.Block
+	currentReq   *consensus.AskRequest
+	unconfirmed  *unconfirmedBlocks // A set of locally mined blocks pending canonicalness confirmations.
 
 	mu       sync.RWMutex // The lock used to protect the coinbase and extra fields
 	coinbase common.Address
@@ -105,34 +106,33 @@ type eventDrivenWorker struct {
 }
 
 func newEventDrivenWorker(config *Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, isLocalBlock func(*types.Block) bool, init bool) *eventDrivenWorker {
+	eventDrivenEngine := engine.(consensus.HotStuff)
 	worker := &eventDrivenWorker{
-		config:             config,
-		chainConfig:        chainConfig,
-		engine:             engine,
-		eth:                eth,
-		mux:                mux,
-		chain:              eth.BlockChain(),
-		isLocalBlock:       isLocalBlock,
-		localUncles:        make(map[common.Hash]*types.Block),
-		remoteUncles:       make(map[common.Hash]*types.Block),
-		unconfirmed:        newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
-		pendingTasks:       make(map[common.Hash]*task),
-		txsCh:              make(chan core.NewTxsEvent, txChanSize),
-		chainHeadCh:        make(chan core.ChainHeadEvent, chainHeadChanSize),
-		chainSideCh:        make(chan core.ChainSideEvent, chainSideChanSize),
-		newWorkCh:          make(chan *newWorkReq),
-		taskCh:             make(chan *task),
-		resultCh:           make(chan *types.Block, resultQueueSize),
-		exitCh:             make(chan struct{}),
-		startCh:            make(chan struct{}, 1),
-		resubmitIntervalCh: make(chan time.Duration),
-		resubmitAdjustCh:   make(chan *intervalAdjust, resubmitAdjustChanSize),
+		config:       config,
+		chainConfig:  chainConfig,
+		engine:       eventDrivenEngine,
+		eth:          eth,
+		mux:          mux,
+		chain:        eth.BlockChain(),
+		isLocalBlock: isLocalBlock,
+		unconfirmed:  newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
+		pendingTasks: make(map[common.Hash]*task),
+		txsCh:        make(chan core.NewTxsEvent, txChanSize),
+		chainHeadCh:  make(chan core.ChainHeadEvent, chainHeadChanSize),
+		requestCh:    make(chan consensus.AskRequest, requestChanSize),
+		newWorkCh:    make(chan *newWorkReq),
+		taskCh:       make(chan *task),
+		resultCh:     make(chan *types.Block, resultQueueSize),
+		exitCh:       make(chan struct{}),
+		//startCh:          make(chan struct{}, 1),
+		resubmitAdjustCh: make(chan *intervalAdjust, resubmitAdjustChanSize),
 	}
 	// Subscribe NewTxsEvent for tx pool
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+	// Subscribe consensus engine for asking request
+	worker.requestSub = worker.engine.SubscribeRequest(worker.requestCh)
 
 	// Sanitize recommit interval if the user-specified one is too short.
 	recommit := worker.config.Recommit
@@ -146,101 +146,7 @@ func newEventDrivenWorker(config *Config, chainConfig *params.ChainConfig, engin
 	go worker.resultLoop()
 	go worker.taskLoop()
 
-	// Submit first work to initialize pending state.
-	if init {
-		worker.startCh <- struct{}{}
-	}
 	return worker
-}
-
-// SetEtherbase sets the etherbase used to initialize the block coinbase field.
-func (w *eventDrivenWorker) SetEtherbase(addr common.Address) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.coinbase = addr
-}
-
-// SetExtra sets the content used to initialize the block extra field.
-func (w *eventDrivenWorker) SetExtra(extra []byte) {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	w.extra = extra
-}
-
-// SetRecommitInterval updates the interval for miner sealing work recommitting.
-func (w *eventDrivenWorker) SetRecommitInterval(interval time.Duration) {
-	w.resubmitIntervalCh <- interval
-}
-
-// disablePreseal disables pre-sealing mining feature
-func (w *eventDrivenWorker) DisablePreseal() {
-	atomic.StoreUint32(&w.noempty, 1)
-}
-
-// enablePreseal enables pre-sealing mining feature
-func (w *eventDrivenWorker) EnablePreseal() {
-	atomic.StoreUint32(&w.noempty, 0)
-}
-
-// pending returns the pending state and corresponding block.
-func (w *eventDrivenWorker) Pending() (*types.Block, *state.StateDB) {
-	// return a snapshot to avoid contention on currentMu mutex
-	w.snapshotMu.RLock()
-	defer w.snapshotMu.RUnlock()
-	if w.snapshotState == nil {
-		return nil, nil
-	}
-	return w.snapshotBlock, w.snapshotState.Copy()
-}
-
-// PendingBlock returns pending block.
-func (w *eventDrivenWorker) PendingBlock() *types.Block {
-	// return a snapshot to avoid contention on currentMu mutex
-	w.snapshotMu.RLock()
-	defer w.snapshotMu.RUnlock()
-	return w.snapshotBlock
-}
-
-func (w *eventDrivenWorker) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription {
-	return w.pendingLogsFeed.Subscribe(ch)
-}
-
-// start sets the running status as 1 and triggers new work submitting.
-func (w *eventDrivenWorker) Start() {
-	istanbul, ok := w.engine.(consensus.HotStuff)
-	if !ok {
-		log.Warn("consensus engine MUST be hotstuff event-driven")
-		return
-	}
-	if err := istanbul.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
-		log.Warn("Failed to start hotstuff event-driven engine", "err", err)
-		return
-	}
-	atomic.StoreInt32(&w.running, 1)
-	w.startCh <- struct{}{}
-}
-
-// stop sets the running status as 0.
-func (w *eventDrivenWorker) Stop() {
-	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
-		istanbul.Stop()
-	}
-	atomic.StoreInt32(&w.running, 0)
-}
-
-// IsRunning returns an indicator whether worker is running or not.
-func (w *eventDrivenWorker) IsRunning() bool {
-	return atomic.LoadInt32(&w.running) == 1
-}
-
-// close terminates all background threads maintained by the worker.
-// Note the worker does not support being closed multiple times.
-func (w *eventDrivenWorker) Close() {
-	if w.current != nil && w.current.state != nil {
-		w.current.state.StopPrefetcher()
-	}
-	atomic.StoreInt32(&w.running, 0)
-	close(w.exitCh)
 }
 
 // newWorkLoop is a standalone goroutine to submit new mining work upon received events.
@@ -282,27 +188,15 @@ func (w *eventDrivenWorker) newWorkLoop(recommit time.Duration) {
 
 	for {
 		select {
-		case <-w.startCh:
-			clearPending(w.chain.CurrentBlock().NumberU64())
+		case req := <-w.requestCh:
+			w.currentReq = &req
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
+			log.Trace("-----accept consensus request", "number", w.currentReq.Number)
 
 		// chainHead是触发commit的主要因素，共识完成后广播区块，节点接收到新的区块头之后，进入新一轮的共识
 		case head := <-w.chainHeadCh:
 			clearPending(head.Block.NumberU64())
-			timestamp = time.Now().Unix()
-			commit(false, commitInterruptNewHead)
-
-		case <-timer.C:
-			// If mining is running resubmit a new work cycle periodically to pull in
-			// higher priced transactions. Disable this overhead for pending blocks.
-			if w.IsRunning() && (w.chainConfig.Clique == nil || w.chainConfig.Clique.Period > 0) {
-				// Short circuit if no new transaction arrives.
-				if atomic.LoadInt32(&w.newTxs) == 0 {
-					timer.Reset(recommit)
-					continue
-				}
-			}
 
 		case adjust := <-w.resubmitAdjustCh:
 			// Adjust resubmit interval by feedback.
@@ -331,51 +225,11 @@ func (w *eventDrivenWorker) newWorkLoop(recommit time.Duration) {
 func (w *eventDrivenWorker) mainLoop() {
 	defer w.txsSub.Unsubscribe()
 	defer w.chainHeadSub.Unsubscribe()
-	defer w.chainSideSub.Unsubscribe()
 
 	for {
 		select {
 		case req := <-w.newWorkCh:
 			w.commitNewWork(req.interrupt, req.noempty, req.timestamp)
-
-		case ev := <-w.chainSideCh:
-			// Short circuit for duplicate side blocks
-			if _, exist := w.localUncles[ev.Block.Hash()]; exist {
-				continue
-			}
-			if _, exist := w.remoteUncles[ev.Block.Hash()]; exist {
-				continue
-			}
-			// Add side block to possible uncle block set depending on the author.
-			if w.isLocalBlock != nil && w.isLocalBlock(ev.Block) {
-				w.localUncles[ev.Block.Hash()] = ev.Block
-			} else {
-				w.remoteUncles[ev.Block.Hash()] = ev.Block
-			}
-			// If our mining block contains less than 2 uncle blocks,
-			// add the new uncle block if valid and regenerate a mining block.
-			if w.IsRunning() && w.current != nil && w.current.uncles.Cardinality() < 2 {
-				start := time.Now()
-				if err := w.commitUncle(w.current, ev.Block.Header()); err == nil {
-					var uncles []*types.Header
-					w.current.uncles.Each(func(item interface{}) bool {
-						hash, ok := item.(common.Hash)
-						if !ok {
-							return false
-						}
-						uncle, exist := w.localUncles[hash]
-						if !exist {
-							uncle, exist = w.remoteUncles[hash]
-						}
-						if !exist {
-							return false
-						}
-						uncles = append(uncles, uncle.Header())
-						return false
-					})
-					w.commit(uncles, nil, true, start)
-				}
-			}
 
 		case ev := <-w.txsCh:
 			// Apply transactions to the pending state if we're not mining.
@@ -405,13 +259,6 @@ func (w *eventDrivenWorker) mainLoop() {
 				if tcount != w.current.tcount {
 					w.updateSnapshot()
 				}
-			} else {
-				// Special case, if the consensus engine is 0 period clique(dev mode),
-				// submit mining work here since all empty submission will be rejected
-				// by clique. Of course the advance sealing(empty submission) is disabled.
-				if w.chainConfig.Clique != nil && w.chainConfig.Clique.Period == 0 {
-					w.commitNewWork(nil, true, time.Now().Unix())
-				}
 			}
 			atomic.AddInt32(&w.newTxs, int32(len(ev.Txs)))
 
@@ -421,8 +268,6 @@ func (w *eventDrivenWorker) mainLoop() {
 		case <-w.txsSub.Err():
 			return
 		case <-w.chainHeadSub.Err():
-			return
-		case <-w.chainSideSub.Err():
 			return
 		}
 	}
@@ -468,6 +313,8 @@ func (w *eventDrivenWorker) taskLoop() {
 			if err := w.engine.Seal(w.chain, task.block, w.resultCh, stopCh); err != nil {
 				log.Warn("Block sealing failed", "err", err)
 			}
+			w.currentBlock = task.block
+
 		case <-w.exitCh:
 			interrupt()
 			return
@@ -541,6 +388,138 @@ func (w *eventDrivenWorker) resultLoop() {
 	}
 }
 
+// commitNewWork generates several new sealing tasks based on the parent block.
+func (w *eventDrivenWorker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) {
+	w.mu.RLock()
+	defer w.mu.RUnlock()
+
+	tstart := time.Now()
+
+	//var parent *types.Block
+	//if w.currentBlock == nil {
+	//	parent = w.chain.CurrentBlock()
+	//} else {
+	//	parent = w.currentBlock
+	//}
+	//if parent.Time() >= uint64(timestamp) {
+	//	timestamp = int64(parent.Time() + 1)
+	//}
+	if w.currentReq == nil || w.currentReq.Number == nil || w.currentReq.Parent == nil {
+		log.Warn("consensus engine request invalid")
+		return
+	}
+	num := w.currentReq.Number
+	if gotNum := w.currentReq.Number.Uint64() + 1; num.Uint64() != gotNum {
+		log.Warn("consensus engine request number", "expect", num, "got", gotNum)
+		return
+	}
+
+	parent := w.currentReq.Parent
+	if parent.Time() >= uint64(timestamp) {
+		timestamp = int64(parent.Time() + 1)
+	}
+	header := &types.Header{
+		ParentHash: parent.Hash(),
+		Number:     num,
+		GasLimit:   core.CalcGasLimit(parent, w.config.GasFloor, w.config.GasCeil),
+		Extra:      w.extra,
+		Time:       uint64(timestamp),
+	}
+
+	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
+	if w.IsRunning() {
+		if w.coinbase == (common.Address{}) {
+			log.Error("Refusing to mine without etherbase")
+			return
+		}
+		header.Coinbase = w.coinbase
+		log.Trace("commitNewWork", "number", header.Number)
+	}
+	if err := w.engine.Prepare(w.chain, header); err != nil {
+		log.Error("Failed to prepare header for mining", "err", err)
+		return
+	}
+
+	// Could potentially happen if starting to mine in an odd state.
+	if err := w.makeCurrent(parent, header); err != nil {
+		log.Error("Failed to create mining context", "err", err)
+		return
+	}
+
+	// Create an empty block based on temporary copied state for
+	// sealing in advance without waiting block execution finished.
+	if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
+		w.commit(nil, false, tstart)
+		log.Trace("-----Commit empty block")
+	}
+
+	// Fill the block with all available pending transactions.
+	pending, _ := w.eth.TxPool().Pending()
+
+	// Short circuit if there is no available pending transactions.
+	// But if we disable empty precommit already, ignore it. Since
+	// empty block is necessary to keep the liveness of the network.
+	if len(pending) == 0 && atomic.LoadUint32(&w.noempty) == 0 {
+		w.updateSnapshot()
+		log.Trace("-------update snapshot")
+		return
+	}
+
+	// Split the pending transactions into locals and remotes
+	localTxs, remoteTxs := make(map[common.Address]types.Transactions), pending
+	for _, account := range w.eth.TxPool().Locals() {
+		if txs := remoteTxs[account]; len(txs) > 0 {
+			delete(remoteTxs, account)
+			localTxs[account] = txs
+		}
+	}
+	if len(localTxs) > 0 {
+		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
+		if w.commitTransactions(txs, w.coinbase, interrupt) {
+			return
+		}
+	}
+	if len(remoteTxs) > 0 {
+		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, remoteTxs)
+		if w.commitTransactions(txs, w.coinbase, interrupt) {
+			return
+		}
+	}
+	w.commit(w.fullTaskHook, true, tstart)
+}
+
+// commit runs any post-transaction state modifications, assembles the final block
+// and commits new work if consensus engine is running.
+func (w *eventDrivenWorker) commit(interval func(), update bool, start time.Time) error {
+	// Deep copy receipts here to avoid interaction between different tasks.
+	receipts := copyReceipts(w.current.receipts)
+	s := w.current.state.Copy()
+	block, err := w.engine.FinalizeAndAssemble(w.chain, w.current.header, s, w.current.txs, nil, receipts)
+	if err != nil {
+		log.Error("FinalizeAndAssemble failed", "err", err)
+		return err
+	}
+
+	if w.IsRunning() {
+		if interval != nil {
+			interval()
+		}
+		select {
+		case w.taskCh <- &task{receipts: receipts, state: s, block: block, createdAt: time.Now()}:
+			w.unconfirmed.Shift(block.NumberU64() - 1)
+			log.Info("Commit new mining work", "number", block.Number(), "sealhash", w.engine.SealHash(block.Header()),
+				"txs", w.current.tcount, "gas", block.GasUsed(), "fees", totalFees(block, receipts), "elapsed", common.PrettyDuration(time.Since(start)))
+
+		case <-w.exitCh:
+			log.Info("Worker has exited")
+		}
+	}
+	if update {
+		w.updateSnapshot()
+	}
+	return nil
+}
+
 // makeCurrent creates a new environment for the current cycle.
 func (w *eventDrivenWorker) makeCurrent(parent *types.Block, header *types.Header) error {
 	// Retrieve the parent state to execute on top and start a prefetcher for
@@ -579,52 +558,16 @@ func (w *eventDrivenWorker) makeCurrent(parent *types.Block, header *types.Heade
 	return nil
 }
 
-// commitUncle adds the given block to uncle block set, returns error if failed to add.
-func (w *eventDrivenWorker) commitUncle(env *environment, uncle *types.Header) error {
-	hash := uncle.Hash()
-	if env.uncles.Contains(hash) {
-		return errors.New("uncle not unique")
-	}
-	if env.header.ParentHash == uncle.ParentHash {
-		return errors.New("uncle is sibling")
-	}
-	if !env.ancestors.Contains(uncle.ParentHash) {
-		return errors.New("uncle's parent unknown")
-	}
-	if env.family.Contains(hash) {
-		return errors.New("uncle already included")
-	}
-	env.uncles.Add(uncle.Hash())
-	return nil
-}
-
 // updateSnapshot updates pending snapshot block and state.
 // Note this function assumes the current variable is thread safe.
 func (w *eventDrivenWorker) updateSnapshot() {
 	w.snapshotMu.Lock()
 	defer w.snapshotMu.Unlock()
 
-	var uncles []*types.Header
-	w.current.uncles.Each(func(item interface{}) bool {
-		hash, ok := item.(common.Hash)
-		if !ok {
-			return false
-		}
-		uncle, exist := w.localUncles[hash]
-		if !exist {
-			uncle, exist = w.remoteUncles[hash]
-		}
-		if !exist {
-			return false
-		}
-		uncles = append(uncles, uncle.Header())
-		return false
-	})
-
 	w.snapshotBlock = types.NewBlock(
 		w.current.header,
 		w.current.txs,
-		uncles,
+		nil,
 		w.current.receipts,
 		trie.NewStackTrie(nil),
 	)
@@ -763,153 +706,87 @@ func (w *eventDrivenWorker) commitTransactions(txs *types.TransactionsByPriceAnd
 	return false
 }
 
-// commitNewWork generates several new sealing tasks based on the parent block.
-func (w *eventDrivenWorker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) {
-	w.mu.RLock()
-	defer w.mu.RUnlock()
-
-	tstart := time.Now()
-	parent := w.chain.CurrentBlock()
-	if parent.Time() >= uint64(timestamp) {
-		timestamp = int64(parent.Time() + 1)
-	}
-	num := parent.Number()
-	header := &types.Header{
-		ParentHash: parent.Hash(),
-		Number:     num.Add(num, common.Big1),
-		GasLimit:   core.CalcGasLimit(parent, w.config.GasFloor, w.config.GasCeil),
-		Extra:      w.extra,
-		Time:       uint64(timestamp),
-	}
-	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
-	if w.IsRunning() {
-		if w.coinbase == (common.Address{}) {
-			log.Error("Refusing to mine without etherbase")
-			return
-		}
-		header.Coinbase = w.coinbase
-		log.Trace("commitNewWork", "number", num.Uint64())
-	}
-	if err := w.engine.Prepare(w.chain, header); err != nil {
-		log.Error("Failed to prepare header for mining", "err", err)
-		return
-	}
-	// If we are care about TheDAO hard-fork check whether to override the extra-data or not
-	if daoBlock := w.chainConfig.DAOForkBlock; daoBlock != nil {
-		// Check whether the block is among the fork extra-override range
-		limit := new(big.Int).Add(daoBlock, params.DAOForkExtraRange)
-		if header.Number.Cmp(daoBlock) >= 0 && header.Number.Cmp(limit) < 0 {
-			// Depending whether we support or oppose the fork, override differently
-			if w.chainConfig.DAOForkSupport {
-				header.Extra = common.CopyBytes(params.DAOForkBlockExtra)
-			} else if bytes.Equal(header.Extra, params.DAOForkBlockExtra) {
-				header.Extra = []byte{} // If miner opposes, don't let it use the reserved extra-data
-			}
-		}
-	}
-	// Could potentially happen if starting to mine in an odd state.
-	err := w.makeCurrent(parent, header)
-	if err != nil {
-		log.Error("Failed to create mining context", "err", err)
-		return
-	}
-	// Create the current work task and check any fork transitions needed
-	env := w.current
-	if w.chainConfig.DAOForkSupport && w.chainConfig.DAOForkBlock != nil && w.chainConfig.DAOForkBlock.Cmp(header.Number) == 0 {
-		misc.ApplyDAOHardFork(env.state)
-	}
-	// Accumulate the uncles for the current block
-	uncles := make([]*types.Header, 0, 2)
-	commitUncles := func(blocks map[common.Hash]*types.Block) {
-		// Clean up stale uncle blocks first
-		for hash, uncle := range blocks {
-			if uncle.NumberU64()+staleThreshold <= header.Number.Uint64() {
-				delete(blocks, hash)
-			}
-		}
-		for hash, uncle := range blocks {
-			if len(uncles) == 2 {
-				break
-			}
-			if err := w.commitUncle(env, uncle.Header()); err != nil {
-				log.Trace("Possible uncle rejected", "hash", hash, "reason", err)
-			} else {
-				log.Debug("Committing new uncle to block", "hash", hash)
-				uncles = append(uncles, uncle.Header())
-			}
-		}
-	}
-	// Prefer to locally generated uncle
-	commitUncles(w.localUncles)
-	commitUncles(w.remoteUncles)
-
-	// Create an empty block based on temporary copied state for
-	// sealing in advance without waiting block execution finished.
-	if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
-		w.commit(uncles, nil, false, tstart)
-	}
-
-	// Fill the block with all available pending transactions.
-	pending, _ := w.eth.TxPool().Pending()
-
-	// Short circuit if there is no available pending transactions.
-	// But if we disable empty precommit already, ignore it. Since
-	// empty block is necessary to keep the liveness of the network.
-	if len(pending) == 0 && atomic.LoadUint32(&w.noempty) == 0 {
-		w.updateSnapshot()
-		return
-	}
-	// Split the pending transactions into locals and remotes
-	localTxs, remoteTxs := make(map[common.Address]types.Transactions), pending
-	for _, account := range w.eth.TxPool().Locals() {
-		if txs := remoteTxs[account]; len(txs) > 0 {
-			delete(remoteTxs, account)
-			localTxs[account] = txs
-		}
-	}
-	if len(localTxs) > 0 {
-		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, localTxs)
-		if w.commitTransactions(txs, w.coinbase, interrupt) {
-			return
-		}
-	}
-	if len(remoteTxs) > 0 {
-		txs := types.NewTransactionsByPriceAndNonce(w.current.signer, remoteTxs)
-		if w.commitTransactions(txs, w.coinbase, interrupt) {
-			return
-		}
-	}
-	w.commit(uncles, w.fullTaskHook, true, tstart)
+// SetEtherbase sets the etherbase used to initialize the block coinbase field.
+func (w *eventDrivenWorker) SetEtherbase(addr common.Address) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.coinbase = addr
 }
 
-// commit runs any post-transaction state modifications, assembles the final block
-// and commits new work if consensus engine is running.
-func (w *eventDrivenWorker) commit(uncles []*types.Header, interval func(), update bool, start time.Time) error {
-	// Deep copy receipts here to avoid interaction between different tasks.
-	receipts := copyReceipts(w.current.receipts)
-	s := w.current.state.Copy()
-	block, err := w.engine.FinalizeAndAssemble(w.chain, w.current.header, s, w.current.txs, uncles, receipts)
-	if err != nil {
-		return err
-	}
-	if w.IsRunning() {
-		if interval != nil {
-			interval()
-		}
-		select {
-		case w.taskCh <- &task{receipts: receipts, state: s, block: block, createdAt: time.Now()}:
-			w.unconfirmed.Shift(block.NumberU64() - 1)
-			log.Info("Commit new mining work", "number", block.Number(), "sealhash", w.engine.SealHash(block.Header()),
-				"uncles", len(uncles), "txs", w.current.tcount,
-				"gas", block.GasUsed(), "fees", totalFees(block, receipts),
-				"elapsed", common.PrettyDuration(time.Since(start)))
+// SetExtra sets the content used to initialize the block extra field.
+func (w *eventDrivenWorker) SetExtra(extra []byte) {
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	w.extra = extra
+}
 
-		case <-w.exitCh:
-			log.Info("Worker has exited")
-		}
+// SetRecommitInterval updates the interval for miner sealing work recommitting.
+func (w *eventDrivenWorker) SetRecommitInterval(interval time.Duration) {
+	//w.resubmitIntervalCh <- interval
+}
+
+// disablePreseal disables pre-sealing mining feature
+func (w *eventDrivenWorker) DisablePreseal() {
+	atomic.StoreUint32(&w.noempty, 1)
+}
+
+// enablePreseal enables pre-sealing mining feature
+func (w *eventDrivenWorker) EnablePreseal() {
+	atomic.StoreUint32(&w.noempty, 0)
+}
+
+// pending returns the pending state and corresponding block.
+func (w *eventDrivenWorker) Pending() (*types.Block, *state.StateDB) {
+	// return a snapshot to avoid contention on currentMu mutex
+	w.snapshotMu.RLock()
+	defer w.snapshotMu.RUnlock()
+	if w.snapshotState == nil {
+		return nil, nil
 	}
-	if update {
-		w.updateSnapshot()
+	return w.snapshotBlock, w.snapshotState.Copy()
+}
+
+// PendingBlock returns pending block.
+func (w *eventDrivenWorker) PendingBlock() *types.Block {
+	// return a snapshot to avoid contention on currentMu mutex
+	w.snapshotMu.RLock()
+	defer w.snapshotMu.RUnlock()
+	return w.snapshotBlock
+}
+
+func (w *eventDrivenWorker) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription {
+	return w.pendingLogsFeed.Subscribe(ch)
+}
+
+// start sets the running status as 1 and triggers new work submitting.
+func (w *eventDrivenWorker) Start() {
+	if err := w.engine.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
+		log.Warn("Failed to start hotstuff event-driven engine", "err", err)
+		return
 	}
-	return nil
+	atomic.StoreInt32(&w.running, 1)
+}
+
+// stop sets the running status as 0.
+func (w *eventDrivenWorker) Stop() {
+	w.requestSub.Unsubscribe()
+	if err := w.engine.Stop(); err != nil {
+		log.Warn("Failed to stop hotstuff event-driven engine", "err", err)
+	}
+	atomic.StoreInt32(&w.running, 0)
+}
+
+// IsRunning returns an indicator whether worker is running or not.
+func (w *eventDrivenWorker) IsRunning() bool {
+	return atomic.LoadInt32(&w.running) == 1
+}
+
+// close terminates all background threads maintained by the worker.
+// Note the worker does not support being closed multiple times.
+func (w *eventDrivenWorker) Close() {
+	if w.current != nil && w.current.state != nil {
+		w.current.state.StopPrefetcher()
+	}
+	atomic.StoreInt32(&w.running, 0)
+	close(w.exitCh)
 }

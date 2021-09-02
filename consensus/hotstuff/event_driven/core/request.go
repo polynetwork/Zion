@@ -21,32 +21,53 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
+	"time"
 )
 
 func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
 	logger := e.newLogger()
-
-	if err := e.requests.checkRequest(e.currentView(), req); err != nil {
-		if err == errFutureMessage {
-			e.requests.StoreRequest(req)
-			logger.Trace("handleRequest", "store future request, number", req.Proposal.Number(), "hash", req.Proposal.Hash())
-			return nil
-		} else {
-			logger.Warn("receive request", "err", err)
-			return err
-		}
-	} else {
-		logger.Trace("handleRequest", "store request, number", req.Proposal.Number(), "hash", req.Proposal.Hash())
-		e.requests.StoreRequest(req)
+	//
+	//if err := e.requests.checkRequest(e.currentView(), req); err == nil || err == errFutureMessage {
+	//	if e.curProposal == nil {
+	//		e.requests.StoreRequest(req)
+	//	} else if e.curProposal.Number().Cmp(req.Proposal.Number()) < 0 {
+	//		e.requests.StoreRequest(req)
+	//	}
+	//}
+	//logger.Trace("Receive Request", "store request, number", req.Proposal.Number(), "hash", req.Proposal.Hash())
+	//
+	//if e.state != StateAcceptRequest {
+	//	return nil
+	//}
+	//
+	//return e.handleNewRound()
+	if req == nil || req.Proposal == nil {
+		logger.Trace("Receive Request", "request", "is nil")
+		return nil
 	}
-
-	logger.Trace("handleRequest", "height", req.Proposal.Number(), "proposal", req.Proposal.Hash())
-
-	if e.state != StateAcceptRequest {
+	proposal, ok := req.Proposal.(*types.Block)
+	if !ok {
+		logger.Trace("Receive Request", "convert proposal", "type invalid")
 		return nil
 	}
 
-	return e.handleNewRound()
+	if proposal.Number().Cmp(e.curHeight) != 0 {
+		logger.Trace("Receive Request", "expect height", e.curHeight, "got", proposal.Number())
+	}
+
+	e.curRequest = proposal
+	return nil
+}
+
+func (e *EventDrivenEngine) getRequest() *types.Block {
+	maxRetry := 20
+	for maxRetry > 0 && (e.curRequest == nil || e.curRequest.Number().Cmp(e.curHeight) != 0) {
+		e.askReq()
+		maxRetry -= 1
+		time.Sleep(500 * time.Millisecond)
+	}
+	return e.curRequest
 }
 
 type requestSet struct {
@@ -64,7 +85,6 @@ func (s *requestSet) checkRequest(view *hotstuff.View, req *hotstuff.Request) er
 		return errInvalidMessage
 	}
 
-	// todo(fuk): how to process future block, store or throw?
 	if c := view.Height.Cmp(req.Proposal.Number()); c < 0 {
 		return errFutureMessage
 	} else if c > 0 {

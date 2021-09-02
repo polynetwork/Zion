@@ -17,7 +17,7 @@
 package hotstuff
 
 import (
-	"math/big"
+	"github.com/ethereum/go-ethereum/consensus"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -66,10 +66,10 @@ type Backend interface {
 	GetProposal(hash common.Hash) Proposal
 
 	// HasProposal checks if the combination of the given hash and height matches any existing blocks
-	HasProposal(hash common.Hash, number *big.Int) bool
+	//HasProposal(hash common.Hash, number *big.Int) bool
 
 	// GetProposer returns the proposer of the given block height
-	GetProposer(number uint64) common.Address
+	//GetProposer(number uint64) common.Address
 
 	// ParentValidators returns the validator set of the given proposal's parent block
 	ParentValidators(proposal Proposal) ValidatorSet
@@ -85,6 +85,7 @@ type CoreEngine interface {
 
 	Stop() error
 
+	// IsProposer return true if self address equal leader/proposer address in current round/height
 	IsProposer() bool
 
 	// verify if a hash is the same as the proposed block in the current pending request
@@ -95,8 +96,14 @@ type CoreEngine interface {
 	// to avoid any race condition of coming propagated blocks
 	IsCurrentProposal(blockHash common.Hash) bool
 
+	// PrepareExtra generate header extra field with validator set
 	PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
-	// CurrentRoundState() *roundState
+
+	// GetHeader get block header with hash and correct block height
+	GetHeader(hash common.Hash, number uint64) *types.Header
+
+	// SubscribeRequest notify to miner worker that event-driven engine need an new proposal
+	SubscribeRequest(ch chan <- consensus.AskRequest) event.Subscription
 }
 
 type HotstuffProtocol string

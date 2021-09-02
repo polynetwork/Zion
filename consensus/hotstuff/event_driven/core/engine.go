@@ -19,11 +19,14 @@
 package core
 
 import (
-	"sync"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
+	"math/big"
+	"sync"
+	"time"
 )
 
 var once sync.Once
@@ -40,20 +43,24 @@ func (e *EventDrivenEngine) Start() error {
 		return err
 	}
 
-	e.handleNewRound()
+	time.Sleep(8 * time.Second)
 
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
 	e.subscribeEvents()
 	go e.handleEvents()
 
-	e.logger.Info("start hotstuff event-driven consensus protocol")
+	// engine is started after this step, DONT allow to return err to miner worker, this may cause worker invalid
+	e.started = true
+	highQC, _ := e.blkPool.GetHighQC()
+	e.advanceRoundByQC(highQC, false)
 	return nil
 }
 
 func (e *EventDrivenEngine) Stop() error {
 	e.stopTimer()
 	e.unsubscribeEvents()
+	e.started = false
 	return nil
 }
 
@@ -62,6 +69,10 @@ func (e *EventDrivenEngine) IsProposer() bool {
 		return true
 	}
 	return false
+}
+
+func (e *EventDrivenEngine) Address() common.Address {
+	return e.signer.Address()
 }
 
 // verify if a hash is the same as the proposed block in the current pending request
@@ -88,6 +99,15 @@ func (e *EventDrivenEngine) PrepareExtra(header *types.Header, valSet hotstuff.V
 	return generateExtra(header, valSet, e.epoch, e.curRound)
 }
 
-func (e *EventDrivenEngine) Address() common.Address {
-	return e.signer.Address()
+func (e *EventDrivenEngine) GetHeader(hash common.Hash, number uint64) *types.Header {
+	block := e.blkPool.GetBlockAndCheckHeight(hash, new(big.Int).SetUint64(number))
+	if block == nil {
+		return nil
+	} else {
+		return block.Header()
+	}
+}
+
+func (e *EventDrivenEngine) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
+	return e.feed.Subscribe(ch)
 }

@@ -37,34 +37,38 @@ func (e *EventDrivenEngine) initialize() error {
 	e.epochHeightStart = big.NewInt(0)
 	e.epochHeightEnd = big.NewInt(100)
 
-	e.curHeight = new(big.Int).Add(lastBlock.Number(), common.Big1)
-
 	salt, qc, err := extraProposal(lastBlock)
 	if err != nil {
 		return err
 	}
+
 	e.highestCommitRound = salt.Round
-	e.curRound = new(big.Int).Add(e.highestCommitRound, common.Big1)
+	e.curRound = new(big.Int).SetUint64(e.highestCommitRound.Uint64()) //new(big.Int).Add(e.highestCommitRound, common.Big1)
+	e.curHeight = new(big.Int).SetUint64(lastBlock.Number().Uint64())  //new(big.Int).Add(lastBlock.Number(), common.Big1)
+
+	e.logger.Trace("initialize event-driven engine", "view", e.currentView())
 
 	if e.epochHeightStart.Cmp(e.highestCommitRound) > 0 {
 		// todo
 	}
 	if e.highestCommitRound.Cmp(common.Big0) == 0 {
-		proposal := e.backend.GetProposal(lastBlock.Hash())
-		if proposal == nil {
-			return fmt.Errorf("Can't get block %v", lastBlock.Hash())
-		}
-		rootBlock := proposal.(*types.Block)
-		rootSalt, highQC, err := extraHeader(rootBlock.Header())
-		if err != nil {
-			return err
-		}
-		blktr, err := NewBlockTree(rootBlock, rootSalt.Round.Uint64(), 100)
-		if err != nil {
-			return err
-		}
-		e.blkPool = NewBlockPool(highQC, blktr)
 	}
+
+	proposal := e.backend.GetProposal(lastBlock.Hash())
+	if proposal == nil {
+		return fmt.Errorf("Can't get block %v", lastBlock.Hash())
+	}
+	rootBlock := proposal.(*types.Block)
+	rootSalt, highQC, err := extraHeader(rootBlock.Header())
+	if err != nil {
+		return err
+	}
+	blktr, err := NewBlockTree(rootBlock, rootSalt.Round.Uint64(), 100)
+	if err != nil {
+		return err
+	}
+	e.blkPool = NewBlockPool(highQC, rootBlock, blktr)
+	e.blkPool.AddQC(qc)
 
 	// todo:
 	e.lastVoteRound = salt.Round

@@ -1,6 +1,7 @@
 package backend
 
 import (
+	"github.com/ethereum/go-ethereum/event"
 	"math/big"
 	"time"
 
@@ -73,8 +74,12 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 	number := header.Number.Uint64()
 	parent := chain.GetHeader(header.ParentHash, number-1)
 	if parent == nil {
+		parent = s.core.GetHeader(header.ParentHash, number - 1);
+	}
+	if parent == nil {
 		return consensus.ErrUnknownAncestor
 	}
+
 	// use the same difficulty for all blocks
 	header.Difficulty = defaultDifficulty
 
@@ -278,4 +283,8 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
 	snap := s.snap().Copy()
 	return s.signer.VerifyHeader(header, snap, seal)
+}
+
+func (s *backend) SubscribeRequest(ch chan <- consensus.AskRequest) event.Subscription {
+	return s.core.SubscribeRequest(ch)
 }

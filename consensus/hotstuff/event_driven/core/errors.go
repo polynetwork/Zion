@@ -30,15 +30,17 @@ var (
 	// errOldMessage is returned when the received Message's view is earlier
 	// than current view.
 	errOldMessage = errors.New("old Message")
-	// errInvalidMessage is returned when the Message is malformed.
+
+	errNoRequest 			= errors.New("failed to fetch request")
 	errInvalidMessage = errors.New("invalid Message")
-	// errFailedDecodeNewView is returned when the NEWVIEW Message is malformed.
+
 	errFailedDecodeNewView = errors.New("failed to decode NEWVIEW")
-	// errFailedDecodePrepare is returned when the PREPARE Message is malformed.
 	errFailedDecodePrepare = errors.New("failed to decode PREPARE")
+
 	errProposalConvert     = errors.New("failed to convert proposal to types.block")
 	errExtraHeader         = errors.New("failed to extract header")
 	errInvalidEpoch        = errors.New("invalid epoch")
+	errInvalidProposal 	   = errors.New("invalid proposal")
 	errInvalidVote         = errors.New("invalid vote")
 	errInvalidQC           = errors.New("invalid qc")
 	errInvalidHighQC       = errors.New("invalid highQC")

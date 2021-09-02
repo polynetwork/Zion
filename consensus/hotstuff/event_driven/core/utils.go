@@ -21,6 +21,7 @@ package core
 import (
 	"bytes"
 	"fmt"
+	"github.com/ethereum/go-ethereum/consensus"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -36,7 +37,7 @@ func (e *EventDrivenEngine) checkValidatorSignature(data []byte, sig []byte) (co
 }
 
 func (e *EventDrivenEngine) newLogger() log.Logger {
-	logger := e.logger.New("state", e.currentState(), "view", e.currentView())
+	logger := e.logger.New("view", e.currentView())
 	return logger
 }
 
@@ -79,34 +80,68 @@ func (e *EventDrivenEngine) checkEpoch(epoch uint64, height *big.Int) error {
 	return nil
 }
 
+func (e *EventDrivenEngine) validateProposal(proposal *types.Block) error {
+	if proposal == nil {
+		return errInvalidProposal
+	}
+	salt, _, err := extraProposal(proposal)
+	if err != nil {
+		return err
+	}
+	view := &hotstuff.View{
+		Round:  salt.Round,
+		Height: proposal.Number(),
+	}
+	if view.Cmp(e.currentView()) != 0 {
+		return fmt.Errorf("expect view %v, got %v", e.currentView(), view)
+	}
+	if err := e.signer.VerifyHeader(proposal.Header(), e.valset, false); err != nil {
+		return err
+	}
+	return nil
+}
+
 func (e *EventDrivenEngine) checkView(view *hotstuff.View) error {
 	if e.curRound.Cmp(view.Round) != 0 || e.curHeight.Cmp(view.Height) != 0 {
-		return errInvalidMessage
+		return fmt.Errorf("expect view %v, got %v", e.currentView(), view)
 	}
 	return nil
 }
 
 func (e *EventDrivenEngine) checkJustifyQC(proposal hotstuff.Proposal, justifyQC *hotstuff.QuorumCert) error {
-	if justifyQC == nil || justifyQC.View == nil || justifyQC.Hash == utils.EmptyHash || justifyQC.Proposer == utils.EmptyAddress {
-		return fmt.Errorf("justifyQC fields may be empty or nil")
+	if proposal.Number().Cmp(common.Big1) == 0 {
+		return nil
+	}
+
+	if justifyQC == nil {
+		return fmt.Errorf("justifyQC is nil")
+	}
+	if justifyQC.View == nil {
+		return fmt.Errorf("justifyQC view is nil")
+	}
+	if justifyQC.Hash == common.EmptyHash {
+		return fmt.Errorf("justifyQC hash is empty")
+	}
+	if justifyQC.Proposer == common.EmptyAddress {
+		return fmt.Errorf("justifyQC proposer is empty")
 	}
 
 	if justifyQC.View.Height.Cmp(new(big.Int).Sub(proposal.Number(), common.Big1)) != 0 {
-		return fmt.Errorf("high qc height invalid")
+		return fmt.Errorf("justifyQC height invalid")
 	}
 
 	if justifyQC.Hash != proposal.ParentHash() {
-		return fmt.Errorf("justifyQC hash invalid")
+		return fmt.Errorf("justifyQC hash extendship invalid")
 	}
 
 	vs := e.valset.Copy()
 	vs.CalcProposerByIndex(justifyQC.View.Round.Uint64())
 	proposer := vs.GetProposer().Address()
 	if proposer != justifyQC.Proposer {
-		return fmt.Errorf("invalid proposer")
+		return fmt.Errorf("justifyQC proposer expect %v got %v", proposer, justifyQC.Proposer)
 	}
 
-	highQC := e.blkPool.GetHighQC()
+	highQC, _ := e.blkPool.GetHighQC()
 	return e.compareQC(highQC, justifyQC)
 }
 
@@ -124,9 +159,6 @@ func (e *EventDrivenEngine) compareQC(expect, src *hotstuff.QuorumCert) error {
 		return fmt.Errorf("qc extra not same")
 	}
 	return nil
-	// if !reflect.DeepEqual(expect, src) {
-	//     return fmt.Errorf("qc not same")
-	// }
 }
 
 // vote to highQC round + 1
@@ -139,7 +171,7 @@ func (e *EventDrivenEngine) checkVote(vote *Vote) error {
 	}
 
 	// vote view MUST be highQC view
-	highQC := e.blkPool.GetHighQC()
+	highQC, _ := e.blkPool.GetHighQC()
 	if new(big.Int).Sub(vote.View.Height, highQC.View.Height).Cmp(common.Big1) != 0 &&
 		new(big.Int).Sub(vote.View.Round, highQC.View.Round).Cmp(common.Big1) != 0 {
 		return errInvalidVote
@@ -167,6 +199,15 @@ func (e *EventDrivenEngine) getTimeoutSeals(round uint64, n int) [][]byte {
 	return seals
 }
 
+func (e *EventDrivenEngine) askReq() {
+	height := copyNum(e.curHeight)
+	_, proposal := e.blkPool.GetHighQC()
+	e.feed.Send(consensus.AskRequest{
+		Number: height,
+		Parent: proposal,
+	})
+}
+
 func (e *EventDrivenEngine) Q() int {
 	return e.valset.Q()
 }
@@ -180,27 +221,29 @@ func (e *EventDrivenEngine) chain3Height() *big.Int {
 }
 
 func (e *EventDrivenEngine) generateTimeoutEvent() *TimeoutEvent {
-	return &TimeoutEvent{
+	tm := &TimeoutEvent{
 		Epoch: e.epoch,
 		View:  e.currentView(),
 	}
+	tm.Digest = tm.Hash()
+	return tm
 }
 
-func (e *EventDrivenEngine) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumCert, error) {
+func (e *EventDrivenEngine) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumCert, *types.Block, error) {
 	proposal := e.blkPool.GetBlockAndCheckHeight(vote.Hash, vote.View.Height)
 	if proposal == nil {
-		return nil, fmt.Errorf("last proposal %v not exist", vote.Hash)
+		return nil, nil, fmt.Errorf("last proposal %v not exist", vote.Hash)
 	}
 
 	seals := e.getVoteSeals(vote.Hash, size)
 	sealedProposal, err := e.backend.PreCommit(proposal, seals)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	sealedBlock, ok := sealedProposal.(*types.Block)
 	if !ok {
-		return nil, errProposalConvert
+		return nil, nil, errProposalConvert
 	}
 
 	extra := sealedBlock.Header().Extra
@@ -211,7 +254,7 @@ func (e *EventDrivenEngine) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumC
 		Extra:    extra,
 	}
 
-	return qc, nil
+	return qc, proposal, nil
 }
 
 func (e *EventDrivenEngine) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
@@ -224,8 +267,25 @@ func (e *EventDrivenEngine) aggregateTC(event *TimeoutEvent, size int) *TimeoutC
 	return tc
 }
 
+func (e *EventDrivenEngine) nextValset() hotstuff.ValidatorSet {
+	vs := e.valset.Copy()
+	vs.CalcProposerByIndex(e.curRound.Uint64() + 1)
+	return vs
+}
+
+func (e *EventDrivenEngine) nextProposer() common.Address {
+	vs := e.valset.Copy()
+	vs.CalcProposerByIndex(e.curRound.Uint64() + 1)
+	proposer := vs.GetProposer()
+	return proposer.Address()
+}
+
 func Encode(val interface{}) ([]byte, error) {
 	return rlp.EncodeToBytes(val)
+}
+
+func copyNum(src *big.Int) *big.Int {
+	return new(big.Int).Set(src)
 }
 
 func isTC(qc *hotstuff.QuorumCert) bool {
