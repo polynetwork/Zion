@@ -23,11 +23,11 @@ import "github.com/ethereum/go-ethereum/consensus/hotstuff"
 func (e *core) sendProposal() error {
 	logger := e.newLogger()
 
-	proposal := e.blkPool.GetHighProposal()
-	justifyQC := e.blkPool.GetHighQC()
+	proposal := e.smr.Proposal()
+	justifyQC := e.smr.HighQC()
 	view := e.currentView()
 	msg := &MsgProposal{
-		Epoch:     e.epoch,
+		Epoch:     e.smr.Epoch(),
 		View:      view,
 		Proposal:  proposal,
 		JustifyQC: justifyQC,
@@ -92,8 +92,8 @@ func (e *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 		logger.Trace("Failed to insert block into block pool", "msg", msgTyp, "from", src.Address(), "err", err)
 		return err
 	}
-	e.blkPool.UpdateHighProposal(proposal)
-	e.blkPool.UpdateHighQC(justifyQC)
+	e.smr.SetProposal(proposal)
+	e.smr.SetHighQC(justifyQC)
 
 	return e.sendVote()
 }

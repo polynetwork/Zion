@@ -24,8 +24,8 @@ func (e *core) sendVote() error {
 	logger := e.newLogger()
 
 	view := e.currentView()
-	justifyQC := e.blkPool.GetHighQC()
-	proposal := e.blkPool.GetHighProposal()
+	justifyQC := e.smr.HighQC()
+	proposal := e.smr.Proposal()
 
 	// make vote and send it to next proposer
 	vote, err := e.makeVote(proposal.Hash(), proposal.Coinbase(), view, justifyQC)
@@ -90,14 +90,13 @@ func (e *core) handleVote(src hotstuff.Validator, data *hotstuff.Message) error 
 		logger.Trace("Failed to insert block into block pool", "msg", msgTyp, "err", err)
 		return err
 	}
-	e.blkPool.UpdateHighQC(qc)
-	highQC := e.blkPool.GetHighQC()
+	e.smr.SetHighQC(qc)
+	highQC := e.smr.HighQC()
 
 	if err := e.advanceRoundByQC(highQC, false); err != nil {
 		logger.Trace("Failed to advance round", "msg", msgTyp, "err", err)
 		return err
 	}
 
-	e.state = StateVoted
 	return nil
 }

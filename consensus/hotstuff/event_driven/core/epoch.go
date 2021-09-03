@@ -22,37 +22,29 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-//todo:
+//todo: epoch manager
 func (e *core) initialize() error {
+	e.smr.SetEpoch(0)
+	e.smr.SetEpochStart(big.NewInt(0))
+	e.smr.SetEpochEnd(big.NewInt(100))
+
 	lastBlock, _ := e.backend.LastProposal()
 	if lastBlock == nil {
 		return fmt.Errorf("initialize event-driven engine with first block failed!")
 	}
-
-	e.epoch = 0
-	e.epochHeightStart = big.NewInt(0)
-	e.epochHeightEnd = big.NewInt(100)
-
 	salt, qc, err := extraProposal(lastBlock)
 	if err != nil {
 		return err
 	}
 
-	e.highestCommitRound = salt.Round
-	e.curRound = new(big.Int).SetUint64(e.highestCommitRound.Uint64()) //new(big.Int).Add(e.highestCommitRound, common.Big1)
-	e.curHeight = new(big.Int).SetUint64(lastBlock.Number().Uint64())  //new(big.Int).Add(lastBlock.Number(), common.Big1)
+	e.smr.SetHighCommitRound(salt.Round)
+	e.smr.SetRound(e.smr.HighCommitRound())
+	e.smr.SetHeight(lastBlock.Number())
 
 	e.logger.Trace("initialize event-driven engine", "view", e.currentView())
-
-	if e.epochHeightStart.Cmp(e.highestCommitRound) > 0 {
-		// todo
-	}
-	if e.highestCommitRound.Cmp(common.Big0) == 0 {
-	}
 
 	proposal := e.backend.GetProposal(lastBlock.Hash())
 	if proposal == nil {
@@ -67,12 +59,12 @@ func (e *core) initialize() error {
 	if err != nil {
 		return err
 	}
-	e.blkPool = NewBlockPool(highQC, rootBlock, blktr)
+	e.blkPool = NewBlockPool(blktr)
 	e.blkPool.AddQC(qc)
 
-	// todo:
-	e.lastVoteRound = salt.Round
-	e.lockQC = qc
+	e.smr.SetHighQC(highQC)
+	e.smr.SetLatestVoteRound(salt.Round)
+	e.smr.SetLockQC(qc)
 
 	return nil
 }

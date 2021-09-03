@@ -19,14 +19,15 @@
 package core
 
 import (
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"math/big"
-	"sync"
-	"time"
 )
 
 var once sync.Once
@@ -52,7 +53,7 @@ func (e *core) Start() error {
 
 	// engine is started after this step, DONT allow to return err to miner worker, this may cause worker invalid
 	e.started = true
-	highQC := e.blkPool.GetHighQC()
+	highQC := e.smr.HighQC()
 	e.advanceRoundByQC(highQC, false)
 	return nil
 }
@@ -65,14 +66,14 @@ func (e *core) Stop() error {
 }
 
 func (e *core) IsProposer() bool {
-	if e.valset.IsProposer(e.address()) {
+	if e.valset.IsProposer(e.address) {
 		return true
 	}
 	return false
 }
 
 func (e *core) Address() common.Address {
-	return e.signer.Address()
+	return e.address
 }
 
 // verify if a hash is the same as the proposed block in the current pending request
@@ -88,15 +89,14 @@ func (e *core) IsCurrentProposal(blockHash common.Hash) bool {
 		return false
 	}
 
-	if block.NumberU64() != e.curHeight.Uint64() {
+	if block.NumberU64() != e.smr.Height().Uint64() {
 		return false
 	}
-
 	return true
 }
 
 func (e *core) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
-	return generateExtra(header, valSet, e.epoch, e.curRound)
+	return generateExtra(header, valSet, e.smr.Epoch(), e.smr.Round())
 }
 
 func (e *core) GetHeader(hash common.Hash, number uint64) *types.Header {

@@ -27,8 +27,8 @@ import (
 func (e *core) sendRequest() error {
 	logger := e.newLogger()
 
-	height := copyNum(e.curHeight)
-	proposal := e.blkPool.GetHighProposal()
+	height := copyNum(e.smr.Height())
+	proposal := e.smr.Proposal()
 	e.feed.Send(consensus.AskRequest{
 		Number: height,
 		Parent: proposal,
@@ -52,12 +52,12 @@ func (e *core) handleRequest(req *hotstuff.Request) error {
 		logger.Trace("Receive Request", "msg", msgTyp, "convert proposal", "type invalid")
 		return nil
 	}
-	if proposal.Number().Cmp(e.curHeight) != 0 {
-		logger.Trace("Receive Request", "msg", msgTyp, "expect height", e.curHeight, "got", proposal.Number())
+	if proposal.Number().Cmp(e.smr.Height()) != 0 {
+		logger.Trace("Receive Request", "msg", msgTyp, "expect height", e.smr.HeightU64(), "got", proposal.Number())
 		return nil
 	}
 
-	e.blkPool.UpdateHighProposal(proposal)
+	e.smr.SetProposal(proposal)
 	logger.Trace("Received request", "msg", msgTyp, "num", req.Proposal.Number(), "hash", req.Proposal.Hash())
 
 	return e.sendProposal()

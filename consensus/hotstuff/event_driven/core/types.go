@@ -74,40 +74,6 @@ func (m MsgType) Value() uint64 {
 	return uint64(m)
 }
 
-type State uint64
-
-const (
-	StateAcceptRequest  State = 1
-	StateAcceptProposal State = 2
-	StateVoted          State = 3
-)
-
-func (s State) String() string {
-	if s == StateAcceptRequest {
-		return "StateAcceptRequest"
-	} else if s == StateAcceptProposal {
-		return "StateAcceptProposal"
-	} else if s == StateVoted {
-		return "StateVoted"
-	} else {
-		return "Unknown"
-	}
-}
-
-// Cmp compares s and y and returns:
-//   -1 if s is the previous state of y
-//    0 if s and y are the same state
-//   +1 if s is the next state of y
-func (s State) Cmp(y State) int {
-	if uint64(s) < uint64(y) {
-		return -1
-	}
-	if uint64(s) > uint64(y) {
-		return 1
-	}
-	return 0
-}
-
 type MsgProposal struct {
 	Epoch     uint64
 	View      *hotstuff.View

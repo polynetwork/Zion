@@ -130,7 +130,7 @@ func (e *core) finalizeMessage(msg *hotstuff.Message, val interface{}) ([]byte, 
 	var err error
 
 	// Add sender address
-	msg.Address = e.address()
+	msg.Address = e.address
 	msg.View = e.currentView()
 
 	if msg.Code == MsgTypeVote {

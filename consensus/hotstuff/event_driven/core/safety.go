@@ -29,8 +29,8 @@ import (
 
 // increaseLastVoteRound commit not to vote in rounds lower than target
 func (e *core) increaseLastVoteRound(rd *big.Int) {
-	if e.lastVoteRound.Cmp(rd) < 0 {
-		e.lastVoteRound = rd
+	if e.smr.LatestVoteRound().Cmp(rd) < 0 {
+		e.smr.SetLatestVoteRound(rd)
 	}
 }
 
@@ -62,12 +62,8 @@ func (e *core) updateLockQC(qc *hotstuff.QuorumCert) error {
 		return errInvalidQC
 	}
 
-	e.lockQC = parentQC
+	e.smr.SetLockQC(parentQC)
 	return nil
-}
-
-func (e *core) getLockQC() *hotstuff.QuorumCert {
-	return e.lockQC
 }
 
 func (e *core) makeVote(hash common.Hash, proposer common.Address,
@@ -75,22 +71,22 @@ func (e *core) makeVote(hash common.Hash, proposer common.Address,
 
 	justifyQCRound := justifyQC.View.Round
 	justifyQCHeight := justifyQC.View.Height
-	lockQCRound := e.lockQC.View.Round
+	lockQCRound := e.smr.LockQC().View.Round
 
 	justifyQCBlock := e.blkPool.GetBlockAndCheckHeight(justifyQC.Hash, justifyQCHeight)
 	if justifyQCBlock == nil {
 		return nil, fmt.Errorf("justifyQC block (hash, height)not exist, (%v, %v)", justifyQC.Hash, justifyQCHeight)
 	}
 
-	if view.Round.Cmp(e.lastVoteRound) <= 0 {
-		return nil, fmt.Errorf("proposalRound <= lastVoteRound, (%v, %v)", view.Round, e.lastVoteRound)
+	if view.Round.Cmp(e.smr.LatestVoteRound()) <= 0 {
+		return nil, fmt.Errorf("proposalRound <= lastVoteRound, (%v, %v)", view.Round, e.smr.LatestVoteRoundU64())
 	}
 	if justifyQCRound.Cmp(lockQCRound) < 0 {
 		return nil, fmt.Errorf("justifyQCRound < lockQCRound, (%v, %v)", justifyQCRound, lockQCRound)
 	}
 
 	vote := &Vote{
-		Epoch:      e.epoch,
+		Epoch:      e.smr.Epoch(),
 		Hash:       hash,
 		Proposer:   proposer,
 		View:       view,
@@ -99,7 +95,7 @@ func (e *core) makeVote(hash common.Hash, proposer common.Address,
 	}
 
 	var qcGrandHash common.Hash
-	if e.curHeight.Cmp(e.chain2Height()) >= 0 {
+	if e.isChain2() {
 		qcParentHash := justifyQCBlock.ParentHash()
 		qcParentHeight := new(big.Int).Sub(justifyQCHeight, common.Big1)
 		qcParentBlock := e.blkPool.GetBlockAndCheckHeight(qcParentHash, qcParentHeight)
@@ -119,7 +115,7 @@ func (e *core) makeVote(hash common.Hash, proposer common.Address,
 		qcGrandHash = qcParentBlock.ParentHash()
 	}
 
-	if e.curHeight.Cmp(e.chain3Height()) >= 0 {
+	if e.isChain3() {
 		qcGrandHeight := new(big.Int).Sub(vote.GrandView.Height, common.Big1)
 		qcGrandBlock := e.blkPool.GetBlockAndCheckHeight(qcGrandHash, qcGrandHeight)
 		if qcGrandBlock == nil {
@@ -156,7 +152,7 @@ func (e *core) validateVote(vote *Vote) error {
 	}
 
 	// validate grand block
-	if e.curHeight.Cmp(e.chain2Height()) >= 0 {
+	if e.isChain2() {
 		if vote.GrandHash == utils.EmptyHash || vote.GrandView == nil {
 			return errInvalidVote
 		}
@@ -169,7 +165,7 @@ func (e *core) validateVote(vote *Vote) error {
 	}
 
 	// validate great-grand block
-	if e.curHeight.Cmp(e.chain3Height()) >= 0 {
+	if e.isChain3() {
 		if vote.GreatGrandHash == utils.EmptyHash || vote.GreatGrandView == nil {
 			return errInvalidVote
 		}

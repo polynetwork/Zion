@@ -35,7 +35,7 @@ type MessagePool struct {
 
 func NewMessagePool(valSet hotstuff.ValidatorSet) *MessagePool {
 	return &MessagePool{
-		valSet:  valSet,
+		valSet:  valSet.Copy(),
 		vote:    make(map[common.Hash]*message_set.MessageSet),
 		timeout: make(map[uint64]*message_set.MessageSet),
 	}

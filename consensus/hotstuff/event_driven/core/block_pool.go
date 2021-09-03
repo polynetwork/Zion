@@ -27,27 +27,15 @@ import (
 )
 
 type BlockPool struct {
-	tree   *BlockTree
-	qcMap  map[common.Hash]*hotstuff.QuorumCert // caches the quorum certificates
-	highQC *hotstuff.QuorumCert                 // the highest qc, 从genesis 0开始
-	highProposal *types.Block
+	tree  *BlockTree
+	qcMap map[common.Hash]*hotstuff.QuorumCert // caches the quorum certificates
 }
 
-func NewBlockPool(initHighQC *hotstuff.QuorumCert, initHighBlock *types.Block, tr *BlockTree) *BlockPool {
+func NewBlockPool(tr *BlockTree) *BlockPool {
 	return &BlockPool{
-		tree:   tr,
-		highQC: initHighQC,
-		highProposal: initHighBlock,
+		tree:  tr,
 		qcMap: make(map[common.Hash]*hotstuff.QuorumCert),
 	}
-}
-
-func (tr *BlockPool) GetHighQC() *hotstuff.QuorumCert {
-	return tr.highQC
-}
-
-func (tr *BlockPool) GetHighProposal() *types.Block {
-	return tr.highProposal
 }
 
 func (tr *BlockPool) GetBlockAndCheckHeight(hash common.Hash, height *big.Int) *types.Block {
@@ -81,29 +69,9 @@ func (tr *BlockPool) AddQC(qc *hotstuff.QuorumCert) {
 	}
 }
 
-func (tr *BlockPool) UpdateHighQC(qc *hotstuff.QuorumCert) {
-	if qc == nil || qc.View == nil {
-		return
-	}
-	if tr.highQC == nil || tr.highQC.View == nil || tr.highQC.View.Round.Cmp(qc.View.Round) < 0 {
-		tr.highQC = qc
-		tr.highProposal = tr.GetBlockByHash(qc.Hash)
-	}
-}
-
-func (tr *BlockPool) UpdateHighProposal(proposal *types.Block) {
-	if proposal.NumberU64() < tr.highProposal.NumberU64() {
-		return
-	}
-	if proposal.Hash() == tr.highProposal.Hash() {
-		return
-	}
-	tr.highProposal = proposal
-}
-
 // GetCommitBlock get highQC's grand-parent block which should be committed at current round
-func (tr *BlockPool) GetCommitBlock(lockQC common.Hash) *types.Block {
-	block := tr.GetBlockByHash(tr.highQC.Hash)
+func (tr *BlockPool) GetCommitBlock(highQC, lockQC common.Hash) *types.Block {
+	block := tr.GetBlockByHash(highQC)
 	parent := tr.GetBlockAndCheckHeight(block.ParentHash(), sub1(block.Number()))
 	if parent == nil {
 		return nil

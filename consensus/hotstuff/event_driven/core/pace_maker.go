@@ -29,8 +29,8 @@ import (
 )
 
 func (e *core) updateHighestCommittedRound(round *big.Int) {
-	if e.highestCommitRound.Cmp(round) < 0 {
-		e.highestCommitRound = round
+	if e.smr.HighCommitRound().Cmp(round) < 0 {
+		e.smr.SetHighCommitRound(round)
 	}
 }
 
@@ -83,16 +83,17 @@ func (e *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) err
 // 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
 // 一般而言只有leader才能收到qc，
 func (e *core) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast bool) error {
-	if qc == nil || qc.View == nil || qc.View.Round.Cmp(e.curRound) < 0 {
+	if qc == nil || qc.View == nil || qc.View.Round.Cmp(e.smr.Round()) < 0 {
 		return fmt.Errorf("qcRound invalid")
 	}
 
 	// broadcast to next leader first, we will use `curRound` again in broadcasting.
-	if !e.IsProposer() && broadcast && qc.View.Height.Cmp(e.epochHeightStart) > 0 {
+	if !e.IsProposer() && broadcast && qc.View.Height.Cmp(e.smr.EpochStart()) > 0 {
 		e.encodeAndBroadcast(MsgTypeQC, qc)
 	}
 
-	e.curHeight = new(big.Int).Add(e.curHeight, common.Big1)
+	height := new(big.Int).Add(e.smr.Height(), common.Big1)
+	e.smr.SetHeight(height)
 
 	return e.advance(qc.View.Round, qc.Hash, true)
 }
@@ -102,8 +103,8 @@ func (e *core) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast bool) error {
 // 一般而言只有leader才能收到qc，
 func (e *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
 	tcRound := tc.View.Round
-	if tcRound.Cmp(e.curRound) < 0 {
-		return fmt.Errorf("tcRound < currentRound, (%v, %v)", tcRound, e.curRound)
+	if tcRound.Cmp(e.smr.Round()) < 0 {
+		return fmt.Errorf("tcRound < currentRound, (%v, %v)", tcRound, e.smr.Round())
 	}
 
 	// broadcast to next leader first, we will use `curRound` again in broadcasting.
@@ -116,10 +117,11 @@ func (e *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
 
 func (e *core) advance(round *big.Int, hash common.Hash, isQC bool) error {
 	// current round increase
-	e.curRound = new(big.Int).Add(round, common.Big1)
+	newRound := new(big.Int).Add(round, common.Big1)
+	e.smr.SetRound(newRound)
 
 	// recalculate proposer
-	e.valset.CalcProposerByIndex(e.curRound.Uint64())
+	e.valset.CalcProposerByIndex(e.smr.RoundU64())
 
 	// reset timer
 	e.newRoundChangeTimer()
@@ -146,8 +148,8 @@ const standardTmoDuration = time.Second * 4
 func (e *core) newRoundChangeTimer() {
 	e.stopTimer()
 
-	curRd := e.curRound.Uint64()
-	hgRd := e.highestCommitRound.Uint64()
+	curRd := e.smr.RoundU64()
+	hgRd := e.smr.HighCommitRoundU64()
 	index := curRd - hgRd
 	timeout := standardTmoDuration
 	if index > 0 {

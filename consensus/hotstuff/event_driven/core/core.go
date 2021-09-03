@@ -19,13 +19,11 @@
 package core
 
 import (
-	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -40,34 +38,18 @@ type core struct {
 	chain   consensus.ChainReader
 	backend hotstuff.Backend
 
-	state   State
 	started bool
-	addr    common.Address
+	address common.Address
 	signer  hotstuff.Signer
 	valset  hotstuff.ValidatorSet
 
-	epoch            uint64
-	epochHeightStart *big.Int // [epochHeightStart, epochHeightEnd] is an closed interval
-	epochHeightEnd   *big.Int
-	curRound         *big.Int // 从genesis block 0开始
-	curHeight        *big.Int // 从genesis block 0开始
-	curRequest       *types.Block
-
+	smr      *SMR
 	messages *MessagePool
 	blkPool  *BlockPool
+	timer    *time.Timer // drive consensus round
 
-	// pace maker
-	highestCommitRound *big.Int    // used to calculate timeout duration
-	timer              *time.Timer // drive consensus round
-
-	// safety
-	//lockQCRound   *big.Int
-	lockQC        *hotstuff.QuorumCert
-	lastVoteRound *big.Int
-
-	feed   event.Feed // request feed
-	events *event.TypeMuxSubscription
-	//timeoutSub        *event.TypeMuxSubscription
+	feed              event.Feed // request feed
+	events            *event.TypeMuxSubscription
 	finalCommittedSub *event.TypeMuxSubscription
 
 	validateFn func([]byte, []byte) (common.Address, error)
@@ -87,10 +69,11 @@ func New(
 		config:  c,
 		db:      db,
 		backend: backend,
-		//chain:   chain,
-		logger: log.New("address", addr),
+		logger:  log.New("address", addr),
 	}
-	engine.addr = addr
+
+	engine.smr = newSMR()
+	engine.address = addr
 	engine.valset = valset
 	engine.signer = signer
 	engine.started = false
@@ -107,17 +90,14 @@ func (e *core) handleNewRound() error {
 	}
 
 	logger := e.newLogger()
-
-	e.state = StateAcceptRequest
 	msgTyp := MsgTypeNewRound
-
-	logger.Trace("New round", "msg", msgTyp, "state", e.currentState(), "new_proposer", e.valset.GetProposer(), "valSet", e.valset.List(), "size", e.valset.Size(), "IsProposer", e.IsProposer())
+	logger.Trace("New round", "msg", msgTyp, "new_proposer", e.valset.GetProposer(), "valSet", e.valset.List(), "size", e.valset.Size(), "IsProposer", e.IsProposer())
 
 	if !e.IsProposer() {
 		return nil
+	} else {
+		return e.sendRequest()
 	}
-
-	return e.sendRequest()
 }
 
 func (e *core) handleQC(src hotstuff.Validator, data *hotstuff.Message) error {
@@ -181,8 +161,9 @@ func (e *core) processQC(qc *hotstuff.QuorumCert) error {
 	}
 
 	// commit qc grand (proposal's great-grand parent block)
-	lastLockQC := e.getLockQC()
-	if committedBlock := e.blkPool.GetCommitBlock(lastLockQC.Hash); committedBlock != nil {
+	lastLockQC := e.smr.LockQC()
+	highQC := e.smr.HighQC()
+	if committedBlock := e.blkPool.GetCommitBlock(highQC.Hash, lastLockQC.Hash); committedBlock != nil {
 		if existProposal := e.backend.GetProposal(committedBlock.Hash()); existProposal == nil {
 			// todo: 如果节点此时宕机怎么办？还是说允许所有的节点一起提交区块
 			if e.isSelf(committedBlock.Coinbase()) {
