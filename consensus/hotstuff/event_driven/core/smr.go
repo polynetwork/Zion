@@ -19,9 +19,9 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 

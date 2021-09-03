@@ -22,20 +22,12 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
-
-// hasherPool holds LegacyKeccak256 hashers for rlpHash.
-var hasherPool = sync.Pool{
-	New: func() interface{} { return sha3.NewLegacyKeccak256() },
-}
 
 type MsgType uint64
 
@@ -169,13 +161,7 @@ func (tm *TimeoutEvent) Hash() common.Hash {
 		Epoch: tm.Epoch,
 		View:  tm.View,
 	}
-	ret := make([]byte, 32)
-	sha := hasherPool.Get().(crypto.KeccakState)
-	defer hasherPool.Put(sha)
-	sha.Reset()
-	rlp.Encode(sha, x)
-	sha.Read(ret[:])
-	return common.BytesToHash(ret[:])
+	return hotstuff.RLPHash(x)
 }
 
 func (tm *TimeoutEvent) EncodeRLP(w io.Writer) error {

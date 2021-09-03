@@ -29,6 +29,11 @@ func (e *core) sendRequest() error {
 
 	height := copyNum(e.smr.Height())
 	proposal := e.smr.Proposal()
+	if proposal == nil {
+		logger.Trace("Failed to get smr proposal", "num", height, "err", "proposal is nil")
+		return nil
+	}
+
 	e.feed.Send(consensus.AskRequest{
 		Number: height,
 		Parent: proposal,
