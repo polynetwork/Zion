@@ -64,7 +64,7 @@ func (e *core) checkEpoch(epoch uint64, height *big.Int) error {
 	return nil
 }
 
-func (e *core) validateProposal(proposal *types.Block) error {
+func (e *core) validateProposalView(proposal *types.Block) error {
 	if proposal == nil {
 		return errInvalidProposal
 	}
@@ -79,9 +79,6 @@ func (e *core) validateProposal(proposal *types.Block) error {
 	if view.Cmp(e.currentView()) != 0 {
 		return fmt.Errorf("expect view %v, got %v", e.currentView(), view)
 	}
-	if err := e.signer.VerifyHeader(proposal.Header(), e.valset, false); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -93,42 +90,44 @@ func (e *core) checkView(view *hotstuff.View) error {
 }
 
 func (e *core) checkJustifyQC(proposal hotstuff.Proposal, justifyQC *hotstuff.QuorumCert) error {
-	if proposal.Number().Cmp(common.Big1) == 0 {
-		return nil
-	}
-
 	if justifyQC == nil {
 		return fmt.Errorf("justifyQC is nil")
 	}
-	if justifyQC.View == nil {
+	if !bigEq0(justifyQC.Height()) && justifyQC.View == nil {
 		return fmt.Errorf("justifyQC view is nil")
 	}
 	if justifyQC.Hash == common.EmptyHash {
 		return fmt.Errorf("justifyQC hash is empty")
 	}
-	if justifyQC.Proposer == common.EmptyAddress {
+	if !bigEq0(justifyQC.Height()) && justifyQC.Proposer == common.EmptyAddress {
 		return fmt.Errorf("justifyQC proposer is empty")
 	}
-
-	if justifyQC.View.Height.Cmp(new(big.Int).Sub(proposal.Number(), common.Big1)) != 0 {
-		return fmt.Errorf("justifyQC height invalid")
-	}
-
 	if justifyQC.Hash != proposal.ParentHash() {
 		return fmt.Errorf("justifyQC hash extendship invalid")
 	}
+	if _, eq := bigSub1Eq(proposal.Number(), justifyQC.Height()); !eq {
+		return fmt.Errorf("justifyQC height invalid")
+	}
 
-	vs := e.valset.Copy()
-	vs.CalcProposerByIndex(justifyQC.View.Round.Uint64())
-	proposer := vs.GetProposer().Address()
-	if proposer != justifyQC.Proposer {
-		return fmt.Errorf("justifyQC proposer expect %v got %v", proposer, justifyQC.Proposer)
+	if !bigEq0(justifyQC.Height()) {
+		vs := e.valset.Copy()
+		vs.CalcProposerByIndex(justifyQC.View.Round.Uint64())
+		proposer := vs.GetProposer().Address()
+		if proposer != justifyQC.Proposer {
+			return fmt.Errorf("justifyQC proposer expect %v got %v", proposer, justifyQC.Proposer)
+		}
 	}
 
 	return nil
 }
 
 func (e *core) compareQC(expect, src *hotstuff.QuorumCert) error {
+	if expect == nil || expect.View == nil {
+		return fmt.Errorf("invalid expect qc")
+	}
+	if src == nil || src.View == nil {
+		return fmt.Errorf("invalid src qc")
+	}
 	if expect.Hash != src.Hash {
 		return fmt.Errorf("qc hash expect %v, got %v", expect.Hash, src.Hash)
 	}
@@ -141,6 +140,7 @@ func (e *core) compareQC(expect, src *hotstuff.QuorumCert) error {
 	if !bytes.Equal(expect.Extra, src.Extra) {
 		return fmt.Errorf("qc extra not same")
 	}
+	// todo(fuk): or implement this with `reflect.DeepEqual(expect, src)`
 	return nil
 }
 
@@ -255,7 +255,12 @@ func (e *core) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
 	return tc
 }
 
-func (e *core) nextValset() hotstuff.ValidatorSet {
+func (e *core) updateHighQCAndProposal(qc *hotstuff.QuorumCert, proposal *types.Block) {
+	e.smr.SetHighQC(qc)
+	e.smr.SetProposal(proposal)
+}
+
+func (e *core) nextValSet() hotstuff.ValidatorSet {
 	vs := e.valset.Copy()
 	vs.CalcProposerByIndex(e.smr.Round().Uint64() + 1)
 	return vs

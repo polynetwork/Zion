@@ -24,7 +24,6 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -82,29 +81,38 @@ func (e *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) err
 // advanceRoundByQC
 // 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
 // 一般而言只有leader才能收到qc，
-func (e *core) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast bool) error {
-	if qc == nil || qc.View == nil || qc.View.Round.Cmp(e.smr.Round()) < 0 {
-		return fmt.Errorf("qcRound invalid")
+func (e *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
+	if qc == nil || qc.View == nil || qc.Round().Cmp(e.smr.Round()) < 0 || qc.Height().Cmp(e.smr.Height()) < 0 {
+		return fmt.Errorf("qc invalid")
 	}
 
-	// broadcast to next leader first, we will use `curRound` again in broadcasting.
-	if !e.IsProposer() && broadcast && qc.View.Height.Cmp(e.smr.EpochStart()) > 0 {
-		e.encodeAndBroadcast(MsgTypeQC, qc)
+	// catch up view
+	var (
+		height, round *big.Int
+	)
+	if bigEq(e.smr.Height(), qc.Height()) {
+		height = bigAdd1(e.smr.Height())
+	} else {
+		height = bigAdd1(qc.Height())
 	}
-
-	height := new(big.Int).Add(e.smr.Height(), common.Big1)
+	if bigEq(e.smr.Round(), qc.Round()) {
+		round = bigAdd1(e.smr.Round())
+	} else {
+		round = bigAdd1(qc.Round())
+	}
 	e.smr.SetHeight(height)
+	e.smr.SetRound(round)
 
-	return e.advance(qc.View.Round, qc.Hash, true)
+	e.valset.CalcProposerByIndex(e.smr.RoundU64())
+	e.newRoundChangeTimer()
+	e.logger.Trace("AdvanceQC", "view", e.currentView(), "hash", qc.Hash)
+
+	return e.handleNewRound()
 }
 
-// advanceRoundByQC
-// 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
-// 一般而言只有leader才能收到qc，
 func (e *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
-	tcRound := tc.View.Round
-	if tcRound.Cmp(e.smr.Round()) < 0 {
-		return fmt.Errorf("tcRound < currentRound, (%v, %v)", tcRound, e.smr.Round())
+	if tc == nil || tc.View == nil || tc.Round().Cmp(e.smr.Round()) < 0 || tc.Height().Cmp(e.smr.Height()) < 0 {
+		return fmt.Errorf("tc invalid")
 	}
 
 	// broadcast to next leader first, we will use `curRound` again in broadcasting.
@@ -112,27 +120,21 @@ func (e *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
 		e.encodeAndBroadcast(MsgTypeTC, tc)
 	}
 
-	return e.advance(tcRound, tc.Hash, false)
-}
-
-func (e *core) advance(round *big.Int, hash common.Hash, isQC bool) error {
-	// current round increase
-	newRound := new(big.Int).Add(round, common.Big1)
-	e.smr.SetRound(newRound)
-
-	// recalculate proposer
-	e.valset.CalcProposerByIndex(e.smr.RoundU64())
-
-	// reset timer
-	e.newRoundChangeTimer()
-
-	if isQC {
-		e.logger.Trace("AdvanceQC", "view", e.currentView(), "hash", hash)
+	// catch up view
+	var (
+		round *big.Int
+	)
+	if bigEq(e.smr.Round(), tc.Round()) {
+		round = bigAdd1(e.smr.Round())
 	} else {
-		e.logger.Trace("AdvanceTC", "view", e.currentView(), "hash", hash)
+		round = bigAdd1(tc.Round())
 	}
+	e.smr.SetRound(round)
 
-	// get into new consensus round
+	e.valset.CalcProposerByIndex(e.smr.RoundU64())
+	e.newRoundChangeTimer()
+	e.logger.Trace("AdvanceTC", "round", e.smr.Round())
+
 	return e.handleNewRound()
 }
 

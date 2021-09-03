@@ -21,9 +21,10 @@ package core
 import "github.com/ethereum/go-ethereum/consensus/hotstuff"
 
 func (e *core) sendProposal() error {
-	logger := e.newLogger()
+	logger := e.newLogger("msg", MsgTypeSendProposal)
 
-	proposal := e.smr.Proposal()
+	// proposal and justify qc already checked in request procedure
+	proposal := e.smr.Request()
 	justifyQC := e.smr.HighQC()
 	view := e.currentView()
 	msg := &MsgProposal{
@@ -40,60 +41,68 @@ func (e *core) sendProposal() error {
 
 // handleProposal validate proposal info and vote to the next leader if the proposal is valid
 func (e *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) error {
-	logger := e.newLogger()
+	logger := e.newLogger("msg", MsgTypeProposal)
 
-	var (
-		msg    *MsgProposal
-		msgTyp = MsgTypeProposal
-	)
+	var msg *MsgProposal
 	if err := data.Decode(&msg); err != nil {
-		logger.Trace("Failed to decode", "type", msgTyp, "from", src.Address(), "err", err)
+		logger.Trace("Failed to decode", "from", src.Address(), "err", err)
 		return errFailedDecodePrepare
 	}
 
 	view := msg.View
-	proposal := msg.Proposal
+	unsealedBlock := msg.Proposal
 	justifyQC := msg.JustifyQC
 
-	if err := e.checkEpoch(msg.Epoch, proposal.Number()); err != nil {
-		logger.Trace("Failed to check epoch", "msg", msgTyp, "from", src.Address(), "err", err)
+	if unsealedBlock == nil || justifyQC == nil || view == nil {
+		logger.Trace("invalid unsealedBlock msg", "err", "unsealedBlock/justifyQC/view is nil")
+		return nil
+	}
+	if err := e.checkEpoch(msg.Epoch, unsealedBlock.Number()); err != nil {
+		logger.Trace("Failed to check epoch", "from", src.Address(), "err", err)
 		return err
 	}
-
-	logger.Trace("Accept proposal", "msg", msgTyp, "proposer", src.Address(), "hash", proposal.Hash(), "height", proposal.Number())
-
-	// try to advance into new round, it will update proposer and current view
-	_ = e.processQC(justifyQC)
-
-	// validate proposal and justify qc
-	if err := e.checkView(view); err != nil {
-		logger.Trace("Failed to check view", "msg", msgTyp, "from", src.Address(), "err", err)
+	if err := e.checkJustifyQC(unsealedBlock, justifyQC); err != nil {
+		logger.Trace("Failed to check justify", "from", src.Address(), "err", err)
 		return err
 	}
-	if err := e.validateProposal(proposal); err != nil {
-		logger.Trace("Failed to validate proposal", "msg", msgTyp, "from", src.Address(), "err", err)
-		return err
-	}
-	if err := e.checkProposer(proposal.Coinbase()); err != nil {
-		logger.Trace("Failed to check proposer", "msg", msgTyp, "from", src.Address(), "err", err)
-		return err
-	}
-	if err := e.checkJustifyQC(proposal, justifyQC); err != nil {
-		logger.Trace("Failed to check justify", "msg", msgTyp, "from", src.Address(), "err", err)
+	if err := e.signer.VerifyHeader(unsealedBlock.Header(), e.valset, false); err != nil {
+		logger.Trace("Failed to validate unsealedBlock header", "from", src.Address(), "err", err)
 		return err
 	}
 	if err := e.signer.VerifyQC(justifyQC, e.valset); err != nil {
-		logger.Trace("Failed to verify justifyQC", "msg", msgTyp, "from", src.Address(), "err", err)
+		logger.Trace("Failed to verify justifyQC", "from", src.Address(), "err", err)
 		return err
 	}
 
-	// add proposal and update highQC as next justifyQC
-	if err := e.blkPool.AddBlock(proposal, view.Round); err != nil {
-		logger.Trace("Failed to insert block into block pool", "msg", msgTyp, "from", src.Address(), "err", err)
+	logger.Trace("Accept unsealedBlock", "proposer", src.Address(), "hash", unsealedBlock.Hash(), "height", unsealedBlock.Number())
+
+	// try to advance into new round, it will update proposer and current view, and reset lockQC as this justify qc.
+	// unsealedBlock's great-grand parent will be committed if 3-chain can be generated.
+	if err := e.advanceRoundByQC(justifyQC); err == nil {
+		e.commit3Chain()
+		e.updateLockQC(justifyQC)
+	}
+
+	// validate unsealedBlock and justify qc
+	if err := e.checkView(view); err != nil {
+		logger.Trace("Failed to check view", "from", src.Address(), "err", err)
 		return err
 	}
-	e.smr.SetProposal(proposal)
-	e.smr.SetHighQC(justifyQC)
+	if err := e.validateProposalView(unsealedBlock); err != nil {
+		logger.Trace("Failed to validate unsealedBlock view", "err", err)
+		return err
+	}
+	if err := e.checkProposer(unsealedBlock.Coinbase()); err != nil {
+		logger.Trace("Failed to check proposer", "from", src.Address(), "err", err)
+		return err
+	}
 
+	// add unsealedBlock and update highQC as next justifyQC
+	if err := e.blkPool.AddBlock(unsealedBlock, view.Round); err != nil {
+		logger.Trace("Failed to insert block into block pool", "from", src.Address(), "err", err)
+		return err
+	}
+	e.updateHighQCAndProposal(justifyQC, unsealedBlock)
+	
 	return e.sendVote()
 }

@@ -34,10 +34,22 @@ func (e *core) increaseLastVoteRound(rd *big.Int) {
 	}
 }
 
-// UpdateLockQC update the latest quorum certificate after voteRule judgement succeed.
+// UpdateLockQC lock qc's parent quorum certificate which sealed n = 2f + 1(quorum size)
+// proposal's parent block. if input is proposal's justify qc it denote that the proposal's
+// grand pa qc is locked, and the proposal is ready to be commit to miner at the next round.
+// for example:
+// 1.if the proposal is b2, and justifyQC is q1, it will lock q0.
+// 2.if the proposal is b3, and justifyQC is q2, it will lock q1.
+// 3.if the proposal is b4, and justifyQC is q3, it will lock q2, and b1 will be committed.
 func (e *core) updateLockQC(qc *hotstuff.QuorumCert) error {
 	if qc == nil || qc.View == nil || qc.Hash == common.EmptyHash || qc.Proposer == common.EmptyAddress {
 		return errInvalidHighQC
+	}
+
+	// current lockQC should be last highQC
+	highQC := e.smr.HighQC()
+	if err := e.compareQC(highQC, qc); err != nil {
+		return err
 	}
 
 	qcBlock := e.blkPool.GetBlockByHash(qc.Hash)
@@ -69,9 +81,21 @@ func (e *core) updateLockQC(qc *hotstuff.QuorumCert) error {
 func (e *core) makeVote(hash common.Hash, proposer common.Address,
 	view *hotstuff.View, justifyQC *hotstuff.QuorumCert) (*Vote, error) {
 
+	if view == nil || justifyQC == nil || justifyQC.View == nil {
+		return nil, fmt.Errorf("invalid justifyQC or view")
+	}
+	if hash == common.EmptyHash || proposer == common.EmptyAddress {
+		return nil, fmt.Errorf("invalid hash or propser")
+	}
+
+	lockQC := e.smr.LockQC()
+	if lockQC == nil || lockQC.View == nil {
+		return nil, fmt.Errorf("invalid lock qc")
+	}
+
 	justifyQCRound := justifyQC.View.Round
 	justifyQCHeight := justifyQC.View.Height
-	lockQCRound := e.smr.LockQC().View.Round
+	lockQCRound := lockQC.View.Round
 
 	justifyQCBlock := e.blkPool.GetBlockAndCheckHeight(justifyQC.Hash, justifyQCHeight)
 	if justifyQCBlock == nil {
@@ -79,10 +103,10 @@ func (e *core) makeVote(hash common.Hash, proposer common.Address,
 	}
 
 	if view.Round.Cmp(e.smr.LatestVoteRound()) <= 0 {
-		return nil, fmt.Errorf("proposalRound <= lastVoteRound, (%v, %v)", view.Round, e.smr.LatestVoteRoundU64())
+		return nil, fmt.Errorf("rule1, expect: proposalRound > lastVoteRound, got (%v <= %v)", view.Round, e.smr.LatestVoteRoundU64())
 	}
 	if justifyQCRound.Cmp(lockQCRound) < 0 {
-		return nil, fmt.Errorf("justifyQCRound < lockQCRound, (%v, %v)", justifyQCRound, lockQCRound)
+		return nil, fmt.Errorf("rule2, expect: justifyQCRound >= lockQCRound, got (%v < %v)", justifyQCRound, lockQCRound)
 	}
 
 	vote := &Vote{

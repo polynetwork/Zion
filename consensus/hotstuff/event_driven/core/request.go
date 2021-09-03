@@ -25,45 +25,60 @@ import (
 )
 
 func (e *core) sendRequest() error {
-	logger := e.newLogger()
+	logger := e.newLogger("msg", MsgTypeSendRequest)
 
-	height := copyNum(e.smr.Height())
-	proposal := e.smr.Proposal()
-	if proposal == nil {
-		logger.Trace("Failed to get smr proposal", "num", height, "err", "proposal is nil")
+	height := e.smr.Height()
+
+	// use existing pending request
+	request := e.smr.Request()
+	if request != nil && bigEq(height, request.Number()) {
+		logger.Trace("Got pending request", "num", request.Number(), "parent hash", request.ParentHash())
+		return e.sendProposal()
+	}
+
+	// ask miner new proposal, use latest high proposal as parent block
+	parent := e.smr.Proposal()
+	if parent == nil {
+		logger.Trace("Failed to get parent block", "num", height, "err", "parent is nil")
+		return nil
+	}
+	if expect, eq := bigSub1Eq(height, parent.Number()); !eq {
+		logger.Trace("Invalid parent block", "expect height", expect, "got", parent.Number())
 		return nil
 	}
 
 	e.feed.Send(consensus.AskRequest{
 		Number: height,
-		Parent: proposal,
+		Parent: parent,
 	})
 
-	logger.Trace("Ask Request", "num", height, "parent hash", proposal.Hash())
+	logger.Trace("Send Request", "num", height, "parent hash", parent.Hash())
 	return nil
 }
 
 func (e *core) handleRequest(req *hotstuff.Request) error {
-	logger := e.newLogger()
-
-	msgTyp := MsgTypeRequest
+	logger := e.newLogger("msg", MsgTypeRequest)
 
 	if req == nil || req.Proposal == nil {
-		logger.Trace("Receive Request", "msg", msgTyp, "request", "is nil")
+		logger.Trace("Invalid request", "err", "is nil")
 		return nil
 	}
 	proposal, ok := req.Proposal.(*types.Block)
 	if !ok {
-		logger.Trace("Receive Request", "msg", msgTyp, "convert proposal", "type invalid")
+		logger.Trace("Failed to convert proposal", "err", "type invalid")
 		return nil
 	}
-	if proposal.Number().Cmp(e.smr.Height()) != 0 {
-		logger.Trace("Receive Request", "msg", msgTyp, "expect height", e.smr.HeightU64(), "got", proposal.Number())
+	if !bigEq(proposal.Number(), e.smr.Height()) {
+		logger.Trace("Invalid proposal", "expect height", e.smr.HeightU64(), "got", proposal.Number())
+		return nil
+	}
+	if parent := e.smr.Proposal(); parent == nil || proposal.ParentHash() != parent.Hash() {
+		logger.Trace("Invalid parent", "err", "parent is nil or hash not equal")
 		return nil
 	}
 
-	e.smr.SetProposal(proposal)
-	logger.Trace("Received request", "msg", msgTyp, "num", req.Proposal.Number(), "hash", req.Proposal.Hash())
+	e.smr.SetRequest(proposal)
+	logger.Trace("Received request", "num", req.Proposal.Number(), "hash", req.Proposal.Hash())
 
 	return e.sendProposal()
 }

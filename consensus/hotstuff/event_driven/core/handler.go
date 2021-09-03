@@ -110,8 +110,6 @@ func (e *core) handleCheckedMsg(src hotstuff.Validator, msg *hotstuff.Message) (
 		err = e.handleProposal(src, msg)
 	case MsgTypeVote:
 		err = e.handleVote(src, msg)
-	case MsgTypeQC:
-		err = e.handleQC(src, msg)
 	case MsgTypeTC:
 		err = e.handleTC(src, msg)
 	case MsgTypeTimeout:
@@ -203,10 +201,10 @@ func (e *core) broadcast(msg *hotstuff.Message, val interface{}) error {
 	}
 
 	switch msg.Code {
-	case MsgTypeProposal, MsgTypeTimeout:
+	case MsgTypeProposal, MsgTypeSendTimeout:
 		err = e.backend.Broadcast(e.valset, payload)
-	case MsgTypeVote, MsgTypeQC, MsgTypeTC:
-		err = e.backend.Unicast(e.nextValset(), payload)
+	case MsgTypeVote, MsgTypeTC:
+		err = e.backend.Unicast(e.nextValSet(), payload)
 	default:
 		err = errInvalidMessage
 	}

@@ -54,7 +54,7 @@ func (e *core) Start() error {
 	// engine is started after this step, DONT allow to return err to miner worker, this may cause worker invalid
 	e.started = true
 	highQC := e.smr.HighQC()
-	e.advanceRoundByQC(highQC, false)
+	e.advanceRoundByQC(highQC)
 	return nil
 }
 

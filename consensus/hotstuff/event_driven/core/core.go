@@ -100,32 +100,6 @@ func (e *core) handleNewRound() error {
 	}
 }
 
-func (e *core) handleQC(src hotstuff.Validator, data *hotstuff.Message) error {
-	logger := e.newLogger()
-
-	var (
-		qc     *hotstuff.QuorumCert
-		msgTyp = MsgTypeQC
-	)
-	if err := data.Decode(&qc); err != nil {
-		logger.Trace("Failed to decode", "msg", msgTyp, "from", src.Address(), "err", err)
-		return err
-	}
-
-	if err := e.signer.VerifyQC(qc, e.valset); err != nil {
-		logger.Trace("Failed to verify qc", "msg", msgTyp, "from", src.Address(), "err", err)
-		return err
-	}
-
-	if err := e.processQC(qc); err != nil {
-		logger.Trace("Failed to process qc", "msg", msgTyp, "from", src.Address(), "err", err)
-		return err
-	}
-
-	logger.Trace("Accept QC", "msg", msgTyp, "src", src.Address(), "qc", qc.Hash, "view", qc.View)
-	return nil
-}
-
 func (e *core) handleTC(src hotstuff.Validator, data *hotstuff.Message) error {
 	logger := e.newLogger()
 
@@ -152,26 +126,51 @@ func (e *core) handleTC(src hotstuff.Validator, data *hotstuff.Message) error {
 	return nil
 }
 
-// try to advance into new round, it will update proposer and current view
-// commit the proposal
-func (e *core) processQC(qc *hotstuff.QuorumCert) error {
-	// try to advance consensus into next round
-	if err := e.advanceRoundByQC(qc, false); err != nil {
-		return err
-	}
-
-	// commit qc grand (proposal's great-grand parent block)
-	lastLockQC := e.smr.LockQC()
+func (e *core) commit3Chain() {
 	highQC := e.smr.HighQC()
-	if committedBlock := e.blkPool.GetCommitBlock(highQC.Hash, lastLockQC.Hash); committedBlock != nil {
-		if existProposal := e.backend.GetProposal(committedBlock.Hash()); existProposal == nil {
-			// todo: 如果节点此时宕机怎么办？还是说允许所有的节点一起提交区块
-			if e.isSelf(committedBlock.Coinbase()) {
-				e.backend.Commit(committedBlock)
-			}
-		}
-		e.blkPool.Pure(committedBlock.Hash())
+	lockQC := e.smr.LockQC()
+	if highQC == nil || lockQC == nil {
+		return
 	}
 
-	return e.updateLockQC(qc)
+	committedBlock := e.blkPool.GetCommitBlock(highQC.Hash, lockQC.Hash)
+	if committedBlock == nil {
+		return
+	}
+
+	// todo: 如果节点此时宕机怎么办？还是说允许所有的节点一起提交区块
+	if existProposal := e.backend.GetProposal(committedBlock.Hash()); existProposal == nil {
+		if e.isSelf(committedBlock.Coinbase()) {
+			e.backend.Commit(committedBlock)
+		}
+	}
+
+	e.blkPool.Pure(committedBlock.Hash())
 }
+
+//
+//func (e *core) handleQC(src hotstuff.Validator, data *hotstuff.Message) error {
+//	logger := e.newLogger()
+//
+//	var (
+//		qc     *hotstuff.QuorumCert
+//		msgTyp = MsgTypeQC
+//	)
+//	if err := data.Decode(&qc); err != nil {
+//		logger.Trace("Failed to decode", "msg", msgTyp, "from", src.Address(), "err", err)
+//		return err
+//	}
+//
+//	if err := e.signer.VerifyQC(qc, e.valset); err != nil {
+//		logger.Trace("Failed to verify qc", "msg", msgTyp, "from", src.Address(), "err", err)
+//		return err
+//	}
+//
+//	if err := e.processQC(qc); err != nil {
+//		logger.Trace("Failed to process qc", "msg", msgTyp, "from", src.Address(), "err", err)
+//		return err
+//	}
+//
+//	logger.Trace("Accept QC", "msg", msgTyp, "src", src.Address(), "qc", qc.Hash, "view", qc.View)
+//	return nil
+//}

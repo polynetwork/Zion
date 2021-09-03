@@ -29,7 +29,7 @@ import (
 func (e *core) initialize() error {
 	e.smr.SetEpoch(0)
 	e.smr.SetEpochStart(big.NewInt(0))
-	e.smr.SetEpochEnd(big.NewInt(100))
+	e.smr.SetEpochEnd(big.NewInt(10000000))
 
 	lastBlock, _ := e.backend.LastProposal()
 	if lastBlock == nil {
@@ -59,12 +59,12 @@ func (e *core) initialize() error {
 	if err != nil {
 		return err
 	}
+
 	e.blkPool = NewBlockPool(blktr)
 	e.blkPool.AddQC(qc)
-
-	e.smr.SetHighQC(highQC)
+	e.updateHighQCAndProposal(highQC, rootBlock)
 	e.smr.SetLatestVoteRound(salt.Round)
-	e.smr.SetLockQC(qc)
 
+	//e.smr.SetLockQC(qc)
 	return nil
 }

@@ -127,20 +127,12 @@ func (s *SMR) SetLatestVoteRound(r *big.Int) {
 	s.curLatestVoteRound = new(big.Int).Set(r)
 }
 
-func (s *SMR) GetRequest() *types.Block {
-	if s.curPendingRequest != nil && s.curPendingRequest.Number().Cmp(s.curHeight) == 0 {
-		return s.curPendingRequest
-	}
-	return nil
+func (s *SMR) Request() *types.Block {
+	return s.curPendingRequest
 }
 
-func (s *SMR) UpdateRequest(req *types.Block) {
-	if req == nil {
-		return
-	}
-	if s.curPendingRequest == nil || s.curPendingRequest.NumberU64() < req.NumberU64() {
-		s.curPendingRequest = req
-	}
+func (s *SMR) SetRequest(req *types.Block) {
+	s.curPendingRequest = req
 }
 
 func (s *SMR) LockQC() *hotstuff.QuorumCert {

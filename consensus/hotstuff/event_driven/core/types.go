@@ -31,32 +31,45 @@ import (
 
 type MsgType uint64
 
+// messages with sub string of `Send` only used in internal communication and logs
 const (
-	MsgTypeNewRound MsgType = 1
-	MsgTypeRequest  MsgType = 2
-	MsgTypeProposal MsgType = 3
-	MsgTypeVote     MsgType = 4
-	MsgTypeTimeout  MsgType = 5
-	MsgTypeQC       MsgType = 6
-	MsgTypeTC       MsgType = 7
+	MsgTypeNewRound     MsgType = 1
+	MsgTypeSendRequest  MsgType = 2
+	MsgTypeRequest      MsgType = 3
+	MsgTypeSendProposal MsgType = 4
+	MsgTypeProposal     MsgType = 5
+	MsgTypeSendVote     MsgType = 6
+	MsgTypeVote         MsgType = 7
+	MsgTypeSendTimeout  MsgType = 8
+	MsgTypeTimeout      MsgType = 9
+	MsgTypeSendTC       MsgType = 10
+	MsgTypeTC           MsgType = 11
 )
 
 func (m MsgType) String() string {
 	switch m {
 	case MsgTypeNewRound:
 		return "MSG_NEW_ROUND"
+	case MsgTypeSendRequest:
+		return "MSG_SEND_REQUEST"
 	case MsgTypeRequest:
-		return "MSG_REQUEST"
+		return "MSG_RECV_REQUEST"
+	case MsgTypeSendProposal:
+		return "MSG_SEND_PROPOSAL"
 	case MsgTypeProposal:
-		return "MSG_PROPOSAL"
+		return "MSG_RECV_PROPOSAL"
+	case MsgTypeSendVote:
+		return "MSG_SEND_VOTE"
 	case MsgTypeVote:
-		return "MSG_VOTE"
+		return "MSG_RECV_VOTE"
+	case MsgTypeSendTimeout:
+		return "MSG_SEND_TIMEOUT"
 	case MsgTypeTimeout:
-		return "MSG_TIMEOUT"
-	case MsgTypeQC:
-		return "MSG_QC"
+		return "MSG_RECV_TIMEOUT"
+	case MsgTypeSendTC:
+		return "MSG_SEND_TC"
 	case MsgTypeTC:
-		return "MSG_TC"
+		return "MSG_RECV_TC"
 	default:
 		return "MSG_UNKNOWN"
 	}
@@ -227,6 +240,28 @@ func (tc *TimeoutCert) Copy() *TimeoutCert {
 		return nil
 	}
 	return newTc
+}
+
+func (tc *TimeoutCert) Height() *big.Int {
+	if tc.View == nil {
+		return common.Big0
+	}
+	return tc.View.Height
+}
+
+func (tc *TimeoutCert) HeightU64() uint64 {
+	return tc.Height().Uint64()
+}
+
+func (tc *TimeoutCert) Round() *big.Int {
+	if tc.View == nil {
+		return common.Big0
+	}
+	return tc.View.Round
+}
+
+func (tc *TimeoutCert) RoundU64() uint64 {
+	return tc.Round().Uint64()
 }
 
 //

@@ -72,11 +72,11 @@ func (tr *BlockPool) AddQC(qc *hotstuff.QuorumCert) {
 // GetCommitBlock get highQC's grand-parent block which should be committed at current round
 func (tr *BlockPool) GetCommitBlock(highQC, lockQC common.Hash) *types.Block {
 	block := tr.GetBlockByHash(highQC)
-	parent := tr.GetBlockAndCheckHeight(block.ParentHash(), sub1(block.Number()))
+	parent := tr.GetBlockAndCheckHeight(block.ParentHash(), bigSub1(block.Number()))
 	if parent == nil {
 		return nil
 	}
-	grand := tr.GetBlockAndCheckHeight(parent.ParentHash(), sub1(parent.Number()))
+	grand := tr.GetBlockAndCheckHeight(parent.ParentHash(), bigSub1(parent.Number()))
 	if grand == nil {
 		return nil
 	}

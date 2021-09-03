@@ -28,9 +28,12 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func (e *core) newLogger() log.Logger {
-	logger := e.logger.New("view", e.currentView())
-	return logger
+func (e *core) newLogger(ctx ...interface{}) log.Logger {
+	if len(ctx)%2 != 0 {
+		e.logger.Warn("logger generating error, check fields number!")
+	}
+	ctxs := []interface{}{"view", e.currentView()}
+	return e.logger.New(append(ctxs, ctx...))
 }
 
 func Encode(val interface{}) ([]byte, error) {
@@ -48,6 +51,28 @@ func isTC(qc *hotstuff.QuorumCert) bool {
 	return false
 }
 
-func sub1(num *big.Int) *big.Int {
+func bigAdd1(num *big.Int) *big.Int {
+	return new(big.Int).Add(num, common.Big1)
+}
+
+func bigAdd1Eq(src, dst *big.Int) (*big.Int, bool) {
+	sum := new(big.Int).Add(src, common.Big1)
+	return sum, sum.Cmp(dst) == 0
+}
+
+func bigSub1(num *big.Int) *big.Int {
 	return new(big.Int).Sub(num, common.Big1)
+}
+
+func bigSub1Eq(src, dst *big.Int) (*big.Int, bool) {
+	res := bigSub1(src)
+	return res, res.Cmp(dst) == 0
+}
+
+func bigEq(src, dst *big.Int) bool {
+	return src.Cmp(dst) == 0
+}
+
+func bigEq0(num *big.Int) bool {
+	return num.Cmp(common.Big0) == 0
 }
