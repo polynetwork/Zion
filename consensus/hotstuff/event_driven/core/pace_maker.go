@@ -28,13 +28,13 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (e *EventDrivenEngine) updateHighestCommittedRound(round *big.Int) {
+func (e *core) updateHighestCommittedRound(round *big.Int) {
 	if e.highestCommitRound.Cmp(round) < 0 {
 		e.highestCommitRound = round
 	}
 }
 
-func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
+func (e *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
 	var evt *TimeoutEvent
 	logger := e.newLogger()
 	msgTyp := MsgTypeTimeout
@@ -82,7 +82,7 @@ func (e *EventDrivenEngine) handleTimeout(src hotstuff.Validator, data *hotstuff
 // advanceRoundByQC
 // 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
 // 一般而言只有leader才能收到qc，
-func (e *EventDrivenEngine) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast bool) error {
+func (e *core) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast bool) error {
 	if qc == nil || qc.View == nil || qc.View.Round.Cmp(e.curRound) < 0 {
 		return fmt.Errorf("qcRound invalid")
 	}
@@ -93,13 +93,14 @@ func (e *EventDrivenEngine) advanceRoundByQC(qc *hotstuff.QuorumCert, broadcast 
 	}
 
 	e.curHeight = new(big.Int).Add(e.curHeight, common.Big1)
-	return e.advance(qc.View.Round, true)
+
+	return e.advance(qc.View.Round, qc.Hash, true)
 }
 
 // advanceRoundByQC
 // 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
 // 一般而言只有leader才能收到qc，
-func (e *EventDrivenEngine) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
+func (e *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
 	tcRound := tc.View.Round
 	if tcRound.Cmp(e.curRound) < 0 {
 		return fmt.Errorf("tcRound < currentRound, (%v, %v)", tcRound, e.curRound)
@@ -110,10 +111,10 @@ func (e *EventDrivenEngine) advanceRoundByTC(tc *TimeoutCert, broadcast bool) er
 		e.encodeAndBroadcast(MsgTypeTC, tc)
 	}
 
-	return e.advance(tcRound, false)
+	return e.advance(tcRound, tc.Hash, false)
 }
 
-func (e *EventDrivenEngine) advance(round *big.Int, isQC bool) error {
+func (e *core) advance(round *big.Int, hash common.Hash, isQC bool) error {
 	// current round increase
 	e.curRound = new(big.Int).Add(round, common.Big1)
 
@@ -124,16 +125,16 @@ func (e *EventDrivenEngine) advance(round *big.Int, isQC bool) error {
 	e.newRoundChangeTimer()
 
 	if isQC {
-		e.logger.Trace("AdvanceQC", "view", e.currentView())
+		e.logger.Trace("AdvanceQC", "view", e.currentView(), "hash", hash)
 	} else {
-		e.logger.Trace("AdvanceTC", "view", e.currentView())
+		e.logger.Trace("AdvanceTC", "view", e.currentView(), "hash", hash)
 	}
 
 	// get into new consensus round
 	return e.handleNewRound()
 }
 
-func (e *EventDrivenEngine) stopTimer() {
+func (e *core) stopTimer() {
 	if e.timer != nil {
 		e.timer.Stop()
 	}
@@ -142,7 +143,7 @@ func (e *EventDrivenEngine) stopTimer() {
 // todo: add in config
 const standardTmoDuration = time.Second * 4
 
-func (e *EventDrivenEngine) newRoundChangeTimer() {
+func (e *core) newRoundChangeTimer() {
 	e.stopTimer()
 
 	curRd := e.curRound.Uint64()

@@ -192,7 +192,7 @@ func (w *eventDrivenWorker) newWorkLoop(recommit time.Duration) {
 			w.currentReq = &req
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
-			log.Trace("-----accept consensus request", "number", w.currentReq.Number)
+			log.Trace("Miner worker accept consensus request", "number", w.currentReq.Number, "parent hash", req.Parent.Hash())
 
 		// chainHead是触发commit的主要因素，共识完成后广播区块，节点接收到新的区块头之后，进入新一轮的共识
 		case head := <-w.chainHeadCh:
@@ -297,6 +297,7 @@ func (w *eventDrivenWorker) taskLoop() {
 			// Reject duplicate sealing work due to resubmitting.
 			sealHash := w.engine.SealHash(task.block.Header())
 			if sealHash == prev {
+				log.Debug("Miner worker taskLoop", "sealHash equals to prev", prev, "current", sealHash)
 				continue
 			}
 			// Interrupt previous sealing operation
@@ -304,6 +305,7 @@ func (w *eventDrivenWorker) taskLoop() {
 			stopCh, prev = make(chan struct{}), sealHash
 
 			if w.skipSealHook != nil && w.skipSealHook(task) {
+				log.Debug("Miner worker taskLoop skip seal")
 				continue
 			}
 			w.pendingMu.Lock()
@@ -311,7 +313,7 @@ func (w *eventDrivenWorker) taskLoop() {
 			w.pendingMu.Unlock()
 
 			if err := w.engine.Seal(w.chain, task.block, w.resultCh, stopCh); err != nil {
-				log.Warn("Block sealing failed", "err", err)
+				log.Warn("Miner worker block sealing failed", "err", err)
 			}
 			w.currentBlock = task.block
 
@@ -344,7 +346,7 @@ func (w *eventDrivenWorker) resultLoop() {
 			task, exist := w.pendingTasks[sealhash]
 			w.pendingMu.RUnlock()
 			if !exist {
-				log.Error("Block found but no relative pending task", "number", block.Number(), "sealhash", sealhash, "hash", hash)
+				log.Error("Miner worker found block but no relative pending task", "number", block.Number(), "sealhash", sealhash, "hash", hash)
 				continue
 			}
 			// Different block could share same sealhash, deep copy here to prevent write-write conflict.
@@ -370,10 +372,10 @@ func (w *eventDrivenWorker) resultLoop() {
 			// Commit block and state to database.
 			_, err := w.chain.WriteBlockWithState(block, receipts, logs, task.state, true)
 			if err != nil {
-				log.Error("Failed writing block to chain", "err", err)
+				log.Error("Miner worker failed writing block to chain", "err", err)
 				continue
 			}
-			log.Info("Successfully sealed new block", "number", block.Number(), "sealhash", sealhash, "hash", hash,
+			log.Info("Miner worker successfully sealed new block", "number", block.Number(), "sealhash", sealhash, "hash", hash,
 				"elapsed", common.PrettyDuration(time.Since(task.createdAt)))
 
 			// Broadcast the block and announce chain insertion event
@@ -405,12 +407,12 @@ func (w *eventDrivenWorker) commitNewWork(interrupt *int32, noempty bool, timest
 	//	timestamp = int64(parent.Time() + 1)
 	//}
 	if w.currentReq == nil || w.currentReq.Number == nil || w.currentReq.Parent == nil {
-		log.Warn("consensus engine request invalid")
+		log.Warn("Miner worker got invalid request from consensus engine")
 		return
 	}
 	num := w.currentReq.Number
-	if gotNum := w.currentReq.Number.Uint64() + 1; num.Uint64() != gotNum {
-		log.Warn("consensus engine request number", "expect", num, "got", gotNum)
+	if gotNum := w.currentReq.Parent.NumberU64() + 1; num.Uint64() != gotNum {
+		log.Warn("Miner worker receive reqeust from consensus engine, number", "expect", num, "got", gotNum)
 		return
 	}
 
@@ -429,20 +431,20 @@ func (w *eventDrivenWorker) commitNewWork(interrupt *int32, noempty bool, timest
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
 	if w.IsRunning() {
 		if w.coinbase == (common.Address{}) {
-			log.Error("Refusing to mine without etherbase")
+			log.Error("Miner worker refusing to mine without etherbase")
 			return
 		}
 		header.Coinbase = w.coinbase
-		log.Trace("commitNewWork", "number", header.Number)
+		log.Trace("Miner worker start new work", "number", header.Number)
 	}
 	if err := w.engine.Prepare(w.chain, header); err != nil {
-		log.Error("Failed to prepare header for mining", "err", err)
+		log.Error("Miner worker failed to prepare header for mining", "err", err)
 		return
 	}
 
 	// Could potentially happen if starting to mine in an odd state.
 	if err := w.makeCurrent(parent, header); err != nil {
-		log.Error("Failed to create mining context", "err", err)
+		log.Error("Miner worker failed to create mining context", "err", err)
 		return
 	}
 
@@ -450,7 +452,6 @@ func (w *eventDrivenWorker) commitNewWork(interrupt *int32, noempty bool, timest
 	// sealing in advance without waiting block execution finished.
 	if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
 		w.commit(nil, false, tstart)
-		log.Trace("-----Commit empty block")
 	}
 
 	// Fill the block with all available pending transactions.
@@ -461,7 +462,6 @@ func (w *eventDrivenWorker) commitNewWork(interrupt *int32, noempty bool, timest
 	// empty block is necessary to keep the liveness of the network.
 	if len(pending) == 0 && atomic.LoadUint32(&w.noempty) == 0 {
 		w.updateSnapshot()
-		log.Trace("-------update snapshot")
 		return
 	}
 
@@ -496,7 +496,7 @@ func (w *eventDrivenWorker) commit(interval func(), update bool, start time.Time
 	s := w.current.state.Copy()
 	block, err := w.engine.FinalizeAndAssemble(w.chain, w.current.header, s, w.current.txs, nil, receipts)
 	if err != nil {
-		log.Error("FinalizeAndAssemble failed", "err", err)
+		log.Trace("Miner worker FinalizeAndAssemble failed", "err", err)
 		return err
 	}
 
@@ -507,11 +507,11 @@ func (w *eventDrivenWorker) commit(interval func(), update bool, start time.Time
 		select {
 		case w.taskCh <- &task{receipts: receipts, state: s, block: block, createdAt: time.Now()}:
 			w.unconfirmed.Shift(block.NumberU64() - 1)
-			log.Info("Commit new mining work", "number", block.Number(), "sealhash", w.engine.SealHash(block.Header()),
+			log.Info("Miner worker commit new mining work", "number", block.Number(), "sealhash", w.engine.SealHash(block.Header()),
 				"txs", w.current.tcount, "gas", block.GasUsed(), "fees", totalFees(block, receipts), "elapsed", common.PrettyDuration(time.Since(start)))
 
 		case <-w.exitCh:
-			log.Info("Worker has exited")
+			log.Info("Miner worker has exited")
 		}
 	}
 	if update {
@@ -760,18 +760,18 @@ func (w *eventDrivenWorker) SubscribePendingLogs(ch chan<- []*types.Log) event.S
 
 // start sets the running status as 1 and triggers new work submitting.
 func (w *eventDrivenWorker) Start() {
+	atomic.StoreInt32(&w.running, 1)
 	if err := w.engine.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
-		log.Warn("Failed to start hotstuff event-driven engine", "err", err)
+		log.Error("Miner worker failed to start hotstuff event-driven engine", "err", err)
 		return
 	}
-	atomic.StoreInt32(&w.running, 1)
 }
 
 // stop sets the running status as 0.
 func (w *eventDrivenWorker) Stop() {
 	w.requestSub.Unsubscribe()
 	if err := w.engine.Stop(); err != nil {
-		log.Warn("Failed to stop hotstuff event-driven engine", "err", err)
+		log.Warn("Miner worker failed to stop hotstuff event-driven engine", "err", err)
 	}
 	atomic.StoreInt32(&w.running, 0)
 }

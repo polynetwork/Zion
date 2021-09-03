@@ -71,13 +71,9 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 	header.MixDigest = types.HotstuffDigest
 
 	// copy the parent extra data as the header extra data
-	number := header.Number.Uint64()
-	parent := chain.GetHeader(header.ParentHash, number-1)
-	if parent == nil {
-		parent = s.core.GetHeader(header.ParentHash, number - 1);
-	}
-	if parent == nil {
-		return consensus.ErrUnknownAncestor
+	parent, err := s.getPendingParentHeader(chain, header)
+	if err != nil {
+		return err
 	}
 
 	// use the same difficulty for all blocks
@@ -117,19 +113,15 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 }
 
 func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
-	// update the block header timestamp and signature and propose the block to core engine
-	header := block.Header()
-	number := header.Number.Uint64()
-	// Bail out if we're unauthorized to sign a block
-
 	snap := s.snap()
 	if _, v := snap.GetByAddress(s.Address()); v == nil {
 		return errUnauthorized
 	}
 
-	parent := chain.GetHeader(header.ParentHash, number-1)
-	if parent == nil {
-		return consensus.ErrUnknownAncestor
+	// update the block header timestamp and signature and propose the block to core engine
+	header := block.Header()
+	if _, err := s.getPendingParentHeader(chain, header); err != nil {
+		return err
 	}
 
 	// sign the sig hash and fill extra seal
@@ -287,4 +279,16 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 
 func (s *backend) SubscribeRequest(ch chan <- consensus.AskRequest) event.Subscription {
 	return s.core.SubscribeRequest(ch)
+}
+
+func (s *backend) getPendingParentHeader(chain consensus.ChainHeaderReader, header *types.Header) (*types.Header, error) {
+	number := header.Number.Uint64()
+	parent := chain.GetHeader(header.ParentHash, number-1)
+	if parent == nil {
+		parent = s.core.GetHeader(header.ParentHash, number - 1);
+	}
+	if parent == nil {
+		return nil, consensus.ErrUnknownAncestor
+	}
+	return parent, nil
 }

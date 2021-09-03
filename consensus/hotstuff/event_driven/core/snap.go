@@ -35,11 +35,11 @@ type Snapshot struct {
 }
 
 // storeSnapshot generate snapshot with consensus info and marshal and store the structure.
-func (e *EventDrivenEngine) storeSnapshot() ([]byte, error) {
+func (e *core) storeSnapshot() ([]byte, error) {
 	return nil, nil
 }
 
 // loadSnapshot load snapshot info from db and unmarshal to structure.
-func (e *EventDrivenEngine) loadSnapshot() (*Snapshot, error) {
+func (e *core) loadSnapshot() (*Snapshot, error) {
 	return nil, nil
 }

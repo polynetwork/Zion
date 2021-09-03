@@ -19,109 +19,46 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common/prque"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
-	"time"
 )
 
-func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
+func (e *core) sendRequest() error {
 	logger := e.newLogger()
-	//
-	//if err := e.requests.checkRequest(e.currentView(), req); err == nil || err == errFutureMessage {
-	//	if e.curProposal == nil {
-	//		e.requests.StoreRequest(req)
-	//	} else if e.curProposal.Number().Cmp(req.Proposal.Number()) < 0 {
-	//		e.requests.StoreRequest(req)
-	//	}
-	//}
-	//logger.Trace("Receive Request", "store request, number", req.Proposal.Number(), "hash", req.Proposal.Hash())
-	//
-	//if e.state != StateAcceptRequest {
-	//	return nil
-	//}
-	//
-	//return e.handleNewRound()
+
+	height := copyNum(e.curHeight)
+	proposal := e.blkPool.GetHighProposal()
+	e.feed.Send(consensus.AskRequest{
+		Number: height,
+		Parent: proposal,
+	})
+
+	logger.Trace("Ask Request", "num", height, "parent hash", proposal.Hash())
+	return nil
+}
+
+func (e *core) handleRequest(req *hotstuff.Request) error {
+	logger := e.newLogger()
+
+	msgTyp := MsgTypeRequest
+
 	if req == nil || req.Proposal == nil {
-		logger.Trace("Receive Request", "request", "is nil")
+		logger.Trace("Receive Request", "msg", msgTyp, "request", "is nil")
 		return nil
 	}
 	proposal, ok := req.Proposal.(*types.Block)
 	if !ok {
-		logger.Trace("Receive Request", "convert proposal", "type invalid")
+		logger.Trace("Receive Request", "msg", msgTyp, "convert proposal", "type invalid")
 		return nil
 	}
-
 	if proposal.Number().Cmp(e.curHeight) != 0 {
-		logger.Trace("Receive Request", "expect height", e.curHeight, "got", proposal.Number())
-	}
-
-	e.curRequest = proposal
-	return nil
-}
-
-func (e *EventDrivenEngine) getRequest() *types.Block {
-	maxRetry := 20
-	for maxRetry > 0 && (e.curRequest == nil || e.curRequest.Number().Cmp(e.curHeight) != 0) {
-		e.askReq()
-		maxRetry -= 1
-		time.Sleep(500 * time.Millisecond)
-	}
-	return e.curRequest
-}
-
-type requestSet struct {
-	pendingRequest *prque.Prque
-}
-
-func newRequestSet() *requestSet {
-	return &requestSet{
-		pendingRequest: prque.New(nil),
-	}
-}
-
-func (s *requestSet) checkRequest(view *hotstuff.View, req *hotstuff.Request) error {
-	if req == nil || req.Proposal == nil {
-		return errInvalidMessage
-	}
-
-	if c := view.Height.Cmp(req.Proposal.Number()); c < 0 {
-		return errFutureMessage
-	} else if c > 0 {
-		return errOldMessage
-	} else {
+		logger.Trace("Receive Request", "msg", msgTyp, "expect height", e.curHeight, "got", proposal.Number())
 		return nil
 	}
-}
 
-func (s *requestSet) StoreRequest(req *hotstuff.Request) {
-	priority := -req.Proposal.Number().Int64()
-	s.pendingRequest.Push(req, priority)
-}
+	e.blkPool.UpdateHighProposal(proposal)
+	logger.Trace("Received request", "msg", msgTyp, "num", req.Proposal.Number(), "hash", req.Proposal.Hash())
 
-func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
-	for !s.pendingRequest.Empty() {
-		m, prior := s.pendingRequest.Pop()
-		req, ok := m.(*hotstuff.Request)
-		if !ok {
-			continue
-		}
-
-		// push back if it's future message
-		if err := s.checkRequest(view, req); err != nil {
-			if err == errFutureMessage {
-				s.pendingRequest.Push(m, prior)
-				// todo: 是否为continue
-				break
-			}
-			continue
-		}
-		return req
-	}
-
-	return nil
-}
-
-func (s *requestSet) Size() int {
-	return s.pendingRequest.Size()
+	return e.sendProposal()
 }

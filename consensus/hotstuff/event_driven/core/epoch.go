@@ -27,7 +27,7 @@ import (
 )
 
 //todo:
-func (e *EventDrivenEngine) initialize() error {
+func (e *core) initialize() error {
 	lastBlock, _ := e.backend.LastProposal()
 	if lastBlock == nil {
 		return fmt.Errorf("initialize event-driven engine with first block failed!")

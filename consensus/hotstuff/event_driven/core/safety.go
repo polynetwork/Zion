@@ -28,14 +28,14 @@ import (
 )
 
 // increaseLastVoteRound commit not to vote in rounds lower than target
-func (e *EventDrivenEngine) increaseLastVoteRound(rd *big.Int) {
+func (e *core) increaseLastVoteRound(rd *big.Int) {
 	if e.lastVoteRound.Cmp(rd) < 0 {
 		e.lastVoteRound = rd
 	}
 }
 
 // UpdateLockQC update the latest quorum certificate after voteRule judgement succeed.
-func (e *EventDrivenEngine) updateLockQC(qc *hotstuff.QuorumCert) error {
+func (e *core) updateLockQC(qc *hotstuff.QuorumCert) error {
 	if qc == nil || qc.View == nil || qc.Hash == common.EmptyHash || qc.Proposer == common.EmptyAddress {
 		return errInvalidHighQC
 	}
@@ -66,11 +66,11 @@ func (e *EventDrivenEngine) updateLockQC(qc *hotstuff.QuorumCert) error {
 	return nil
 }
 
-func (e *EventDrivenEngine) getLockQC() *hotstuff.QuorumCert {
+func (e *core) getLockQC() *hotstuff.QuorumCert {
 	return e.lockQC
 }
 
-func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address,
+func (e *core) makeVote(hash common.Hash, proposer common.Address,
 	view *hotstuff.View, justifyQC *hotstuff.QuorumCert) (*Vote, error) {
 
 	justifyQCRound := justifyQC.View.Round
@@ -142,7 +142,7 @@ func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address,
 	return vote, nil
 }
 
-func (e *EventDrivenEngine) validateVote(vote *Vote) error {
+func (e *core) validateVote(vote *Vote) error {
 	if err := e.validateSingleChain(vote.Hash, vote.View, utils.EmptyHash); err != nil {
 		return err
 	}
@@ -184,7 +184,7 @@ func (e *EventDrivenEngine) validateVote(vote *Vote) error {
 }
 
 // validateSingleChain fetch block and check child hash
-func (e *EventDrivenEngine) validateSingleChain(hash common.Hash, view *hotstuff.View, child common.Hash) error {
+func (e *core) validateSingleChain(hash common.Hash, view *hotstuff.View, child common.Hash) error {
 	block := e.blkPool.GetBlockAndCheckHeight(hash, view.Height)
 	if block == nil {
 		return fmt.Errorf("proposal %v not exist", hash)

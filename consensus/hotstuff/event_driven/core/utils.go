@@ -21,7 +21,6 @@ package core
 import (
 	"bytes"
 	"fmt"
-	"github.com/ethereum/go-ethereum/consensus"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -32,42 +31,42 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func (e *EventDrivenEngine) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+func (e *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
 	return e.signer.CheckSignature(e.valset, data, sig)
 }
 
-func (e *EventDrivenEngine) newLogger() log.Logger {
+func (e *core) newLogger() log.Logger {
 	logger := e.logger.New("view", e.currentView())
 	return logger
 }
 
-func (e *EventDrivenEngine) address() common.Address {
+func (e *core) address() common.Address {
 	return e.addr
 }
 
-func (e *EventDrivenEngine) isSelf(addr common.Address) bool {
+func (e *core) isSelf(addr common.Address) bool {
 	return e.addr == addr
 }
 
-func (e *EventDrivenEngine) currentView() *hotstuff.View {
+func (e *core) currentView() *hotstuff.View {
 	return &hotstuff.View{
 		Round:  new(big.Int).Set(e.curRound),
 		Height: new(big.Int).Set(e.curHeight),
 	}
 }
 
-func (e *EventDrivenEngine) currentState() State {
+func (e *core) currentState() State {
 	return e.state
 }
 
-func (e *EventDrivenEngine) checkProposer(proposer common.Address) error {
+func (e *core) checkProposer(proposer common.Address) error {
 	if !e.valset.IsProposer(proposer) {
 		return errNotFromProposer
 	}
 	return nil
 }
 
-func (e *EventDrivenEngine) checkEpoch(epoch uint64, height *big.Int) error {
+func (e *core) checkEpoch(epoch uint64, height *big.Int) error {
 	if e.epoch != epoch {
 		return errInvalidHighQC
 	}
@@ -80,7 +79,7 @@ func (e *EventDrivenEngine) checkEpoch(epoch uint64, height *big.Int) error {
 	return nil
 }
 
-func (e *EventDrivenEngine) validateProposal(proposal *types.Block) error {
+func (e *core) validateProposal(proposal *types.Block) error {
 	if proposal == nil {
 		return errInvalidProposal
 	}
@@ -101,14 +100,14 @@ func (e *EventDrivenEngine) validateProposal(proposal *types.Block) error {
 	return nil
 }
 
-func (e *EventDrivenEngine) checkView(view *hotstuff.View) error {
+func (e *core) checkView(view *hotstuff.View) error {
 	if e.curRound.Cmp(view.Round) != 0 || e.curHeight.Cmp(view.Height) != 0 {
 		return fmt.Errorf("expect view %v, got %v", e.currentView(), view)
 	}
 	return nil
 }
 
-func (e *EventDrivenEngine) checkJustifyQC(proposal hotstuff.Proposal, justifyQC *hotstuff.QuorumCert) error {
+func (e *core) checkJustifyQC(proposal hotstuff.Proposal, justifyQC *hotstuff.QuorumCert) error {
 	if proposal.Number().Cmp(common.Big1) == 0 {
 		return nil
 	}
@@ -141,11 +140,10 @@ func (e *EventDrivenEngine) checkJustifyQC(proposal hotstuff.Proposal, justifyQC
 		return fmt.Errorf("justifyQC proposer expect %v got %v", proposer, justifyQC.Proposer)
 	}
 
-	highQC, _ := e.blkPool.GetHighQC()
-	return e.compareQC(highQC, justifyQC)
+	return nil
 }
 
-func (e *EventDrivenEngine) compareQC(expect, src *hotstuff.QuorumCert) error {
+func (e *core) compareQC(expect, src *hotstuff.QuorumCert) error {
 	if expect.Hash != src.Hash {
 		return fmt.Errorf("qc hash expect %v, got %v", expect.Hash, src.Hash)
 	}
@@ -162,16 +160,22 @@ func (e *EventDrivenEngine) compareQC(expect, src *hotstuff.QuorumCert) error {
 }
 
 // vote to highQC round + 1
-func (e *EventDrivenEngine) checkVote(vote *Vote) error {
-	if vote.View == nil || vote.Hash == utils.EmptyHash {
-		return errInvalidVote
+func (e *core) checkVote(vote *Vote) error {
+	if vote.View == nil {
+		return fmt.Errorf("vote view is nil")
 	}
-	if vote.ParentHash == utils.EmptyHash || vote.ParentView == nil {
-		return errInvalidVote
+	if vote.Hash == utils.EmptyHash {
+		return fmt.Errorf("vote hash is empty")
+	}
+	if vote.ParentView == nil {
+		return fmt.Errorf("vote parent view is nil")
+	}
+	if vote.ParentHash == utils.EmptyHash {
+		return fmt.Errorf("vote parent hash is empty")
 	}
 
 	// vote view MUST be highQC view
-	highQC, _ := e.blkPool.GetHighQC()
+	highQC := e.blkPool.GetHighQC()
 	if new(big.Int).Sub(vote.View.Height, highQC.View.Height).Cmp(common.Big1) != 0 &&
 		new(big.Int).Sub(vote.View.Round, highQC.View.Round).Cmp(common.Big1) != 0 {
 		return errInvalidVote
@@ -179,7 +183,7 @@ func (e *EventDrivenEngine) checkVote(vote *Vote) error {
 	return nil
 }
 
-func (e *EventDrivenEngine) getVoteSeals(hash common.Hash, n int) [][]byte {
+func (e *core) getVoteSeals(hash common.Hash, n int) [][]byte {
 	seals := make([][]byte, n)
 	for i, data := range e.messages.Votes(hash) {
 		if i < n {
@@ -189,7 +193,7 @@ func (e *EventDrivenEngine) getVoteSeals(hash common.Hash, n int) [][]byte {
 	return seals
 }
 
-func (e *EventDrivenEngine) getTimeoutSeals(round uint64, n int) [][]byte {
+func (e *core) getTimeoutSeals(round uint64, n int) [][]byte {
 	seals := make([][]byte, n)
 	for i, data := range e.messages.Timeouts(round) {
 		if i < n {
@@ -199,28 +203,19 @@ func (e *EventDrivenEngine) getTimeoutSeals(round uint64, n int) [][]byte {
 	return seals
 }
 
-func (e *EventDrivenEngine) askReq() {
-	height := copyNum(e.curHeight)
-	_, proposal := e.blkPool.GetHighQC()
-	e.feed.Send(consensus.AskRequest{
-		Number: height,
-		Parent: proposal,
-	})
-}
-
-func (e *EventDrivenEngine) Q() int {
+func (e *core) Q() int {
 	return e.valset.Q()
 }
 
-func (e *EventDrivenEngine) chain2Height() *big.Int {
+func (e *core) chain2Height() *big.Int {
 	return new(big.Int).Add(e.epochHeightStart, common.Big2)
 }
 
-func (e *EventDrivenEngine) chain3Height() *big.Int {
+func (e *core) chain3Height() *big.Int {
 	return new(big.Int).Add(e.epochHeightStart, common.Big3)
 }
 
-func (e *EventDrivenEngine) generateTimeoutEvent() *TimeoutEvent {
+func (e *core) generateTimeoutEvent() *TimeoutEvent {
 	tm := &TimeoutEvent{
 		Epoch: e.epoch,
 		View:  e.currentView(),
@@ -229,7 +224,7 @@ func (e *EventDrivenEngine) generateTimeoutEvent() *TimeoutEvent {
 	return tm
 }
 
-func (e *EventDrivenEngine) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumCert, *types.Block, error) {
+func (e *core) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumCert, *types.Block, error) {
 	proposal := e.blkPool.GetBlockAndCheckHeight(vote.Hash, vote.View.Height)
 	if proposal == nil {
 		return nil, nil, fmt.Errorf("last proposal %v not exist", vote.Hash)
@@ -257,7 +252,7 @@ func (e *EventDrivenEngine) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumC
 	return qc, proposal, nil
 }
 
-func (e *EventDrivenEngine) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
+func (e *core) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
 	seals := e.getTimeoutSeals(event.View.Round.Uint64(), size)
 	tc := &TimeoutCert{
 		View:  event.View,
@@ -267,13 +262,13 @@ func (e *EventDrivenEngine) aggregateTC(event *TimeoutEvent, size int) *TimeoutC
 	return tc
 }
 
-func (e *EventDrivenEngine) nextValset() hotstuff.ValidatorSet {
+func (e *core) nextValset() hotstuff.ValidatorSet {
 	vs := e.valset.Copy()
 	vs.CalcProposerByIndex(e.curRound.Uint64() + 1)
 	return vs
 }
 
-func (e *EventDrivenEngine) nextProposer() common.Address {
+func (e *core) nextProposer() common.Address {
 	vs := e.valset.Copy()
 	vs.CalcProposerByIndex(e.curRound.Uint64() + 1)
 	proposer := vs.GetProposer()

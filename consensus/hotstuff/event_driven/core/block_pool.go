@@ -42,8 +42,12 @@ func NewBlockPool(initHighQC *hotstuff.QuorumCert, initHighBlock *types.Block, t
 	}
 }
 
-func (tr *BlockPool) GetHighQC() (*hotstuff.QuorumCert, *types.Block) {
-	return tr.highQC, tr.highProposal
+func (tr *BlockPool) GetHighQC() *hotstuff.QuorumCert {
+	return tr.highQC
+}
+
+func (tr *BlockPool) GetHighProposal() *types.Block {
+	return tr.highProposal
 }
 
 func (tr *BlockPool) GetBlockAndCheckHeight(hash common.Hash, height *big.Int) *types.Block {
@@ -85,6 +89,16 @@ func (tr *BlockPool) UpdateHighQC(qc *hotstuff.QuorumCert) {
 		tr.highQC = qc
 		tr.highProposal = tr.GetBlockByHash(qc.Hash)
 	}
+}
+
+func (tr *BlockPool) UpdateHighProposal(proposal *types.Block) {
+	if proposal.NumberU64() < tr.highProposal.NumberU64() {
+		return
+	}
+	if proposal.Hash() == tr.highProposal.Hash() {
+		return
+	}
+	tr.highProposal = proposal
 }
 
 // GetCommitBlock get highQC's grand-parent block which should be committed at current round

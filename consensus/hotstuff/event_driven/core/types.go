@@ -41,17 +41,20 @@ type MsgType uint64
 
 const (
 	MsgTypeNewRound MsgType = 1
-	MsgTypeProposal MsgType = 2
-	MsgTypeVote     MsgType = 3
-	MsgTypeTimeout  MsgType = 4
-	MsgTypeQC       MsgType = 5
-	MsgTypeTC       MsgType = 6
+	MsgTypeRequest  MsgType = 2
+	MsgTypeProposal MsgType = 3
+	MsgTypeVote     MsgType = 4
+	MsgTypeTimeout  MsgType = 5
+	MsgTypeQC       MsgType = 6
+	MsgTypeTC       MsgType = 7
 )
 
 func (m MsgType) String() string {
 	switch m {
 	case MsgTypeNewRound:
 		return "MSG_NEW_ROUND"
+	case MsgTypeRequest:
+		return "MSG_REQUEST"
 	case MsgTypeProposal:
 		return "MSG_PROPOSAL"
 	case MsgTypeVote:

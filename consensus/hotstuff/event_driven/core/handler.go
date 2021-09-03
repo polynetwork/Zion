@@ -25,7 +25,7 @@ import (
 )
 
 // Subscribe both internal and external events
-func (e *EventDrivenEngine) subscribeEvents() {
+func (e *core) subscribeEvents() {
 	e.events = e.backend.EventMux().Subscribe(
 		hotstuff.RequestEvent{},
 		hotstuff.MessageEvent{},
@@ -37,13 +37,13 @@ func (e *EventDrivenEngine) subscribeEvents() {
 }
 
 // Unsubscribe all events
-func (e *EventDrivenEngine) unsubscribeEvents() {
+func (e *core) unsubscribeEvents() {
 	e.events.Unsubscribe()
 	//e.timeoutSub.Unsubscribe()
 	e.finalCommittedSub.Unsubscribe()
 }
 
-func (e *EventDrivenEngine) handleEvents() {
+func (e *core) handleEvents() {
 	logger := e.logger.New("handleEvents")
 
 	for {
@@ -76,11 +76,11 @@ func (e *EventDrivenEngine) handleEvents() {
 }
 
 // sendEvent sends events to mux
-func (e *EventDrivenEngine) sendEvent(ev interface{}) {
+func (e *core) sendEvent(ev interface{}) {
 	e.backend.EventMux().Post(ev)
 }
 
-func (e *EventDrivenEngine) handleMsg(payload []byte) error {
+func (e *core) handleMsg(payload []byte) error {
 	logger := e.logger.New()
 
 	// Decode Message and check its signature
@@ -104,7 +104,7 @@ func (e *EventDrivenEngine) handleMsg(payload []byte) error {
 	return nil
 }
 
-func (e *EventDrivenEngine) handleCheckedMsg(src hotstuff.Validator, msg *hotstuff.Message) (err error) {
+func (e *core) handleCheckedMsg(src hotstuff.Validator, msg *hotstuff.Message) (err error) {
 	switch msg.Code {
 	case MsgTypeProposal:
 		err = e.handleProposal(src, msg)
@@ -126,7 +126,7 @@ func (e *EventDrivenEngine) handleCheckedMsg(src hotstuff.Validator, msg *hotstu
 	return
 }
 
-func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message, val interface{}) ([]byte, error) {
+func (e *core) finalizeMessage(msg *hotstuff.Message, val interface{}) ([]byte, error) {
 	var err error
 
 	// Add sender address
@@ -178,7 +178,7 @@ func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message, val interface
 	return payload, nil
 }
 
-func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) {
+func (e *core) encodeAndBroadcast(msgTyp MsgType, val interface{}) {
 	logger := e.newLogger()
 
 	payload, err := Encode(val)
@@ -196,7 +196,7 @@ func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) 
 	}
 }
 
-func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message, val interface{}) error {
+func (e *core) broadcast(msg *hotstuff.Message, val interface{}) error {
 	payload, err := e.finalizeMessage(msg, val)
 	if err != nil {
 		return err

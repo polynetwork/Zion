@@ -31,7 +31,7 @@ import (
 
 var once sync.Once
 
-func (e *EventDrivenEngine) Start() error {
+func (e *core) Start() error {
 	once.Do(func() {
 		hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
 			code := data.(uint64)
@@ -52,26 +52,26 @@ func (e *EventDrivenEngine) Start() error {
 
 	// engine is started after this step, DONT allow to return err to miner worker, this may cause worker invalid
 	e.started = true
-	highQC, _ := e.blkPool.GetHighQC()
+	highQC := e.blkPool.GetHighQC()
 	e.advanceRoundByQC(highQC, false)
 	return nil
 }
 
-func (e *EventDrivenEngine) Stop() error {
+func (e *core) Stop() error {
 	e.stopTimer()
 	e.unsubscribeEvents()
 	e.started = false
 	return nil
 }
 
-func (e *EventDrivenEngine) IsProposer() bool {
+func (e *core) IsProposer() bool {
 	if e.valset.IsProposer(e.address()) {
 		return true
 	}
 	return false
 }
 
-func (e *EventDrivenEngine) Address() common.Address {
+func (e *core) Address() common.Address {
 	return e.signer.Address()
 }
 
@@ -82,7 +82,7 @@ func (e *EventDrivenEngine) Address() common.Address {
 // pending request is populated right at the request stage so this would give us the earliest verification
 // to avoid any race condition of coming propagated blocks
 // 判断是否已经提交或者正在提交, 这样一来，request必须在一开始就写入到blockTree
-func (e *EventDrivenEngine) IsCurrentProposal(blockHash common.Hash) bool {
+func (e *core) IsCurrentProposal(blockHash common.Hash) bool {
 	block := e.blkPool.GetBlockByHash(blockHash)
 	if block == nil {
 		return false
@@ -95,11 +95,11 @@ func (e *EventDrivenEngine) IsCurrentProposal(blockHash common.Hash) bool {
 	return true
 }
 
-func (e *EventDrivenEngine) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
+func (e *core) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
 	return generateExtra(header, valSet, e.epoch, e.curRound)
 }
 
-func (e *EventDrivenEngine) GetHeader(hash common.Hash, number uint64) *types.Header {
+func (e *core) GetHeader(hash common.Hash, number uint64) *types.Header {
 	block := e.blkPool.GetBlockAndCheckHeight(hash, new(big.Int).SetUint64(number))
 	if block == nil {
 		return nil
@@ -108,6 +108,6 @@ func (e *EventDrivenEngine) GetHeader(hash common.Hash, number uint64) *types.He
 	}
 }
 
-func (e *EventDrivenEngine) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
+func (e *core) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
 	return e.feed.Subscribe(ch)
 }

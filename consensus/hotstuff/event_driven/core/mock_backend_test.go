@@ -61,8 +61,8 @@ type testCommittedMsgs struct {
 	committedSeals [][]byte
 }
 
-func (m *mockBackend) core() *EventDrivenEngine {
-	return m.engine.(*EventDrivenEngine)
+func (m *mockBackend) core() *core {
+	return m.engine.(*core)
 }
 
 func (m *mockBackend) NewRequest(request hotstuff.Proposal) {
@@ -277,7 +277,7 @@ type testSystem struct {
 	quit                   chan struct{}
 }
 
-func (s *testSystem) getLeader() *EventDrivenEngine {
+func (s *testSystem) getLeader() *core {
 	for _, v := range s.backends {
 		if v.engine.IsProposer() {
 			return v.core()
@@ -286,7 +286,7 @@ func (s *testSystem) getLeader() *EventDrivenEngine {
 	return nil
 }
 
-func (s *testSystem) getLeaderByRound(lastProposer common.Address, round *big.Int) *EventDrivenEngine {
+func (s *testSystem) getLeaderByRound(lastProposer common.Address, round *big.Int) *core {
 	valset := s.backends[0].peers.Copy()
 	valset.CalcProposer(lastProposer, round.Uint64())
 	proposer := valset.GetProposer().Address()
@@ -299,8 +299,8 @@ func (s *testSystem) getLeaderByRound(lastProposer common.Address, round *big.In
 	return nil
 }
 
-func (s *testSystem) getRepos() []*EventDrivenEngine {
-	list := make([]*EventDrivenEngine, 0)
+func (s *testSystem) getRepos() []*core {
+	list := make([]*core, 0)
 	for _, v := range s.backends {
 		if !v.engine.IsProposer() {
 			list = append(list, v.core())
