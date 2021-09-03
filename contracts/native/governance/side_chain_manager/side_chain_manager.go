@@ -108,7 +108,7 @@ func RegisterSideChain(native *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
 	}
-	registerSideChain, err := getSideChainApply(native, params.ChainId)
+	registerSideChain, err := GetSideChainApply(native, params.ChainId)
 	if err != nil {
 		return nil, fmt.Errorf("RegisterSideChain, getRegisterSideChain error: %v", err)
 	}
@@ -157,7 +157,7 @@ func ApproveRegisterSideChain(native *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, checkWitness error: %v", err)
 	}
 
-	registerSideChain, err := getSideChainApply(native, params.Chainid)
+	registerSideChain, err := GetSideChainApply(native, params.Chainid)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, getRegisterSideChain error: %v", err)
 	}

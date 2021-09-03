@@ -29,6 +29,8 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -85,6 +87,10 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return quorum.NewQuorumHandler(), nil
 	case utils.POLYGON_BOR_ROUTER:
 		return polygon.NewHandler(), nil
+	case utils.COSMOS_ROUTER:
+		return cosmos.NewCosmosHandler(), nil
+	case utils.ZILLIQA_ROUTER:
+		return zilliqa.NewHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}

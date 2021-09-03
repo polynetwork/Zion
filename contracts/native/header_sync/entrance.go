@@ -30,6 +30,8 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/quorum"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/cosmos"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
@@ -165,6 +167,10 @@ func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
 		return polygon.NewHeimdallHandler(), nil
 	case utils.POLYGON_BOR_ROUTER:
 		return polygon.NewBorHandler(), nil
+	case utils.COSMOS_ROUTER:
+		return cosmos.NewCosmosHandler(), nil	
+	case utils.ZILLIQA_ROUTER:
+		return zilliqa.NewHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}
