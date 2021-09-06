@@ -32,7 +32,7 @@ import (
 
 var netParam = &chaincfg.TestNet3Params
 
-func getSideChainApply(native *native.NativeContract, chanid uint64) (*SideChain, error) {
+func GetSideChainApply(native *native.NativeContract, chanid uint64) (*SideChain, error) {
 	contract := utils.SideChainManagerContractAddress
 	chainidByte := utils.GetUint64Bytes(chanid)
 
