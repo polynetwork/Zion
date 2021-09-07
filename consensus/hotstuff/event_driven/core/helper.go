@@ -44,6 +44,11 @@ func (c *core) currentView() *hotstuff.View {
 	}
 }
 
+func (c *core) getProposer() common.Address {
+	proposer := c.valset.GetProposer()
+	return proposer.Address()
+}
+
 func (c *core) checkProposer(proposer common.Address) error {
 	if !c.valset.IsProposer(proposer) {
 		return errNotFromProposer

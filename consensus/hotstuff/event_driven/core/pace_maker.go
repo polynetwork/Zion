@@ -104,6 +104,7 @@ func (c *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
 	c.smr.SetRound(round)
 
 	c.valset.CalcProposerByIndex(c.smr.RoundU64())
+	//c.valset.CalcProposer(c.getProposer(), c.smr.RoundU64())
 	c.newRoundChangeTimer()
 	c.logger.Trace("AdvanceQC", "view", c.currentView(), "hash", qc.Hash)
 
@@ -131,7 +132,8 @@ func (c *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
 	}
 	c.smr.SetRound(round)
 
-	c.valset.CalcProposerByIndex(c.smr.RoundU64())
+	c.valset.CalcProposer(c.getProposer(), c.smr.RoundU64())
+	//c.valset.CalcProposerByIndex(c.smr.RoundU64())
 	c.newRoundChangeTimer()
 	c.logger.Trace("AdvanceTC", "round", c.smr.Round())
 
