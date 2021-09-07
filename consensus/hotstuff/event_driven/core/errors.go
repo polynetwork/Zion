@@ -44,6 +44,7 @@ var (
 	errInvalidVote         = errors.New("invalid vote")
 	errNeedCatchUp 		   = errors.New("need catchup")
 	errInvalidQC           = errors.New("invalid qc")
+	errInvalidTC 		   = errors.New("invalid tc")
 	errInvalidHighQC       = errors.New("invalid highQC")
 
 	// errInvalidSigner is returned when the Message is signed by a validator different than Message sender

@@ -43,8 +43,15 @@ func (c *core) sendRequest() error {
 		return nil
 	}
 	if expect, eq := bigSub1Eq(height, parent.Number()); !eq {
-		logger.Trace("Invalid parent block", "expect height", expect, "got", parent.Number())
-		return nil
+		if !bigEq(height, parent.Number()) {
+			logger.Trace("Invalid parent block", "expect height", expect, "got", parent.Number())
+			return nil
+		}
+		parent = c.blkPool.GetBlockByHash(parent.ParentHash())
+		if parent == nil {
+			logger.Trace("Failed to get parent block", "err", "parent is nil")
+			return nil
+		}
 	}
 
 	c.feed.Send(consensus.AskRequest{
@@ -72,11 +79,14 @@ func (c *core) handleRequest(req *hotstuff.Request) error {
 		logger.Trace("Invalid proposal", "expect height", c.smr.HeightU64(), "got", proposal.Number())
 		return nil
 	}
-	if parent := c.smr.Proposal(); parent == nil || proposal.ParentHash() != parent.Hash() {
-		logger.Trace("Invalid parent", "err", "parent is nil or hash not equal")
-		return nil
-	}
-
+	//parent := c.smr.Proposal()
+	//if parent == nil {
+	//	logger.Trace("Invalid parent", "err", "parent is nil or hash not equal")
+	//	return nil
+	//}
+	//if proposal.ParentHash() != parent.Hash() {
+	//	logger.Trace("Invalid parent", "expect parent hash")
+	//}
 	c.smr.SetRequest(proposal)
 	logger.Trace("Received request", "num", req.Proposal.Number(), "hash", req.Proposal.Hash())
 

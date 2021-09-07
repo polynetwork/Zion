@@ -19,7 +19,6 @@
 package core
 
 import (
-	"fmt"
 	"math"
 	"math/big"
 	"time"
@@ -82,8 +81,8 @@ func (c *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) err
 // 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
 // 一般而言只有leader才能收到qc，
 func (c *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
-	if qc == nil || qc.View == nil || qc.Round().Cmp(c.smr.Round()) < 0 || qc.Height().Cmp(c.smr.Height()) < 0 {
-		return fmt.Errorf("qc invalid")
+	if qc.Round().Cmp(c.smr.Round()) < 0 || qc.Height().Cmp(c.smr.Height()) < 0 {
+		return errOldMessage
 	}
 
 	// catch up view
@@ -104,7 +103,6 @@ func (c *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
 	c.smr.SetRound(round)
 
 	c.valset.CalcProposerByIndex(c.smr.RoundU64())
-	//c.valset.CalcProposer(c.getProposer(), c.smr.RoundU64())
 	c.newRoundChangeTimer()
 	c.logger.Trace("AdvanceQC", "view", c.currentView(), "hash", qc.Hash)
 
@@ -112,10 +110,6 @@ func (c *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
 }
 
 func (c *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
-	if tc == nil || tc.View == nil || tc.Round().Cmp(c.smr.Round()) < 0 || tc.Height().Cmp(c.smr.Height()) < 0 {
-		return fmt.Errorf("tc invalid")
-	}
-
 	// broadcast to next leader first, we will use `curRound` again in broadcasting.
 	if !c.IsProposer() && broadcast {
 		c.encodeAndBroadcast(MsgTypeTC, tc)
@@ -132,8 +126,7 @@ func (c *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
 	}
 	c.smr.SetRound(round)
 
-	c.valset.CalcProposer(c.getProposer(), c.smr.RoundU64())
-	//c.valset.CalcProposerByIndex(c.smr.RoundU64())
+	c.valset.CalcProposerByIndex(c.smr.RoundU64())
 	c.newRoundChangeTimer()
 	c.logger.Trace("AdvanceTC", "round", c.smr.Round())
 

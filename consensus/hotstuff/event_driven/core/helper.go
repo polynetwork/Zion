@@ -73,7 +73,7 @@ func (c *core) checkView(view *hotstuff.View) error {
 	if cmp := view.Cmp(c.currentView()); cmp > 0 {
 		return errFutureMessage
 	} else if cmp < 0 {
-		return errInvalidVote
+		return errOldMessage
 	} else {
 		return nil
 	}
@@ -217,6 +217,9 @@ func (c *core) generateTimeoutEvent() *TimeoutEvent {
 }
 
 func (c *core) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumCert, *types.Block, error) {
+	if vote == nil || vote.View == nil {
+		return nil, nil, fmt.Errorf("invalid vote")
+	}
 	proposal := c.blkPool.GetBlockAndCheckHeight(vote.Hash, vote.View.Height)
 	if proposal == nil {
 		return nil, nil, fmt.Errorf("last proposal %v not exist", vote.Hash)
@@ -248,7 +251,7 @@ func (c *core) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
 	seals := c.getTimeoutSeals(event.View.Round.Uint64(), size)
 	tc := &TimeoutCert{
 		View:  event.View,
-		Hash:  common.Hash{},
+		Hash:  event.Digest,
 		Seals: seals,
 	}
 	return tc
@@ -257,6 +260,7 @@ func (c *core) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
 func (c *core) updateHighQCAndProposal(qc *hotstuff.QuorumCert, proposal *types.Block) {
 	c.smr.SetHighQC(qc)
 	c.smr.SetProposal(proposal)
+	c.logger.Trace("Update high qc", "hash", qc.Hash, "qc view", qc.View)
 }
 
 func (c *core) nextValSet() hotstuff.ValidatorSet {

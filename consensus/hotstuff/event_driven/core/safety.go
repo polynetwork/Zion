@@ -46,35 +46,42 @@ func (c *core) updateLockQC(qc *hotstuff.QuorumCert) error {
 		return errInvalidHighQC
 	}
 
-	// current lockQC should be last highQC
-	highQC := c.smr.HighQC()
-	if err := c.compareQC(highQC, qc); err != nil {
-		return err
-	}
-
 	qcBlock := c.blkPool.GetBlockByHash(qc.Hash)
 	if qcBlock == nil {
+		c.logger.Trace("Failed to update lockQC", "get qc block err", "block not exist", "hash", qc.Hash, "qc view", qc.View)
 		return errInvalidQC
 	}
 	salt, qc, err := extraProposal(qcBlock)
 	if err != nil {
+		c.logger.Trace("Failed to update lockQC", "extract qc err", err)
 		return err
 	}
 
 	qcParentBlock := c.blkPool.GetBlockByHash(qcBlock.ParentHash())
 	if qcParentBlock == nil {
+		c.logger.Trace("Failed to update lockQC", "get qc parent block err", "parent block is nil", "parent hash", qcBlock.ParentHash())
 		return errInvalidQC
 	}
 	parentSalt, parentQC, err := extraProposal(qcParentBlock)
 	if err != nil {
+		c.logger.Trace("Failed to update lockQC", "extract parent qc err", err)
 		return err
 	}
 
 	if salt.Round.Cmp(parentSalt.Round) < 0 || qcBlock.Number().Cmp(qcParentBlock.Number()) < 0 {
+		c.logger.Trace("Failed to update lockQC", "compare qc view", "round", salt.Round, "parent qc round", parentSalt.Round, "number", qcBlock.Number(), "qc parent block number", qcParentBlock.Number())
 		return errInvalidQC
 	}
 
+	//highQC := c.smr.HighQC()
+	//if err := c.compareQC(highQC, parentQC); err != nil {
+	//	c.logger.Trace("Failed to update lockQC", "expect high qc's parent qc", parentQC.Hash, "parent qc view", parentQC.View)
+	//	return err
+	//}
+
 	c.smr.SetLockQC(parentQC)
+	c.logger.Trace("Update lock qc", "hash", parentQC.Hash, "view", parentQC.View, "proposer", parentQC.Proposer)
+
 	return nil
 }
 
@@ -112,7 +119,7 @@ func (c *core) makeVote(hash common.Hash, proposer common.Address,
 	if c.isChain3() {
 		lockQC := c.smr.LockQC()
 		if lockQC == nil || lockQC.View == nil {
-			return nil, fmt.Errorf("invalid lock qc")
+			return nil, fmt.Errorf("lock qc at block %d may be nil", c.smr.Height())
 		}
 		if lockQCRound := lockQC.View.Round; justifyQCRound.Cmp(lockQCRound) < 0 {
 			return nil, fmt.Errorf("rule2, expect: justifyQCRound >= lockQCRound, got (%v < %v)", justifyQCRound, lockQCRound)

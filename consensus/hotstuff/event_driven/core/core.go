@@ -99,6 +99,10 @@ func (c *core) handleNewRound() error {
 	}
 
 	c.processBacklog()
+	//if err := c.forwardProposal(); err != nil {
+	//	return c.sendRequest()
+	//}
+	//return nil
 	return c.sendRequest()
 }
 
@@ -115,14 +119,26 @@ func (c *core) handleTC(src hotstuff.Validator, data *hotstuff.Message) error {
 		return err
 	}
 
+	if tc == nil || tc.View == nil {
+		logger.Trace("Invalid tc", "err", "tc is nil")
+		return errInvalidTC
+	}
+	if tc.View.Cmp(c.currentView()) < 0 {
+		return nil
+	}
+
 	if err := c.signer.VerifyCommittedSeal(c.valset, tc.Hash, tc.Seals); err != nil {
 		logger.Trace("Failed to verify committed seal", "from", src.Address(), "err", err)
 		return err
 	}
 
 	if err := c.advanceRoundByTC(tc, false); err != nil {
-		logger.Trace("Failed to advance by tc", "from", src.Address(), "err", err)
-		return err
+		if err == errOldMessage {
+			return nil
+		} else {
+			logger.Trace("Failed to advance by tc", "from", src.Address(), "err", err)
+			return err
+		}
 	}
 
 	logger.Trace("Accept TC", "src", src.Address(), "tc", tc.Hash, "view", tc.View)
@@ -130,23 +146,31 @@ func (c *core) handleTC(src hotstuff.Validator, data *hotstuff.Message) error {
 }
 
 func (c *core) commit3Chain() {
-	highQC := c.smr.HighQC()
 	lockQC := c.smr.LockQC()
-	if highQC == nil || lockQC == nil {
+	if lockQC == nil {
 		return
 	}
 
-	committedBlock := c.blkPool.GetCommitBlock(highQC.Hash, lockQC.Hash)
+	c.logger.Trace("Try to Commit 3-chain block")
+
+	committedBlock := c.blkPool.GetCommitBlock(lockQC.Hash)
 	if committedBlock == nil {
+		c.logger.Trace("Failed to get commit block","lockQC view", lockQC.View)
 		return
 	}
 
-	// todo: 如果节点此时宕机怎么办？还是说允许所有的节点一起提交区块
-	if existProposal := c.backend.GetProposal(committedBlock.Hash()); existProposal == nil {
-		if c.isSelf(committedBlock.Coinbase()) {
-			c.backend.Commit(committedBlock)
-		}
-	}
+	c.backend.Commit(committedBlock)
+	c.logger.Trace("Commit 3-chain block", "hash", committedBlock.Hash(), "number", committedBlock.Number())
+
+	//// todo: 如果节点此时宕机怎么办？还是说允许所有的节点一起提交区块
+	//if existProposal := c.backend.GetProposal(committedBlock.Hash()); existProposal == nil {
+	//	//if c.isSelf(committedBlock.Coinbase()) {
+	//	//
+	//	//}
+	//
+	//} else {
+	//	c.logger.Trace("block already synced to chain reader", "")
+	//}
 
 	c.blkPool.Pure(committedBlock.Hash())
 }

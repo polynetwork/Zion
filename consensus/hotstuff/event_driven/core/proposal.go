@@ -18,7 +18,9 @@
 
 package core
 
-import "github.com/ethereum/go-ethereum/consensus/hotstuff"
+import (
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+)
 
 func (c *core) sendProposal() error {
 	logger := c.newSenderLogger("MSG_SEND_PROPOSAL")
@@ -38,6 +40,26 @@ func (c *core) sendProposal() error {
 	logger.Trace("Send proposal", "hash", msg.Proposal.Hash(), "justifyQC hash", msg.JustifyQC.Hash)
 	return nil
 }
+
+//func (c *core) forwardProposal() error {
+//	logger := c.newSenderLogger("MSG_FORWARD_PROPOSAL")
+//
+//	proposal := c.smr.Proposal()
+//	if proposal == nil || !bigEq(proposal.Number(), c.smr.Height()) {
+//		return fmt.Errorf("no forward proposal")
+//	}
+//	justifyQC := c.smr.HighQC()
+//	view := c.currentView()
+//	msg := &MsgProposal{
+//		Epoch:     c.smr.Epoch(),
+//		View:      view,
+//		Proposal:  proposal,
+//		JustifyQC: justifyQC,
+//	}
+//	c.encodeAndBroadcast(MsgTypeProposal, msg)
+//	logger.Trace("Forward proposal", "hash", msg.Proposal.Hash(), "justifyQC hash", msg.JustifyQC.Hash)
+//	return nil
+//}
 
 // handleProposal validate proposal info and vote to the next leader if the proposal is valid
 func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) error {
