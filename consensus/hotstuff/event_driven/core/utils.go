@@ -28,12 +28,16 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func (e *core) newLogger(ctx ...interface{}) log.Logger {
-	if len(ctx)%2 != 0 {
-		e.logger.Warn("logger generating error, check fields number!")
-	}
-	ctxs := []interface{}{"view", e.currentView()}
-	return e.logger.New(append(ctxs, ctx...))
+func (c *core) newMsgLogger(msgtyp interface{}) log.Logger {
+	return c.logger.New("view", c.currentView(), "msg", msgtyp)
+}
+
+func (c *core) newSenderLogger(msgtyp string) log.Logger {
+	return c.logger.New("view", c.currentView(), "msg", msgtyp)
+}
+
+func (c *core) newLogger() log.Logger {
+	return c.logger.New("view", c.currentView())
 }
 
 func Encode(val interface{}) ([]byte, error) {

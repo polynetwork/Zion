@@ -26,12 +26,12 @@ import (
 )
 
 //todo: epoch manager
-func (e *core) initialize() error {
-	e.smr.SetEpoch(0)
-	e.smr.SetEpochStart(big.NewInt(0))
-	e.smr.SetEpochEnd(big.NewInt(10000000))
+func (c *core) initialize() error {
+	c.smr.SetEpoch(0)
+	c.smr.SetEpochStart(big.NewInt(0))
+	c.smr.SetEpochEnd(big.NewInt(10000000))
 
-	lastBlock, _ := e.backend.LastProposal()
+	lastBlock, _ := c.backend.LastProposal()
 	if lastBlock == nil {
 		return fmt.Errorf("initialize event-driven engine with first block failed!")
 	}
@@ -40,13 +40,13 @@ func (e *core) initialize() error {
 		return err
 	}
 
-	e.smr.SetHighCommitRound(salt.Round)
-	e.smr.SetRound(e.smr.HighCommitRound())
-	e.smr.SetHeight(lastBlock.Number())
+	c.smr.SetHighCommitRound(salt.Round)
+	c.smr.SetRound(c.smr.HighCommitRound())
+	c.smr.SetHeight(lastBlock.Number())
 
-	e.logger.Trace("initialize event-driven engine", "view", e.currentView())
+	c.logger.Trace("initialize event-driven engine", "view", c.currentView())
 
-	proposal := e.backend.GetProposal(lastBlock.Hash())
+	proposal := c.backend.GetProposal(lastBlock.Hash())
 	if proposal == nil {
 		return fmt.Errorf("Can't get block %v", lastBlock.Hash())
 	}
@@ -60,10 +60,10 @@ func (e *core) initialize() error {
 		return err
 	}
 
-	e.blkPool = NewBlockPool(blktr)
-	e.blkPool.AddQC(qc)
-	e.updateHighQCAndProposal(highQC, rootBlock)
-	e.smr.SetLatestVoteRound(salt.Round)
+	c.blkPool = NewBlockPool(blktr)
+	c.blkPool.AddQC(qc)
+	c.updateHighQCAndProposal(highQC, rootBlock)
+	c.smr.SetLatestVoteRound(salt.Round)
 
 	//e.smr.SetLockQC(qc)
 	return nil

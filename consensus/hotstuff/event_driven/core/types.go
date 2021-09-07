@@ -33,43 +33,22 @@ type MsgType uint64
 
 // messages with sub string of `Send` only used in internal communication and logs
 const (
-	MsgTypeNewRound     MsgType = 1
-	MsgTypeSendRequest  MsgType = 2
-	MsgTypeRequest      MsgType = 3
-	MsgTypeSendProposal MsgType = 4
-	MsgTypeProposal     MsgType = 5
-	MsgTypeSendVote     MsgType = 6
-	MsgTypeVote         MsgType = 7
-	MsgTypeSendTimeout  MsgType = 8
-	MsgTypeTimeout      MsgType = 9
-	MsgTypeSendTC       MsgType = 10
-	MsgTypeTC           MsgType = 11
+	MsgTypeProposal MsgType = 1
+	MsgTypeVote     MsgType = 2
+	MsgTypeTimeout  MsgType = 3
+	MsgTypeTC       MsgType = 4
 )
 
 func (m MsgType) String() string {
 	switch m {
-	case MsgTypeNewRound:
-		return "MSG_NEW_ROUND"
-	case MsgTypeSendRequest:
-		return "MSG_SEND_REQUEST"
-	case MsgTypeRequest:
-		return "MSG_RECV_REQUEST"
-	case MsgTypeSendProposal:
-		return "MSG_SEND_PROPOSAL"
 	case MsgTypeProposal:
-		return "MSG_RECV_PROPOSAL"
-	case MsgTypeSendVote:
-		return "MSG_SEND_VOTE"
+		return "MSG_PROPOSAL"
 	case MsgTypeVote:
-		return "MSG_RECV_VOTE"
-	case MsgTypeSendTimeout:
-		return "MSG_SEND_TIMEOUT"
+		return "MSG_VOTE"
 	case MsgTypeTimeout:
-		return "MSG_RECV_TIMEOUT"
-	case MsgTypeSendTC:
-		return "MSG_SEND_TC"
+		return "MSG_TIMEOUT"
 	case MsgTypeTC:
-		return "MSG_RECV_TC"
+		return "MSG_TC"
 	default:
 		return "MSG_UNKNOWN"
 	}
@@ -263,32 +242,6 @@ func (tc *TimeoutCert) Round() *big.Int {
 func (tc *TimeoutCert) RoundU64() uint64 {
 	return tc.Round().Uint64()
 }
-
-//
-//type CertificateEvent struct {
-//	Cert *hotstuff.QuorumCert
-//}
-//
-//func (ce *CertificateEvent) EncodeRLP(w io.Writer) error {
-//	return rlp.Encode(w, []interface{}{ce.Cert})
-//}
-//
-//func (ce *CertificateEvent) DecodeRLP(s *rlp.Stream) error {
-//	var subject struct {
-//		Cert *hotstuff.QuorumCert
-//	}
-//
-//	if err := s.Decode(&subject); err != nil {
-//		return err
-//	}
-//
-//	ce.Cert = subject.Cert
-//	return nil
-//}
-//
-//func (ce *CertificateEvent) String() string {
-//	return fmt.Sprintf("{Hash: %v, View: %v, Proposer: %v}", ce.Cert.Hash, ce.Cert.View, ce.Cert.Proposer)
-//}
 
 type ExtraSalt struct {
 	Epoch uint64

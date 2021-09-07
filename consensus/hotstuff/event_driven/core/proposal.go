@@ -20,28 +20,28 @@ package core
 
 import "github.com/ethereum/go-ethereum/consensus/hotstuff"
 
-func (e *core) sendProposal() error {
-	logger := e.newLogger("msg", MsgTypeSendProposal)
+func (c *core) sendProposal() error {
+	logger := c.newSenderLogger("MSG_SEND_PROPOSAL")
 
 	// proposal and justify qc already checked in request procedure
-	proposal := e.smr.Request()
-	justifyQC := e.smr.HighQC()
-	view := e.currentView()
+	proposal := c.smr.Request()
+	justifyQC := c.smr.HighQC()
+	view := c.currentView()
 	msg := &MsgProposal{
-		Epoch:     e.smr.Epoch(),
+		Epoch:     c.smr.Epoch(),
 		View:      view,
 		Proposal:  proposal,
 		JustifyQC: justifyQC,
 	}
 
-	e.encodeAndBroadcast(MsgTypeProposal, msg)
+	c.encodeAndBroadcast(MsgTypeProposal, msg)
 	logger.Trace("Send proposal", "hash", msg.Proposal.Hash(), "justifyQC hash", msg.JustifyQC.Hash)
 	return nil
 }
 
 // handleProposal validate proposal info and vote to the next leader if the proposal is valid
-func (e *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) error {
-	logger := e.newLogger("msg", MsgTypeProposal)
+func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) error {
+	logger := c.newMsgLogger(MsgTypeProposal)
 
 	var msg *MsgProposal
 	if err := data.Decode(&msg); err != nil {
@@ -57,19 +57,19 @@ func (e *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 		logger.Trace("invalid unsealedBlock msg", "err", "unsealedBlock/justifyQC/view is nil")
 		return nil
 	}
-	if err := e.checkEpoch(msg.Epoch, unsealedBlock.Number()); err != nil {
+	if err := c.checkEpoch(msg.Epoch, unsealedBlock.Number()); err != nil {
 		logger.Trace("Failed to check epoch", "from", src.Address(), "err", err)
 		return err
 	}
-	if err := e.checkJustifyQC(unsealedBlock, justifyQC); err != nil {
+	if err := c.checkJustifyQC(unsealedBlock, justifyQC); err != nil {
 		logger.Trace("Failed to check justify", "from", src.Address(), "err", err)
 		return err
 	}
-	if err := e.signer.VerifyHeader(unsealedBlock.Header(), e.valset, false); err != nil {
+	if err := c.signer.VerifyHeader(unsealedBlock.Header(), c.valset, false); err != nil {
 		logger.Trace("Failed to validate unsealedBlock header", "from", src.Address(), "err", err)
 		return err
 	}
-	if err := e.signer.VerifyQC(justifyQC, e.valset); err != nil {
+	if err := c.signer.VerifyQC(justifyQC, c.valset); err != nil {
 		logger.Trace("Failed to verify justifyQC", "from", src.Address(), "err", err)
 		return err
 	}
@@ -78,31 +78,31 @@ func (e *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 
 	// try to advance into new round, it will update proposer and current view, and reset lockQC as this justify qc.
 	// unsealedBlock's great-grand parent will be committed if 3-chain can be generated.
-	if err := e.advanceRoundByQC(justifyQC); err == nil {
-		e.commit3Chain()
-		e.updateLockQC(justifyQC)
+	if err := c.advanceRoundByQC(justifyQC); err == nil {
+		c.commit3Chain()
+		c.updateLockQC(justifyQC)
 	}
 
 	// validate unsealedBlock and justify qc
-	if err := e.checkView(view); err != nil {
+	if err := c.checkView(view); err != nil {
 		logger.Trace("Failed to check view", "from", src.Address(), "err", err)
 		return err
 	}
-	if err := e.validateProposalView(unsealedBlock); err != nil {
+	if err := c.validateProposalView(unsealedBlock); err != nil {
 		logger.Trace("Failed to validate unsealedBlock view", "err", err)
 		return err
 	}
-	if err := e.checkProposer(unsealedBlock.Coinbase()); err != nil {
+	if err := c.checkProposer(unsealedBlock.Coinbase()); err != nil {
 		logger.Trace("Failed to check proposer", "from", src.Address(), "err", err)
 		return err
 	}
 
 	// add unsealedBlock and update highQC as next justifyQC
-	if err := e.blkPool.AddBlock(unsealedBlock, view.Round); err != nil {
+	if err := c.blkPool.AddBlock(unsealedBlock, view.Round); err != nil {
 		logger.Trace("Failed to insert block into block pool", "from", src.Address(), "err", err)
 		return err
 	}
-	e.updateHighQCAndProposal(justifyQC, unsealedBlock)
-	
-	return e.sendVote()
+	c.updateHighQCAndProposal(justifyQC, unsealedBlock)
+
+	return c.sendVote()
 }

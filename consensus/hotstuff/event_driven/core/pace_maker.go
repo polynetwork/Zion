@@ -27,50 +27,50 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (e *core) updateHighestCommittedRound(round *big.Int) {
-	if e.smr.HighCommitRound().Cmp(round) < 0 {
-		e.smr.SetHighCommitRound(round)
+func (c *core) updateHighestCommittedRound(round *big.Int) {
+	if c.smr.HighCommitRound().Cmp(round) < 0 {
+		c.smr.SetHighCommitRound(round)
 	}
 }
 
-func (e *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
+func (c *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) error {
 	var evt *TimeoutEvent
-	logger := e.newLogger()
+	logger := c.newLogger()
 	msgTyp := MsgTypeTimeout
 
 	if err := data.Decode(&evt); err != nil {
 		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
 		return err
 	}
-	if err := e.checkView(evt.View); err != nil {
+	if err := c.checkView(evt.View); err != nil {
 		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
-	if err := e.signer.VerifyHash(e.valset, evt.Digest, data.CommittedSeal); err != nil {
+	if err := c.signer.VerifyHash(c.valset, evt.Digest, data.CommittedSeal); err != nil {
 		logger.Trace("Failed to verify hash", "msg", msgTyp, "err", err)
 		return err
 	}
 
 	round := evt.View.Round
-	if err := e.messages.AddTimeout(round.Uint64(), data); err != nil {
+	if err := c.messages.AddTimeout(round.Uint64(), data); err != nil {
 		logger.Trace("Failed to add timeout", "msg", msgTyp, "err", err)
 		return err
 	}
 
-	if e.isSelf(src.Address()) {
-		e.increaseLastVoteRound(round)
+	if c.isSelf(src.Address()) {
+		c.increaseLastVoteRound(round)
 	}
 
-	size := e.messages.TimeoutSize(round.Uint64())
+	size := c.messages.TimeoutSize(round.Uint64())
 	logger.Trace("Accept Timeout", "msg", msgTyp, "from", src.Address(), "size", size)
-	if size != e.Q() {
+	if size != c.Q() {
 		return nil
 	}
 
-	tc := e.aggregateTC(evt, size)
+	tc := c.aggregateTC(evt, size)
 	logger.Trace("Aggregate TC", "msg", msgTyp, "hash", tc.Hash)
 
-	if err := e.advanceRoundByTC(tc, true); err != nil {
+	if err := c.advanceRoundByTC(tc, true); err != nil {
 		logger.Trace("Failed to advance round by TC", "msg", msgTyp, "err", err)
 		return nil
 	}
@@ -81,8 +81,8 @@ func (e *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) err
 // advanceRoundByQC
 // 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
 // 一般而言只有leader才能收到qc，
-func (e *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
-	if qc == nil || qc.View == nil || qc.Round().Cmp(e.smr.Round()) < 0 || qc.Height().Cmp(e.smr.Height()) < 0 {
+func (c *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
+	if qc == nil || qc.View == nil || qc.Round().Cmp(c.smr.Round()) < 0 || qc.Height().Cmp(c.smr.Height()) < 0 {
 		return fmt.Errorf("qc invalid")
 	}
 
@@ -90,76 +90,76 @@ func (e *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
 	var (
 		height, round *big.Int
 	)
-	if bigEq(e.smr.Height(), qc.Height()) {
-		height = bigAdd1(e.smr.Height())
+	if bigEq(c.smr.Height(), qc.Height()) {
+		height = bigAdd1(c.smr.Height())
 	} else {
 		height = bigAdd1(qc.Height())
 	}
-	if bigEq(e.smr.Round(), qc.Round()) {
-		round = bigAdd1(e.smr.Round())
+	if bigEq(c.smr.Round(), qc.Round()) {
+		round = bigAdd1(c.smr.Round())
 	} else {
 		round = bigAdd1(qc.Round())
 	}
-	e.smr.SetHeight(height)
-	e.smr.SetRound(round)
+	c.smr.SetHeight(height)
+	c.smr.SetRound(round)
 
-	e.valset.CalcProposerByIndex(e.smr.RoundU64())
-	e.newRoundChangeTimer()
-	e.logger.Trace("AdvanceQC", "view", e.currentView(), "hash", qc.Hash)
+	c.valset.CalcProposerByIndex(c.smr.RoundU64())
+	c.newRoundChangeTimer()
+	c.logger.Trace("AdvanceQC", "view", c.currentView(), "hash", qc.Hash)
 
-	return e.handleNewRound()
+	return c.handleNewRound()
 }
 
-func (e *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
-	if tc == nil || tc.View == nil || tc.Round().Cmp(e.smr.Round()) < 0 || tc.Height().Cmp(e.smr.Height()) < 0 {
+func (c *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
+	if tc == nil || tc.View == nil || tc.Round().Cmp(c.smr.Round()) < 0 || tc.Height().Cmp(c.smr.Height()) < 0 {
 		return fmt.Errorf("tc invalid")
 	}
 
 	// broadcast to next leader first, we will use `curRound` again in broadcasting.
-	if !e.IsProposer() && broadcast {
-		e.encodeAndBroadcast(MsgTypeTC, tc)
+	if !c.IsProposer() && broadcast {
+		c.encodeAndBroadcast(MsgTypeTC, tc)
 	}
 
 	// catch up view
 	var (
 		round *big.Int
 	)
-	if bigEq(e.smr.Round(), tc.Round()) {
-		round = bigAdd1(e.smr.Round())
+	if bigEq(c.smr.Round(), tc.Round()) {
+		round = bigAdd1(c.smr.Round())
 	} else {
 		round = bigAdd1(tc.Round())
 	}
-	e.smr.SetRound(round)
+	c.smr.SetRound(round)
 
-	e.valset.CalcProposerByIndex(e.smr.RoundU64())
-	e.newRoundChangeTimer()
-	e.logger.Trace("AdvanceTC", "round", e.smr.Round())
+	c.valset.CalcProposerByIndex(c.smr.RoundU64())
+	c.newRoundChangeTimer()
+	c.logger.Trace("AdvanceTC", "round", c.smr.Round())
 
-	return e.handleNewRound()
+	return c.handleNewRound()
 }
 
-func (e *core) stopTimer() {
-	if e.timer != nil {
-		e.timer.Stop()
+func (c *core) stopTimer() {
+	if c.timer != nil {
+		c.timer.Stop()
 	}
 }
 
 // todo: add in config
 const standardTmoDuration = time.Second * 4
 
-func (e *core) newRoundChangeTimer() {
-	e.stopTimer()
+func (c *core) newRoundChangeTimer() {
+	c.stopTimer()
 
-	curRd := e.smr.RoundU64()
-	hgRd := e.smr.HighCommitRoundU64()
+	curRd := c.smr.RoundU64()
+	hgRd := c.smr.HighCommitRoundU64()
 	index := curRd - hgRd
 	timeout := standardTmoDuration
 	if index > 0 {
 		timeout += time.Duration(math.Pow(2, float64(index))) * time.Second
 	}
 
-	e.timer = time.AfterFunc(timeout, func() {
-		evt := e.generateTimeoutEvent()
-		e.encodeAndBroadcast(MsgTypeTimeout, evt)
+	c.timer = time.AfterFunc(timeout, func() {
+		evt := c.generateTimeoutEvent()
+		c.encodeAndBroadcast(MsgTypeTimeout, evt)
 	})
 }

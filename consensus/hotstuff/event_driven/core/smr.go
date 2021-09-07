@@ -166,11 +166,11 @@ func (s *SMR) Proposal() *types.Block {
 }
 
 func (s *SMR) SetProposal(proposal *types.Block) {
-	if proposal.NumberU64() < s.curHighProposal.NumberU64() {
+	if proposal == nil || proposal.Header() == nil {
 		return
 	}
-	if proposal.Hash() == s.curHighProposal.Hash() {
-		return
+	// allow replace, from unsealed to sealed
+	if s.curHighProposal == nil || s.curHighProposal.NumberU64() <= proposal.NumberU64() {
+		s.curHighProposal = proposal
 	}
-	s.curHighProposal = proposal
 }

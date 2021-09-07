@@ -37,10 +37,10 @@ var (
 )
 
 type HotstuffExtra struct {
-	Validators    []common.Address
-	Seal          []byte
-	CommittedSeal [][]byte
-	Salt 		  []byte
+	Validators    []common.Address // consensus participants address
+	Seal          []byte           // proposer signature
+	CommittedSeal [][]byte         // consensus participants signatures
+	Salt          []byte           // epoch id and consensus round
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
@@ -59,7 +59,7 @@ func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 		Validators    []common.Address
 		Seal          []byte
 		CommittedSeal [][]byte
-		Salt 		  []byte
+		Salt          []byte
 	}
 	if err := s.Decode(&extra); err != nil {
 		return err

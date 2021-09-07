@@ -42,6 +42,7 @@ var (
 	errInvalidEpoch        = errors.New("invalid epoch")
 	errInvalidProposal 	   = errors.New("invalid proposal")
 	errInvalidVote         = errors.New("invalid vote")
+	errNeedCatchUp 		   = errors.New("need catchup")
 	errInvalidQC           = errors.New("invalid qc")
 	errInvalidHighQC       = errors.New("invalid highQC")
 

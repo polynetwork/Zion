@@ -20,31 +20,31 @@ package core
 
 import "github.com/ethereum/go-ethereum/consensus/hotstuff"
 
-func (e *core) sendVote() error {
-	logger := e.newLogger("msg", MsgTypeSendVote)
+func (c *core) sendVote() error {
+	logger := c.newSenderLogger("MSG_SEND_VOTE")
 
-	view := e.currentView()
-	justifyQC := e.smr.HighQC()
-	proposal := e.smr.Proposal()
+	view := c.currentView()
+	justifyQC := c.smr.HighQC()
+	proposal := c.smr.Proposal()
 
 	// make vote and send it to next proposer
-	vote, err := e.makeVote(proposal.Hash(), proposal.Coinbase(), view, justifyQC)
+	vote, err := c.makeVote(proposal.Hash(), proposal.Coinbase(), view, justifyQC)
 	if err != nil {
 		logger.Trace("Failed to make vote", "err", err)
 		return err
 	}
 
-	logger.Trace("Send Vote", "to", e.nextProposer(), "hash", vote.Hash)
+	logger.Trace("Send Vote", "to", c.nextProposer(), "vote", vote)
 
-	e.increaseLastVoteRound(view.Round)
-	e.encodeAndBroadcast(MsgTypeVote, vote)
+	c.increaseLastVoteRound(view.Round)
+	c.encodeAndBroadcast(MsgTypeVote, vote)
 
 	return nil
 }
 
 // handleVote validate vote message and try to assemble qc
-func (e *core) handleVote(src hotstuff.Validator, data *hotstuff.Message) error {
-	logger := e.newLogger("msg", MsgTypeVote)
+func (c *core) handleVote(src hotstuff.Validator, data *hotstuff.Message) error {
+	logger := c.newMsgLogger(MsgTypeVote)
 
 	var vote *Vote
 	if err := data.Decode(&vote); err != nil {
@@ -54,43 +54,43 @@ func (e *core) handleVote(src hotstuff.Validator, data *hotstuff.Message) error 
 
 	logger.Trace("Accept Vote", "from", src.Address(), "hash", vote.Hash, "vote view", vote.View)
 
-	if err := e.checkVote(vote); err != nil {
+	if err := c.checkVote(vote); err != nil {
 		logger.Trace("Failed to check vote", "from", src.Address(), "err", err)
 		return err
 	}
-	if err := e.checkEpoch(vote.Epoch, vote.View.Height); err != nil {
+	if err := c.checkEpoch(vote.Epoch, vote.View.Height); err != nil {
 		logger.Trace("Failed to check epoch", "from", src.Address(), "err", err)
 		return err
 	}
-	if err := e.validateVote(vote); err != nil {
+	if err := c.validateVote(vote); err != nil {
 		logger.Trace("Failed to validate vote", "from", src.Address(), "err", err)
 		return err
 	}
-	if err := e.messages.AddVote(vote.Hash, data); err != nil {
+	if err := c.messages.AddVote(vote.Hash, data); err != nil {
 		logger.Trace("Failed to add vote", "from", src.Address(), "err", err)
 		return err
 	}
 
-	size := e.messages.VoteSize(vote.Hash)
-	if size != e.Q() {
+	size := c.messages.VoteSize(vote.Hash)
+	if size != c.Q() {
 		return nil
 	}
 
-	highQC, sealedBlock, err := e.aggregateQC(vote, size)
+	highQC, sealedBlock, err := c.aggregateQC(vote, size)
 	if err != nil {
 		logger.Trace("Failed to aggregate qc", "err", err)
 		return err
 	}
 	logger.Trace("Aggregate QC", "qc hash", highQC.Hash, "qc view", highQC.View)
 
-	if err := e.blkPool.AddBlock(sealedBlock, vote.View.Round); err != nil {
+	if err := c.blkPool.AddBlock(sealedBlock, vote.View.Round); err != nil {
 		logger.Trace("Failed to insert block into block pool", "err", err)
 		return err
 	}
 
-	e.updateHighQCAndProposal(highQC, sealedBlock)
+	c.updateHighQCAndProposal(highQC, sealedBlock)
 
-	if err := e.advanceRoundByQC(highQC); err != nil {
+	if err := c.advanceRoundByQC(highQC); err != nil {
 		logger.Trace("Failed to advance round", "err", err)
 		return err
 	}

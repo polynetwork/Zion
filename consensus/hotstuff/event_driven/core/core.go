@@ -46,6 +46,7 @@ type core struct {
 	smr      *SMR
 	messages *MessagePool
 	blkPool  *BlockPool
+	backlogs *backlog
 	timer    *time.Timer // drive consensus round
 
 	feed              event.Feed // request feed
@@ -77,6 +78,7 @@ func New(
 	engine.valset = valset
 	engine.signer = signer
 	engine.started = false
+	engine.backlogs = newBackLog()
 	engine.messages = NewMessagePool(valset)
 	engine.validateFn = engine.checkValidatorSignature
 
@@ -84,73 +86,74 @@ func New(
 }
 
 // handleNewRound proposer at this round get an new proposal and broadcast to all validators.
-func (e *core) handleNewRound() error {
-	if !e.started {
+func (c *core) handleNewRound() error {
+	if !c.started {
 		return nil
 	}
 
-	logger := e.newLogger()
-	msgTyp := MsgTypeNewRound
-	logger.Trace("New round", "msg", msgTyp, "new_proposer", e.valset.GetProposer(), "valSet", e.valset.List(), "size", e.valset.Size(), "IsProposer", e.IsProposer())
+	logger := c.newSenderLogger("MSG_NEW_ROUND")
+	logger.Trace("New round", "new_proposer", c.valset.GetProposer(), "valSet", c.valset.List(), "size", c.valset.Size(), "IsProposer", c.IsProposer())
 
-	if !e.IsProposer() {
+	if !c.IsProposer() {
 		return nil
-	} else {
-		return e.sendRequest()
 	}
+
+	c.processBacklog()
+	return c.sendRequest()
 }
 
-func (e *core) handleTC(src hotstuff.Validator, data *hotstuff.Message) error {
-	logger := e.newLogger()
-
+func (c *core) handleTC(src hotstuff.Validator, data *hotstuff.Message) error {
 	var (
 		tc     *TimeoutCert
 		msgTyp = MsgTypeTC
 	)
+
+	logger := c.newMsgLogger(msgTyp)
+
 	if err := data.Decode(&tc); err != nil {
-		logger.Trace("Failed to decode", "msg", msgTyp, "from", src.Address(), "err", err)
+		logger.Trace("Failed to decode", "from", src.Address(), "err", err)
 		return err
 	}
 
-	if err := e.signer.VerifyCommittedSeal(e.valset, tc.Hash, tc.Seals); err != nil {
-		logger.Trace("Failed to verify committed seal", "msg", msgTyp, "from", src.Address(), "err", err)
+	if err := c.signer.VerifyCommittedSeal(c.valset, tc.Hash, tc.Seals); err != nil {
+		logger.Trace("Failed to verify committed seal", "from", src.Address(), "err", err)
 		return err
 	}
 
-	if err := e.advanceRoundByTC(tc, false); err != nil {
-		logger.Trace("Failed to advance by tc", "msg", msgTyp, "from", src.Address(), "err", err)
+	if err := c.advanceRoundByTC(tc, false); err != nil {
+		logger.Trace("Failed to advance by tc", "from", src.Address(), "err", err)
 		return err
 	}
 
-	logger.Trace("Accept TC", "msg", msgTyp, "src", src.Address(), "tc", tc.Hash, "view", tc.View)
+	logger.Trace("Accept TC", "src", src.Address(), "tc", tc.Hash, "view", tc.View)
 	return nil
 }
 
-func (e *core) commit3Chain() {
-	highQC := e.smr.HighQC()
-	lockQC := e.smr.LockQC()
+func (c *core) commit3Chain() {
+	highQC := c.smr.HighQC()
+	lockQC := c.smr.LockQC()
 	if highQC == nil || lockQC == nil {
 		return
 	}
 
-	committedBlock := e.blkPool.GetCommitBlock(highQC.Hash, lockQC.Hash)
+	committedBlock := c.blkPool.GetCommitBlock(highQC.Hash, lockQC.Hash)
 	if committedBlock == nil {
 		return
 	}
 
 	// todo: 如果节点此时宕机怎么办？还是说允许所有的节点一起提交区块
-	if existProposal := e.backend.GetProposal(committedBlock.Hash()); existProposal == nil {
-		if e.isSelf(committedBlock.Coinbase()) {
-			e.backend.Commit(committedBlock)
+	if existProposal := c.backend.GetProposal(committedBlock.Hash()); existProposal == nil {
+		if c.isSelf(committedBlock.Coinbase()) {
+			c.backend.Commit(committedBlock)
 		}
 	}
 
-	e.blkPool.Pure(committedBlock.Hash())
+	c.blkPool.Pure(committedBlock.Hash())
 }
 
 //
 //func (e *core) handleQC(src hotstuff.Validator, data *hotstuff.Message) error {
-//	logger := e.newLogger()
+//	logger := e.newMsgLogger()
 //
 //	var (
 //		qc     *hotstuff.QuorumCert

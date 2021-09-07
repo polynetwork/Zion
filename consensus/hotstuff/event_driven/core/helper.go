@@ -29,42 +29,52 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func (e *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return e.signer.CheckSignature(e.valset, data, sig)
+func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+	return c.signer.CheckSignature(c.valset, data, sig)
 }
 
-func (e *core) isSelf(addr common.Address) bool {
-	return e.address == addr
+func (c *core) isSelf(addr common.Address) bool {
+	return c.address == addr
 }
 
-func (e *core) currentView() *hotstuff.View {
+func (c *core) currentView() *hotstuff.View {
 	return &hotstuff.View{
-		Round:  new(big.Int).Set(e.smr.Round()),
-		Height: new(big.Int).Set(e.smr.Height()),
+		Round:  new(big.Int).Set(c.smr.Round()),
+		Height: new(big.Int).Set(c.smr.Height()),
 	}
 }
 
-func (e *core) checkProposer(proposer common.Address) error {
-	if !e.valset.IsProposer(proposer) {
+func (c *core) checkProposer(proposer common.Address) error {
+	if !c.valset.IsProposer(proposer) {
 		return errNotFromProposer
 	}
 	return nil
 }
 
-func (e *core) checkEpoch(epoch uint64, height *big.Int) error {
-	if e.smr.Epoch() != epoch {
+func (c *core) checkEpoch(epoch uint64, height *big.Int) error {
+	if c.smr.Epoch() != epoch {
 		return errInvalidHighQC
 	}
-	if height.Cmp(e.smr.EpochStart()) < 0 {
+	if height.Cmp(c.smr.EpochStart()) < 0 {
 		return errInvalidEpoch
 	}
-	if height.Cmp(e.smr.EpochEnd()) > 0 {
+	if height.Cmp(c.smr.EpochEnd()) > 0 {
 		return errInvalidEpoch
 	}
 	return nil
 }
 
-func (e *core) validateProposalView(proposal *types.Block) error {
+func (c *core) checkView(view *hotstuff.View) error {
+	if cmp := view.Cmp(c.currentView()); cmp > 0 {
+		return errFutureMessage
+	} else if cmp < 0 {
+		return errInvalidVote
+	} else {
+		return nil
+	}
+}
+
+func (c *core) validateProposalView(proposal *types.Block) error {
 	if proposal == nil {
 		return errInvalidProposal
 	}
@@ -76,20 +86,10 @@ func (e *core) validateProposalView(proposal *types.Block) error {
 		Round:  salt.Round,
 		Height: proposal.Number(),
 	}
-	if view.Cmp(e.currentView()) != 0 {
-		return fmt.Errorf("expect view %v, got %v", e.currentView(), view)
-	}
-	return nil
+	return c.checkView(view)
 }
 
-func (e *core) checkView(view *hotstuff.View) error {
-	if curView := e.currentView(); curView.Cmp(view) != 0 {
-		return fmt.Errorf("expect view %v, got %v", curView, view)
-	}
-	return nil
-}
-
-func (e *core) checkJustifyQC(proposal hotstuff.Proposal, justifyQC *hotstuff.QuorumCert) error {
+func (c *core) checkJustifyQC(proposal hotstuff.Proposal, justifyQC *hotstuff.QuorumCert) error {
 	if justifyQC == nil {
 		return fmt.Errorf("justifyQC is nil")
 	}
@@ -110,7 +110,7 @@ func (e *core) checkJustifyQC(proposal hotstuff.Proposal, justifyQC *hotstuff.Qu
 	}
 
 	if !bigEq0(justifyQC.Height()) {
-		vs := e.valset.Copy()
+		vs := c.valset.Copy()
 		vs.CalcProposerByIndex(justifyQC.View.Round.Uint64())
 		proposer := vs.GetProposer().Address()
 		if proposer != justifyQC.Proposer {
@@ -121,7 +121,7 @@ func (e *core) checkJustifyQC(proposal hotstuff.Proposal, justifyQC *hotstuff.Qu
 	return nil
 }
 
-func (e *core) compareQC(expect, src *hotstuff.QuorumCert) error {
+func (c *core) compareQC(expect, src *hotstuff.QuorumCert) error {
 	if expect == nil || expect.View == nil {
 		return fmt.Errorf("invalid expect qc")
 	}
@@ -145,7 +145,7 @@ func (e *core) compareQC(expect, src *hotstuff.QuorumCert) error {
 }
 
 // vote to highQC round + 1
-func (e *core) checkVote(vote *Vote) error {
+func (c *core) checkVote(vote *Vote) error {
 	if vote.View == nil {
 		return fmt.Errorf("vote view is nil")
 	}
@@ -159,18 +159,12 @@ func (e *core) checkVote(vote *Vote) error {
 		return fmt.Errorf("vote parent hash is empty")
 	}
 
-	// vote view MUST be highQC view
-	highQC := e.smr.HighQC()
-	if new(big.Int).Sub(vote.View.Height, highQC.View.Height).Cmp(common.Big1) != 0 &&
-		new(big.Int).Sub(vote.View.Round, highQC.View.Round).Cmp(common.Big1) != 0 {
-		return errInvalidVote
-	}
-	return nil
+	return c.checkView(vote.View)
 }
 
-func (e *core) getVoteSeals(hash common.Hash, n int) [][]byte {
+func (c *core) getVoteSeals(hash common.Hash, n int) [][]byte {
 	seals := make([][]byte, n)
-	for i, data := range e.messages.Votes(hash) {
+	for i, data := range c.messages.Votes(hash) {
 		if i < n {
 			seals[i] = data.CommittedSeal
 		}
@@ -178,9 +172,9 @@ func (e *core) getVoteSeals(hash common.Hash, n int) [][]byte {
 	return seals
 }
 
-func (e *core) getTimeoutSeals(round uint64, n int) [][]byte {
+func (c *core) getTimeoutSeals(round uint64, n int) [][]byte {
 	seals := make([][]byte, n)
-	for i, data := range e.messages.Timeouts(round) {
+	for i, data := range c.messages.Timeouts(round) {
 		if i < n {
 			seals[i] = data.CommittedSeal
 		}
@@ -188,43 +182,43 @@ func (e *core) getTimeoutSeals(round uint64, n int) [][]byte {
 	return seals
 }
 
-func (e *core) Q() int {
-	return e.valset.Q()
+func (c *core) Q() int {
+	return c.valset.Q()
 }
 
-func (e *core) chain2Height() *big.Int {
-	return new(big.Int).Add(e.smr.EpochStart(), common.Big2)
+func (c *core) chain2Height() *big.Int {
+	return new(big.Int).Add(c.smr.EpochStart(), common.Big2)
 }
 
-func (e *core) isChain2() bool {
-	return e.smr.Height().Cmp(e.chain2Height()) >= 0
+func (c *core) isChain2() bool {
+	return c.smr.Height().Cmp(c.chain2Height()) >= 0
 }
 
-func (e *core) chain3Height() *big.Int {
-	return new(big.Int).Add(e.smr.EpochStart(), common.Big3)
+func (c *core) chain3Height() *big.Int {
+	return new(big.Int).Add(c.smr.EpochStart(), common.Big3)
 }
 
-func (e *core) isChain3() bool {
-	return e.smr.Height().Cmp(e.chain3Height()) >= 0
+func (c *core) isChain3() bool {
+	return c.smr.Height().Cmp(c.chain3Height()) >= 0
 }
 
-func (e *core) generateTimeoutEvent() *TimeoutEvent {
+func (c *core) generateTimeoutEvent() *TimeoutEvent {
 	tm := &TimeoutEvent{
-		Epoch: e.smr.Epoch(),
-		View:  e.currentView(),
+		Epoch: c.smr.Epoch(),
+		View:  c.currentView(),
 	}
 	tm.Digest = tm.Hash()
 	return tm
 }
 
-func (e *core) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumCert, *types.Block, error) {
-	proposal := e.blkPool.GetBlockAndCheckHeight(vote.Hash, vote.View.Height)
+func (c *core) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumCert, *types.Block, error) {
+	proposal := c.blkPool.GetBlockAndCheckHeight(vote.Hash, vote.View.Height)
 	if proposal == nil {
 		return nil, nil, fmt.Errorf("last proposal %v not exist", vote.Hash)
 	}
 
-	seals := e.getVoteSeals(vote.Hash, size)
-	sealedProposal, err := e.backend.PreCommit(proposal, seals)
+	seals := c.getVoteSeals(vote.Hash, size)
+	sealedProposal, err := c.backend.PreCommit(proposal, seals)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -245,8 +239,8 @@ func (e *core) aggregateQC(vote *Vote, size int) (*hotstuff.QuorumCert, *types.B
 	return qc, proposal, nil
 }
 
-func (e *core) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
-	seals := e.getTimeoutSeals(event.View.Round.Uint64(), size)
+func (c *core) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
+	seals := c.getTimeoutSeals(event.View.Round.Uint64(), size)
 	tc := &TimeoutCert{
 		View:  event.View,
 		Hash:  common.Hash{},
@@ -255,20 +249,20 @@ func (e *core) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
 	return tc
 }
 
-func (e *core) updateHighQCAndProposal(qc *hotstuff.QuorumCert, proposal *types.Block) {
-	e.smr.SetHighQC(qc)
-	e.smr.SetProposal(proposal)
+func (c *core) updateHighQCAndProposal(qc *hotstuff.QuorumCert, proposal *types.Block) {
+	c.smr.SetHighQC(qc)
+	c.smr.SetProposal(proposal)
 }
 
-func (e *core) nextValSet() hotstuff.ValidatorSet {
-	vs := e.valset.Copy()
-	vs.CalcProposerByIndex(e.smr.Round().Uint64() + 1)
+func (c *core) nextValSet() hotstuff.ValidatorSet {
+	vs := c.valset.Copy()
+	vs.CalcProposerByIndex(c.smr.Round().Uint64() + 1)
 	return vs
 }
 
-func (e *core) nextProposer() common.Address {
-	vs := e.valset.Copy()
-	vs.CalcProposerByIndex(e.smr.Round().Uint64() + 1)
+func (c *core) nextProposer() common.Address {
+	vs := c.valset.Copy()
+	vs.CalcProposerByIndex(c.smr.Round().Uint64() + 1)
 	proposer := vs.GetProposer()
 	return proposer.Address()
 }
