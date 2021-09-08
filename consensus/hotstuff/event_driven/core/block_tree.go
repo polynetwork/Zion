@@ -91,10 +91,14 @@ func (bt *BlockTree) Add(block *types.Block, round uint64) error {
 	var (
 		ok     bool
 		hash   = block.Hash()
-		parent *Node
+		node, parent *Node
 	)
 
-	if _, ok = bt.nodes[hash]; ok {
+	// allow sealed block to override unsealed block
+	if node, ok = bt.nodes[hash]; ok {
+		if node.round == round {
+			node.block = block
+		}
 		return nil
 	}
 
@@ -105,7 +109,7 @@ func (bt *BlockTree) Add(block *types.Block, round uint64) error {
 		}
 	}
 
-	node := generateNode(block, round)
+	node = generateNode(block, round)
 	bt.nodes[hash] = node
 	bt.roundTable[round] = append(bt.roundTable[round], node)
 	if parent != nil {

@@ -155,9 +155,9 @@ func (c *core) commit3Chain() {
 
 	if err := c.backend.Commit(committedBlock); err != nil {
 		c.logger.Trace("[Commit 3-Chain], failed to commit", "err", err)
-		return
+	} else {
+		c.logger.Trace("[Commit 3-Chain], leader commit", "address", c.address, "hash", committedBlock.Hash(), "number", committedBlock.Number())
 	}
 
 	c.blkPool.Pure(committedBlock.Hash())
-	c.logger.Trace("[Commit 3-Chain]", "hash", committedBlock.Hash(), "number", committedBlock.Number())
 }
