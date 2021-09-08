@@ -153,11 +153,17 @@ func (c *core) commit3Chain() {
 		return
 	}
 
+	salt, _, err := extraProposal(committedBlock)
+	if err != nil {
+		c.logger.Trace("[Commit 3-Chain], failed to extra proposal", "err", err)
+		return
+	}
 	if err := c.backend.Commit(committedBlock); err != nil {
 		c.logger.Trace("[Commit 3-Chain], failed to commit", "err", err)
 	} else {
 		c.logger.Trace("[Commit 3-Chain], leader commit", "address", c.address, "hash", committedBlock.Hash(), "number", committedBlock.Number())
 	}
 
+	c.updateHighestCommittedRound(salt.Round)
 	c.blkPool.Pure(committedBlock.Hash())
 }

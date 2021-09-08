@@ -145,9 +145,7 @@ const standardTmoDuration = time.Second * 4
 func (c *core) newRoundChangeTimer() {
 	c.stopTimer()
 
-	curRd := c.smr.RoundU64()
-	hgRd := c.smr.HighCommitRoundU64()
-	index := curRd - hgRd
+	index := c.smr.HighCommitRoundU64() - c.smr.RoundU64() - 3
 	timeout := standardTmoDuration
 	if index > 0 {
 		timeout += time.Duration(math.Pow(2, float64(index))) * time.Second
