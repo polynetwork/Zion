@@ -80,9 +80,13 @@ func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 
 	// try to advance into new round, it will update proposer and current view, and reset lockQC as this justify qc.
 	// unsealedBlock's great-grand parent will be committed if 3-chain can be generated.
+	// logger should be reset for new view.
 	if err := c.advanceRoundByQC(justifyQC); err == nil {
 		c.commit3Chain()
 		c.updateLockQC(justifyQC)
+		logger = c.newMsgLogger(MsgTypeProposal)
+	} else {
+		logger.Trace("------test advance round by qc failed", "err", err, "qc", justifyQC)
 	}
 
 	// validate unsealedBlock and justify qc
@@ -106,6 +110,8 @@ func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 	}
 	if err := c.updateHighQCAndProposal(justifyQC, unsealedBlock); err != nil {
 		logger.Trace("[Handle Proposal], failed to update high qc and proposal", "err", err)
+	} else {
+		logger.Trace("[Handle Proposal], update highQC", "highQC hash", justifyQC.Hash, "highQC view", justifyQC.View, "proposal hash", unsealedBlock.Hash(), "proposal view", view)
 	}
 
 	return c.sendVote()

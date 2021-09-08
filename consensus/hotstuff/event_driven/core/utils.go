@@ -73,6 +73,10 @@ func bigSub1Eq(src, dst *big.Int) (*big.Int, bool) {
 	return res, res.Cmp(dst) == 0
 }
 
+func bigCmp(src, dst *big.Int) int {
+	return src.Cmp(dst)
+}
+
 func bigEq(src, dst *big.Int) bool {
 	return src.Cmp(dst) == 0
 }

@@ -200,7 +200,7 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	s.getBlockByHash = getBlockByHash
 	s.hasBadBlock = hasBadBlock
 
-	if err := s.core.Start(); err != nil {
+	if err := s.core.Start(chain); err != nil {
 		return err
 	}
 

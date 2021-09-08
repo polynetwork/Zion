@@ -84,7 +84,7 @@ type Backend interface {
 }
 
 type CoreEngine interface {
-	Start() error
+	Start(chain consensus.ChainReader) error
 
 	Stop() error
 

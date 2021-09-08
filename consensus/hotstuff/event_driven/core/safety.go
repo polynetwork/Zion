@@ -42,7 +42,20 @@ func (c *core) increaseLastVoteRound(rd *big.Int) {
 // 2.if the proposal is b3, and justifyQC is q2, it will lock q1.
 // 3.if the proposal is b4, and justifyQC is q3, it will lock q2, and b1 will be committed.
 func (c *core) updateLockQC(qc *hotstuff.QuorumCert) error {
-	if qc == nil || qc.View == nil || qc.Hash == common.EmptyHash || qc.Proposer == common.EmptyAddress {
+	if qc == nil {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "err", "qc is nil")
+		return errInvalidHighQC
+	}
+	if qc.View == nil {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "err", "qc view is nil")
+		return errInvalidHighQC
+	}
+	if qc.Hash == common.EmptyHash {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "err", "qc hash is empty")
+		return errInvalidHighQC
+	}
+	if qc.Proposer == common.EmptyAddress {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "err", "qc proposer is empty")
 		return errInvalidHighQC
 	}
 

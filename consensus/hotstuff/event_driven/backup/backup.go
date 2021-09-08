@@ -77,3 +77,23 @@ package backup
 //	return nil
 //}
 
+// commit 3-chain
+//
+//committedBlock := c.blkPool.GetCommitBlock(lockQC.Hash)
+//if committedBlock == nil {
+//	c.logger.Trace("[Commit 3-Chain], failed to get commit block", "lockQC view", lockQC.View)
+//	return
+//}
+//
+//round := lockQC.Round()
+//if existProposal := c.backend.GetProposal(committedBlock.Hash()); c.IsProposer() && existProposal == nil {
+//	if err := c.backend.Commit(committedBlock); err != nil {
+//		c.logger.Trace("[Commit 3-Chain], failed to commit", "err", err)
+//	} else {
+//		c.logger.Trace("[Commit 3-Chain], leader commit", "address", c.address, "hash", committedBlock.Hash(), "number", committedBlock.Number())
+//	}
+//}
+//
+//c.updateHighestCommittedRound(round)
+//puredBlocks := c.blkPool.Pure(committedBlock.Hash())
+//c.logger.Trace("[Commit 3-Chain], pured blocks", "hash lists", puredBlocks)

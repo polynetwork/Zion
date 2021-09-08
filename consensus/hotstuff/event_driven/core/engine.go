@@ -32,7 +32,7 @@ import (
 
 var once sync.Once
 
-func (c *core) Start() error {
+func (c *core) Start(chain consensus.ChainReader) error {
 	once.Do(func() {
 		hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
 			code := data.(uint64)
@@ -40,6 +40,7 @@ func (c *core) Start() error {
 		})
 	})
 
+	c.chain = chain
 	if err := c.initialize(); err != nil {
 		return err
 	}

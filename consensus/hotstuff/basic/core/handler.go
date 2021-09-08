@@ -21,13 +21,14 @@ import (
 	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
 var once sync.Once
 
 // Start implements core.Engine.Start
-func (c *core) Start() error {
+func (c *core) Start(chain consensus.ChainReader) error {
 	once.Do(func() {
 		hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
 			code := data.(uint64)
