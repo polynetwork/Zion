@@ -32,24 +32,24 @@ func (c *core) sendRequest() error {
 	// use existing pending request
 	request := c.smr.Request()
 	if request != nil && bigEq(height, request.Number()) {
-		logger.Trace("Got pending request", "num", request.Number(), "parent hash", request.ParentHash())
+		logger.Trace("[Send Request], Got pending request", "num", request.Number(), "parent hash", request.ParentHash())
 		return c.sendProposal()
 	}
 
 	// ask miner new proposal, use latest high proposal as parent block
 	parent := c.smr.Proposal()
 	if parent == nil {
-		logger.Trace("Failed to get parent block", "num", height, "err", "parent is nil")
+		logger.Trace("[Send Request], Failed to get parent block", "num", height, "err", "parent is nil")
 		return nil
 	}
 	if expect, eq := bigSub1Eq(height, parent.Number()); !eq {
 		if !bigEq(height, parent.Number()) {
-			logger.Trace("Invalid parent block", "expect height", expect, "got", parent.Number())
+			logger.Trace("[Send Request], Invalid parent block", "expect height", expect, "got", parent.Number())
 			return nil
 		}
 		parent = c.blkPool.GetBlockByHash(parent.ParentHash())
 		if parent == nil {
-			logger.Trace("Failed to get parent block", "err", "parent is nil")
+			logger.Trace("[Send Request], Failed to get parent block", "err", "parent is nil")
 			return nil
 		}
 	}
@@ -59,7 +59,7 @@ func (c *core) sendRequest() error {
 		Parent: parent,
 	})
 
-	logger.Trace("Send Request", "num", height, "parent hash", parent.Hash())
+	logger.Trace("[Send Request]", "num", height, "parent hash", parent.Hash())
 	return nil
 }
 
@@ -67,28 +67,20 @@ func (c *core) handleRequest(req *hotstuff.Request) error {
 	logger := c.newSenderLogger("MSG_RECV_REQUEST")
 
 	if req == nil || req.Proposal == nil {
-		logger.Trace("Invalid request", "err", "is nil")
+		logger.Trace("[Handle Request], Invalid request", "err", "is nil")
 		return nil
 	}
 	proposal, ok := req.Proposal.(*types.Block)
 	if !ok {
-		logger.Trace("Failed to convert proposal", "err", "type invalid")
+		logger.Trace("[Handle Request], Failed to convert proposal", "err", "type invalid")
 		return nil
 	}
 	if !bigEq(proposal.Number(), c.smr.Height()) {
-		logger.Trace("Invalid proposal", "expect height", c.smr.HeightU64(), "got", proposal.Number())
+		logger.Trace("[Handle Request], Invalid proposal", "expect height", c.smr.HeightU64(), "got", proposal.Number())
 		return nil
 	}
-	//parent := c.smr.Proposal()
-	//if parent == nil {
-	//	logger.Trace("Invalid parent", "err", "parent is nil or hash not equal")
-	//	return nil
-	//}
-	//if proposal.ParentHash() != parent.Hash() {
-	//	logger.Trace("Invalid parent", "expect parent hash")
-	//}
 	c.smr.SetRequest(proposal)
-	logger.Trace("Received request", "num", req.Proposal.Number(), "hash", req.Proposal.Hash())
+	logger.Trace("[Handle Request]", "num", req.Proposal.Number(), "hash", req.Proposal.Hash())
 
 	return c.sendProposal()
 }

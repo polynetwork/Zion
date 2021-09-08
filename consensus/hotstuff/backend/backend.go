@@ -215,7 +215,6 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 // PreCommit implements hotstuff.Backend.PreCommit
 func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
 	// Check if the proposal is a valid block
-	block := &types.Block{}
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		s.logger.Error("Invalid proposal, %v", proposal)
@@ -229,6 +228,20 @@ func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuf
 	}
 
 	// update block's header
+	block = block.WithSeal(h)
+
+	return block, nil
+}
+
+func (s *backend) ForwardCommit(proposal hotstuff.Proposal, extra []byte) (hotstuff.Proposal, error) {
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		s.logger.Error("Invalid proposal, %v", proposal)
+		return nil, errInvalidProposal
+	}
+
+	h := block.Header()
+	h.Extra = extra
 	block = block.WithSeal(h)
 
 	return block, nil

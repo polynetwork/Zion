@@ -38,21 +38,21 @@ func (c *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) err
 	msgTyp := MsgTypeTimeout
 
 	if err := data.Decode(&evt); err != nil {
-		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
+		logger.Trace("[Handle Timeout], failed to decode", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.checkView(evt.View); err != nil {
-		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
+		logger.Trace("[Handle Timeout], failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
 	if err := c.signer.VerifyHash(c.valset, evt.Digest, data.CommittedSeal); err != nil {
-		logger.Trace("Failed to verify hash", "msg", msgTyp, "err", err)
+		logger.Trace("[Handle Timeout], failed to verify hash", "msg", msgTyp, "err", err)
 		return err
 	}
 
 	round := evt.View.Round
 	if err := c.messages.AddTimeout(round.Uint64(), data); err != nil {
-		logger.Trace("Failed to add timeout", "msg", msgTyp, "err", err)
+		logger.Trace("[Handle Timeout], failed to add timeout", "msg", msgTyp, "err", err)
 		return err
 	}
 
@@ -61,16 +61,16 @@ func (c *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) err
 	}
 
 	size := c.messages.TimeoutSize(round.Uint64())
-	logger.Trace("Accept Timeout", "msg", msgTyp, "from", src.Address(), "size", size)
+	logger.Trace("[Handle Timeout], accept Timeout", "msg", msgTyp, "from", src.Address(), "size", size)
 	if size != c.Q() {
 		return nil
 	}
 
 	tc := c.aggregateTC(evt, size)
-	logger.Trace("Aggregate TC", "msg", msgTyp, "hash", tc.Hash)
+	logger.Trace("[Handle Timeout], aggregate TC", "msg", msgTyp, "hash", tc.Hash)
 
 	if err := c.advanceRoundByTC(tc, true); err != nil {
-		logger.Trace("Failed to advance round by TC", "msg", msgTyp, "err", err)
+		logger.Trace("[Handle Timeout], failed to advance round by TC", "msg", msgTyp, "err", err)
 		return nil
 	}
 
@@ -104,7 +104,7 @@ func (c *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
 
 	c.valset.CalcProposerByIndex(c.smr.RoundU64())
 	c.newRoundChangeTimer()
-	c.logger.Trace("AdvanceQC", "view", c.currentView(), "hash", qc.Hash)
+	c.logger.Trace("[AdvanceQC]", "view", c.currentView(), "hash", qc.Hash)
 
 	return c.handleNewRound()
 }
@@ -128,7 +128,7 @@ func (c *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
 
 	c.valset.CalcProposerByIndex(c.smr.RoundU64())
 	c.newRoundChangeTimer()
-	c.logger.Trace("AdvanceTC", "round", c.smr.Round())
+	c.logger.Trace("[AdvanceTC]", "round", c.smr.Round())
 
 	return c.handleNewRound()
 }

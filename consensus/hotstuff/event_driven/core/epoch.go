@@ -44,8 +44,6 @@ func (c *core) initialize() error {
 	c.smr.SetRound(c.smr.HighCommitRound())
 	c.smr.SetHeight(lastBlock.Number())
 
-	c.logger.Trace("initialize event-driven engine", "view", c.currentView())
-
 	proposal := c.backend.GetProposal(lastBlock.Hash())
 	if proposal == nil {
 		return fmt.Errorf("Can't get block %v", lastBlock.Hash())
@@ -62,9 +60,11 @@ func (c *core) initialize() error {
 
 	c.blkPool = NewBlockPool(blktr)
 	c.blkPool.AddQC(qc)
-	c.updateHighQCAndProposal(highQC, rootBlock)
+	if err := c.updateHighQCAndProposal(highQC, rootBlock); err != nil {
+		c.logger.Trace("[Initialize Engine], update high qc and proposal", "err", err)
+	}
 	c.smr.SetLatestVoteRound(salt.Round)
 
-	//e.smr.SetLockQC(qc)
+	c.logger.Trace("[Initialize Engine]", "view", c.currentView())
 	return nil
 }

@@ -37,29 +37,9 @@ func (c *core) sendProposal() error {
 	}
 
 	c.encodeAndBroadcast(MsgTypeProposal, msg)
-	logger.Trace("Send proposal", "hash", msg.Proposal.Hash(), "justifyQC hash", msg.JustifyQC.Hash)
+	logger.Trace("[Send proposal]", "hash", msg.Proposal.Hash(), "justifyQC hash", msg.JustifyQC.Hash)
 	return nil
 }
-
-//func (c *core) forwardProposal() error {
-//	logger := c.newSenderLogger("MSG_FORWARD_PROPOSAL")
-//
-//	proposal := c.smr.Proposal()
-//	if proposal == nil || !bigEq(proposal.Number(), c.smr.Height()) {
-//		return fmt.Errorf("no forward proposal")
-//	}
-//	justifyQC := c.smr.HighQC()
-//	view := c.currentView()
-//	msg := &MsgProposal{
-//		Epoch:     c.smr.Epoch(),
-//		View:      view,
-//		Proposal:  proposal,
-//		JustifyQC: justifyQC,
-//	}
-//	c.encodeAndBroadcast(MsgTypeProposal, msg)
-//	logger.Trace("Forward proposal", "hash", msg.Proposal.Hash(), "justifyQC hash", msg.JustifyQC.Hash)
-//	return nil
-//}
 
 // handleProposal validate proposal info and vote to the next leader if the proposal is valid
 func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) error {
@@ -67,7 +47,7 @@ func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 
 	var msg *MsgProposal
 	if err := data.Decode(&msg); err != nil {
-		logger.Trace("Failed to decode", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Proposal], failed to decode", "from", src.Address(), "err", err)
 		return errFailedDecodePrepare
 	}
 
@@ -76,27 +56,27 @@ func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 	justifyQC := msg.JustifyQC
 
 	if unsealedBlock == nil || justifyQC == nil || view == nil {
-		logger.Trace("invalid unsealedBlock msg", "err", "unsealedBlock/justifyQC/view is nil")
+		logger.Trace("[Handle Proposal], invalid unsealedBlock msg", "err", "unsealedBlock/justifyQC/view is nil")
 		return nil
 	}
 	if err := c.checkEpoch(msg.Epoch, unsealedBlock.Number()); err != nil {
-		logger.Trace("Failed to check epoch", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Proposal], failed to check epoch", "from", src.Address(), "err", err)
 		return err
 	}
 	if err := c.checkJustifyQC(unsealedBlock, justifyQC); err != nil {
-		logger.Trace("Failed to check justify", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Proposal], failed to check justify", "from", src.Address(), "err", err)
 		return err
 	}
 	if err := c.signer.VerifyHeader(unsealedBlock.Header(), c.valset, false); err != nil {
-		logger.Trace("Failed to validate unsealedBlock header", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Proposal], failed to validate unsealedBlock header", "from", src.Address(), "err", err)
 		return err
 	}
 	if err := c.signer.VerifyQC(justifyQC, c.valset); err != nil {
-		logger.Trace("Failed to verify justifyQC", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Proposal], failed to verify justifyQC", "from", src.Address(), "err", err)
 		return err
 	}
 
-	logger.Trace("Accept unsealedBlock", "proposer", src.Address(), "hash", unsealedBlock.Hash(), "height", unsealedBlock.Number())
+	logger.Trace("[Handle Proposal], accept unsealedBlock", "proposer", src.Address(), "hash", unsealedBlock.Hash(), "height", unsealedBlock.Number())
 
 	// try to advance into new round, it will update proposer and current view, and reset lockQC as this justify qc.
 	// unsealedBlock's great-grand parent will be committed if 3-chain can be generated.
@@ -107,24 +87,26 @@ func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 
 	// validate unsealedBlock and justify qc
 	if err := c.checkView(view); err != nil {
-		logger.Trace("Failed to check view", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Proposal], failed to check view", "from", src.Address(), "err", err)
 		return err
 	}
 	if err := c.validateProposalView(unsealedBlock); err != nil {
-		logger.Trace("Failed to validate unsealedBlock view", "err", err)
+		logger.Trace("[Handle Proposal], failed to validate unsealedBlock view", "err", err)
 		return err
 	}
 	if err := c.checkProposer(unsealedBlock.Coinbase()); err != nil {
-		logger.Trace("Failed to check proposer", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Proposal], failed to check proposer", "from", src.Address(), "err", err)
 		return err
 	}
 
 	// add unsealedBlock and update highQC as next justifyQC
 	if err := c.blkPool.AddBlock(unsealedBlock, view.Round); err != nil {
-		logger.Trace("Failed to insert block into block pool", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Proposal], failed to insert block into block pool", "from", src.Address(), "err", err)
 		return err
 	}
-	c.updateHighQCAndProposal(justifyQC, unsealedBlock)
+	if err := c.updateHighQCAndProposal(justifyQC, unsealedBlock); err != nil {
+		logger.Trace("[Handle Proposal], failed to update high qc and proposal", "err", err)
+	}
 
 	return c.sendVote()
 }

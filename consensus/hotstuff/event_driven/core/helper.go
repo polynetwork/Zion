@@ -257,10 +257,27 @@ func (c *core) aggregateTC(event *TimeoutEvent, size int) *TimeoutCert {
 	return tc
 }
 
-func (c *core) updateHighQCAndProposal(qc *hotstuff.QuorumCert, proposal *types.Block) {
+func (c *core) updateHighQCAndProposal(qc *hotstuff.QuorumCert, proposal *types.Block) error {
 	c.smr.SetHighQC(qc)
 	c.smr.SetProposal(proposal)
-	c.logger.Trace("Update high qc", "hash", qc.Hash, "qc view", qc.View)
+
+	qcBlock := c.blkPool.GetBlockByHash(qc.Hash)
+	if qcBlock == nil {
+		return fmt.Errorf("qc block %v not exist", qc.Hash)
+	}
+
+	sealedProposal, err := c.backend.ForwardCommit(qcBlock, qc.Extra)
+	if err != nil {
+		return fmt.Errorf("forward commit err %v", err)
+	}
+	sealedBlock, ok := sealedProposal.(*types.Block)
+	if !ok {
+		return errProposalConvert
+	}
+	if err := c.blkPool.AddBlock(sealedBlock, qc.View.Round); err != nil {
+		return fmt.Errorf("add block err %v", err)
+	}
+	return nil
 }
 
 func (c *core) nextValSet() hotstuff.ValidatorSet {

@@ -30,11 +30,11 @@ func (c *core) sendVote() error {
 	// make vote and send it to next proposer
 	vote, err := c.makeVote(proposal.Hash(), proposal.Coinbase(), view, justifyQC)
 	if err != nil {
-		logger.Trace("Failed to make vote", "err", err)
+		logger.Trace("[Send Vote], failed to make vote", "err", err)
 		return err
 	}
 
-	logger.Trace("Send Vote", "to", c.nextProposer(), "vote", vote)
+	logger.Trace("[Send Vote]", "to", c.nextProposer(), "vote", vote)
 
 	c.increaseLastVoteRound(view.Round)
 	c.encodeAndBroadcast(MsgTypeVote, vote)
@@ -48,26 +48,26 @@ func (c *core) handleVote(src hotstuff.Validator, data *hotstuff.Message) error 
 
 	var vote *Vote
 	if err := data.Decode(&vote); err != nil {
-		logger.Trace("Failed to decode", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Vote], failed to decode", "from", src.Address(), "err", err)
 		return errFailedDecodeNewView
 	}
 
-	logger.Trace("Accept Vote", "from", src.Address(), "hash", vote.Hash, "vote view", vote.View)
+	logger.Trace("[Handle Vote], accept Vote", "from", src.Address(), "hash", vote.Hash, "vote view", vote.View)
 
 	if err := c.checkVote(vote); err != nil {
-		logger.Trace("Failed to check vote", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Vote], failed to check vote", "from", src.Address(), "err", err)
 		return err
 	}
 	if err := c.checkEpoch(vote.Epoch, vote.View.Height); err != nil {
-		logger.Trace("Failed to check epoch", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Vote], failed to check epoch", "from", src.Address(), "err", err)
 		return err
 	}
 	if err := c.validateVote(vote); err != nil {
-		logger.Trace("Failed to validate vote", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Vote], failed to validate vote", "from", src.Address(), "err", err)
 		return err
 	}
 	if err := c.messages.AddVote(vote.Hash, data); err != nil {
-		logger.Trace("Failed to add vote", "from", src.Address(), "err", err)
+		logger.Trace("[Handle Vote], failed to add vote", "from", src.Address(), "err", err)
 		return err
 	}
 
@@ -78,20 +78,22 @@ func (c *core) handleVote(src hotstuff.Validator, data *hotstuff.Message) error 
 
 	highQC, sealedBlock, err := c.aggregateQC(vote, size)
 	if err != nil {
-		logger.Trace("Failed to aggregate qc", "err", err)
+		logger.Trace("[Handle Vote], failed to aggregate qc", "err", err)
 		return err
 	}
-	logger.Trace("Aggregate QC", "qc hash", highQC.Hash, "qc view", highQC.View)
+	logger.Trace("[Handle Vote], aggregate QC", "qc hash", highQC.Hash, "qc view", highQC.View)
 
 	if err := c.blkPool.AddBlock(sealedBlock, vote.View.Round); err != nil {
-		logger.Trace("Failed to insert block into block pool", "err", err)
+		logger.Trace("[Handle Vote], failed to insert block into block pool", "err", err)
 		return err
 	}
 
-	c.updateHighQCAndProposal(highQC, sealedBlock)
+	if err := c.updateHighQCAndProposal(highQC, sealedBlock); err != nil {
+		logger.Trace("[Handle Vote], failed to update high qc and proposal", "err", err)
+	}
 
 	if err := c.advanceRoundByQC(highQC); err != nil {
-		logger.Trace("Failed to advance round", "err", err)
+		logger.Trace("[Handle Vote], failed to advance round", "err", err)
 		return err
 	}
 

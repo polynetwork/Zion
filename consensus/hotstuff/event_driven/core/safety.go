@@ -48,28 +48,28 @@ func (c *core) updateLockQC(qc *hotstuff.QuorumCert) error {
 
 	qcBlock := c.blkPool.GetBlockByHash(qc.Hash)
 	if qcBlock == nil {
-		c.logger.Trace("Failed to update lockQC", "get qc block err", "block not exist", "hash", qc.Hash, "qc view", qc.View)
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "get qc block err", "block not exist", "hash", qc.Hash, "qc view", qc.View)
 		return errInvalidQC
 	}
 	salt, qc, err := extraProposal(qcBlock)
 	if err != nil {
-		c.logger.Trace("Failed to update lockQC", "extract qc err", err)
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "extract qc err", err)
 		return err
 	}
 
 	qcParentBlock := c.blkPool.GetBlockByHash(qcBlock.ParentHash())
 	if qcParentBlock == nil {
-		c.logger.Trace("Failed to update lockQC", "get qc parent block err", "parent block is nil", "parent hash", qcBlock.ParentHash())
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "get qc parent block err", "parent block is nil", "parent hash", qcBlock.ParentHash())
 		return errInvalidQC
 	}
 	parentSalt, parentQC, err := extraProposal(qcParentBlock)
 	if err != nil {
-		c.logger.Trace("Failed to update lockQC", "extract parent qc err", err)
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "extract parent qc err", err)
 		return err
 	}
 
 	if salt.Round.Cmp(parentSalt.Round) < 0 || qcBlock.Number().Cmp(qcParentBlock.Number()) < 0 {
-		c.logger.Trace("Failed to update lockQC", "compare qc view", "round", salt.Round, "parent qc round", parentSalt.Round, "number", qcBlock.Number(), "qc parent block number", qcParentBlock.Number())
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "compare qc view", "round", salt.Round, "parent qc round", parentSalt.Round, "number", qcBlock.Number(), "qc parent block number", qcParentBlock.Number())
 		return errInvalidQC
 	}
 
@@ -80,7 +80,7 @@ func (c *core) updateLockQC(qc *hotstuff.QuorumCert) error {
 	//}
 
 	c.smr.SetLockQC(parentQC)
-	c.logger.Trace("Update lock qc", "hash", parentQC.Hash, "view", parentQC.View, "proposer", parentQC.Proposer)
+	c.logger.Trace("[Update LockQC]", "hash", parentQC.Hash, "view", parentQC.View, "proposer", parentQC.Proposer)
 
 	return nil
 }
