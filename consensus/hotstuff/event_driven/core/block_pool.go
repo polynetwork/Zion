@@ -71,25 +71,23 @@ func (tr *BlockPool) AddQC(qc *hotstuff.QuorumCert) {
 
 // GetCommitBlock get highQC's grand-parent block which should be committed at current round
 func (tr *BlockPool) GetCommitBlock(lockQC common.Hash) *types.Block {
-	//block := tr.GetBlockByHash(highQC)
-	//parent := tr.GetBlockAndCheckHeight(block.ParentHash(), bigSub1(block.Number()))
-	//if parent == nil {
-	//	fmt.Print("-------x1")
-	//	return nil
-	//}
-	//grand := tr.GetBlockAndCheckHeight(parent.ParentHash(), bigSub1(parent.Number()))
-	//if grand == nil {
-	//	fmt.Print("-------x2")
-	//	return nil
-	//}
-	//if grand.Hash() != lockQC {
-	//	fmt.Print("-------x3")
-	//	return nil
-	//}
 	return tr.GetBlockByHash(lockQC)
 }
 
+// GetCommitBranch get blocks which can be commit
+func (tr *BlockPool) GetCommitBranch(lockQC common.Hash) []*types.Block {
+	branch := tr.tree.Branch(lockQC)
+	if branch == nil || len(branch) == 0 {
+		return nil
+	}
+	list := make([]*types.Block, 0)
+	for _, node := range branch {
+		list = append(list, node.GetBlock())
+	}
+	return list
+}
+
 // Pure delete useless blocks
-func (tr *BlockPool) Pure(committedBlock common.Hash) {
-	tr.tree.Prune(committedBlock)
+func (tr *BlockPool) Pure(committedBlock common.Hash) []common.Hash {
+	return tr.tree.Prune(committedBlock)
 }

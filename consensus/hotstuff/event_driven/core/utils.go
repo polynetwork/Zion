@@ -77,6 +77,14 @@ func bigEq(src, dst *big.Int) bool {
 	return src.Cmp(dst) == 0
 }
 
+func bigLt(src, dst *big.Int) bool {
+	return src.Cmp(dst) < 0
+}
+
+func bigGt(src, dst *big.Int) bool {
+	return src.Cmp(dst) > 0
+}
+
 func bigEq0(num *big.Int) bool {
 	return num.Cmp(common.Big0) == 0
 }

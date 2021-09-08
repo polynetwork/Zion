@@ -280,6 +280,10 @@ func (c *core) updateHighQCAndProposal(qc *hotstuff.QuorumCert, proposal *types.
 	return nil
 }
 
+func (c *core) catchUpBlockTree() {
+
+}
+
 func (c *core) nextValSet() hotstuff.ValidatorSet {
 	vs := c.valset.Copy()
 	vs.CalcProposerByIndex(c.smr.Round().Uint64() + 1)

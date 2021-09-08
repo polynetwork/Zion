@@ -142,28 +142,51 @@ func (c *core) handleTC(src hotstuff.Validator, data *hotstuff.Message) error {
 }
 
 func (c *core) commit3Chain() {
+	if !c.IsProposer() {
+		return
+	}
+
 	lockQC := c.smr.LockQC()
 	if lockQC == nil {
 		return
 	}
+	//
+	//committedBlock := c.blkPool.GetCommitBlock(lockQC.Hash)
+	//if committedBlock == nil {
+	//	c.logger.Trace("[Commit 3-Chain], failed to get commit block", "lockQC view", lockQC.View)
+	//	return
+	//}
+	//
+	//round := lockQC.Round()
+	//if existProposal := c.backend.GetProposal(committedBlock.Hash()); c.IsProposer() && existProposal == nil {
+	//	if err := c.backend.Commit(committedBlock); err != nil {
+	//		c.logger.Trace("[Commit 3-Chain], failed to commit", "err", err)
+	//	} else {
+	//		c.logger.Trace("[Commit 3-Chain], leader commit", "address", c.address, "hash", committedBlock.Hash(), "number", committedBlock.Number())
+	//	}
+	//}
+	//
+	//c.updateHighestCommittedRound(round)
+	//puredBlocks := c.blkPool.Pure(committedBlock.Hash())
+	//c.logger.Trace("[Commit 3-Chain], pured blocks", "hash lists", puredBlocks)
 
-	committedBlock := c.blkPool.GetCommitBlock(lockQC.Hash)
-	if committedBlock == nil {
-		c.logger.Trace("[Commit 3-Chain], failed to get commit block", "lockQC view", lockQC.View)
+	branch := c.blkPool.GetCommitBranch(lockQC.Hash)
+	if branch == nil {
+		c.logger.Trace("[Commit 3-Chain], failed to get branch", "lockQC view", lockQC.View, "lockQC hash", lockQC.Hash)
 		return
 	}
 
-	salt, _, err := extraProposal(committedBlock)
-	if err != nil {
-		c.logger.Trace("[Commit 3-Chain], failed to extra proposal", "err", err)
-		return
-	}
-	if err := c.backend.Commit(committedBlock); err != nil {
-		c.logger.Trace("[Commit 3-Chain], failed to commit", "err", err)
-	} else {
-		c.logger.Trace("[Commit 3-Chain], leader commit", "address", c.address, "hash", committedBlock.Hash(), "number", committedBlock.Number())
+	for _, block := range branch {
+		if exist := c.backend.GetProposal(block.Hash()); exist != nil {
+			continue
+		}
+		if err := c.backend.Commit(block); err != nil {
+			c.logger.Trace("[Commit 3-Chain], failed to commit", "err", err)
+		} else {
+			c.logger.Trace("[Commit 3-Chain], leader commit", "address", c.address, "hash", block.Hash(), "number", block.Number())
+		}
 	}
 
-	c.updateHighestCommittedRound(salt.Round)
-	c.blkPool.Pure(committedBlock.Hash())
+	c.updateHighestCommittedRound(lockQC.Round())
+	c.blkPool.Pure(lockQC.Hash)
 }

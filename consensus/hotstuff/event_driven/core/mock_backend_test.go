@@ -121,6 +121,10 @@ func (m *mockBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hot
 	return proposal, nil
 }
 
+func (m *mockBackend) ForwardCommit(proposal hotstuff.Proposal, extra []byte) (hotstuff.Proposal, error) {
+	return proposal, nil
+}
+
 func (m *mockBackend) Commit(proposal hotstuff.Proposal) error {
 	testLogger.Info("commit Message", "address", m.Address())
 	msg := testCommittedMsgs{
