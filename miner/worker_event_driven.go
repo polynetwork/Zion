@@ -336,6 +336,7 @@ func (w *eventDrivenWorker) resultLoop() {
 			}
 			// Short circuit when receiving duplicate result caused by resubmitting.
 			if w.chain.HasBlock(block.Hash(), block.NumberU64()) {
+				log.Error("Miner worker found block already exist", "hash", block.Hash(), "number", block.Number())
 				continue
 			}
 			var (

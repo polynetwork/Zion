@@ -61,14 +61,16 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
+	proposedBlockHashes map[common.Hash]struct{}
+
 	// The channels for hotstuff engine notifications
-	sealMu            sync.Mutex
-	commitCh          chan *types.Block
-	proposedBlockHash common.Hash
-	coreStarted       bool
-	sigMu             sync.RWMutex // Protects the address fields
-	consenMu          sync.Mutex   // Ensure a round can only start after the last one has finished
-	coreMu            sync.RWMutex
+	sealMu   sync.Mutex
+	commitCh chan *types.Block
+	//proposedBlockHash common.Hash
+	coreStarted bool
+	sigMu       sync.RWMutex // Protects the address fields
+	consenMu    sync.Mutex   // Ensure a round can only start after the last one has finished
+	coreMu      sync.RWMutex
 
 	// event subscription for ChainHeadEvent event
 	broadcaster consensus.Broadcaster
@@ -87,16 +89,17 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 	backend := &backend{
 		config: config,
 		//db:             db,
-		logger:         log.New(),
-		valset:         valset,
-		commitCh:       make(chan *types.Block, 1),
-		coreStarted:    false,
-		eventMux:       new(event.TypeMux),
-		signer:         signer,
-		recentMessages: recentMessages,
-		knownMessages:  knownMessages,
-		recents:        recents,
-		proposals:      make(map[common.Address]bool),
+		logger:              log.New(),
+		valset:              valset,
+		commitCh:            make(chan *types.Block, 1),
+		coreStarted:         false,
+		eventMux:            new(event.TypeMux),
+		signer:              signer,
+		recentMessages:      recentMessages,
+		knownMessages:       knownMessages,
+		recents:             recents,
+		proposals:           make(map[common.Address]bool),
+		proposedBlockHashes: make(map[common.Hash]struct{}),
 	}
 
 	switch protocol {
@@ -249,10 +252,9 @@ func (s *backend) ForwardCommit(proposal hotstuff.Proposal, extra []byte) (hotst
 
 func (s *backend) Commit(proposal hotstuff.Proposal) error {
 	// Check if the proposal is a valid block
-	block := &types.Block{}
 	block, ok := proposal.(*types.Block)
 	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
+		s.logger.Error("Committed to miner worker", "proposal", "not block")
 		return errInvalidProposal
 	}
 
@@ -263,13 +265,15 @@ func (s *backend) Commit(proposal hotstuff.Proposal) error {
 	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
 	//    the next block and the previous Seal() will be stopped (need to check this --- saber).
 	// -- otherwise, an error will be returned and a round change event will be fired.
-	if s.proposedBlockHash == block.Hash() {
+	if _, ok := s.proposedBlockHashes[block.Hash()]; ok {
 		// feed block hash to Seal() and wait the Seal() result
 		s.commitCh <- block
 		return nil
-	}
-	if s.broadcaster != nil {
-		s.broadcaster.Enqueue(fetcherID, block)
+	} else {
+		s.logger.Trace("Proposed block not match, broadcast it", "expect", block.Hash(), "got", nil)
+		if s.broadcaster != nil {
+			s.broadcaster.Enqueue(fetcherID, block)
+		}
 	}
 	return nil
 }

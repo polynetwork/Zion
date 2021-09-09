@@ -97,3 +97,32 @@ package backup
 //c.updateHighestCommittedRound(round)
 //puredBlocks := c.blkPool.Pure(committedBlock.Hash())
 //c.logger.Trace("[Commit 3-Chain], pured blocks", "hash lists", puredBlocks)
+
+//lockQC := c.smr.LockQC()
+//if lockQC == nil {
+//	c.logger.Trace("[Commit 3-Chain]", "err", "lockQC is nil")
+//	return
+//}
+//
+//branch := c.blkPool.GetCommitBranch(lockQC.Hash)
+//if branch == nil {
+//	c.logger.Trace("[Commit 3-Chain], failed to get branch", "lockQC view", lockQC.View, "lockQC hash", lockQC.Hash)
+//	return
+//}
+//
+//for _, block := range branch {
+//	if exist := c.chain.GetBlockByHash(block.Hash()); exist != nil {
+//		continue
+//	}
+//	if !c.isSelf(block.Coinbase()) {
+//		continue
+//	}
+//	if err := c.backend.Commit(block); err != nil {
+//		c.logger.Trace("[Commit 3-Chain], failed to commit", "err", err)
+//	} else {
+//		c.logger.Trace("[Commit 3-Chain], commit success!", "hash", block.Hash(), "number", block.Number(), "proposer", block.Coinbase())
+//	}
+//}
+//
+//c.updateHighestCommittedRound(lockQC.Round())
+//c.blkPool.Pure(lockQC.Hash)

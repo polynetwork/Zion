@@ -134,10 +134,10 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	go func() {
 		// get the proposed block hash and clear it if the seal() is completed.
 		s.sealMu.Lock()
-		s.proposedBlockHash = block.Hash()
+		s.proposedBlockHashes[block.Hash()] = struct{}{}
+		s.logger.Trace("Add proposed block", "hash", block.Hash(), "number", block.Number())
 
 		defer func() {
-			s.proposedBlockHash = common.Hash{}
 			s.sealMu.Unlock()
 		}()
 		// post block into Istanbul engine
@@ -149,11 +149,16 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 			case result := <-s.commitCh:
 				// if the block hash and the hash from channel are the same,
 				// return the result. Otherwise, keep waiting the next hash.
-				if result != nil && block.Hash() == result.Hash() {
-					results <- result
-					return
+				if result != nil {
+					if _, ok := s.proposedBlockHashes[result.Hash()]; ok {
+						results <- result
+						delete(s.proposedBlockHashes, block.Hash())
+						s.logger.Trace("Delete proposed block", "hash", block.Hash(), "number", block.Number())
+						return
+					}
 				}
 			case <-stop:
+				s.logger.Trace("Stop seal, check miner status!")
 				results <- nil
 				return
 			}
@@ -189,7 +194,6 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	}
 
 	// clear previous data
-	s.proposedBlockHash = common.Hash{}
 	if s.commitCh != nil {
 		close(s.commitCh)
 	}
@@ -277,7 +281,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	return s.signer.VerifyHeader(header, snap, seal)
 }
 
-func (s *backend) SubscribeRequest(ch chan <- consensus.AskRequest) event.Subscription {
+func (s *backend) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
 	return s.core.SubscribeRequest(ch)
 }
 
@@ -285,7 +289,7 @@ func (s *backend) getPendingParentHeader(chain consensus.ChainHeaderReader, head
 	number := header.Number.Uint64()
 	parent := chain.GetHeader(header.ParentHash, number-1)
 	if parent == nil {
-		parent = s.core.GetHeader(header.ParentHash, number - 1);
+		parent = s.core.GetHeader(header.ParentHash, number-1)
 	}
 	if parent == nil {
 		return nil, consensus.ErrUnknownAncestor

@@ -56,7 +56,6 @@ type core struct {
 	validateFn func([]byte, []byte) (common.Address, error)
 }
 
-// todo: chain
 func New(
 	backend hotstuff.Backend,
 	c *hotstuff.Config,
@@ -146,28 +145,32 @@ func (c *core) commit3Chain() {
 	if lockQC == nil {
 		c.logger.Trace("[Commit 3-Chain]", "err", "lockQC is nil")
 		return
+	} else {
+		c.logger.Trace("[Commit 3-Chain]", "lockQC view", lockQC.View, "lockQC hash", lockQC.Hash, "lockQC proposer", lockQC.Proposer)
 	}
 
-	branch := c.blkPool.GetCommitBranch(lockQC.Hash)
-	if branch == nil {
-		c.logger.Trace("[Commit 3-Chain], failed to get branch", "lockQC view", lockQC.View, "lockQC hash", lockQC.Hash)
+	committedBlock := c.blkPool.GetCommitBlock(lockQC.Hash)
+	if committedBlock == nil {
+		c.logger.Trace("[Commit 3-Chain], failed to get commit block", "lockQC view", lockQC.View)
 		return
 	}
 
-	for _, block := range branch {
-		if exist := c.chain.GetBlockByHash(block.Hash()); exist != nil {
-			continue
-		}
-		if !c.isSelf(block.Coinbase()) {
-			continue
-		}
-		if err := c.backend.Commit(block); err != nil {
-			c.logger.Trace("[Commit 3-Chain], failed to commit", "err", err)
+	round := lockQC.Round()
+	if exist := c.chain.GetBlockByHash(committedBlock.Hash()); exist == nil {
+		if c.isSelf(committedBlock.Coinbase()) {
+			if err := c.backend.Commit(committedBlock); err != nil {
+				c.logger.Trace("[Commit 3-Chain], failed to commit", "err", err, "hash", committedBlock.Hash(), "number", committedBlock.Number(), "coinbase", committedBlock.Coinbase())
+			} else {
+				c.logger.Trace("[Commit 3-Chain], leader commit", "hash", committedBlock.Hash(), "number", committedBlock.Number(), "coinbase", committedBlock.Coinbase())
+			}
 		} else {
-			c.logger.Trace("[Commit 3-Chain], commit success!", "hash", block.Hash(), "number", block.Number(), "proposer", block.Coinbase())
+			c.logger.Trace("[Commit 3-Chain], failed to commit", "err", "coinbase not match", "hash", committedBlock.Hash(), "number", committedBlock.Number(), "coinbase", committedBlock.Coinbase())
 		}
+	} else {
+		c.logger.Trace("[Commit 3-Chain], failed to commit", "err", "block already exist", "hash", committedBlock.Hash(), "number", committedBlock.Number(), "coinbase", committedBlock.Coinbase())
 	}
 
-	c.updateHighestCommittedRound(lockQC.Round())
-	c.blkPool.Pure(lockQC.Hash)
+	c.updateHighestCommittedRound(round)
+	puredBlocks := c.blkPool.Pure(committedBlock.Hash())
+	c.logger.Trace("[Commit 3-Chain], pured blocks", "hash lists", puredBlocks)
 }
