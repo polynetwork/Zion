@@ -24,21 +24,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
-
-func (c *core) newMsgLogger(msgtyp interface{}) log.Logger {
-	return c.logger.New("view", c.currentView(), "msg", msgtyp)
-}
-
-func (c *core) newSenderLogger(msgtyp string) log.Logger {
-	return c.logger.New("view", c.currentView(), "msg", msgtyp)
-}
-
-func (c *core) newLogger() log.Logger {
-	return c.logger.New("view", c.currentView())
-}
 
 func Encode(val interface{}) ([]byte, error) {
 	return rlp.EncodeToBytes(val)
@@ -46,6 +33,13 @@ func Encode(val interface{}) ([]byte, error) {
 
 func copyNum(src *big.Int) *big.Int {
 	return new(big.Int).Set(src)
+}
+
+func newView(round, height *big.Int) *hotstuff.View {
+	return &hotstuff.View{
+		Round:  new(big.Int).Set(round),
+		Height: new(big.Int).Set(height),
+	}
 }
 
 func isTC(qc *hotstuff.QuorumCert) bool {
@@ -91,4 +85,16 @@ func bigGt(src, dst *big.Int) bool {
 
 func bigEq0(num *big.Int) bool {
 	return num.Cmp(common.Big0) == 0
+}
+
+// convert inner MsgType to hotstuff MsgType
+func convertUpMsgType(data interface{}) hotstuff.MsgType {
+	code := data.(uint64)
+	return MsgType(code)
+}
+
+// convert hotstuff MsgType to inner MsgType
+func convertDownMsgType(typ hotstuff.MsgType) MsgType {
+	code := typ.Value()
+	return MsgType(code)
 }

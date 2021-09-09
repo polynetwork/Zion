@@ -19,24 +19,22 @@
 package core
 
 import (
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
-	"math/big"
-	"sync"
-	"time"
 )
 
 var once sync.Once
 
 func (c *core) Start(chain consensus.ChainReader) error {
 	once.Do(func() {
-		hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
-			code := data.(uint64)
-			return MsgType(code)
-		})
+		hotstuff.RegisterMsgTypeConvertHandler(convertUpMsgType)
 	})
 
 	c.chain = chain
@@ -46,7 +44,7 @@ func (c *core) Start(chain consensus.ChainReader) error {
 
 	// todo: start all nodes at the same time
 	time.Sleep(15 * time.Second)
-	
+
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
 	c.subscribeEvents()

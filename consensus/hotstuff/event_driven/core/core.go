@@ -93,11 +93,12 @@ func (c *core) handleNewRound() error {
 	logger := c.newSenderLogger("MSG_NEW_ROUND")
 	logger.Trace("[New round]", "new_proposer", c.valset.GetProposer(), "valSet", c.valset.List(), "size", c.valset.Size(), "IsProposer", c.IsProposer())
 
+	c.setCurrentState(StateNewRound)
+
 	if !c.IsProposer() {
 		return nil
 	}
 
-	c.processBacklog()
 	return c.sendRequest()
 }
 
@@ -118,59 +119,52 @@ func (c *core) handleTC(src hotstuff.Validator, data *hotstuff.Message) error {
 		logger.Trace("[Handle TC], invalid tc", "err", "tc is nil")
 		return errInvalidTC
 	}
-	if tc.View.Cmp(c.currentView()) < 0 {
-		return nil
+	if err := c.checkView(data.Code, data.View); err == errOldMessage {
+		logger.Trace("[Handle TC], failed to check view", "from", src.Address(), "err", err)
+		return err
 	}
-
 	if err := c.signer.VerifyCommittedSeal(c.valset, tc.Hash, tc.Seals); err != nil {
 		logger.Trace("[Handle TC], failed to verify committed seal", "from", src.Address(), "err", err)
 		return err
 	}
 
-	if err := c.advanceRoundByTC(tc, false); err != nil {
-		if err == errOldMessage {
-			return nil
-		} else {
-			logger.Trace("[Handle TC], failed to advance by tc", "from", src.Address(), "err", err)
-			return err
-		}
-	}
+	logger.Trace("[Handle TC], accept TC", "from", src.Address(), "tc", tc.Hash, "tc view", tc.View)
 
-	logger.Trace("[Handle TC], accept TC", "src", src.Address(), "tc", tc.Hash, "view", tc.View)
+	if err := c.advanceRoundByTC(tc, false); err != nil {
+		logger.Trace("[Handle TC], failed to advance tc", "from", src.Address(), "err", err)
+		return err
+	}
 	return nil
 }
 
+func (c *core) setCurrentState(state State) {
+	c.smr.SetState(state)
+	c.processBacklog()
+}
+
 func (c *core) commit3Chain() {
+	logger := c.newSenderLogger("MSG_COMMIT_3_CHAIN")
 	lockQC := c.smr.LockQC()
 	if lockQC == nil {
-		c.logger.Trace("[Commit 3-Chain]", "err", "lockQC is nil")
+		logger.Trace("[Commit 3-Chain]", "err", "lockQC is nil")
 		return
-	} else {
-		c.logger.Trace("[Commit 3-Chain]", "lockQC view", lockQC.View, "lockQC hash", lockQC.Hash, "lockQC proposer", lockQC.Proposer)
 	}
 
 	committedBlock := c.blkPool.GetCommitBlock(lockQC.Hash)
 	if committedBlock == nil {
-		c.logger.Trace("[Commit 3-Chain], failed to get commit block", "lockQC view", lockQC.View)
+		logger.Trace("[Commit 3-Chain], failed to get commit block", "lockQC view", lockQC.View)
 		return
 	}
 
 	round := lockQC.Round()
 	if exist := c.chain.GetBlockByHash(committedBlock.Hash()); exist == nil {
-		if c.isSelf(committedBlock.Coinbase()) {
-			if err := c.backend.Commit(committedBlock); err != nil {
-				c.logger.Trace("[Commit 3-Chain], failed to commit", "err", err, "hash", committedBlock.Hash(), "number", committedBlock.Number(), "coinbase", committedBlock.Coinbase())
-			} else {
-				c.logger.Trace("[Commit 3-Chain], leader commit", "hash", committedBlock.Hash(), "number", committedBlock.Number(), "coinbase", committedBlock.Coinbase())
-			}
+		if err := c.backend.Commit(committedBlock); err != nil {
+			logger.Trace("[Commit 3-Chain], failed to commit", "err", err, "hash", committedBlock.Hash(), "number", committedBlock.Number(), "coinbase", committedBlock.Coinbase())
 		} else {
-			c.logger.Trace("[Commit 3-Chain], failed to commit", "err", "coinbase not match", "hash", committedBlock.Hash(), "number", committedBlock.Number(), "coinbase", committedBlock.Coinbase())
+			logger.Trace("[Commit 3-Chain], leader commit", "hash", committedBlock.Hash(), "number", committedBlock.Number(), "coinbase", committedBlock.Coinbase())
 		}
-	} else {
-		c.logger.Trace("[Commit 3-Chain], failed to commit", "err", "block already exist", "hash", committedBlock.Hash(), "number", committedBlock.Number(), "coinbase", committedBlock.Coinbase())
 	}
 
 	c.updateHighestCommittedRound(round)
-	puredBlocks := c.blkPool.Pure(committedBlock.Hash())
-	c.logger.Trace("[Commit 3-Chain], pured blocks", "hash lists", puredBlocks)
+	c.blkPool.Pure(committedBlock.Hash())
 }

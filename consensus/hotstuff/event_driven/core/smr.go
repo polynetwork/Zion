@@ -37,6 +37,7 @@ type SMR struct {
 	curHighestCommitRound *big.Int // used to calculate timeout duration
 	curLatestVoteRound    *big.Int // latest vote round number
 
+	curState          State
 	curPendingRequest *types.Block
 	curHighProposal   *types.Block
 	curHighQC         *hotstuff.QuorumCert
@@ -133,6 +134,14 @@ func (s *SMR) Request() *types.Block {
 
 func (s *SMR) SetRequest(req *types.Block) {
 	s.curPendingRequest = req
+}
+
+func (s *SMR) State() State {
+	return s.curState
+}
+
+func (s *SMR) SetState(state State) {
+	s.curState = state
 }
 
 func (s *SMR) LockQC() *hotstuff.QuorumCert {

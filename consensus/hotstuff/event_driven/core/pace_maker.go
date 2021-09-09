@@ -41,7 +41,7 @@ func (c *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) err
 		logger.Trace("[Handle Timeout], failed to decode", "msg", msgTyp, "err", err)
 		return err
 	}
-	if err := c.checkView(evt.View); err != nil {
+	if err := c.checkView(data.Code, evt.View); err != nil {
 		logger.Trace("[Handle Timeout], failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
@@ -81,7 +81,8 @@ func (c *core) handleTimeout(src hotstuff.Validator, data *hotstuff.Message) err
 // 使用qc或者tc驱动paceMaker进入下一轮，有个前提就是qc.round >= curRound.
 // 一般而言只有leader才能收到qc，
 func (c *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
-	if qc.Round().Cmp(c.smr.Round()) < 0 || qc.Height().Cmp(c.smr.Height()) < 0 {
+	// new round will be driven by qc, so qc's view should be greater than `smr`
+	if bigLt(qc.Round(), c.smr.Round()) || bigLt(qc.Height(), c.smr.Height()) {
 		return errOldMessage
 	}
 
@@ -104,21 +105,29 @@ func (c *core) advanceRoundByQC(qc *hotstuff.QuorumCert) error {
 
 	c.valset.CalcProposerByIndex(c.smr.RoundU64())
 	c.newRoundChangeTimer()
-	c.logger.Trace("[AdvanceQC]", "view", c.currentView(), "hash", qc.Hash)
+	c.logger.Trace("[AdvanceQC]", "view", c.currentView(), "hash", qc.Hash, "qc view", qc.View)
 
 	return c.handleNewRound()
 }
 
 func (c *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
+	// new round will be driven by tc, so tc's view should be greater than `smr`
+	if bigLt(tc.Round(), c.smr.Round()) || bigLt(tc.Height(), c.smr.Height()) {
+		return errOldMessage
+	}
+
 	// broadcast to next leader first, we will use `curRound` again in broadcasting.
 	if !c.IsProposer() && broadcast {
 		c.encodeAndBroadcast(MsgTypeTC, tc)
 	}
 
-	// catch up view
-	var (
-		round *big.Int
-	)
+	// catch up view, set new height if instance's current height is lower than tc's height,
+	//
+	if bigLt(c.smr.Height(), tc.Height()) {
+		c.smr.SetHeight(tc.Height())
+	}
+
+	var round *big.Int
 	if bigEq(c.smr.Round(), tc.Round()) {
 		round = bigAdd1(c.smr.Round())
 	} else {
@@ -128,7 +137,7 @@ func (c *core) advanceRoundByTC(tc *TimeoutCert, broadcast bool) error {
 
 	c.valset.CalcProposerByIndex(c.smr.RoundU64())
 	c.newRoundChangeTimer()
-	c.logger.Trace("[AdvanceTC]", "round", c.smr.Round())
+	c.logger.Trace("[AdvanceTC]", "view", c.currentView(), "tc view", tc.View)
 
 	return c.handleNewRound()
 }

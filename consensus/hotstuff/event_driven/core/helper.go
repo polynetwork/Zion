@@ -25,9 +25,21 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 )
+
+func (c *core) newMsgLogger(msgtyp interface{}) log.Logger {
+	return c.logger.New("view", c.currentView(), "msg", msgtyp)
+}
+
+func (c *core) newSenderLogger(msgtyp string) log.Logger {
+	return c.logger.New("view", c.currentView(), "msg", msgtyp)
+}
+
+func (c *core) newLogger() log.Logger {
+	return c.logger.New("view", c.currentView())
+}
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
 	return c.signer.CheckSignature(c.valset, data, sig)
@@ -69,29 +81,42 @@ func (c *core) checkEpoch(epoch uint64, height *big.Int) error {
 	return nil
 }
 
-func (c *core) checkView(view *hotstuff.View) error {
+func (c *core) checkView(code hotstuff.MsgType, view *hotstuff.View) error {
 	if cmp := view.Cmp(c.currentView()); cmp > 0 {
 		return errFutureMessage
 	} else if cmp < 0 {
 		return errOldMessage
-	} else {
-		return nil
 	}
+
+	// validator receive vote before proposal, allow to receive msg `timeout` and `tc` before proposal
+	if c.smr.State() == StateNewRound && code == MsgTypeVote {
+		return errFutureMessage
+	}
+
+	// validator should not receive duplicate proposal msg, allow to receive msg `vote`,`timeout` and `tc`
+	if c.smr.State() == StateProposed && code == MsgTypeProposal {
+		return errOldMessage
+	}
+
+	// validator should not receive another proposal after vote, allow to receive msg `timeout` and `tc`
+	if c.smr.State() == StateVoted && code == MsgTypeProposal {
+		return errOldMessage
+	}
+
+	return nil
 }
 
-func (c *core) validateProposalView(proposal *types.Block) error {
-	if proposal == nil {
-		return errInvalidProposal
-	}
+func (c *core) checkProposalView(proposal *types.Block, view *hotstuff.View) (*hotstuff.View, error) {
 	salt, _, err := extraProposal(proposal)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	view := &hotstuff.View{
-		Round:  salt.Round,
-		Height: proposal.Number(),
+
+	proposalView := newView(salt.Round, proposal.Number())
+	if view.Cmp(proposalView) != 0 {
+		return nil, fmt.Errorf("proposal view expect %v, got %v", view, proposalView)
 	}
-	return c.checkView(view)
+	return proposalView, nil
 }
 
 func (c *core) checkJustifyQC(proposal hotstuff.Proposal, justifyQC *hotstuff.QuorumCert) error {
@@ -147,24 +172,6 @@ func (c *core) compareQC(expect, src *hotstuff.QuorumCert) error {
 	}
 	// todo(fuk): or implement this with `reflect.DeepEqual(expect, src)`
 	return nil
-}
-
-// vote to highQC round + 1
-func (c *core) checkVote(vote *Vote) error {
-	if vote.View == nil {
-		return fmt.Errorf("vote view is nil")
-	}
-	if vote.Hash == utils.EmptyHash {
-		return fmt.Errorf("vote hash is empty")
-	}
-	if vote.ParentView == nil {
-		return fmt.Errorf("vote parent view is nil")
-	}
-	if vote.ParentHash == utils.EmptyHash {
-		return fmt.Errorf("vote parent hash is empty")
-	}
-
-	return c.checkView(vote.View)
 }
 
 func (c *core) getVoteSeals(hash common.Hash, n int) [][]byte {

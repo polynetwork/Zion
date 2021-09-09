@@ -397,16 +397,6 @@ func (w *eventDrivenWorker) commitNewWork(interrupt *int32, noempty bool, timest
 	defer w.mu.RUnlock()
 
 	tstart := time.Now()
-
-	//var parent *types.Block
-	//if w.currentBlock == nil {
-	//	parent = w.chain.CurrentBlock()
-	//} else {
-	//	parent = w.currentBlock
-	//}
-	//if parent.Time() >= uint64(timestamp) {
-	//	timestamp = int64(parent.Time() + 1)
-	//}
 	if w.currentReq == nil || w.currentReq.Number == nil || w.currentReq.Parent == nil {
 		log.Warn("Miner worker got invalid request from consensus engine")
 		return

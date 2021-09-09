@@ -18,7 +18,10 @@
 
 package core
 
-import "github.com/ethereum/go-ethereum/consensus/hotstuff"
+import (
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+)
 
 func (c *core) sendVote() error {
 	logger := c.newSenderLogger("MSG_SEND_VOTE")
@@ -38,7 +41,7 @@ func (c *core) sendVote() error {
 
 	c.increaseLastVoteRound(view.Round)
 	c.encodeAndBroadcast(MsgTypeVote, vote)
-
+	c.setCurrentState(StateVoted)
 	return nil
 }
 
@@ -54,12 +57,16 @@ func (c *core) handleVote(src hotstuff.Validator, data *hotstuff.Message) error 
 
 	logger.Trace("[Handle Vote], accept Vote", "from", src.Address(), "hash", vote.Hash, "vote view", vote.View)
 
-	if err := c.checkVote(vote); err != nil {
-		logger.Trace("[Handle Vote], failed to check vote", "from", src.Address(), "err", err)
-		return err
+	if vote == nil || vote.View == nil || vote.Hash == utils.EmptyHash || vote.ParentView == nil || vote.ParentHash == utils.EmptyHash {
+		logger.Trace("[Handle Vote], failed to check vote", "from", src.Address(), "err", "vote may be nil")
+		return errInvalidVote
 	}
 	if err := c.checkEpoch(vote.Epoch, vote.View.Height); err != nil {
 		logger.Trace("[Handle Vote], failed to check epoch", "from", src.Address(), "err", err)
+		return err
+	}
+	if err := c.checkView(data.Code, vote.View); err != nil {
+		logger.Trace("[Handle Vote], failed to check view", "from", src.Address(), "err", err)
 		return err
 	}
 	if err := c.validateVote(vote); err != nil {
@@ -87,11 +94,9 @@ func (c *core) handleVote(src hotstuff.Validator, data *hotstuff.Message) error 
 		logger.Trace("[Handle Vote], failed to insert block into block pool", "err", err)
 		return err
 	}
-
 	if err := c.updateHighQCAndProposal(highQC, sealedBlock); err != nil {
 		logger.Trace("[Handle Vote], failed to update high qc and proposal", "err", err)
 	}
-
 	if err := c.advanceRoundByQC(highQC); err != nil {
 		logger.Trace("[Handle Vote], failed to advance round", "err", err)
 		return err

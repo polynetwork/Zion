@@ -202,9 +202,9 @@ func (c *core) broadcast(msg *hotstuff.Message, val interface{}) error {
 	}
 
 	switch msg.Code {
-	case MsgTypeProposal, MsgTypeTimeout:
+	case MsgTypeProposal, MsgTypeTimeout, MsgTypeTC:
 		err = c.backend.Broadcast(c.valset, payload)
-	case MsgTypeVote, MsgTypeTC:
+	case MsgTypeVote:
 		err = c.backend.Unicast(c.nextValSet(), payload)
 	default:
 		err = errInvalidMessage

@@ -126,3 +126,13 @@ package backup
 //
 //c.updateHighestCommittedRound(lockQC.Round())
 //c.blkPool.Pure(lockQC.Hash)
+
+//var parent *types.Block
+//if w.currentBlock == nil {
+//	parent = w.chain.CurrentBlock()
+//} else {
+//	parent = w.currentBlock
+//}
+//if parent.Time() >= uint64(timestamp) {
+//	timestamp = int64(parent.Time() + 1)
+//}

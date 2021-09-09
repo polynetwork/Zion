@@ -63,6 +63,11 @@ func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 		logger.Trace("[Handle Proposal], failed to check epoch", "from", src.Address(), "err", err)
 		return err
 	}
+	proposalView, err := c.checkProposalView(unsealedBlock, view)
+	if err != nil {
+		logger.Trace("[Handle Proposal], failed to check proposal view", "from", src.Address(), "err", err)
+		return err
+	}
 	if err := c.checkJustifyQC(unsealedBlock, justifyQC); err != nil {
 		logger.Trace("[Handle Proposal], failed to check justify", "from", src.Address(), "err", err)
 		return err
@@ -76,7 +81,7 @@ func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 		return err
 	}
 
-	logger.Trace("[Handle Proposal], accept unsealedBlock", "proposer", src.Address(), "hash", unsealedBlock.Hash(), "height", unsealedBlock.Number())
+	logger.Trace("[Handle Proposal], accept unsealedBlock", "proposer", src.Address(), "hash", unsealedBlock.Hash(), "proposal view", proposalView)
 
 	// try to advance into new round, it will update proposer and current view, and reset lockQC as this justify qc.
 	// unsealedBlock's great-grand parent will be committed if 3-chain can be generated.
@@ -87,12 +92,8 @@ func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 	logger = c.newMsgLogger(MsgTypeProposal)
 
 	// validate unsealedBlock and justify qc
-	if err := c.checkView(view); err != nil {
+	if err := c.checkView(data.Code, view); err != nil {
 		logger.Trace("[Handle Proposal], failed to check view", "from", src.Address(), "err", err)
-		return err
-	}
-	if err := c.validateProposalView(unsealedBlock); err != nil {
-		logger.Trace("[Handle Proposal], failed to validate unsealedBlock view", "err", err)
 		return err
 	}
 	if err := c.checkProposer(unsealedBlock.Coinbase()); err != nil {
@@ -110,6 +111,8 @@ func (c *core) handleProposal(src hotstuff.Validator, data *hotstuff.Message) er
 	} else {
 		logger.Trace("[Handle Proposal], update highQC", "highQC hash", justifyQC.Hash, "highQC view", justifyQC.View, "proposal hash", unsealedBlock.Hash(), "proposal view", view)
 	}
+
+	c.setCurrentState(StateProposed)
 
 	return c.sendVote()
 }
