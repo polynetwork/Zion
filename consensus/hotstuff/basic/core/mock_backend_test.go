@@ -41,13 +41,14 @@ type mockBackend struct {
 	id  uint64
 	sys *testSystem
 
-	engine CoreEngine
+	engine hotstuff.CoreEngine
 	signer hotstuff.Signer
 	peers  hotstuff.ValidatorSet
 	events *event.TypeMux
 
 	committedMsgs []testCommittedMsgs
-	sentMsgs      [][]byte // store the message when Send is called by core
+	committedMsgMap map[common.Hash]testCommittedMsgs
+	sentMsgs      [][]byte // store the messages when Send is called by core
 
 	address common.Address
 	db      ethdb.Database
@@ -125,10 +126,15 @@ func (m *mockBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hot
 }
 
 func (m *mockBackend) Commit(proposal hotstuff.Proposal) error {
-	testLogger.Info("commit message", "address", m.Address())
-	m.committedMsgs = append(m.committedMsgs, testCommittedMsgs{
+	testLogger.Info("commit Message", "address", m.Address())
+	msg := testCommittedMsgs{
 		commitProposal: proposal,
-	})
+	}
+	m.committedMsgs = append(m.committedMsgs, msg)
+	if m.committedMsgMap == nil {
+		m.committedMsgMap = make(map[common.Hash]testCommittedMsgs)
+	}
+	m.committedMsgMap[proposal.Hash()] = msg
 	// fake new head events
 	// go self.events.Post(istanbul.FinalCommittedEvent{})
 	return nil
@@ -157,6 +163,15 @@ func (m *mockBackend) LastProposal() (hotstuff.Proposal, common.Address) {
 	}
 }
 
+func (m *mockBackend) GetProposal(hash common.Hash) hotstuff.Proposal {
+	msg, ok := m.committedMsgMap[hash]
+	if ok {
+		return msg.commitProposal
+	} else {
+		return nil
+	}
+}
+
 // Only block height 5 will return true
 func (m *mockBackend) HasProposal(hash common.Hash, number *big.Int) bool {
 	return number.Cmp(big.NewInt(5)) == 0
@@ -182,8 +197,8 @@ type mockSinger struct {
 	address common.Address
 }
 
-func (s *mockSinger) Address() common.Address {
-	return s.address
+func (m *mockSinger) Address() common.Address {
+	return m.address
 }
 
 func (m *mockSinger) Sign(data []byte) ([]byte, error) {
@@ -195,23 +210,23 @@ func (m *mockSinger) SigHash(header *types.Header) (hash common.Hash) {
 	return header.Hash()
 }
 
-func (m *mockSinger) SignVote(p hotstuff.Proposal) ([]byte, error) {
+func (m *mockSinger) SignHash(hash common.Hash) ([]byte, error) {
 	return nil, nil
 }
 
-func (s *mockSinger) Recover(h *types.Header) (common.Address, error) {
+func (m *mockSinger) Recover(h *types.Header) (common.Address, error) {
 	return h.Coinbase, nil
 }
 
-func (s *mockSinger) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
+func (m *mockSinger) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
 	return nil, nil
 }
 
-func (s *mockSinger) SealBeforeCommit(h *types.Header) error {
+func (m *mockSinger) SealBeforeCommit(h *types.Header) error {
 	return nil
 }
 
-func (s *mockSinger) SealAfterCommit(h *types.Header, committedSeals [][]byte) error {
+func (m *mockSinger) SealAfterCommit(h *types.Header, committedSeals [][]byte) error {
 	return nil
 }
 
@@ -219,11 +234,11 @@ func (m *mockSinger) VerifyHeader(header *types.Header, valSet hotstuff.Validato
 	return nil
 }
 
-func (s *mockSinger) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.ValidatorSet) error {
+func (m *mockSinger) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.ValidatorSet) error {
 	return nil
 }
 
-func (s *mockSinger) CheckQCParticipant(qc *hotstuff.QuorumCert, signer common.Address) error {
+func (m *mockSinger) CheckQCParticipant(qc *hotstuff.QuorumCert, signer common.Address) error {
 	return nil
 }
 
@@ -231,8 +246,16 @@ func (m *mockSinger) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, s
 	return common.BytesToAddress(signature), nil
 }
 
-func (s *mockSinger) WrapCommittedSeal(hash common.Hash) []byte {
+func (m *mockSinger) WrapCommittedSeal(hash common.Hash) []byte {
 	return hash.Bytes()
+}
+
+func (m *mockSinger) VerifyHash(valSet hotstuff.ValidatorSet, hash common.Hash, sig []byte) error {
+	return nil
+}
+
+func (m *mockSinger) VerifyCommittedSeal(valSet hotstuff.ValidatorSet, hash common.Hash, committedSeals [][]byte) error {
+	return nil
 }
 
 // ==============================================
@@ -344,7 +367,7 @@ func NewTestSystemWithBackend(n, f, h, r uint64) *testSystem {
 	return sys
 }
 
-// listen will consume messages from queue and deliver a message to core
+// listen will consume messages from queue and deliver a Message to core
 func (t *testSystem) listen() {
 	for {
 		select {

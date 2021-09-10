@@ -1,8 +1,10 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/message_set"
 )
 
 type roundState struct {
@@ -17,10 +19,10 @@ type roundState struct {
 	proposalLocked bool
 
 	// o(4n)
-	newViews       *messageSet
-	prepareVotes   *messageSet
-	preCommitVotes *messageSet
-	commitVotes    *messageSet
+	newViews       *message_set.MessageSet
+	prepareVotes   *message_set.MessageSet
+	preCommitVotes *message_set.MessageSet
+	commitVotes    *message_set.MessageSet
 
 	highQC      *hotstuff.QuorumCert // leader highQC
 	prepareQC   *hotstuff.QuorumCert // prepareQC for repo and leader
@@ -35,10 +37,10 @@ func newRoundState(view *hotstuff.View, validatorSet hotstuff.ValidatorSet, prep
 		round:          view.Round,
 		height:         view.Height,
 		state:          StateAcceptRequest,
-		newViews:       newMessageSet(validatorSet),
-		prepareVotes:   newMessageSet(validatorSet),
-		preCommitVotes: newMessageSet(validatorSet),
-		commitVotes:    newMessageSet(validatorSet),
+		newViews:       message_set.NewMessageSet(validatorSet),
+		prepareVotes:   message_set.NewMessageSet(validatorSet),
+		preCommitVotes: message_set.NewMessageSet(validatorSet),
+		commitVotes:    message_set.NewMessageSet(validatorSet),
 	}
 	if prepareQC != nil {
 		rs.prepareQC = prepareQC.Copy()
@@ -122,8 +124,8 @@ func (s *roundState) Vote() *Vote {
 	}
 }
 
-// AddNewViews all valid message, and invalid message would be ignore
-func (s *roundState) AddNewViews(msg *message) error {
+// AddNewViews all valid Message, and invalid Message would be ignore
+func (s *roundState) AddNewViews(msg *hotstuff.Message) error {
 	return s.newViews.Add(msg)
 }
 
@@ -131,15 +133,15 @@ func (s *roundState) NewViewSize() int {
 	return s.newViews.Size()
 }
 
-func (s *roundState) NewViews() []*message {
+func (s *roundState) NewViews() []*hotstuff.Message {
 	return s.newViews.Values()
 }
 
-func (s *roundState) AddPrepareVote(msg *message) error {
+func (s *roundState) AddPrepareVote(msg *hotstuff.Message) error {
 	return s.prepareVotes.Add(msg)
 }
 
-func (s *roundState) PrepareVotes() []*message {
+func (s *roundState) PrepareVotes() []*hotstuff.Message {
 	return s.prepareVotes.Values()
 }
 
@@ -147,7 +149,7 @@ func (s *roundState) PrepareVoteSize() int {
 	return s.prepareVotes.Size()
 }
 
-func (s *roundState) AddPreCommitVote(msg *message) error {
+func (s *roundState) AddPreCommitVote(msg *hotstuff.Message) error {
 	return s.preCommitVotes.Add(msg)
 }
 
@@ -155,7 +157,7 @@ func (s *roundState) PreCommitVoteSize() int {
 	return s.preCommitVotes.Size()
 }
 
-func (s *roundState) AddCommitVote(msg *message) error {
+func (s *roundState) AddCommitVote(msg *hotstuff.Message) error {
 	return s.commitVotes.Add(msg)
 }
 

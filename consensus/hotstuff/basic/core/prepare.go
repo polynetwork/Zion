@@ -54,11 +54,11 @@ func (c *core) sendPrepare() {
 	time.Sleep(delay)
 	logger.Trace("delay to broadcast proposal", "time", delay.Milliseconds())
 
-	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendPrepare", "prepare view", prepare.View, "proposal", prepare.Proposal.Hash())
 }
 
-func (c *core) handlePrepare(data *message, src hotstuff.Validator) error {
+func (c *core) handlePrepare(data *hotstuff.Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
@@ -126,7 +126,7 @@ func (c *core) sendPrepareVote() {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendPrepareVote", "vote view", vote.View, "vote", vote.Digest)
 }
 
