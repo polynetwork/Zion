@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package native
 
 import (
@@ -15,7 +33,7 @@ type ContractRef struct {
 
 	stateDB     *state.StateDB
 	blockHeight *big.Int
-	msgSender   common.Address
+	origin      common.Address
 	caller      common.Address
 	evmHandler  EVMHandler
 	gasLeft     uint64
@@ -23,7 +41,7 @@ type ContractRef struct {
 
 func NewContractRef(
 	db *state.StateDB,
-	sender common.Address,
+	origin common.Address,
 	caller common.Address,
 	blockHeight *big.Int,
 	suppliedGas uint64,
@@ -32,7 +50,7 @@ func NewContractRef(
 	return &ContractRef{
 		contexts:    make([]*Context, 0),
 		stateDB:     db,
-		msgSender:   sender,
+		origin:      origin,
 		caller:      caller,
 		blockHeight: blockHeight,
 		gasLeft:     suppliedGas,
@@ -74,8 +92,14 @@ func (s *ContractRef) BlockHeight() *big.Int {
 	return s.blockHeight
 }
 
+// MsgSender implement solidity grammar `msg.sender`
 func (s *ContractRef) MsgSender() common.Address {
-	return s.msgSender
+	return s.caller
+}
+
+// TxOrigin implement solidity grammar `tx.origin`
+func (s *ContractRef) TxOrigin() common.Address {
+	return s.origin
 }
 
 func (s *ContractRef) GasLeft() uint64 {
@@ -138,30 +162,31 @@ func (s *ContractRef) CheckContexts() bool {
 	return true
 }
 
-func (s *ContractRef) CheckWitness(address common.Address) bool {
-	if s.CheckTxSender(address) || s.CheckCaller(address) || s.CheckContractAddress(address) {
-		return true
-	}
-	return false
-}
-
-func (s *ContractRef) CheckTxSender(address common.Address) bool {
-	if s.msgSender == address {
-		return true
-	}
-	return false
-}
-
-func (s *ContractRef) CheckCaller(address common.Address) bool {
-	if s.caller == address {
-		return true
-	}
-	return false
-}
-
-func (s *ContractRef) CheckContractAddress(address common.Address) bool {
-	if s.CallingContext() != nil && s.CallingContext().ContractAddress == address {
-		return true
-	}
-	return false
-}
+// mark: authority checking for ontology
+//func (s *ContractRef) CheckWitness(address common.Address) bool {
+//	if s.CheckTxSender(address) || s.CheckCaller(address) || s.CheckContractAddress(address) {
+//		return true
+//	}
+//	return false
+//}
+//
+//func (s *ContractRef) CheckTxSender(address common.Address) bool {
+//	if s.origin == address {
+//		return true
+//	}
+//	return false
+//}
+//
+//func (s *ContractRef) CheckCaller(address common.Address) bool {
+//	if s.caller == address {
+//		return true
+//	}
+//	return false
+//}
+//
+//func (s *ContractRef) CheckContractAddress(address common.Address) bool {
+//	if s.CallingContext() != nil && s.CallingContext().ContractAddress == address {
+//		return true
+//	}
+//	return false
+//}
