@@ -43,6 +43,9 @@ const (
 var (
 	hashT    = reflect.TypeOf(Hash{})
 	addressT = reflect.TypeOf(Address{})
+
+	EmptyHash    = Hash{}
+	EmptyAddress = Address{}
 )
 
 // Hash represents the 32 byte Keccak256 hash of arbitrary data.

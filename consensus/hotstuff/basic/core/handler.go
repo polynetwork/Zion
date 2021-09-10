@@ -18,13 +18,24 @@ package core
 
 import (
 	"math/big"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
+var once sync.Once
+
 // Start implements core.Engine.Start
-func (c *core) Start() error {
+func (c *core) Start(chain consensus.ChainReader) error {
+	once.Do(func() {
+		hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
+			code := data.(uint64)
+			return MsgType(code)
+		})
+	})
+
 	// Start a new round from last sequence + 1
 	c.startNewRound(common.Big0)
 
@@ -117,28 +128,28 @@ func (c *core) sendEvent(ev interface{}) {
 func (c *core) handleMsg(payload []byte) error {
 	logger := c.logger.New()
 
-	// Decode message and check its signature
-	msg := new(message)
+	// Decode Message and check its signature
+	msg := new(hotstuff.Message)
 	if err := msg.FromPayload(payload, c.validateFn); err != nil {
-		logger.Error("Failed to decode message from payload", "err", err)
+		logger.Error("Failed to decode Message from payload", "err", err)
 		return err
 	}
 
-	// Only accept message if the address is valid
+	// Only accept Message if the address is valid
 	_, src := c.valSet.GetByAddress(msg.Address)
 	if src == nil {
-		logger.Error("Invalid address in message", "msg", msg)
+		logger.Error("Invalid address in Message", "msg", msg)
 		return errInvalidSigner
 	}
 
-	// handle checked message
+	// handle checked Message
 	if err := c.handleCheckedMsg(msg, src); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *core) handleCheckedMsg(msg *message, src hotstuff.Validator) (err error) {
+func (c *core) handleCheckedMsg(msg *hotstuff.Message, src hotstuff.Validator) (err error) {
 	switch msg.Code {
 	case MsgTypeNewView:
 		err = c.handleNewView(msg, src)

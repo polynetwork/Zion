@@ -25,7 +25,9 @@ func TestMain(m *testing.M) {
 	InitGovernance()
 
 	blockNumber := big.NewInt(1)
-	testEnv = native.NewContractRef(testStateDB, testCaller, blockNumber, common.Hash{}, testGasSupply, nil)
+
+	testEnv = native.NewContractRef(testStateDB, testCaller, testCaller, blockNumber, common.Hash{}, testGasSupply, nil)
+
 	os.Exit(m.Run())
 }
 

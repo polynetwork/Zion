@@ -17,10 +17,11 @@
 package hotstuff
 
 import (
-	"math/big"
+	"github.com/ethereum/go-ethereum/consensus"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 )
 
@@ -47,6 +48,9 @@ type Backend interface {
 	// PreCommit write seal to header and assemble new qc
 	PreCommit(proposal Proposal, seals [][]byte) (Proposal, error)
 
+	// ForwardCommit assemble unsealed block and sealed extra into an new full block
+	ForwardCommit(proposal Proposal, extra []byte) (Proposal, error)
+
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
 	Commit(proposal Proposal) error
@@ -62,11 +66,13 @@ type Backend interface {
 	// LastProposal retrieves latest committed proposal and the address of proposer
 	LastProposal() (Proposal, common.Address)
 
+	GetProposal(hash common.Hash) Proposal
+
 	// HasProposal checks if the combination of the given hash and height matches any existing blocks
-	HasProposal(hash common.Hash, number *big.Int) bool
+	//HasProposal(hash common.Hash, number *big.Int) bool
 
 	// GetProposer returns the proposer of the given block height
-	GetProposer(number uint64) common.Address
+	//GetProposer(number uint64) common.Address
 
 	// ParentValidators returns the validator set of the given proposal's parent block
 	ParentValidators(proposal Proposal) ValidatorSet
@@ -76,3 +82,36 @@ type Backend interface {
 
 	Close() error
 }
+
+type CoreEngine interface {
+	Start(chain consensus.ChainReader) error
+
+	Stop() error
+
+	// IsProposer return true if self address equal leader/proposer address in current round/height
+	IsProposer() bool
+
+	// verify if a hash is the same as the proposed block in the current pending request
+	//
+	// this is useful when the engine is currently the speaker
+	//
+	// pending request is populated right at the request stage so this would give us the earliest verification
+	// to avoid any race condition of coming propagated blocks
+	IsCurrentProposal(blockHash common.Hash) bool
+
+	// PrepareExtra generate header extra field with validator set
+	PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
+
+	// GetHeader get block header with hash and correct block height
+	GetHeader(hash common.Hash, number uint64) *types.Header
+
+	// SubscribeRequest notify to miner worker that event-driven engine need an new proposal
+	SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription
+}
+
+type HotstuffProtocol string
+
+const (
+	HOTSTUFF_PROTOCOL_BASIC        HotstuffProtocol = "basic"
+	HOTSTUFF_PROTOCOL_EVENT_DRIVEN HotstuffProtocol = "event_driven"
+)

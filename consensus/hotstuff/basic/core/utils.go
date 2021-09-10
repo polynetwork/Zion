@@ -81,24 +81,26 @@ func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
 	if proposal == nil {
 		return fmt.Errorf("current locked proposal is nil")
 	}
-	if !reflect.DeepEqual(proposal, msg) {
+	// todo(fuk): should compare entire proposal or hash
+	//if !reflect.DeepEqual(proposal, msg) {
+	if proposal.Hash() != msg.Hash() {
 		return fmt.Errorf("expect %s, got %s", proposal.Hash().Hex(), msg.Hash().Hex())
 	}
 	return nil
 }
 
-// checkView checks the message state, remote msg view should not be nil(local view WONT be nil).
-// if the view is ahead of current view we name the message to be future message, and if the view
-// is behind of current view, we name it as old message. `old message` and `invalid message` will
-// be dropped. and we use the storage of `backlog` to cache the future message, it only allow the
-// message height not bigger than `current height + 1` to ensure that the `backlog` memory won't be
+// checkView checks the Message state, remote msg view should not be nil(local view WONT be nil).
+// if the view is ahead of current view we name the Message to be future Message, and if the view
+// is behind of current view, we name it as old Message. `old Message` and `invalid Message` will
+// be dropped. and we use the storage of `backlog` to cache the future Message, it only allow the
+// Message height not bigger than `current height + 1` to ensure that the `backlog` memory won't be
 // too large, it won't interrupt the consensus process, because that the `core` instance will sync
 // block until the current height to the correct value.
 //
-// if the view is equal the current view, compare the message type and round state, with the right
-// round state sequence, message ahead of certain state is `old message`, and message behind certain
-// state is `future message`. message type and round state table as follow:
-func (c *core) checkView(msgCode MsgType, view *hotstuff.View) error {
+// if the view is equal the current view, compare the Message type and round state, with the right
+// round state sequence, Message ahead of certain state is `old Message`, and Message behind certain
+// state is `future Message`. Message type and round state table as follow:
+func (c *core) checkView(msgCode hotstuff.MsgType, view *hotstuff.View) error {
 	if view == nil || view.Height == nil || view.Round == nil {
 		return errInvalidMessage
 	}
@@ -119,7 +121,7 @@ func (c *core) checkView(msgCode MsgType, view *hotstuff.View) error {
 	}
 }
 
-func (c *core) finalizeMessage(msg *message) ([]byte, error) {
+func (c *core) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
 	var err error
 
 	// Add sender address
@@ -129,14 +131,14 @@ func (c *core) finalizeMessage(msg *message) ([]byte, error) {
 	// Add proof of consensus
 	proposal := c.current.Proposal()
 	if msg.Code == MsgTypePrepareVote && proposal != nil {
-		seal, err := c.signer.SignVote(proposal)
+		seal, err := c.signer.SignHash(proposal.Hash())
 		if err != nil {
 			return nil, err
 		}
 		msg.CommittedSeal = seal
 	}
 
-	// Sign message
+	// Sign Message
 	data, err := msg.PayloadNoSig()
 	if err != nil {
 		return nil, err
@@ -165,23 +167,23 @@ func (c *core) getMessageSeals(n int) [][]byte {
 	return seals
 }
 
-func (c *core) broadcast(msg *message) {
+func (c *core) broadcast(msg *hotstuff.Message) {
 	logger := c.logger.New("state", c.currentState())
 
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {
-		logger.Error("Failed to finalize message", "msg", msg, "err", err)
+		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
 		return
 	}
 
 	switch msg.Code {
 	case MsgTypeNewView, MsgTypePrepareVote, MsgTypePreCommitVote, MsgTypeCommitVote:
 		if err := c.backend.Unicast(c.valSet, payload); err != nil {
-			logger.Error("Failed to unicast message", "msg", msg, "err", err)
+			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
 		}
 	case MsgTypePrepare, MsgTypePreCommit, MsgTypeCommit, MsgTypeDecide:
 		if err := c.backend.Broadcast(c.valSet, payload); err != nil {
-			logger.Error("Failed to broadcast message", "msg", msg, "err", err)
+			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
 		}
 	default:
 		logger.Error("invalid msg type", "msg", msg)

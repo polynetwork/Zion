@@ -33,7 +33,7 @@ func TestProposal(t *testing.T) {
 	assert.NoError(t, err)
 
 	addr := makeAddress(1)
-	msg := &message{
+	msg := &hotstuff.Message{
 		Code:    MsgTypeNewView,
 		Msg:     payload,
 		Address: addr,
@@ -42,7 +42,7 @@ func TestProposal(t *testing.T) {
 	assert.NoError(t, err)
 
 	var decodedProposal *types.Block
-	decodedMsg := new(message)
+	decodedMsg := new(hotstuff.Message)
 	assert.NoError(t, decodedMsg.FromPayload(msgPayload, nil))
 	assert.NoError(t, decodedMsg.Decode(&decodedProposal))
 	assert.Equal(t, block.Hash(), decodedProposal.Hash())
@@ -61,7 +61,7 @@ func TestQuorumCert(t *testing.T) {
 	payload, err := Encode(qc)
 	assert.NoError(t, err)
 
-	msg := &message{
+	msg := &hotstuff.Message{
 		Code:    MsgTypeNewView,
 		Msg:     payload,
 		Address: makeAddress(1),
@@ -70,7 +70,7 @@ func TestQuorumCert(t *testing.T) {
 	assert.NoError(t, err)
 
 	var decodedQC *hotstuff.QuorumCert
-	decodedMsg := new(message)
+	decodedMsg := new(hotstuff.Message)
 	assert.NoError(t, decodedMsg.FromPayload(msgPayload, nil))
 	assert.NoError(t, decodedMsg.Decode(&decodedQC))
 	assert.Equal(t, qc.Hash, decodedQC.Hash)
@@ -94,7 +94,7 @@ func TestNewView(t *testing.T) {
 	assert.NoError(t, err)
 
 	addr := makeAddress(1)
-	m := &message{
+	m := &hotstuff.Message{
 		Code:    MsgTypeNewView,
 		Msg:     payload,
 		Address: addr,
@@ -103,7 +103,7 @@ func TestNewView(t *testing.T) {
 	msgPayload, err := m.Payload()
 	assert.NoError(t, err)
 
-	decodedMsg := new(message)
+	decodedMsg := new(hotstuff.Message)
 	if err = decodedMsg.FromPayload(msgPayload, nil); err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
@@ -137,7 +137,7 @@ func TestQuorumCertWithSig(t *testing.T) {
 	subjectPayload, _ := Encode(s)
 	// 1. Encode test
 	address := common.HexToAddress("0x1234567890")
-	m := &message{
+	m := &hotstuff.Message{
 		Code:          MsgTypePrepareVote,
 		Msg:           subjectPayload,
 		Address:       address,
@@ -152,7 +152,7 @@ func TestQuorumCertWithSig(t *testing.T) {
 
 	// 2. Decode test
 	// 2.1 Test normal validate func
-	decodedMsg := new(message)
+	decodedMsg := new(hotstuff.Message)
 	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte) (common.Address, error) {
 		return address, nil
 	})
@@ -165,18 +165,18 @@ func TestQuorumCertWithSig(t *testing.T) {
 	}
 
 	// 2.2 Test nil validate func
-	decodedMsg = new(message)
+	decodedMsg = new(hotstuff.Message)
 	err = decodedMsg.FromPayload(msgPayload, nil)
 	if err != nil {
 		t.Error(err)
 	}
 
 	if !reflect.DeepEqual(decodedMsg, m) {
-		t.Errorf("message mismatch: have %v, want %v", decodedMsg, m)
+		t.Errorf("Message mismatch: have %v, want %v", decodedMsg, m)
 	}
 
 	// 2.3 Test failed validate func
-	decodedMsg = new(message)
+	decodedMsg = new(hotstuff.Message)
 	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte) (common.Address, error) {
 		return common.Address{}, ErrUnauthorizedAddress
 	})

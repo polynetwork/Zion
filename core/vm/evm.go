@@ -439,8 +439,14 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 func (evm *EVM) nativeCall(caller, addr common.Address, input []byte, suppliedGas uint64) (ret []byte, leftOverGas uint64, err error) {
 	sdb := evm.StateDB.(*state.StateDB)
 	blockNumber := evm.Context.BlockNumber
+
 	txHash := evm.TxContext.TxHash
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, txHash, suppliedGas, evm.Callback)
+	msgSender := caller
+	if evm.TxContext.Origin != common.EmptyAddress && len(evm.TxContext.Origin[:]) == common.AddressLength {
+		msgSender = evm.TxContext.Origin
+	}
+	contractRef := native.NewContractRef(sdb, msgSender, caller, blockNumber, txHash, suppliedGas, evm.Callback)
+
 	ret, leftOverGas, err = contractRef.NativeCall(caller, addr, input)
 	return
 }

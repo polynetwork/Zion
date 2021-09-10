@@ -19,6 +19,7 @@ package core
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -49,7 +50,7 @@ func TestHandleMsg(t *testing.T) {
 			PrepareQC: newTestQC(r0, H-1, R),
 		})
 		// with a matched payload. msg prepare vote should match with *hotstuff.MsgPrepareVote in normal case.
-		msg := &message{
+		msg := &hotstuff.Message{
 			Code:    MsgTypeNewView,
 			Msg:     payload,
 			Address: v0.Address(),
@@ -65,7 +66,7 @@ func TestHandleMsg(t *testing.T) {
 			Proposal: makeBlock(int64(H - 1)),
 			HighQC:   newTestQC(r0, H, R),
 		})
-		msg := &message{
+		msg := &hotstuff.Message{
 			Code:    MsgTypePrepare,
 			Msg:     payload,
 			Address: v0.Address(),
@@ -83,7 +84,7 @@ func TestHandleMsg(t *testing.T) {
 			Digest: block.Hash(),
 		})
 		// with a matched payload. msg prepare vote should match with *hotstuff.MsgPrepareVote in normal case.
-		msg := &message{
+		msg := &hotstuff.Message{
 			Code:    MsgTypePrepareVote,
 			Msg:     payload,
 			Address: v0.Address(),

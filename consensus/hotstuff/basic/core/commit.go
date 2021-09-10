@@ -5,7 +5,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) handlePreCommitVote(data *message, src hotstuff.Validator) error {
+func (c *core) handlePreCommitVote(data *hotstuff.Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
@@ -58,11 +58,11 @@ func (c *core) sendCommit() {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendCommit", "msg view", sub.View, "proposal", sub.Hash)
 }
 
-func (c *core) handleCommit(data *message, src hotstuff.Validator) error {
+func (c *core) handleCommit(data *hotstuff.Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
@@ -123,7 +123,7 @@ func (c *core) sendCommitVote() {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&message{Code: msgTyp, Msg: payload})
+	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendCommitVote", "vote view", vote.View, "vote", vote.Digest)
 
 	if !c.IsProposer() {
