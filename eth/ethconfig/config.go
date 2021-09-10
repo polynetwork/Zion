@@ -18,7 +18,6 @@
 package ethconfig
 
 import (
-	"github.com/ethereum/go-ethereum/crypto"
 	"math/big"
 	"os"
 	"os/user"
@@ -28,14 +27,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	hsb "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/backend"
+	hsb "github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/miner"
 	"github.com/ethereum/go-ethereum/node"
 	"github.com/ethereum/go-ethereum/params"
@@ -84,7 +86,7 @@ var Defaults = Config{
 		GasFloor: 8000000,
 		GasCeil:  8000000,
 		GasPrice: big.NewInt(params.GWei),
-		Recommit: 3 * time.Second,
+		Recommit: 1 * time.Second,
 	},
 	TxPool:      core.DefaultTxPoolConfig,
 	RPCGasCap:   25000000,
@@ -208,46 +210,45 @@ type Config struct {
 }
 
 // CreateConsensusEngine creates a consensus engine for the given chain configuration.
-//func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
-//	// If proof-of-authority is requested, set it up
-//	if chainConfig.Clique != nil {
-//		return clique.New(chainConfig.Clique, db)
-//	}
-//	// Otherwise assume proof-of-work
-//	switch config.PowMode {
-//	case ethash.ModeFake:
-//		log.Warn("Ethash used in fake mode")
-//	case ethash.ModeTest:
-//		log.Warn("Ethash used in test mode")
-//	case ethash.ModeShared:
-//		log.Warn("Ethash used in shared mode")
-//	}
-//	engine := ethash.New(ethash.Config{
-//		PowMode:          config.PowMode,
-//		CacheDir:         stack.ResolvePath(config.CacheDir),
-//		CachesInMem:      config.CachesInMem,
-//		CachesOnDisk:     config.CachesOnDisk,
-//		CachesLockMmap:   config.CachesLockMmap,
-//		DatasetDir:       config.DatasetDir,
-//		DatasetsInMem:    config.DatasetsInMem,
-//		DatasetsOnDisk:   config.DatasetsOnDisk,
-//		DatasetsLockMmap: config.DatasetsLockMmap,
-//		NotifyFull:       config.NotifyFull,
-//	}, notify, noverify)
-//	engine.SetThreads(-1) // Disable CPU mining
-//	return engine
-//}
-
-// CreateConsensusEngine creates the required type of consensus engine instance for an Ethereum service
-func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, db ethdb.Database) consensus.Engine {
-	config := hotstuff.DefaultBasicConfig
-	nodeKey := stack.Config().NodeKey()
-	genesisNodeList := stack.Config().StaticNodes()
-	validators := make([]common.Address, 0)
-	for _, v := range genesisNodeList {
-		pubkey := v.Pubkey()
-		validators = append(validators, crypto.PubkeyToAddress(*pubkey))
+func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, config *ethash.Config, notify []string, noverify bool, db ethdb.Database) consensus.Engine {
+	// If proof-of-authority is requested, set it up
+	if chainConfig.Clique != nil {
+		return clique.New(chainConfig.Clique, db)
 	}
-	valset := validator.NewSet(validators, hotstuff.RoundRobin)
-	return hsb.New(config, nodeKey, db, valset)
+	if chainConfig.HotStuff != nil {
+		config := hotstuff.DefaultBasicConfig
+		nodeKey := stack.Config().NodeKey()
+		genesisNodeList := stack.Config().StaticNodes()
+		validators := make([]common.Address, 0)
+		for _, v := range genesisNodeList {
+			pubkey := v.Pubkey()
+			validators = append(validators, crypto.PubkeyToAddress(*pubkey))
+		}
+		valset := validator.NewSet(validators, hotstuff.RoundRobin)
+		protocol := hotstuff.HotstuffProtocol(chainConfig.HotStuff.Protocol)
+		return hsb.New(config, nodeKey, db, valset, protocol)
+	}
+	// Otherwise assume proof-of-work
+	switch config.PowMode {
+	case ethash.ModeFake:
+		log.Warn("Ethash used in fake mode")
+	case ethash.ModeTest:
+		log.Warn("Ethash used in test mode")
+	case ethash.ModeShared:
+		log.Warn("Ethash used in shared mode")
+	}
+	engine := ethash.New(ethash.Config{
+		PowMode:          config.PowMode,
+		CacheDir:         stack.ResolvePath(config.CacheDir),
+		CachesInMem:      config.CachesInMem,
+		CachesOnDisk:     config.CachesOnDisk,
+		CachesLockMmap:   config.CachesLockMmap,
+		DatasetDir:       config.DatasetDir,
+		DatasetsInMem:    config.DatasetsInMem,
+		DatasetsOnDisk:   config.DatasetsOnDisk,
+		DatasetsLockMmap: config.DatasetsLockMmap,
+		NotifyFull:       config.NotifyFull,
+	}, notify, noverify)
+	engine.SetThreads(-1) // Disable CPU mining
+	return engine
 }

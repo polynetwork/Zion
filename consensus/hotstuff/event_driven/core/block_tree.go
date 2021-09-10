@@ -44,6 +44,16 @@ func (n *Node) GetChildren() []*Node {
 	return n.children
 }
 
+type NodeBranch []*Node
+
+func (nb NodeBranch) Details() string {
+	content := bytes.NewBufferString(fmt.Sprintf("branch size: %d\n", len(nb)))
+	for _, node := range nb {
+		content.WriteString(fmt.Sprintf("hash: %v, height: %d, round:%d\n", node.block.Hash(), node.block.NumberU64(), node.round))
+	}
+	return content.String()
+}
+
 func generateNode(block *types.Block, round uint64) *Node {
 	return &Node{
 		block:    block,
@@ -82,30 +92,34 @@ func NewBlockTree(rootBlock *types.Block, rootRound uint64, maxPrunedSize int) (
 //Add insert block to tree
 func (bt *BlockTree) Add(block *types.Block, round uint64) error {
 	if block == nil || block.Hash() == common.EmptyHash {
-		return fmt.Errorf("block is invalid")
+		return fmt.Errorf("block is nil")
 	}
 	if round > 0 && block.ParentHash() == common.EmptyHash {
-		return fmt.Errorf("block parent hash is empty")
+		return fmt.Errorf("block %v parent hash is empty", block.Hash())
 	}
 
 	var (
-		ok     bool
-		hash   = block.Hash()
-		parent *Node
+		ok           bool
+		hash         = block.Hash()
+		node, parent *Node
 	)
 
-	if _, ok = bt.nodes[hash]; ok {
+	// allow sealed block to override unsealed block
+	if node, ok = bt.nodes[hash]; ok {
+		if node.round == round {
+			node.block = block
+		}
 		return nil
 	}
 
 	if round > 0 {
 		parentHash := block.ParentHash()
 		if parent, ok = bt.nodes[parentHash]; !ok {
-			return fmt.Errorf("block's parent not exist")
+			return fmt.Errorf("block %v parent %v not exist", block.Hash(), block.ParentHash())
 		}
 	}
 
-	node := generateNode(block, round)
+	node = generateNode(block, round)
 	bt.nodes[hash] = node
 	bt.roundTable[round] = append(bt.roundTable[round], node)
 	if parent != nil {
@@ -138,17 +152,17 @@ func (bt *BlockTree) GetBlocksByRound(round uint64) []*types.Block {
 }
 
 //Branch get branch from root to input block
-func (bt *BlockTree) Branch(hash common.Hash) []*types.Block {
+func (bt *BlockTree) Branch(hash common.Hash) NodeBranch {
 	cur, ok := bt.nodes[hash]
 	if !ok {
 		return nil
 	}
-	var branch []*types.Block
+	branch := make([]*Node, 0)
 
 	for cur.round > bt.root.round {
 		curBlock := cur.GetBlock()
 		parentHash := curBlock.ParentHash()
-		branch = append(branch, curBlock)
+		branch = append(branch, cur)
 		if cur = bt.nodes[parentHash]; cur == nil {
 			break
 		}

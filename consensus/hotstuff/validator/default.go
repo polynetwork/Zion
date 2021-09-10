@@ -134,9 +134,12 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 func (valSet *defaultSet) CalcProposerByIndex(index uint64) {
 	valSet.validatorMu.RLock()
 	defer valSet.validatorMu.RUnlock()
-	if index < uint64(len(valSet.validators)) {
-		valSet.proposer = valSet.validators[index]
+	if index > 1 {
+		index = (index - 1) % uint64(len(valSet.validators))
+	} else {
+		index = 0
 	}
+	valSet.proposer = valSet.validators[index]
 }
 
 func calcSeed(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) uint64 {

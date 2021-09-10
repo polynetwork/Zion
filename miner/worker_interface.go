@@ -16,30 +16,29 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package core
+package miner
 
 import (
+	"time"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"math/big"
+	"github.com/ethereum/go-ethereum/event"
 )
 
-type Snapshot struct {
-	Epoch uint64
+type MinerWorker interface {
+	Start()
+	Stop()
+	Close()
 
-	CurrentRound       *big.Int
-	CurrentHeight      *big.Int
-	LastVoteRound      *big.Int
-	HighestCommitRound *big.Int
-
-	Blocks []*types.Block
-}
-
-// storeSnapshot generate snapshot with consensus info and marshal and store the structure.
-func (e *EventDrivenEngine) storeSnapshot() ([]byte, error) {
-	return nil, nil
-}
-
-// loadSnapshot load snapshot info from db and unmarshal to structure.
-func (e *EventDrivenEngine) loadSnapshot() (*Snapshot, error) {
-	return nil, nil
+	IsRunning() bool
+	SetExtra(extra []byte)
+	SetRecommitInterval(interval time.Duration)
+	Pending() (*types.Block, *state.StateDB)
+	PendingBlock() *types.Block
+	SetEtherbase(addr common.Address)
+	EnablePreseal()
+	DisablePreseal()
+	SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription
 }

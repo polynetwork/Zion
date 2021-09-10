@@ -22,29 +22,21 @@ import (
 	"fmt"
 	"io"
 	"math/big"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
-
-// hasherPool holds LegacyKeccak256 hashers for rlpHash.
-var hasherPool = sync.Pool{
-	New: func() interface{} { return sha3.NewLegacyKeccak256() },
-}
 
 type MsgType uint64
 
+// messages with sub string of `Send` only used in internal communication and logs
 const (
 	MsgTypeProposal MsgType = 1
 	MsgTypeVote     MsgType = 2
 	MsgTypeTimeout  MsgType = 3
-	MsgTypeQC       MsgType = 4
-	MsgTypeTC       MsgType = 5
+	MsgTypeTC       MsgType = 4
 )
 
 func (m MsgType) String() string {
@@ -55,8 +47,6 @@ func (m MsgType) String() string {
 		return "MSG_VOTE"
 	case MsgTypeTimeout:
 		return "MSG_TIMEOUT"
-	case MsgTypeQC:
-		return "MSG_QC"
 	case MsgTypeTC:
 		return "MSG_TC"
 	default:
@@ -68,31 +58,24 @@ func (m MsgType) Value() uint64 {
 	return uint64(m)
 }
 
-// todo: set in start function
-func init() {
-	hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
-		code := data.(uint64)
-		return MsgType(code)
-	})
-}
-
 type State uint64
 
 const (
-	StateAcceptRequest  State = 1
-	StateAcceptProposal State = 2
-	StateVoted          State = 3
+	StateNewRound State = 1
+	StateProposed State = 2
+	StateVoted    State = 3
 )
 
 func (s State) String() string {
-	if s == StateAcceptRequest {
-		return "StateAcceptRequest"
-	} else if s == StateAcceptProposal {
-		return "StateAcceptProposal"
-	} else if s == StateVoted {
+	switch s {
+	case StateNewRound:
+		return "StateNewRound"
+	case StateProposed:
+		return "StateProposed"
+	case StateVoted:
 		return "StateVoted"
-	} else {
-		return "Unknown"
+	default:
+		return "StateUnknown"
 	}
 }
 
@@ -108,6 +91,10 @@ func (s State) Cmp(y State) int {
 		return 1
 	}
 	return 0
+}
+
+func (s State) Value() uint64 {
+	return uint64(s)
 }
 
 type MsgProposal struct {
@@ -205,17 +192,11 @@ func (tm *TimeoutEvent) Hash() common.Hash {
 		Epoch: tm.Epoch,
 		View:  tm.View,
 	}
-	ret := make([]byte, 32)
-	sha := hasherPool.Get().(crypto.KeccakState)
-	defer hasherPool.Put(sha)
-	sha.Reset()
-	rlp.Encode(sha, x)
-	sha.Read(ret[:])
-	return common.BytesToHash(ret[:])
+	return hotstuff.RLPHash(x)
 }
 
 func (tm *TimeoutEvent) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{tm.Epoch, tm.View, tm.Hash})
+	return rlp.Encode(w, []interface{}{tm.Epoch, tm.View, tm.Digest})
 }
 
 func (tm *TimeoutEvent) DecodeRLP(s *rlp.Stream) error {
@@ -279,31 +260,27 @@ func (tc *TimeoutCert) Copy() *TimeoutCert {
 	return newTc
 }
 
-//
-//type CertificateEvent struct {
-//	Cert *hotstuff.QuorumCert
-//}
-//
-//func (ce *CertificateEvent) EncodeRLP(w io.Writer) error {
-//	return rlp.Encode(w, []interface{}{ce.Cert})
-//}
-//
-//func (ce *CertificateEvent) DecodeRLP(s *rlp.Stream) error {
-//	var subject struct {
-//		Cert *hotstuff.QuorumCert
-//	}
-//
-//	if err := s.Decode(&subject); err != nil {
-//		return err
-//	}
-//
-//	ce.Cert = subject.Cert
-//	return nil
-//}
-//
-//func (ce *CertificateEvent) String() string {
-//	return fmt.Sprintf("{Hash: %v, View: %v, Proposer: %v}", ce.Cert.Hash, ce.Cert.View, ce.Cert.Proposer)
-//}
+func (tc *TimeoutCert) Height() *big.Int {
+	if tc.View == nil {
+		return common.Big0
+	}
+	return tc.View.Height
+}
+
+func (tc *TimeoutCert) HeightU64() uint64 {
+	return tc.Height().Uint64()
+}
+
+func (tc *TimeoutCert) Round() *big.Int {
+	if tc.View == nil {
+		return common.Big0
+	}
+	return tc.View.Round
+}
+
+func (tc *TimeoutCert) RoundU64() uint64 {
+	return tc.Round().Uint64()
+}
 
 type ExtraSalt struct {
 	Epoch uint64

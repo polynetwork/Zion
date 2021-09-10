@@ -22,52 +22,33 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/event"
 )
 
-type EventSender struct {
-	eventMtx *event.TypeMux
-}
-
-func NewEventSender(backend hotstuff.Backend) *EventSender {
-	return &EventSender{eventMtx: backend.EventMux()}
-}
-
-func (s *EventSender) sendEvent(val interface{}) {
-	s.eventMtx.Post(val)
-}
-
-// ----------------------------------------------------------------------------
-
 // Subscribe both internal and external events
-func (e *EventDrivenEngine) subscribeEvents() {
-	e.events = e.backend.EventMux().Subscribe(
-		// external events
+func (c *core) subscribeEvents() {
+	c.events = c.backend.EventMux().Subscribe(
 		hotstuff.RequestEvent{},
 		hotstuff.MessageEvent{},
 		backlogEvent{},
 	)
-	//e.timeoutSub = e.backend.EventMux().Subscribe(
-	//	TimeoutEvent{},
-	//)
-	e.finalCommittedSub = e.backend.EventMux().Subscribe(
+	c.finalCommittedSub = c.backend.EventMux().Subscribe(
 		hotstuff.FinalCommittedEvent{},
 	)
 }
 
 // Unsubscribe all events
-func (e *EventDrivenEngine) unsubscribeEvents() {
-	e.events.Unsubscribe()
+func (c *core) unsubscribeEvents() {
+	c.events.Unsubscribe()
 	//e.timeoutSub.Unsubscribe()
-	e.finalCommittedSub.Unsubscribe()
+	c.finalCommittedSub.Unsubscribe()
 }
 
-func (e *EventDrivenEngine) handleEvents() {
-	logger := e.logger.New("handleEvents")
+func (c *core) handleEvents() {
+	logger := c.logger.New("handleEvents")
 
 	for {
 		select {
-		case evt, ok := <-e.events.Chan():
+		case evt, ok := <-c.events.Chan():
 			if !ok {
 				logger.Error("Failed to receive msg Event")
 				return
@@ -75,16 +56,16 @@ func (e *EventDrivenEngine) handleEvents() {
 			// A real Event arrived, process interesting content
 			switch ev := evt.Data.(type) {
 			case hotstuff.RequestEvent:
-				e.handleRequest(&hotstuff.Request{Proposal: ev.Proposal})
+				c.handleRequest(&hotstuff.Request{Proposal: ev.Proposal})
 
 			case hotstuff.MessageEvent:
-				e.handleMsg(ev.Payload)
+				c.handleMsg(ev.Payload)
 
 			case backlogEvent:
-				e.handleCheckedMsg(ev.src, ev.msg)
+				c.handleCheckedMsg(ev.src, ev.msg)
 			}
 
-		case _, ok := <-e.finalCommittedSub.Chan():
+		case _, ok := <-c.finalCommittedSub.Chan():
 			if !ok {
 				logger.Error("Failed to receive finalCommitted Event")
 				return
@@ -95,70 +76,67 @@ func (e *EventDrivenEngine) handleEvents() {
 }
 
 // sendEvent sends events to mux
-func (e *EventDrivenEngine) sendEvent(ev interface{}) {
-	e.backend.EventMux().Post(ev)
+func (c *core) sendEvent(ev interface{}) {
+	c.backend.EventMux().Post(ev)
 }
 
-func (e *EventDrivenEngine) handleMsg(payload []byte) error {
-	logger := e.logger.New()
+func (c *core) handleMsg(payload []byte) error {
+	logger := c.logger.New()
 
 	// Decode Message and check its signature
 	msg := new(hotstuff.Message)
-	if err := msg.FromPayload(payload, e.validateFn); err != nil {
+	if err := msg.FromPayload(payload, c.validateFn); err != nil {
 		logger.Error("Failed to decode Message from payload", "err", err)
 		return err
 	}
 
 	// Only accept Message if the address is valid
-	_, src := e.valset.GetByAddress(msg.Address)
+	_, src := c.valset.GetByAddress(msg.Address)
 	if src == nil {
 		logger.Error("Invalid address in Message", "msg", msg)
 		return errInvalidSigner
 	}
 
 	// handle checked Message
-	if err := e.handleCheckedMsg(src, msg); err != nil {
+	if err := c.handleCheckedMsg(src, msg); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (e *EventDrivenEngine) handleCheckedMsg(src hotstuff.Validator, msg *hotstuff.Message) (err error) {
+func (c *core) handleCheckedMsg(src hotstuff.Validator, msg *hotstuff.Message) (err error) {
 	switch msg.Code {
 	case MsgTypeProposal:
-		err = e.handleProposal(src, msg)
+		err = c.handleProposal(src, msg)
 	case MsgTypeVote:
-		err = e.handleVote(src, msg)
-	case MsgTypeQC:
-		err = e.handleQC(src, msg)
+		err = c.handleVote(src, msg)
 	case MsgTypeTC:
-		err = e.handleTC(src, msg)
+		err = c.handleTC(src, msg)
 	case MsgTypeTimeout:
-		err = e.handleTimeout(src, msg)
+		err = c.handleTimeout(src, msg)
 	default:
 		err = errInvalidMessage
-		e.logger.Error("msg type invalid", "unknown type", msg.Code)
 	}
 
 	if err == errFutureMessage {
-		//e.storeBacklog(msg, src)
+		c.storeBacklog(msg, src)
 	}
 	return
 }
 
-func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message, val interface{}) ([]byte, error) {
+func (c *core) finalizeMessage(msg *hotstuff.Message, val interface{}) ([]byte, error) {
 	var err error
 
 	// Add sender address
-	msg.Address = e.address()
-	msg.View = e.currentView()
+	msg.Address = c.address
+	msg.View = c.currentView()
 
 	if msg.Code == MsgTypeVote {
 		vote, ok := val.(*Vote)
 		if !ok {
 			return nil, fmt.Errorf("msg is not vote")
 		}
-		seal, err := e.signer.SignHash(vote.Hash)
+		seal, err := c.signer.SignHash(vote.Hash)
 		if err != nil {
 			return nil, err
 		}
@@ -170,9 +148,8 @@ func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message, val interface
 		if !ok {
 			return nil, fmt.Errorf("msg is not timeout")
 		}
-		digest := tm.Hash()
-		tm.Digest = digest
-		seal, err := e.signer.SignHash(tm.Digest)
+		tm.Digest = tm.Hash()
+		seal, err := c.signer.SignHash(tm.Digest)
 		if err != nil {
 			return nil, err
 		}
@@ -184,7 +161,7 @@ func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message, val interface
 	if err != nil {
 		return nil, err
 	}
-	msg.Signature, err = e.signer.Sign(data)
+	msg.Signature, err = c.signer.Sign(data)
 	if err != nil {
 		return nil, err
 	}
@@ -198,46 +175,39 @@ func (e *EventDrivenEngine) finalizeMessage(msg *hotstuff.Message, val interface
 	return payload, nil
 }
 
-func (e *EventDrivenEngine) encodeAndBroadcast(msgTyp MsgType, val interface{}) error {
+func (c *core) encodeAndBroadcast(msgTyp MsgType, val interface{}) {
 	payload, err := Encode(val)
 	if err != nil {
-		return err
+		c.logger.Trace("Failed to encode broadcast msg payload", "msg", msgTyp, "instance", val, "err", err)
+		return
+	}
+	if len(payload) == 0 {
+		c.logger.Trace("Failed to encode broadcast msg payload", "msg", msgTyp, "instance", val, "err", "payload is nil")
+		return
 	}
 
 	msg := &hotstuff.Message{
 		Code: msgTyp,
 		Msg:  payload,
 	}
-
-	return e.broadcast(msg, val)
+	if err := c.broadcast(msg, val); err != nil {
+		c.logger.Trace("Failed to broadcast to peers", "msg", msg, "instance", val, "err", err)
+	}
 }
 
-func (e *EventDrivenEngine) broadcast(msg *hotstuff.Message, val interface{}) error {
-	logger := e.newLogger()
-
-	payload, err := e.finalizeMessage(msg, val)
+func (c *core) broadcast(msg *hotstuff.Message, val interface{}) error {
+	payload, err := c.finalizeMessage(msg, val)
 	if err != nil {
-		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
 		return err
 	}
 
 	switch msg.Code {
-	case MsgTypeProposal, MsgTypeTimeout:
-		if err := e.backend.Broadcast(e.valset, payload); err != nil {
-			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
-			return err
-		}
-	case MsgTypeVote, MsgTypeQC, MsgTypeTC:
-		// vote to next round leader
-		nextRoundVals := e.valset.Copy()
-		nextRoundVals.CalcProposerByIndex(e.curRound.Uint64() + 1)
-		if err := e.backend.Unicast(nextRoundVals, payload); err != nil {
-			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
-			return err
-		}
+	case MsgTypeProposal, MsgTypeTimeout, MsgTypeTC:
+		err = c.backend.Broadcast(c.valset, payload)
+	case MsgTypeVote:
+		err = c.backend.Unicast(c.nextValSet(), payload)
 	default:
-		logger.Error("invalid msg type", "msg", msg)
-		return errInvalidMessage
+		err = errInvalidMessage
 	}
-	return nil
+	return err
 }

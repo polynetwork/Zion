@@ -56,7 +56,6 @@ func generateExtra(header *types.Header, valSet hotstuff.ValidatorSet, epoch uin
 	if err != nil {
 		return nil, err
 	}
-
 	ist := &types.HotstuffExtra{
 		Validators:    vals,
 		Seal:          []byte{},
@@ -68,7 +67,6 @@ func generateExtra(header *types.Header, valSet hotstuff.ValidatorSet, epoch uin
 	if err != nil {
 		return nil, err
 	}
-
 	return append(buf.Bytes(), payload...), nil
 }
 
@@ -91,7 +89,13 @@ func extraHeader(h *types.Header) (salt *ExtraSalt, qc *hotstuff.QuorumCert, err
 	if extra, err = types.ExtractHotstuffExtra(h); err != nil {
 		return
 	}
-	if err = rlp.DecodeBytes(extra.Salt, &salt); err != nil {
+
+	if h.Number.Uint64() == 0 && len(extra.Salt) == 0 {
+		salt = &ExtraSalt{
+			Epoch: 0,
+			Round: big.NewInt(0),
+		}
+	} else if err = rlp.DecodeBytes(extra.Salt, &salt); err != nil {
 		return
 	}
 

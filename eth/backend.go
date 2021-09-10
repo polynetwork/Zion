@@ -141,12 +141,11 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		log.Error("Failed to recover state", "error", err)
 	}
 	eth := &Ethereum{
-		config:         config,
-		chainDb:        chainDb,
-		eventMux:       stack.EventMux(),
-		accountManager: stack.AccountManager(),
-		// engine:            ethconfig.CreateConsensusEngine(stack, chainConfig, &ethashConfig, config.Miner.Notify, config.Miner.Noverify, chainDb),
-		engine:            ethconfig.CreateConsensusEngine(stack, chainConfig, chainDb),
+		config:            config,
+		chainDb:           chainDb,
+		eventMux:          stack.EventMux(),
+		accountManager:    stack.AccountManager(),
+		engine:            ethconfig.CreateConsensusEngine(stack, chainConfig, &ethashConfig, config.Miner.Notify, config.Miner.Noverify, chainDb),
 		closeBloomHandler: make(chan struct{}),
 		networkID:         config.NetworkId,
 		gasPrice:          config.Miner.GasPrice,
@@ -480,6 +479,7 @@ func (s *Ethereum) StartMining(threads int) error {
 		// introduced to speed sync times.
 		atomic.StoreUint32(&s.handler.acceptTxs, 1)
 
+		log.Info("Start miner with etherbase", "address", eb.Hex())
 		go s.miner.Start(eb)
 	}
 	return nil

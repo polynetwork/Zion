@@ -69,19 +69,22 @@ func TestBlockTree(t *testing.T) {
 	// test branch
 	branch3 := tr.Branch(block3.Hash())
 	assert.Equal(t, 3, len(branch3))
-	for i, v := range branch3 {
+	for i, node := range branch3 {
+		v := node.GetBlock()
 		t.Logf("branch3: block%d hash %v, height %d", i, v.Hash(), v.NumberU64())
 	}
 
 	branch2 := tr.Branch(block2.Hash())
 	assert.Equal(t, 2, len(branch2))
-	for i, v := range branch2 {
+	for i, node := range branch2 {
+		v := node.GetBlock()
 		t.Logf("branch2: block%d hash %v, height %d", i, v.Hash(), v.NumberU64())
 	}
 
 	branch1 := tr.Branch(block1.Hash())
 	assert.Equal(t, 1, len(branch1))
-	for i, v := range branch1 {
+	for i, node := range branch1 {
+		v := node.GetBlock()
 		t.Logf("branch1: block%d hash %v, height %d", i, v.Hash(), v.NumberU64())
 	}
 
@@ -91,7 +94,35 @@ func TestBlockTree(t *testing.T) {
 	assert.Equal(t, 1, len(tr.Prune(block3.Hash())))
 }
 
-func TestBLockTreeFork(t *testing.T) {
+func TestBlockTreeBranch(t *testing.T) {
+	t.Log("fork from block (round: 4, height: 3)")
+	tr := newTestBlockTree(0)
+
+	block1 := newBlockTreeTestBlock(testRoot.Hash(), 1)
+	block2 := newBlockTreeTestBlock(block1.Hash(), 2)
+	block30 := newBlockTreeTestBlock(block2.Hash(), 3)
+	block31 := newBlockTreeTestBlock(block2.Hash(), 3)
+	block32 := newBlockTreeTestBlock(block2.Hash(), 3)
+	block33 := newBlockTreeTestBlock(block2.Hash(), 3)
+
+	// test GetBlockByHash
+	_ = tr.Add(block1, 1)
+	_ = tr.Add(block2, 2)
+	_ = tr.Add(block30, 3)
+	_ = tr.Add(block31, 4)
+	_ = tr.Add(block32, 5)
+	_ = tr.Add(block33, 6)
+
+	t.Log("before pure", tr.Details())
+
+	br := tr.Branch(block31.Hash())
+	t.Log("branch detail", br.Details())
+
+	tr.Prune(block31.Hash())
+	t.Log("after pure", tr.Details())
+}
+
+func TestBlockTreeFork(t *testing.T) {
 	{
 		t.Log("fork from block3")
 		tr := newTestBlockTree(0)

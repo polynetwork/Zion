@@ -163,6 +163,7 @@ func newTestWorkerBackend(t *testing.T, chainConfig *params.ChainConfig, engine 
 
 func (b *testWorkerBackend) BlockChain() *core.BlockChain { return b.chain }
 func (b *testWorkerBackend) TxPool() *core.TxPool         { return b.txPool }
+func (b *testWorkerBackend) PeerCount() int               { return 0 }
 
 func (b *testWorkerBackend) newRandomUncle() *types.Block {
 	var parent *types.Block
@@ -194,7 +195,7 @@ func newTestWorker(t *testing.T, chainConfig *params.ChainConfig, engine consens
 	backend := newTestWorkerBackend(t, chainConfig, engine, db, blocks)
 	backend.txPool.AddLocals(pendingTxs)
 	w := newWorker(testConfig, chainConfig, engine, backend, new(event.TypeMux), nil, false)
-	w.setEtherbase(testBankAddress)
+	w.SetEtherbase(testBankAddress)
 	return w, backend
 }
 
@@ -222,7 +223,7 @@ func testGenerateBlockAndImport(t *testing.T, isClique bool) {
 	}
 
 	w, b := newTestWorker(t, chainConfig, engine, db, 0)
-	defer w.close()
+	defer w.Close()
 
 	// This test chain imports the mined blocks.
 	db2 := rawdb.NewMemoryDatabase()
@@ -240,7 +241,7 @@ func testGenerateBlockAndImport(t *testing.T, isClique bool) {
 	defer sub.Unsubscribe()
 
 	// Start mining!
-	w.start()
+	w.Start()
 
 	for i := 0; i < 5; i++ {
 		b.txPool.AddLocal(b.newRandomTx(true))
@@ -271,7 +272,7 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 	defer engine.Close()
 
 	w, _ := newTestWorker(t, chainConfig, engine, rawdb.NewMemoryDatabase(), 0)
-	defer w.close()
+	defer w.Close()
 
 	var (
 		taskIndex int
@@ -302,7 +303,7 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 	w.fullTaskHook = func() {
 		time.Sleep(100 * time.Millisecond)
 	}
-	w.start() // Start mining!
+	w.Start() // Start mining!
 	for i := 0; i < 2; i += 1 {
 		select {
 		case <-taskCh:
@@ -317,7 +318,7 @@ func TestStreamUncleBlock(t *testing.T) {
 	defer ethash.Close()
 
 	w, b := newTestWorker(t, ethashChainConfig, ethash, rawdb.NewMemoryDatabase(), 1)
-	defer w.close()
+	defer w.Close()
 
 	var taskCh = make(chan struct{})
 
@@ -344,7 +345,7 @@ func TestStreamUncleBlock(t *testing.T) {
 	w.fullTaskHook = func() {
 		time.Sleep(100 * time.Millisecond)
 	}
-	w.start()
+	w.Start()
 
 	for i := 0; i < 2; i += 1 {
 		select {
@@ -375,7 +376,7 @@ func testRegenerateMiningBlock(t *testing.T, chainConfig *params.ChainConfig, en
 	defer engine.Close()
 
 	w, b := newTestWorker(t, chainConfig, engine, rawdb.NewMemoryDatabase(), 0)
-	defer w.close()
+	defer w.Close()
 
 	var taskCh = make(chan struct{})
 
@@ -404,7 +405,7 @@ func testRegenerateMiningBlock(t *testing.T, chainConfig *params.ChainConfig, en
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	w.start()
+	w.Start()
 	// Ignore the first two works
 	for i := 0; i < 2; i += 1 {
 		select {
@@ -435,7 +436,7 @@ func testAdjustInterval(t *testing.T, chainConfig *params.ChainConfig, engine co
 	defer engine.Close()
 
 	w, _ := newTestWorker(t, chainConfig, engine, rawdb.NewMemoryDatabase(), 0)
-	defer w.close()
+	defer w.Close()
 
 	w.skipSealHook = func(task *task) bool {
 		return true
@@ -483,12 +484,12 @@ func testAdjustInterval(t *testing.T, chainConfig *params.ChainConfig, engine co
 		index += 1
 		progress <- struct{}{}
 	}
-	w.start()
+	w.Start()
 
 	time.Sleep(time.Second) // Ensure two tasks have been summitted due to start opt
 	atomic.StoreUint32(&start, 1)
 
-	w.setRecommitInterval(3 * time.Second)
+	w.SetRecommitInterval(3 * time.Second)
 	select {
 	case <-progress:
 	case <-time.NewTimer(time.Second).C:
@@ -509,7 +510,7 @@ func testAdjustInterval(t *testing.T, chainConfig *params.ChainConfig, engine co
 		t.Error("interval reset timeout")
 	}
 
-	w.setRecommitInterval(500 * time.Millisecond)
+	w.SetRecommitInterval(500 * time.Millisecond)
 	select {
 	case <-progress:
 	case <-time.NewTimer(time.Second).C:

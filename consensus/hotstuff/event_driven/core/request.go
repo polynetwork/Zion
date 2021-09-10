@@ -19,135 +19,68 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common/prque"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"sync"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func (e *EventDrivenEngine) handleRequest(req *hotstuff.Request) error {
-	logger := e.newLogger()
+func (c *core) sendRequest() error {
+	logger := c.newSenderLogger("MSG_SEND_REQUEST")
 
-	if err := e.requests.checkRequest(e.currentView(), req); err != nil {
-		if err == errFutureMessage {
-			e.requests.StoreRequest(req)
+	height := c.smr.Height()
+
+	// use existing pending request
+	request := c.smr.Request()
+	if request != nil && bigEq(height, request.Number()) {
+		logger.Trace("[Send Request], Got pending request", "num", request.Number(), "parent hash", request.ParentHash())
+		return c.sendProposal()
+	}
+
+	// ask miner new proposal, use latest high proposal as parent block
+	parent := c.smr.Proposal()
+	if parent == nil {
+		logger.Trace("[Send Request], Failed to get parent block", "num", height, "err", "parent is nil")
+		return nil
+	}
+	if expect, eq := bigSub1Eq(height, parent.Number()); !eq {
+		if !bigEq(height, parent.Number()) {
+			logger.Trace("[Send Request], Invalid parent block", "expect height", expect, "got", parent.Number())
 			return nil
-		} else {
-			logger.Warn("receive request", "err", err)
-			return err
 		}
-	} else {
-		e.requests.StoreRequest(req)
-	}
-
-	logger.Trace("handleRequest", "height", req.Proposal.Number(), "proposal", req.Proposal.Hash())
-
-	if e.state != StateAcceptRequest {
-		return nil
-	}
-
-	return e.handleNewRound()
-	//if req := e.requests.GetRequest(e.currentView()); req != nil {
-	//	e.requests.SetCurrentRequest(req)
-	//	return e.handleNewRound()
-	//}
-	//
-	//return nil
-}
-
-type requestSet struct {
-	mtx *sync.RWMutex
-
-	current *hotstuff.Request
-	pendingRequest *prque.Prque
-}
-
-func newRequestSet() *requestSet {
-	return &requestSet{
-		mtx:            new(sync.RWMutex),
-		pendingRequest: prque.New(nil),
-	}
-}
-
-func (s *requestSet) checkRequest(view *hotstuff.View, req *hotstuff.Request) error {
-	if req == nil || req.Proposal == nil {
-		return errInvalidMessage
-	}
-
-	// todo(fuk): how to process future block, store or throw?
-	if c := view.Height.Cmp(req.Proposal.Number()); c < 0 {
-		return errFutureMessage
-	} else if c > 0 {
-		return errOldMessage
-	} else {
-		return nil
-	}
-}
-
-//func (s *requestSet) GetCurrentRequest() *hotstuff.Request {
-//	return s.current
-//}
-
-func (s *requestSet) StoreRequest(req *hotstuff.Request) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
-	priority := -req.Proposal.Number().Int64()
-	s.pendingRequest.Push(req, priority)
-}
-
-func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
-	for !s.pendingRequest.Empty() {
-		m, prior := s.pendingRequest.Pop()
-		req, ok := m.(*hotstuff.Request)
-		if !ok {
-			continue
+		parent = c.blkPool.GetBlockByHash(parent.ParentHash())
+		if parent == nil {
+			logger.Trace("[Send Request], Failed to get parent block", "err", "parent is nil")
+			return nil
 		}
-
-		// push back if it's future message
-		if err := s.checkRequest(view, req); err != nil {
-			if err == errFutureMessage {
-				s.pendingRequest.Push(m, prior)
-				// todo: 是否为continue
-				break
-			}
-			continue
-		}
-		return req
 	}
 
+	c.feed.Send(consensus.AskRequest{
+		Number: height,
+		Parent: parent,
+	})
+
+	logger.Trace("[Send Request]", "num", height, "parent hash", parent.Hash())
 	return nil
-//	maxRetry := 20
-//retry:
-//	for !s.pendingRequest.Empty() {
-//		m, prior := s.pendingRequest.Pop()
-//		req, ok := m.(*hotstuff.Request)
-//		if !ok {
-//			continue
-//		}
-//
-//		// push back if it's future message
-//		if err := s.checkRequest(view, req); err != nil {
-//			if err == errFutureMessage {
-//				s.pendingRequest.Push(m, prior)
-//				// todo: 是否为continue
-//				break
-//			}
-//			continue
-//		}
-//		return req
-//	}
-//	if maxRetry -= 1; maxRetry > 0 {
-//		time.Sleep(500 * time.Millisecond)
-//		goto retry
-//	}
-//	return nil
 }
 
-func (s *requestSet) Size() int {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
-	return s.pendingRequest.Size()
+func (c *core) handleRequest(req *hotstuff.Request) error {
+	logger := c.newSenderLogger("MSG_RECV_REQUEST")
+
+	if req == nil || req.Proposal == nil {
+		logger.Trace("[Handle Request], Invalid request", "err", "is nil")
+		return nil
+	}
+	proposal, ok := req.Proposal.(*types.Block)
+	if !ok {
+		logger.Trace("[Handle Request], Failed to convert proposal", "err", "type invalid")
+		return nil
+	}
+	if !bigEq(proposal.Number(), c.smr.Height()) {
+		logger.Trace("[Handle Request], Invalid proposal", "expect height", c.smr.HeightU64(), "got", proposal.Number())
+		return nil
+	}
+	c.smr.SetRequest(proposal)
+	logger.Trace("[Handle Request]", "num", req.Proposal.Number(), "hash", req.Proposal.Hash())
+
+	return c.sendProposal()
 }

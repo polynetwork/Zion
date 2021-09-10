@@ -155,6 +155,28 @@ func (qc *QuorumCert) Copy() *QuorumCert {
 	return newQC
 }
 
+func (qc *QuorumCert) Height() *big.Int {
+	if qc.View == nil {
+		return common.Big0
+	}
+	return qc.View.Height
+}
+
+func (qc *QuorumCert) HeightU64() uint64 {
+	return qc.Height().Uint64()
+}
+
+func (qc *QuorumCert) Round() *big.Int {
+	if qc.View == nil {
+		return common.Big0
+	}
+	return qc.View.Round
+}
+
+func (qc *QuorumCert) RoundU64() uint64 {
+	return qc.Round().Uint64()
+}
+
 type MsgType interface {
 	String() string
 	Value() uint64

@@ -173,6 +173,7 @@ func (s *SignerImpl) VerifyHeader(header *types.Header, valSet hotstuff.Validato
 		if err != nil {
 			return errInvalidExtraDataFormat
 		}
+
 		// The length of Committed seals should be larger than 0
 		if len(extra.CommittedSeal) == 0 {
 			return errEmptyCommittedSeals

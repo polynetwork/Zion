@@ -28,69 +28,100 @@ import (
 )
 
 // increaseLastVoteRound commit not to vote in rounds lower than target
-func (e *EventDrivenEngine) increaseLastVoteRound(rd *big.Int) {
-	if e.lastVoteRound.Cmp(rd) < 0 {
-		e.lastVoteRound = rd
+func (c *core) increaseLastVoteRound(rd *big.Int) {
+	if c.smr.LatestVoteRound().Cmp(rd) < 0 {
+		c.smr.SetLatestVoteRound(rd)
 	}
 }
 
-// UpdateLockQC update the latest quorum certificate after voteRule judgement succeed.
-func (e *EventDrivenEngine) updateLockQC(qc *hotstuff.QuorumCert) error {
-	if qc == nil || qc.View == nil || qc.Hash == common.EmptyHash || qc.Proposer == common.EmptyAddress {
+// UpdateLockQC lock qc's parent quorum certificate which sealed n = 2f + 1(quorum size)
+// proposal's parent block. if input is proposal's justify qc it denote that the proposal's
+// grand pa qc is locked, and the proposal is ready to be commit to miner at the next round.
+// for example:
+// 1.if the proposal is b2, and justifyQC is q1, it will lock q0.
+// 2.if the proposal is b3, and justifyQC is q2, it will lock q1.
+// 3.if the proposal is b4, and justifyQC is q3, it will lock q2, and b1 will be committed.
+func (c *core) updateLockQC(qc *hotstuff.QuorumCert) error {
+	if qc == nil {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "err", "qc is nil")
+		return errInvalidHighQC
+	}
+	if qc.View == nil {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "err", "qc view is nil")
+		return errInvalidHighQC
+	}
+	if qc.Hash == common.EmptyHash {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "err", "qc hash is empty")
+		return errInvalidHighQC
+	}
+	if qc.Proposer == common.EmptyAddress {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "err", "qc proposer is empty")
 		return errInvalidHighQC
 	}
 
-	qcBlock := e.blkPool.GetBlockByHash(qc.Hash)
+	qcBlock := c.blkPool.GetBlockByHash(qc.Hash)
 	if qcBlock == nil {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "get qc block err", "block not exist", "hash", qc.Hash, "qc view", qc.View)
 		return errInvalidQC
 	}
 	salt, qc, err := extraProposal(qcBlock)
 	if err != nil {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "extract qc err", err)
 		return err
 	}
 
-	qcParentBlock := e.blkPool.GetBlockByHash(qcBlock.ParentHash())
+	qcParentBlock := c.blkPool.GetBlockByHash(qcBlock.ParentHash())
 	if qcParentBlock == nil {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "get qc parent block err", "parent block is nil", "parent hash", qcBlock.ParentHash())
 		return errInvalidQC
 	}
 	parentSalt, parentQC, err := extraProposal(qcParentBlock)
 	if err != nil {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "extract parent qc err", err)
 		return err
 	}
 
 	if salt.Round.Cmp(parentSalt.Round) < 0 || qcBlock.Number().Cmp(qcParentBlock.Number()) < 0 {
+		c.logger.Trace("[Update LockQC], failed to update lockQC", "compare qc view", "round", salt.Round, "parent qc round", parentSalt.Round, "number", qcBlock.Number(), "qc parent block number", qcParentBlock.Number())
 		return errInvalidQC
 	}
 
-	e.lockQC = parentQC
+	//highQC := c.smr.HighQC()
+	//if err := c.compareQC(highQC, parentQC); err != nil {
+	//	c.logger.Trace("Failed to update lockQC", "expect high qc's parent qc", parentQC.Hash, "parent qc view", parentQC.View)
+	//	return err
+	//}
+
+	c.smr.SetLockQC(parentQC)
+	c.logger.Trace("[Update LockQC]", "hash", parentQC.Hash, "view", parentQC.View, "proposer", parentQC.Proposer)
+
 	return nil
 }
 
-func (e *EventDrivenEngine) getLockQC() *hotstuff.QuorumCert {
-	return e.lockQC
-}
-
-func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address,
+func (c *core) makeVote(hash common.Hash, proposer common.Address,
 	view *hotstuff.View, justifyQC *hotstuff.QuorumCert) (*Vote, error) {
+
+	if view == nil || justifyQC == nil || justifyQC.View == nil {
+		return nil, fmt.Errorf("invalid justifyQC or view")
+	}
+	if hash == common.EmptyHash || proposer == common.EmptyAddress {
+		return nil, fmt.Errorf("invalid hash or propser")
+	}
 
 	justifyQCRound := justifyQC.View.Round
 	justifyQCHeight := justifyQC.View.Height
-	lockQCRound := e.lockQC.View.Round
-
-	justifyQCBlock := e.blkPool.GetBlockAndCheckHeight(justifyQC.Hash, justifyQCHeight)
+	justifyQCBlock := c.blkPool.GetBlockAndCheckHeight(justifyQC.Hash, justifyQCHeight)
 	if justifyQCBlock == nil {
 		return nil, fmt.Errorf("justifyQC block (hash, height)not exist, (%v, %v)", justifyQC.Hash, justifyQCHeight)
 	}
 
-	if view.Round.Cmp(e.lastVoteRound) <= 0 {
-		return nil, fmt.Errorf("proposalRound <= lastVoteRound, (%v, %v)", view.Round, e.lastVoteRound)
-	}
-	if justifyQCRound.Cmp(lockQCRound) < 0 {
-		return nil, fmt.Errorf("justifyQCRound < lockQCRound, (%v, %v)", justifyQCRound, lockQCRound)
+	if view.Round.Cmp(c.smr.LatestVoteRound()) <= 0 {
+		return nil, fmt.Errorf("rule1, expect: proposalRound > lastVoteRound, got (%v <= %v)", view.Round, c.smr.LatestVoteRoundU64())
 	}
 
+	var qcGrandHash common.Hash
 	vote := &Vote{
-		Epoch:      e.epoch,
+		Epoch:      c.smr.Epoch(),
 		Hash:       hash,
 		Proposer:   proposer,
 		View:       view,
@@ -98,11 +129,20 @@ func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address,
 		ParentView: justifyQC.View,
 	}
 
-	var qcGrandHash common.Hash
-	if e.curHeight.Cmp(e.chain2Height()) >= 0 {
+	if c.isChain3() {
+		lockQC := c.smr.LockQC()
+		if lockQC == nil || lockQC.View == nil {
+			return nil, fmt.Errorf("lock qc at block %d may be nil", c.smr.Height())
+		}
+		if lockQCRound := lockQC.View.Round; justifyQCRound.Cmp(lockQCRound) < 0 {
+			return nil, fmt.Errorf("rule2, expect: justifyQCRound >= lockQCRound, got (%v < %v)", justifyQCRound, lockQCRound)
+		}
+	}
+
+	if c.isChain2() {
 		qcParentHash := justifyQCBlock.ParentHash()
 		qcParentHeight := new(big.Int).Sub(justifyQCHeight, common.Big1)
-		qcParentBlock := e.blkPool.GetBlockAndCheckHeight(qcParentHash, qcParentHeight)
+		qcParentBlock := c.blkPool.GetBlockAndCheckHeight(qcParentHash, qcParentHeight)
 		if qcParentBlock == nil {
 			return nil, fmt.Errorf("justifyQC parent (hash, height) not exist, (%v, %v)", qcParentHash, qcParentHeight)
 		}
@@ -119,9 +159,9 @@ func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address,
 		qcGrandHash = qcParentBlock.ParentHash()
 	}
 
-	if e.curHeight.Cmp(e.chain3Height()) >= 0 {
+	if c.isChain3() {
 		qcGrandHeight := new(big.Int).Sub(vote.GrandView.Height, common.Big1)
-		qcGrandBlock := e.blkPool.GetBlockAndCheckHeight(qcGrandHash, qcGrandHeight)
+		qcGrandBlock := c.blkPool.GetBlockAndCheckHeight(qcGrandHash, qcGrandHeight)
 		if qcGrandBlock == nil {
 			return nil, fmt.Errorf("justifyQC grand-pa (hash, height) not exist, (%v, %v)", qcGrandHash, qcGrandHeight)
 		}
@@ -142,8 +182,8 @@ func (e *EventDrivenEngine) makeVote(hash common.Hash, proposer common.Address,
 	return vote, nil
 }
 
-func (e *EventDrivenEngine) validateVote(vote *Vote) error {
-	if err := e.validateSingleChain(vote.Hash, vote.View, utils.EmptyHash); err != nil {
+func (c *core) validateVote(vote *Vote) error {
+	if err := c.validateSingleChain(vote.Hash, vote.View, utils.EmptyHash); err != nil {
 		return err
 	}
 
@@ -151,32 +191,32 @@ func (e *EventDrivenEngine) validateVote(vote *Vote) error {
 	if new(big.Int).Add(vote.ParentView.Height, common.Big1).Cmp(vote.View.Height) != 0 {
 		return errInvalidVote
 	}
-	if err := e.validateSingleChain(vote.ParentHash, vote.ParentView, vote.Hash); err != nil {
+	if err := c.validateSingleChain(vote.ParentHash, vote.ParentView, vote.Hash); err != nil {
 		return errInvalidVote
 	}
 
 	// validate grand block
-	if e.curHeight.Cmp(e.chain2Height()) >= 0 {
+	if c.isChain2() {
 		if vote.GrandHash == utils.EmptyHash || vote.GrandView == nil {
 			return errInvalidVote
 		}
 		if new(big.Int).Add(vote.GrandView.Height, common.Big1).Cmp(vote.ParentView.Height) != 0 {
 			return errInvalidVote
 		}
-		if err := e.validateSingleChain(vote.GrandHash, vote.GrandView, vote.ParentHash); err != nil {
+		if err := c.validateSingleChain(vote.GrandHash, vote.GrandView, vote.ParentHash); err != nil {
 			return err
 		}
 	}
 
 	// validate great-grand block
-	if e.curHeight.Cmp(e.chain3Height()) >= 0 {
+	if c.isChain3() {
 		if vote.GreatGrandHash == utils.EmptyHash || vote.GreatGrandView == nil {
 			return errInvalidVote
 		}
 		if new(big.Int).Add(vote.GreatGrandView.Height, common.Big1).Cmp(vote.GrandView.Height) != 0 {
 			return errInvalidVote
 		}
-		if err := e.validateSingleChain(vote.GreatGrandHash, vote.GreatGrandView, vote.GrandHash); err != nil {
+		if err := c.validateSingleChain(vote.GreatGrandHash, vote.GreatGrandView, vote.GrandHash); err != nil {
 			return err
 		}
 	}
@@ -184,8 +224,8 @@ func (e *EventDrivenEngine) validateVote(vote *Vote) error {
 }
 
 // validateSingleChain fetch block and check child hash
-func (e *EventDrivenEngine) validateSingleChain(hash common.Hash, view *hotstuff.View, child common.Hash) error {
-	block := e.blkPool.GetBlockAndCheckHeight(hash, view.Height)
+func (c *core) validateSingleChain(hash common.Hash, view *hotstuff.View, child common.Hash) error {
+	block := c.blkPool.GetBlockAndCheckHeight(hash, view.Height)
 	if block == nil {
 		return fmt.Errorf("proposal %v not exist", hash)
 	}
@@ -197,7 +237,7 @@ func (e *EventDrivenEngine) validateSingleChain(hash common.Hash, view *hotstuff
 		return fmt.Errorf("vote proposal round expect %v, got %v", salt.Round, view.Round)
 	}
 	if child != common.EmptyHash {
-		if block := e.blkPool.GetBlockByHash(child); block.ParentHash() != hash {
+		if block := c.blkPool.GetBlockByHash(child); block.ParentHash() != hash {
 			return fmt.Errorf("vote proposal parent hash expect %v, got %v", block.ParentHash(), hash)
 		}
 	}

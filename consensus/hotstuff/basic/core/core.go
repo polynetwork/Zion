@@ -2,6 +2,7 @@ package core
 
 import (
 	"bytes"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"math"
@@ -99,6 +100,14 @@ func (c *core) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) 
 	}
 
 	return append(buf.Bytes(), payload...), nil
+}
+
+func (c *core) GetHeader(hash common.Hash, number uint64) *types.Header {
+	return nil
+}
+
+func (c *core) SubscribeRequest(ch chan <- consensus.AskRequest) event.Subscription {
+	return nil
 }
 
 const maxRetry uint64 = 10

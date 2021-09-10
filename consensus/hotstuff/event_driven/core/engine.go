@@ -19,32 +19,60 @@
 package core
 
 import (
+	"math/big"
+	"sync"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 )
 
-func (e *EventDrivenEngine) Start() error {
-	e.handleNewRound()
+var once sync.Once
+
+func (c *core) Start(chain consensus.ChainReader) error {
+	once.Do(func() {
+		hotstuff.RegisterMsgTypeConvertHandler(convertUpMsgType)
+	})
+
+	c.chain = chain
+	if err := c.initialize(); err != nil {
+		return err
+	}
+
+	// todo: start all nodes at the same time
+	time.Sleep(15 * time.Second)
 
 	// Tests will handle events itself, so we have to make subscribeEvents()
 	// be able to call in test.
-	e.subscribeEvents()
-	go e.handleEvents()
+	c.subscribeEvents()
+	go c.handleEvents()
+
+	// engine is started after this step, DONT allow to return err to miner worker, this may cause worker invalid
+	c.started = true
+	highQC := c.smr.HighQC()
+	c.advanceRoundByQC(highQC)
 	return nil
 }
 
-func (e *EventDrivenEngine) Stop() error {
-	e.stopTimer()
-	e.unsubscribeEvents()
+func (c *core) Stop() error {
+	c.stopTimer()
+	c.unsubscribeEvents()
+	c.started = false
 	return nil
 }
 
-func (e *EventDrivenEngine) IsProposer() bool {
-	if e.valset.IsProposer(e.address()) {
+func (c *core) IsProposer() bool {
+	if c.valset.IsProposer(c.address) {
 		return true
 	}
 	return false
+}
+
+func (c *core) Address() common.Address {
+	return c.address
 }
 
 // verify if a hash is the same as the proposed block in the current pending request
@@ -54,23 +82,31 @@ func (e *EventDrivenEngine) IsProposer() bool {
 // pending request is populated right at the request stage so this would give us the earliest verification
 // to avoid any race condition of coming propagated blocks
 // 判断是否已经提交或者正在提交, 这样一来，request必须在一开始就写入到blockTree
-func (e *EventDrivenEngine) IsCurrentProposal(blockHash common.Hash) bool {
-	block := e.blkPool.GetBlockByHash(blockHash)
+func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
+	block := c.blkPool.GetBlockByHash(blockHash)
 	if block == nil {
 		return false
 	}
 
-	if block.NumberU64() != e.curHeight.Uint64() {
+	if block.NumberU64() != c.smr.Height().Uint64() {
 		return false
 	}
-
 	return true
 }
 
-func (e *EventDrivenEngine) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
-	return generateExtra(header, valSet, e.epoch, e.curRound)
+func (c *core) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) ([]byte, error) {
+	return generateExtra(header, valSet, c.smr.Epoch(), c.smr.Round())
 }
 
-func (e *EventDrivenEngine) Address() common.Address {
-	return e.signer.Address()
+func (c *core) GetHeader(hash common.Hash, number uint64) *types.Header {
+	block := c.blkPool.GetBlockAndCheckHeight(hash, new(big.Int).SetUint64(number))
+	if block == nil {
+		return nil
+	} else {
+		return block.Header()
+	}
+}
+
+func (c *core) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
+	return c.feed.Subscribe(ch)
 }

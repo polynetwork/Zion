@@ -236,37 +236,37 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	return worker
 }
 
-// setEtherbase sets the etherbase used to initialize the block coinbase field.
-func (w *worker) setEtherbase(addr common.Address) {
+// SetEtherbase sets the etherbase used to initialize the block coinbase field.
+func (w *worker) SetEtherbase(addr common.Address) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.coinbase = addr
 }
 
-// setExtra sets the content used to initialize the block extra field.
-func (w *worker) setExtra(extra []byte) {
+// SetExtra sets the content used to initialize the block extra field.
+func (w *worker) SetExtra(extra []byte) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	w.extra = extra
 }
 
-// setRecommitInterval updates the interval for miner sealing work recommitting.
-func (w *worker) setRecommitInterval(interval time.Duration) {
+// SetRecommitInterval updates the interval for miner sealing work recommitting.
+func (w *worker) SetRecommitInterval(interval time.Duration) {
 	w.resubmitIntervalCh <- interval
 }
 
 // disablePreseal disables pre-sealing mining feature
-func (w *worker) disablePreseal() {
+func (w *worker) DisablePreseal() {
 	atomic.StoreUint32(&w.noempty, 1)
 }
 
 // enablePreseal enables pre-sealing mining feature
-func (w *worker) enablePreseal() {
+func (w *worker) EnablePreseal() {
 	atomic.StoreUint32(&w.noempty, 0)
 }
 
 // pending returns the pending state and corresponding block.
-func (w *worker) pending() (*types.Block, *state.StateDB) {
+func (w *worker) Pending() (*types.Block, *state.StateDB) {
 	// return a snapshot to avoid contention on currentMu mutex
 	w.snapshotMu.RLock()
 	defer w.snapshotMu.RUnlock()
@@ -276,39 +276,46 @@ func (w *worker) pending() (*types.Block, *state.StateDB) {
 	return w.snapshotBlock, w.snapshotState.Copy()
 }
 
-// pendingBlock returns pending block.
-func (w *worker) pendingBlock() *types.Block {
+// PendingBlock returns pending block.
+func (w *worker) PendingBlock() *types.Block {
 	// return a snapshot to avoid contention on currentMu mutex
 	w.snapshotMu.RLock()
 	defer w.snapshotMu.RUnlock()
 	return w.snapshotBlock
 }
 
+func (w *worker) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription {
+	return w.pendingLogsFeed.Subscribe(ch)
+}
+
 // start sets the running status as 1 and triggers new work submitting.
-func (w *worker) start() {
-	atomic.StoreInt32(&w.running, 1)
+func (w *worker) Start() {
 	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
-		istanbul.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil)
+		if err := istanbul.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
+			log.Warn("Failed to start hotstuff event-driven engine", "err", err)
+			return
+		}
 	}
+	atomic.StoreInt32(&w.running, 1)
 	w.startCh <- struct{}{}
 }
 
 // stop sets the running status as 0.
-func (w *worker) stop() {
+func (w *worker) Stop() {
 	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
 		istanbul.Stop()
 	}
 	atomic.StoreInt32(&w.running, 0)
 }
 
-// isRunning returns an indicator whether worker is running or not.
-func (w *worker) isRunning() bool {
+// IsRunning returns an indicator whether worker is running or not.
+func (w *worker) IsRunning() bool {
 	return atomic.LoadInt32(&w.running) == 1
 }
 
 // close terminates all background threads maintained by the worker.
 // Note the worker does not support being closed multiple times.
-func (w *worker) close() {
+func (w *worker) Close() {
 	if w.current != nil && w.current.state != nil {
 		w.current.state.StopPrefetcher()
 	}
@@ -382,6 +389,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
 
+		// chainHead是触发commit的主要因素，共识完成后广播区块，节点接收到新的区块头之后，进入新一轮的共识
 		case head := <-w.chainHeadCh:
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
@@ -390,13 +398,12 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		case <-timer.C:
 			// If mining is running resubmit a new work cycle periodically to pull in
 			// higher priced transactions. Disable this overhead for pending blocks.
-			if w.isRunning() && (w.chainConfig.Clique == nil || w.chainConfig.Clique.Period > 0) {
+			if w.IsRunning() && (w.chainConfig.Clique == nil || w.chainConfig.Clique.Period > 0) {
 				// Short circuit if no new transaction arrives.
 				if atomic.LoadInt32(&w.newTxs) == 0 {
 					timer.Reset(recommit)
 					continue
 				}
-				commit(true, commitInterruptResubmit)
 			}
 
 		case interval := <-w.resubmitIntervalCh:
@@ -462,7 +469,7 @@ func (w *worker) mainLoop() {
 			}
 			// If our mining block contains less than 2 uncle blocks,
 			// add the new uncle block if valid and regenerate a mining block.
-			if w.isRunning() && w.current != nil && w.current.uncles.Cardinality() < 2 {
+			if w.IsRunning() && w.current != nil && w.current.uncles.Cardinality() < 2 {
 				start := time.Now()
 				if err := w.commitUncle(w.current, ev.Block.Header()); err == nil {
 					var uncles []*types.Header
@@ -491,7 +498,7 @@ func (w *worker) mainLoop() {
 			// Note all transactions received may not be continuous with transactions
 			// already included in the current mining block. These transactions will
 			// be automatically eliminated.
-			if !w.isRunning() && w.current != nil {
+			if !w.IsRunning() && w.current != nil {
 				// If block is already full, abort
 				if gp := w.current.gasPool; gp != nil && gp.Gas() < params.TxGas {
 					continue
@@ -848,7 +855,7 @@ func (w *worker) commitTransactions(txs *types.TransactionsByPriceAndNonce, coin
 		}
 	}
 
-	if !w.isRunning() && len(coalescedLogs) > 0 {
+	if !w.IsRunning() && len(coalescedLogs) > 0 {
 		// We don't push the pendingLogsEvent while we are mining. The reason is that
 		// when we are mining, the worker will regenerate a mining block every 3 seconds.
 		// In order to avoid pushing the repeated pendingLog, we disable the pending log pushing.
@@ -878,7 +885,6 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 
 	tstart := time.Now()
 	parent := w.chain.CurrentBlock()
-
 	if parent.Time() >= uint64(timestamp) {
 		timestamp = int64(parent.Time() + 1)
 	}
@@ -891,7 +897,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		Time:       uint64(timestamp),
 	}
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
-	if w.isRunning() {
+	if w.IsRunning() {
 		if w.coinbase == (common.Address{}) {
 			log.Error("Refusing to mine without etherbase")
 			return
@@ -1001,7 +1007,7 @@ func (w *worker) commit(uncles []*types.Header, interval func(), update bool, st
 	if err != nil {
 		return err
 	}
-	if w.isRunning() {
+	if w.IsRunning() {
 		if interval != nil {
 			interval()
 		}

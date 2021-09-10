@@ -27,7 +27,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	hsc "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
+	hsb "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
+	hse "github.com/ethereum/go-ethereum/consensus/hotstuff/event_driven/core"
 	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -47,27 +48,29 @@ const (
 type backend struct {
 	config *hotstuff.Config
 	//db           ethdb.Database // Database to store and retrieve necessary information
-	core         hotstuff.CoreEngine
-	signer       hotstuff.Signer
-	chain        consensus.ChainReader
-	currentBlock func() *types.Block
-	getBlockByHash  func(hash common.Hash) *types.Block
-	hasBadBlock  func(hash common.Hash) bool
-	logger       log.Logger
+	core           hotstuff.CoreEngine
+	signer         hotstuff.Signer
+	chain          consensus.ChainReader
+	currentBlock   func() *types.Block
+	getBlockByHash func(hash common.Hash) *types.Block
+	hasBadBlock    func(hash common.Hash) bool
+	logger         log.Logger
 
 	valset         hotstuff.ValidatorSet
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
+	proposedBlockHashes map[common.Hash]struct{}
+
 	// The channels for hotstuff engine notifications
-	sealMu            sync.Mutex
-	commitCh          chan *types.Block
-	proposedBlockHash common.Hash
-	coreStarted       bool
-	sigMu             sync.RWMutex // Protects the address fields
-	consenMu          sync.Mutex   // Ensure a round can only start after the last one has finished
-	coreMu            sync.RWMutex
+	sealMu   sync.Mutex
+	commitCh chan *types.Block
+	//proposedBlockHash common.Hash
+	coreStarted bool
+	sigMu       sync.RWMutex // Protects the address fields
+	consenMu    sync.Mutex   // Ensure a round can only start after the last one has finished
+	coreMu      sync.RWMutex
 
 	// event subscription for ChainHeadEvent event
 	broadcaster consensus.Broadcaster
@@ -77,28 +80,36 @@ type backend struct {
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet) consensus.HotStuff {
+func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet, protocol hotstuff.HotstuffProtocol) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
-	signer := snr.NewSigner(privateKey, byte(hsc.MsgTypePrepareVote))
+	signer := snr.NewSigner(privateKey, byte(hsb.MsgTypePrepareVote))
 	backend := &backend{
 		config: config,
 		//db:             db,
-		logger:         log.New(),
-		valset:         valset,
-		commitCh:       make(chan *types.Block, 1),
-		coreStarted:    false,
-		eventMux:       new(event.TypeMux),
-		signer:         signer,
-		recentMessages: recentMessages,
-		knownMessages:  knownMessages,
-		recents:        recents,
-		proposals:      make(map[common.Address]bool),
+		logger:              log.New(),
+		valset:              valset,
+		commitCh:            make(chan *types.Block, 1),
+		coreStarted:         false,
+		eventMux:            new(event.TypeMux),
+		signer:              signer,
+		recentMessages:      recentMessages,
+		knownMessages:       knownMessages,
+		recents:             recents,
+		proposals:           make(map[common.Address]bool),
+		proposedBlockHashes: make(map[common.Hash]struct{}),
 	}
 
-	backend.core = hsc.New(backend, config, signer, valset)
+	switch protocol {
+	case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
+		backend.core = hsb.New(backend, config, signer, valset)
+	case hotstuff.HOTSTUFF_PROTOCOL_EVENT_DRIVEN:
+		backend.core = hse.New(backend, config, db, signer, valset)
+	default:
+		panic("unknown hotstuff protocol")
+	}
 	return backend
 }
 
@@ -207,7 +218,6 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 // PreCommit implements hotstuff.Backend.PreCommit
 func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
 	// Check if the proposal is a valid block
-	block := &types.Block{}
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		s.logger.Error("Invalid proposal, %v", proposal)
@@ -226,12 +236,25 @@ func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuf
 	return block, nil
 }
 
-func (s *backend) Commit(proposal hotstuff.Proposal) error {
-	// Check if the proposal is a valid block
-	block := &types.Block{}
+func (s *backend) ForwardCommit(proposal hotstuff.Proposal, extra []byte) (hotstuff.Proposal, error) {
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		s.logger.Error("Invalid proposal, %v", proposal)
+		return nil, errInvalidProposal
+	}
+
+	h := block.Header()
+	h.Extra = extra
+	block = block.WithSeal(h)
+
+	return block, nil
+}
+
+func (s *backend) Commit(proposal hotstuff.Proposal) error {
+	// Check if the proposal is a valid block
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		s.logger.Error("Committed to miner worker", "proposal", "not block")
 		return errInvalidProposal
 	}
 
@@ -242,13 +265,15 @@ func (s *backend) Commit(proposal hotstuff.Proposal) error {
 	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
 	//    the next block and the previous Seal() will be stopped (need to check this --- saber).
 	// -- otherwise, an error will be returned and a round change event will be fired.
-	if s.proposedBlockHash == block.Hash() {
+	if _, ok := s.proposedBlockHashes[block.Hash()]; ok {
 		// feed block hash to Seal() and wait the Seal() result
 		s.commitCh <- block
 		return nil
-	}
-	if s.broadcaster != nil {
-		s.broadcaster.Enqueue(fetcherID, block)
+	} else {
+		s.logger.Trace("Proposed block not match, broadcast it", "expect", block.Hash(), "got", nil)
+		if s.broadcaster != nil {
+			s.broadcaster.Enqueue(fetcherID, block)
+		}
 	}
 	return nil
 }
@@ -328,7 +353,6 @@ func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 	}
 
 	block := s.currentBlock()
-
 	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
 		var err error

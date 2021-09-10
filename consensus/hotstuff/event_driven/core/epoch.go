@@ -22,51 +22,49 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-// todo:
-func (e *EventDrivenEngine) initialize() error {
-	lastBlock, _ := e.backend.LastProposal()
+//todo: epoch manager
+func (c *core) initialize() error {
+	c.smr.SetEpoch(0)
+	c.smr.SetEpochStart(big.NewInt(0))
+	c.smr.SetEpochEnd(big.NewInt(10000000))
 
-	//todo:
-	e.epoch = 0
-	e.epochHeightStart = big.NewInt(0)
-	e.epochHeightEnd = big.NewInt(100)
-
-	e.curHeight = new(big.Int).Add(lastBlock.Number(), common.Big1)
-
+	lastBlock, _ := c.backend.LastProposal()
+	if lastBlock == nil {
+		return fmt.Errorf("initialize event-driven engine with first block failed!")
+	}
 	salt, qc, err := extraProposal(lastBlock)
 	if err != nil {
 		return err
 	}
-	e.highestCommitRound = salt.Round
-	e.curRound = new(big.Int).Add(e.highestCommitRound, common.Big1)
 
-	if e.epochHeightStart.Cmp(e.highestCommitRound) > 0 {
-		// todo
+	c.smr.SetHighCommitRound(salt.Round)
+	c.smr.SetRound(c.smr.HighCommitRound())
+	c.smr.SetHeight(lastBlock.Number())
+
+	proposal := c.backend.GetProposal(lastBlock.Hash())
+	if proposal == nil {
+		return fmt.Errorf("Can't get block %v", lastBlock.Hash())
 	}
-	if e.highestCommitRound.Cmp(common.Big0) == 0 {
-		proposal := e.backend.GetProposal(lastBlock.Hash())
-		if proposal == nil {
-			return fmt.Errorf("Can't get block %v", lastBlock.Hash())
-		}
-		rootBlock := proposal.(*types.Block)
-		rootSalt, highQC, err := extraHeader(rootBlock.Header())
-		if err != nil {
-			return err
-		}
-		blktr, err := NewBlockTree(rootBlock, rootSalt.Round.Uint64(), 100)
-		if err != nil {
-			return err
-		}
-		e.blkPool = NewBlockPool(highQC, blktr)
+	rootBlock := proposal.(*types.Block)
+	rootSalt, highQC, err := extraHeader(rootBlock.Header())
+	if err != nil {
+		return err
+	}
+	blktr, err := NewBlockTree(rootBlock, rootSalt.Round.Uint64(), 100)
+	if err != nil {
+		return err
 	}
 
-	// todo:
-	e.lastVoteRound = salt.Round
-	e.lockQC = qc
+	c.blkPool = NewBlockPool(blktr)
+	c.blkPool.AddQC(qc)
+	if err := c.updateHighQCAndProposal(highQC, rootBlock); err != nil {
+		c.logger.Trace("[Initialize Engine], update high qc and proposal", "err", err)
+	}
+	c.smr.SetLatestVoteRound(salt.Round)
 
+	c.logger.Trace("[Initialize Engine]", "view", c.currentView())
 	return nil
 }

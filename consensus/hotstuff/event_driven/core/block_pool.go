@@ -27,19 +27,15 @@ import (
 )
 
 type BlockPool struct {
-	tree   *BlockTree
-	highQC *hotstuff.QuorumCert // the highest qc, 从genesis 0开始
+	tree  *BlockTree
+	qcMap map[common.Hash]*hotstuff.QuorumCert // caches the quorum certificates
 }
 
-func NewBlockPool(initHighQC *hotstuff.QuorumCert, tr *BlockTree) *BlockPool {
+func NewBlockPool(tr *BlockTree) *BlockPool {
 	return &BlockPool{
-		tree:   tr,
-		highQC: initHighQC,
+		tree:  tr,
+		qcMap: make(map[common.Hash]*hotstuff.QuorumCert),
 	}
-}
-
-func (tr *BlockPool) GetHighQC() *hotstuff.QuorumCert {
-	return tr.highQC
 }
 
 func (tr *BlockPool) GetBlockAndCheckHeight(hash common.Hash, height *big.Int) *types.Block {
@@ -57,40 +53,41 @@ func (tr *BlockPool) GetBlockByHash(hash common.Hash) *types.Block {
 	return tr.tree.GetBlockByHash(hash)
 }
 
-// Insert insert new block into pending block tree, calculate and return the highestQC
-func (tr *BlockPool) Insert(block *types.Block, round *big.Int) error {
+func (tr *BlockPool) GetQCByHash(hash common.Hash) *hotstuff.QuorumCert {
+	return tr.qcMap[hash]
+}
+
+// AddBlock insert new block into pending block tree, calculate and return the highestQC
+// allow to store the sealed and unsealed block with same hash.
+func (tr *BlockPool) AddBlock(block *types.Block, round *big.Int) error {
 	return tr.tree.Add(block, round.Uint64())
 }
 
-func (tr *BlockPool) UpdateHighQC(qc *hotstuff.QuorumCert) {
-	if qc == nil || qc.View == nil {
-		return
-	}
-	if tr.highQC == nil || tr.highQC.View == nil {
-		tr.highQC = qc
-	} else if tr.highQC.View.Round.Cmp(qc.View.Round) < 0 {
-		tr.highQC = qc
+func (tr *BlockPool) AddQC(qc *hotstuff.QuorumCert) {
+	if _, ok := tr.qcMap[qc.Hash]; !ok {
+		tr.qcMap[qc.Hash] = qc
 	}
 }
 
 // GetCommitBlock get highQC's grand-parent block which should be committed at current round
 func (tr *BlockPool) GetCommitBlock(lockQC common.Hash) *types.Block {
-	block := tr.GetBlockByHash(tr.highQC.Hash)
-	parent := tr.GetBlockAndCheckHeight(block.ParentHash(), sub1(block.Number()))
-	if parent == nil {
-		return nil
-	}
-	grand := tr.GetBlockAndCheckHeight(parent.ParentHash(), sub1(parent.Number()))
-	if grand == nil {
-		return nil
-	}
-	if grand.Hash() != lockQC {
-		return nil
-	}
 	return tr.GetBlockByHash(lockQC)
 }
 
+// GetCommitBranch get blocks which can be commit
+func (tr *BlockPool) GetCommitBranch(lockQC common.Hash) []*types.Block {
+	branch := tr.tree.Branch(lockQC)
+	if branch == nil || len(branch) == 0 {
+		return nil
+	}
+	list := make([]*types.Block, 0)
+	for _, node := range branch {
+		list = append(list, node.GetBlock())
+	}
+	return list
+}
+
 // Pure delete useless blocks
-func (tr *BlockPool) Pure(committedBlock common.Hash) {
-	tr.tree.Prune(committedBlock)
+func (tr *BlockPool) Pure(committedBlock common.Hash) []common.Hash {
+	return tr.tree.Prune(committedBlock)
 }
