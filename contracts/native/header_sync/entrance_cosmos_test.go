@@ -68,10 +68,11 @@ const (
 	OPERATOR_ERROR
 	UNKNOWN
 )
+
 var (
-	sdb  *state.StateDB
-	acct *ecdsa.PublicKey
-	caller ethcommon.Address
+	sdb         *state.StateDB
+	acct        *ecdsa.PublicKey
+	caller      ethcommon.Address
 	contractRef *native.ContractRef
 )
 
@@ -88,14 +89,13 @@ func init() {
 	sdb, _ = state.New(ethcommon.Hash{}, state.NewDatabase(db), nil)
 
 	cacheDB := (*state.CacheDB)(sdb)
-	
 
 	blockNumber := big.NewInt(1)
 	key, _ := crypto.GenerateKey()
 	acct = &key.PublicKey
 	caller = crypto.PubkeyToAddress(*acct)
 	putPeerMapPoolAndView(cacheDB)
-	contractRef = native.NewContractRef(sdb, caller, blockNumber, ethcommon.Hash{}, 60000000, nil)
+	contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, ethcommon.Hash{}, 60000000, nil)
 }
 
 func putPeerMapPoolAndView(db *state.CacheDB) {
@@ -149,8 +149,6 @@ func typeOfError(e error) int {
 	return UNKNOWN
 }
 
-
-
 func RegisterSideChainManager(contractRef *native.ContractRef, chainId uint64) {
 	param := new(side_chain_manager.RegisterSideChainParam)
 	param.BlocksToWait = 4
@@ -159,7 +157,7 @@ func RegisterSideChainManager(contractRef *native.ContractRef, chainId uint64) {
 	param.Router = 3
 	param.Address = caller
 
-	extraInfo  := zilliqa.ExtraInfo{NumOfGuardList: 1}
+	extraInfo := zilliqa.ExtraInfo{NumOfGuardList: 1}
 	b, _ := json.Marshal(extraInfo)
 	param.ExtraInfo = b
 
@@ -185,8 +183,6 @@ func NewNative(name string, param interface{}) (*native.NativeContract, error) {
 		return nil, err
 	}
 
-	
-
 	contractRef.PushContext(&native.Context{
 		Caller:          caller,
 		ContractAddress: utils.HeaderSyncContractAddress,
@@ -197,18 +193,18 @@ func NewNative(name string, param interface{}) (*native.NativeContract, error) {
 
 	chainId := reflect.Indirect(reflect.ValueOf(param)).FieldByName("ChainID").Uint()
 	RegisterSideChainManager(contractRef, uint64(chainId))
-	
-    /*
-	 input, err := utils.PackMethodWithStruct(scom.GetABI(), name, param)
-	 if err != nil {
-		 return nil, err
-	 }
 
-	 ret, leftOverGas, err := contractRef.NativeCall(ethcommon.Address{}, utils.HeaderSyncContractAddress, input)
-	 if err != nil {
-		 return nil, err
-	 }
-	 fmt.Printf("ret: %s, gas: %d", hex.EncodeToString(ret), leftOverGas) */
+	/*
+		 input, err := utils.PackMethodWithStruct(scom.GetABI(), name, param)
+		 if err != nil {
+			 return nil, err
+		 }
+
+		 ret, leftOverGas, err := contractRef.NativeCall(ethcommon.Address{}, utils.HeaderSyncContractAddress, input)
+		 if err != nil {
+			 return nil, err
+		 }
+		 fmt.Printf("ret: %s, gas: %d", hex.EncodeToString(ret), leftOverGas) */
 	return c, nil
 
 	//result, err := utils.PackOutputs(header_sync.ABI, header_sync.MethodSyncBlockHeader, true)

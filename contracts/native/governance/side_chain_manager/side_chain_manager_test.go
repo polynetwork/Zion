@@ -1,3 +1,20 @@
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
 package side_chain_manager
 
 import (
@@ -74,7 +91,7 @@ func TestRegisterSideChainManager(t *testing.T) {
 
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, common.Hash{}, gasTable[MethodRegisterSideChain]+extra, nil)
+	contractRef := native.NewContractRef(sdb, common.Address{}, common.Address{}, blockNumber, common.Hash{}, gasTable[MethodRegisterSideChain]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
 
 	assert.Nil(t, err)
@@ -85,7 +102,7 @@ func TestRegisterSideChainManager(t *testing.T) {
 	assert.Equal(t, leftOverGas, extra)
 
 	contract := native.NewNativeContract(sdb, contractRef)
-	sideChain, err := getSideChainApply(contract, 8)
+	sideChain, err := GetSideChainApply(contract, 8)
 	assert.Equal(t, sideChain.Name, "mychain")
 	assert.Nil(t, err)
 
@@ -107,7 +124,7 @@ func TestApproveRegisterSideChain(t *testing.T) {
 
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, gasTable[MethodApproveRegisterSideChain]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[MethodApproveRegisterSideChain]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
 
 	assert.Nil(t, err)
@@ -133,7 +150,7 @@ func TestUpdateSideChain(t *testing.T) {
 
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, common.Address{}, blockNumber, common.Hash{}, gasTable[MethodUpdateSideChain]+extra, nil)
+	contractRef := native.NewContractRef(sdb, common.Address{}, common.Address{}, blockNumber, common.Hash{}, gasTable[MethodUpdateSideChain]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
 
 	assert.Nil(t, err)
@@ -158,7 +175,7 @@ func TestApproveUpdateSideChain(t *testing.T) {
 
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, gasTable[MethodApproveUpdateSideChain]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[MethodApproveUpdateSideChain]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
 
 	assert.Nil(t, err)

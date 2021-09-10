@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
+	otypes "github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -125,7 +126,7 @@ func rlpHash(x interface{}) (h common.Hash) {
 	return h
 }
 
-func To1559(h *types.Header) *Header {
+func To1559(h *otypes.Header) *Header {
 	return &Header{
 		ParentHash:  h.ParentHash,
 		UncleHash:   h.UncleHash,
