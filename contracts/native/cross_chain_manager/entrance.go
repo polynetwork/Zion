@@ -24,12 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/btc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
@@ -73,8 +73,6 @@ func RegisterCrossChainManagerContract(s *native.NativeContract) {
 
 func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 	switch router {
-	case utils.BTC_ROUTER:
-		return btc.NewBTCHandler(), nil
 	case utils.BSC_ROUTER:
 		return bsc.NewHandler(), nil
 	case utils.ETH_ROUTER:

@@ -23,14 +23,13 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/bsc"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/btc"
 	hscommon "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/quorum"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
@@ -151,8 +150,6 @@ func SyncCrossChainMsg(native *native.NativeContract) ([]byte, error) {
 
 func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
 	switch router {
-	case utils.BTC_ROUTER:
-		return btc.NewBTCHandler(), nil
 	case utils.BSC_ROUTER:
 		return bsc.NewHandler(), nil
 	case utils.ETH_ROUTER:
@@ -168,7 +165,7 @@ func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
 	case utils.POLYGON_BOR_ROUTER:
 		return polygon.NewBorHandler(), nil
 	case utils.COSMOS_ROUTER:
-		return cosmos.NewCosmosHandler(), nil	
+		return cosmos.NewCosmosHandler(), nil
 	case utils.ZILLIQA_ROUTER:
 		return zilliqa.NewHandler(), nil
 	default:
