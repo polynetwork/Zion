@@ -19,7 +19,7 @@ package eth
 import (
 	"math/big"
 
-	"github.com/zhiqiangxu/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type ProofAccount struct {

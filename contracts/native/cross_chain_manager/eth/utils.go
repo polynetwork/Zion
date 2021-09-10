@@ -24,18 +24,18 @@ import (
 	"fmt"
 	"math/big"
 
+	ecom "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/trie"
 	"github.com/polynetwork/poly/common"
-	ecom "github.com/zhiqiangxu/go-ethereum/common"
-	"github.com/zhiqiangxu/go-ethereum/core/types"
-	"github.com/zhiqiangxu/go-ethereum/crypto"
-	"github.com/zhiqiangxu/go-ethereum/light"
-	"github.com/zhiqiangxu/go-ethereum/rlp"
-	"github.com/zhiqiangxu/go-ethereum/trie"
 )
 
 func verifyFromEthTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32, sideChain *side_chain_manager.SideChain) (*scom.MakeTxParam, error) {

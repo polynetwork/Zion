@@ -22,9 +22,9 @@ import (
 	"fmt"
 	"math"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
 	pcom "github.com/polynetwork/poly/common"
-	"github.com/zhiqiangxu/go-ethereum/common"
-	"github.com/zhiqiangxu/go-ethereum/core/types"
 )
 
 type QuorumValSet []common.Address

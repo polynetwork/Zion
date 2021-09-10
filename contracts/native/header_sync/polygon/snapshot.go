@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"fmt"
 
-	"github.com/zhiqiangxu/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Snapshot is the state of the authorization voting at a given point in time.

@@ -26,8 +26,8 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/zhiqiangxu/go-ethereum/common"
 )
 
 // MaxTotalVotingPower - the maximum allowed total voting power.

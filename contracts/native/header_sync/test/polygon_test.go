@@ -9,12 +9,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
+	ethTypes "github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 	polygonTypes "github.com/polynetwork/poly/native/service/header_sync/polygon/types"
 	"github.com/stretchr/testify/assert"
-	ethTypes "github.com/zhiqiangxu/go-ethereum/core/types"
 )
 
 func TestHeimdall(t *testing.T) {
@@ -32,7 +32,7 @@ func TestHeimdall(t *testing.T) {
 
 		blockNumber := big.NewInt(1)
 		extra := uint64(10)
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)
@@ -55,7 +55,7 @@ func TestHeimdall(t *testing.T) {
 
 		blockNumber := big.NewInt(1)
 		extra := uint64(10)
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)
@@ -72,7 +72,7 @@ func TestBor(t *testing.T) {
 	caller := crypto.PubkeyToAddress(*acct)
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
 	contract := native.NewNativeContract(sdb, contractRef)
 
 	{
@@ -85,7 +85,7 @@ func TestBor(t *testing.T) {
 		input, err := utils.PackMethodWithStruct(scom.ABI, scom.MethodSyncGenesisHeader, param)
 		assert.Nil(t, err)
 
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)
@@ -125,7 +125,7 @@ func TestBor(t *testing.T) {
 		input, err := utils.PackMethodWithStruct(scom.ABI, scom.MethodSyncGenesisHeader, param)
 		assert.Nil(t, err)
 
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)
@@ -182,7 +182,7 @@ func TestBor(t *testing.T) {
 		input, err := utils.PackMethodWithStruct(scom.ABI, scom.MethodSyncBlockHeader, param)
 		assert.Nil(t, err)
 
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)
@@ -213,7 +213,7 @@ func TestBor(t *testing.T) {
 		input, err := utils.PackMethodWithStruct(scom.ABI, scom.MethodSyncBlockHeader, param)
 		assert.Nil(t, err)
 
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)
@@ -273,7 +273,7 @@ func TestBorSnap(t *testing.T) {
 	caller := crypto.PubkeyToAddress(*acct)
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
 	contract := native.NewNativeContract(sdb, contractRef)
 
 	{
@@ -286,7 +286,7 @@ func TestBorSnap(t *testing.T) {
 		input, err := utils.PackMethodWithStruct(scom.ABI, scom.MethodSyncGenesisHeader, param)
 		assert.Nil(t, err)
 
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)
@@ -324,7 +324,7 @@ func TestBorSnap(t *testing.T) {
 		input, err := utils.PackMethodWithStruct(scom.ABI, scom.MethodSyncGenesisHeader, param)
 		assert.Nil(t, err)
 
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)
@@ -363,7 +363,7 @@ func TestBorSnap(t *testing.T) {
 		input, err := utils.PackMethodWithStruct(scom.ABI, scom.MethodSyncBlockHeader, param)
 		assert.Nil(t, err)
 
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
 		polygon.SkipVerifySpan = true
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 		polygon.SkipVerifySpan = false

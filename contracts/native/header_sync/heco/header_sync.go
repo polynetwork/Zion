@@ -24,17 +24,17 @@ import (
 	"math/big"
 	"time"
 
+	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 	cstates "github.com/polynetwork/poly/core/states"
-	ecommon "github.com/zhiqiangxu/go-ethereum/common"
-	"github.com/zhiqiangxu/go-ethereum/core/types"
-	"github.com/zhiqiangxu/go-ethereum/crypto"
-	"github.com/zhiqiangxu/go-ethereum/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

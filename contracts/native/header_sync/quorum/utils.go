@@ -19,12 +19,12 @@ package quorum
 import (
 	"fmt"
 
+	ecom "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	pcom "github.com/polynetwork/poly/common"
 	"github.com/polynetwork/poly/core/states"
-	ecom "github.com/zhiqiangxu/go-ethereum/common"
 )
 
 var (

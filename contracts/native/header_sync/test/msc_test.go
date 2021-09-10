@@ -9,14 +9,14 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
+	etypes "github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
-	ethcommon "github.com/zhiqiangxu/go-ethereum/common"
-	etypes "github.com/zhiqiangxu/go-ethereum/core/types"
 )
 
 func TestMscSyncGenesisHeader(t *testing.T) {
@@ -34,7 +34,7 @@ func TestMscSyncGenesisHeader(t *testing.T) {
 	caller := crypto.PubkeyToAddress(*acct)
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 	assert.Nil(t, err)
@@ -69,7 +69,7 @@ func TestMscSyncGenesisHeaderNoOperator(t *testing.T) {
 	caller := common.HexToAddress("0x11")
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 	_, _, err = contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 	assert.Nil(t, err)
@@ -106,7 +106,7 @@ func TestMscSyncBlockHeader(t *testing.T) {
 		caller := crypto.PubkeyToAddress(*acct)
 		blockNumber := big.NewInt(1)
 		extra := uint64(10)
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)
@@ -150,7 +150,7 @@ func TestMscSyncBlockHeader(t *testing.T) {
 		caller := crypto.PubkeyToAddress(*acct)
 		blockNumber := big.NewInt(1)
 		extra := uint64(10)
-		contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)

@@ -21,10 +21,10 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/zhiqiangxu/go-ethereum/common"
-	"github.com/zhiqiangxu/go-ethereum/core/types"
-	"github.com/zhiqiangxu/go-ethereum/crypto"
-	"github.com/zhiqiangxu/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/sha3"
 )
 

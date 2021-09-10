@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
@@ -16,7 +17,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	cstates "github.com/polynetwork/poly/core/states"
 	"github.com/stretchr/testify/assert"
-	ethcommon "github.com/zhiqiangxu/go-ethereum/common"
 )
 
 func TestSyncGenesisHeader(t *testing.T) {
@@ -31,7 +31,7 @@ func TestSyncGenesisHeader(t *testing.T) {
 	caller := crypto.PubkeyToAddress(*acct)
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 	assert.Nil(t, err)

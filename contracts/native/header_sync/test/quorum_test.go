@@ -37,7 +37,7 @@ func TestQuorumHandler_SyncGenesisHeader(t *testing.T) {
 	caller := crypto.PubkeyToAddress(*acct)
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 	assert.Nil(t, err)
@@ -72,7 +72,7 @@ func TestQuorumHandler_SyncBlockHeader(t *testing.T) {
 	caller := crypto.PubkeyToAddress(*acct)
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncGenesisHeader]+extra, nil)
 	ret, leftOverGas, err := contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 	assert.Nil(t, err)
@@ -105,7 +105,7 @@ func TestQuorumHandler_SyncBlockHeader(t *testing.T) {
 		input, err = utils.PackMethodWithStruct(scom.ABI, scom.MethodSyncBlockHeader, p1)
 		assert.Nil(t, err)
 
-		contractRef = native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
+		contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
 		ret, leftOverGas, err = contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)
@@ -138,7 +138,7 @@ func TestQuorumHandler_SyncBlockHeader(t *testing.T) {
 		input, err = utils.PackMethodWithStruct(scom.ABI, scom.MethodSyncBlockHeader, p2)
 		assert.Nil(t, err)
 
-		contractRef = native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
+		contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, scom.GasTable[scom.MethodSyncBlockHeader]+extra, nil)
 		ret, leftOverGas, err = contractRef.NativeCall(caller, utils.HeaderSyncContractAddress, input)
 
 		assert.Nil(t, err)

@@ -21,11 +21,11 @@ import (
 	"reflect"
 	"unsafe"
 
+	"github.com/ethereum/go-ethereum/common/bitutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/polynetwork/poly/core/states"
 	"github.com/polynetwork/poly/native/service/header_sync/common"
-	"github.com/zhiqiangxu/go-ethereum/common/bitutil"
 	"golang.org/x/crypto/sha3"
 )
 

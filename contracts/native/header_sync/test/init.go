@@ -66,7 +66,7 @@ func putSideChain() {
 	caller := crypto.PubkeyToAddress(*acct)
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, blockNumber, common.Hash{}, extra, nil)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
 	contract := native.NewNativeContract(sdb, contractRef)
 
 	err := side_chain_manager.PutSideChain(contract, &side_chain_manager.SideChain{

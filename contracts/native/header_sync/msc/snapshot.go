@@ -21,7 +21,7 @@ import (
 	"fmt"
 	"sort"
 
-	"github.com/zhiqiangxu/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Tally is a simple vote tally to keep the current score of votes. Votes that

@@ -25,11 +25,11 @@ import (
 	"time"
 	"unsafe"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	cstates "github.com/polynetwork/poly/core/states"
-	"github.com/zhiqiangxu/go-ethereum/common"
 )
 
 const (
