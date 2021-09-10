@@ -22,7 +22,6 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/btc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
@@ -66,7 +65,6 @@ func RegisterCrossChainManagerContract(s *native.NativeContract) {
 
 	s.Register(scom.MethodContractName, Name)
 	s.Register(scom.MethodImportOuterTransfer, ImportOuterTransfer)
-	s.Register(scom.MethodMultiSign, MultiSign)
 	s.Register(scom.MethodBlackChain, BlackChain)
 	s.Register(scom.MethodWhiteChain, WhiteChain)
 }
@@ -152,11 +150,7 @@ func ImportOuterTransfer(native *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ImportExTransfer, side chain %d is not registered", targetid)
 	}
 	if sideChain.Router == utils.BTC_ROUTER {
-		err := btc.NewBTCHandler().MakeTransaction(native, txParam, chainID)
-		if err != nil {
-			return nil, err
-		}
-		return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
+		return nil, fmt.Errorf("btc is not supported")
 	}
 
 	//NOTE, you need to store the tx in this
@@ -195,24 +189,6 @@ func PutRequest(native *native.NativeContract, txHash []byte, chainID uint64, re
 	chainIDBytes := utils.GetUint64Bytes(chainID)
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.REQUEST), chainIDBytes, txHash), hash)
 	return nil
-}
-
-func MultiSign(native *native.NativeContract) ([]byte, error) {
-	ctx := native.ContractRef().CurrentContext()
-	params := &scom.MultiSignParam{}
-	if err := utils.UnpackMethod(scom.ABI, scom.MethodMultiSign, params, ctx.Payload); err != nil {
-		return nil, err
-	}
-
-	handler := btc.NewBTCHandler()
-
-	//1. multi sign
-	err := handler.MultiSign(native, params)
-	if err != nil {
-		return nil, fmt.Errorf("MultiSign fail:%v", err)
-	}
-
-	return utils.PackOutputs(scom.ABI, scom.MethodMultiSign, true)
 }
 
 func BlackChain(native *native.NativeContract) ([]byte, error) {
