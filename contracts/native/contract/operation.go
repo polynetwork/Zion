@@ -15,39 +15,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
-package header_sync
+package contract
 
 import (
 	"fmt"
-	"strings"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native"
 )
 
-const abijson = ``
-
-func GetABI() abi.ABI {
-	ab, err := abi.JSON(strings.NewReader(abijson))
-	if err != nil {
-		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
+func ValidateOwner(n *native.NativeContract, address common.Address) error {
+	if n.ContractRef().CheckWitness(address) == false {
+		return fmt.Errorf("validateOwner, authentication failed!")
 	}
-	return ab
-}
-
-type SyncGenesisHeaderParam struct {
-	ChainID       uint64
-	GenesisHeader []byte
-}
-
-type SyncBlockHeaderParam struct {
-	ChainID uint64
-	Address common.Address
-	Headers [][]byte
-}
-
-type SyncCrossChainMsgParam struct {
-	ChainID        uint64
-	Address        common.Address
-	CrossChainMsgs [][]byte
+	return nil
 }

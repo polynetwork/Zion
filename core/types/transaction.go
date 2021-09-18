@@ -489,6 +489,7 @@ type Message struct {
 	data       []byte
 	accessList AccessList
 	checkNonce bool
+	txHash     common.Hash
 }
 
 func NewMessage(from common.Address, to *common.Address, nonce uint64, amount *big.Int, gasLimit uint64, gasPrice *big.Int, data []byte, accessList AccessList, checkNonce bool) Message {
@@ -516,6 +517,7 @@ func (tx *Transaction) AsMessage(s Signer) (Message, error) {
 		data:       tx.Data(),
 		accessList: tx.AccessList(),
 		checkNonce: true,
+		txHash:     tx.Hash(),
 	}
 
 	var err error
@@ -532,3 +534,4 @@ func (m Message) Nonce() uint64          { return m.nonce }
 func (m Message) Data() []byte           { return m.data }
 func (m Message) AccessList() AccessList { return m.accessList }
 func (m Message) CheckNonce() bool       { return m.checkNonce }
+func (m Message) TxHash() common.Hash    { return m.txHash }

@@ -26,6 +26,13 @@ import (
 const contractName = "node manager"
 
 const (
+	//status
+	CandidateStatus Status = iota
+	ConsensusStatus
+	QuitingStatus
+	BlackStatus
+
+	//function name
 	MethodContractName        = "name"
 	MethodInitConfig          = "initConfig"
 	MethodRegisterCandidate   = "registerCandidate"
@@ -36,6 +43,19 @@ const (
 	MethodQuitNode            = "quitNode"
 	MethodUpdateConfig        = "updateConfig"
 	MethodCommitDpos          = "commitDpos"
+
+	//key prefix
+	GOVERNANCE_VIEW = "governanceView"
+	VBFT_CONFIG     = "vbftConfig"
+	CANDIDITE_INDEX = "candidateIndex"
+	PEER_APPLY      = "peerApply"
+	PEER_POOL       = "peerPool"
+	PEER_INDEX      = "peerIndex"
+	BLACK_LIST      = "blackList"
+	CONSENSUS_SIGNS = "consensusSigns"
+
+	//const
+	MIN_PEER_NUM = 4
 )
 
 var (
@@ -53,7 +73,7 @@ var (
 		MethodCommitDpos:          0,
 	}
 
-	ABI abi.ABI
+	ABI *abi.ABI
 )
 
 func InitNodeManager() {

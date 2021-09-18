@@ -13,8 +13,8 @@ import (
 )
 
 var (
-	testStateDB *state.StateDB
-	testEnv     *native.ContractRef
+	testStateDB   *state.StateDB
+	testEnv       *native.ContractRef
 	testGasSupply = uint64(100000)
 
 	testCaller = common.HexToAddress("0xab7ada5c57b3e796ec589bfe84bea3cb7ae47b63")
@@ -25,13 +25,15 @@ func TestMain(m *testing.M) {
 	InitGovernance()
 
 	blockNumber := big.NewInt(1)
-	testEnv = native.NewContractRef(testStateDB, testCaller, testCaller, blockNumber, testGasSupply, nil)
+
+	testEnv = native.NewContractRef(testStateDB, testCaller, testCaller, blockNumber, common.Hash{}, testGasSupply, nil)
+
 	os.Exit(m.Run())
 }
 
 func TestName(t *testing.T) {
 	name := MethodContractName
-	payload, err := utils.PackMethod(ABI, name)
+	payload, err := utils.PackMethod(&ABI, name)
 	assert.NoError(t, err)
 
 	enc, gasLeft, err := testEnv.NativeCall(testCaller, this, payload)
@@ -41,7 +43,7 @@ func TestName(t *testing.T) {
 	assert.Equal(t, expectGasLeft, gasLeft)
 
 	output := new(MethodNameOutput)
-	err = utils.UnpackOutputs(ABI, name, output, enc)
+	err = utils.UnpackOutputs(&ABI, name, output, enc)
 	assert.NoError(t, err)
 	assert.Equal(t, contractName, output.Name)
 	t.Logf("left gas %d", gasLeft)
@@ -50,7 +52,7 @@ func TestName(t *testing.T) {
 func TestEpoch(t *testing.T) {
 	name := MethodGetEpoch
 
-	payload, err := utils.PackMethod(ABI, name)
+	payload, err := utils.PackMethod(&ABI, name)
 	assert.NoError(t, err)
 
 	enc, gasLeft, err := testEnv.NativeCall(testCaller, this, payload)
@@ -60,7 +62,7 @@ func TestEpoch(t *testing.T) {
 	assert.Equal(t, expectGasLeft, gasLeft)
 
 	output := new(MethodEpochOutput)
-	err = utils.UnpackOutputs(ABI, name, output, enc)
+	err = utils.UnpackOutputs(&ABI, name, output, enc)
 	assert.NoError(t, err)
 
 	assert.Equal(t, uint64(1), output.Epoch.Uint64())
@@ -70,7 +72,7 @@ func TestAddValidator(t *testing.T) {
 	name := MethodAddValidator
 
 	expectValidator := common.HexToAddress("0x12345")
-	payload, err := utils.PackMethod(ABI, name, expectValidator)
+	payload, err := utils.PackMethod(&ABI, name, expectValidator)
 	assert.NoError(t, err)
 
 	enc, gasLeft, err := testEnv.NativeCall(testCaller, this, payload)
@@ -80,7 +82,7 @@ func TestAddValidator(t *testing.T) {
 	assert.Equal(t, expectGasLeft, gasLeft)
 
 	output := new(MethodAddValidatorOutput)
-	err = utils.UnpackOutputs(ABI, name, output, enc)
+	err = utils.UnpackOutputs(&ABI, name, output, enc)
 	assert.NoError(t, err)
 	assert.Equal(t, true, output.Succeed)
 

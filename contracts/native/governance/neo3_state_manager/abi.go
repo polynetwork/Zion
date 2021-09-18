@@ -25,14 +25,28 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-const abijson = ``
+const (
+	EventApproveRegisterStateValidator = "approveRegisterStateValidator"
+	EventApproveRemoveStateValidator   = "approveRemoveStateValidator"
+)
 
-func GetABI() abi.ABI {
+const abijson = `[
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRegisterStateValidator + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRemoveStateValidator + `","type":"event"},
+    {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRegisterStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRemoveStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[],"name":"` + MethodGetCurrentStateValidator + `","outputs":[{"internalType":"bytes","name":"Validator","type":"bytes"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"string[]","name":"StateValidators","type":"string[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRegisterStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"string[]","name":"StateValidators","type":"string[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRemoveStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
+]`
+
+func GetABI() *abi.ABI {
 	ab, err := abi.JSON(strings.NewReader(abijson))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
-	return ab
+	return &ab
 }
 
 type StateValidatorListParam struct {

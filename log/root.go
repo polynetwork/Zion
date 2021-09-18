@@ -1,6 +1,7 @@
 package log
 
 import (
+	"fmt"
 	"os"
 )
 
@@ -47,6 +48,30 @@ func Info(msg string, ctx ...interface{}) {
 // Warn is a convenient alias for Root().Warn
 func Warn(msg string, ctx ...interface{}) {
 	root.write(msg, LvlWarn, ctx, skipLevel)
+}
+
+func Tracef(format string, a ...interface{}) {
+	Trace(fmt.Sprintf(format, a...))
+}
+
+func Debugf(format string, a ...interface{}) {
+	Debug(fmt.Sprintf(format, a...))
+}
+
+func Infof(format string, a ...interface{}) {
+	Info(fmt.Sprintf(format, a...))
+}
+
+func Warnf(format string, a ...interface{}) {
+	Warn(fmt.Sprintf(format, a...))
+}
+
+func Errorf(format string, a ...interface{}) {
+	Error(fmt.Sprintf(format, a...))
+}
+
+func Critf(format string, a ...interface{}) {
+	Crit(fmt.Sprintf(format, a...))
 }
 
 // Error is a convenient alias for Root().Error
