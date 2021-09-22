@@ -32,8 +32,8 @@ type ContractRef struct {
 
 	stateDB     *state.StateDB
 	blockHeight *big.Int
+	origin      common.Address
 	txHash      common.Hash
-	msgSender   common.Address
 	caller      common.Address
 	evmHandler  EVMHandler
 	gasLeft     uint64
@@ -41,7 +41,7 @@ type ContractRef struct {
 
 func NewContractRef(
 	db *state.StateDB,
-	sender common.Address,
+	origin common.Address,
 	caller common.Address,
 	blockHeight *big.Int,
 	txHash common.Hash,
@@ -51,7 +51,7 @@ func NewContractRef(
 	return &ContractRef{
 		contexts:    make([]*Context, 0),
 		stateDB:     db,
-		msgSender:   sender,
+		origin:      origin,
 		caller:      caller,
 		blockHeight: blockHeight,
 		txHash:      txHash,
@@ -98,8 +98,14 @@ func (s *ContractRef) TxHash() common.Hash {
 	return s.txHash
 }
 
+// MsgSender implement solidity grammar `msg.sender`
 func (s *ContractRef) MsgSender() common.Address {
-	return s.msgSender
+	return s.caller
+}
+
+// TxOrigin implement solidity grammar `tx.origin`
+func (s *ContractRef) TxOrigin() common.Address {
+	return s.origin
 }
 
 func (s *ContractRef) GasLeft() uint64 {
@@ -162,30 +168,31 @@ func (s *ContractRef) CheckContexts() bool {
 	return true
 }
 
-func (s *ContractRef) CheckWitness(address common.Address) bool {
-	if s.CheckTxSender(address) || s.CheckCaller(address) || s.CheckContractAddress(address) {
-		return true
-	}
-	return false
-}
-
-func (s *ContractRef) CheckTxSender(address common.Address) bool {
-	if s.msgSender == address {
-		return true
-	}
-	return false
-}
-
-func (s *ContractRef) CheckCaller(address common.Address) bool {
-	if s.caller == address {
-		return true
-	}
-	return false
-}
-
-func (s *ContractRef) CheckContractAddress(address common.Address) bool {
-	if s.CallingContext() != nil && s.CallingContext().ContractAddress == address {
-		return true
-	}
-	return false
-}
+// mark: authority checking for ontology
+//func (s *ContractRef) CheckWitness(address common.Address) bool {
+//	if s.CheckTxSender(address) || s.CheckCaller(address) || s.CheckContractAddress(address) {
+//		return true
+//	}
+//	return false
+//}
+//
+//func (s *ContractRef) CheckTxSender(address common.Address) bool {
+//	if s.origin == address {
+//		return true
+//	}
+//	return false
+//}
+//
+//func (s *ContractRef) CheckCaller(address common.Address) bool {
+//	if s.caller == address {
+//		return true
+//	}
+//	return false
+//}
+//
+//func (s *ContractRef) CheckContractAddress(address common.Address) bool {
+//	if s.CallingContext() != nil && s.CallingContext().ContractAddress == address {
+//		return true
+//	}
+//	return false
+//}

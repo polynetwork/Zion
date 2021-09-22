@@ -25,7 +25,7 @@ import (
 )
 
 func ValidateOwner(n *native.NativeContract, address common.Address) error {
-	if n.ContractRef().CheckWitness(address) == false {
+	if n.ContractRef().TxOrigin() == address {
 		return fmt.Errorf("validateOwner, authentication failed!")
 	}
 	return nil

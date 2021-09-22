@@ -119,7 +119,7 @@ func init() {
 	acct = &key.PublicKey
 	caller = crypto.PubkeyToAddress(*acct)
 	putPeerMapPoolAndView(cacheDB)
-	contractRef = native.NewContractRef(sdb, caller, blockNumber, ethcommon.Hash{}, 60000000, nil)
+	contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, ethcommon.Hash{}, 60000000, nil)
 }
 
 func putPeerMapPoolAndView(db *state.CacheDB) {
