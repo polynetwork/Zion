@@ -58,14 +58,13 @@ func executeCommitDpos(native *native.NativeContract) error {
 
 	putPeerPoolMap(native, peerPoolMap, newView)
 	oldView := view - 1
-	oldViewBytes := utils.GetUint32Bytes(oldView)
+	oldViewBytes := utils.GetUint64Bytes(oldView)
 	native.GetCacheDB().Delete(utils.ConcatKey(utils.NodeManagerContractAddress, []byte(PEER_POOL), oldViewBytes))
 
 	//update view
-	// todo: uint64
 	governanceView = &GovernanceView{
 		View:   view + 1,
-		Height: uint32(native.ContractRef().BlockHeight().Uint64()),
+		Height: native.ContractRef().BlockHeight().Uint64(),
 		TxHash: native.ContractRef().TxHash(),
 	}
 	putGovernanceView(native, governanceView)

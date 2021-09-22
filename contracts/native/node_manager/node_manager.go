@@ -23,12 +23,12 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	xctrs "github.com/ethereum/go-ethereum/contracts/native/contract"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/polynetwork/poly/common/config"
 	"github.com/polynetwork/poly/core/genesis"
 	cstates "github.com/polynetwork/poly/core/states"
-	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	xctrs "github.com/ethereum/go-ethereum/contracts/native/contract"
 )
 
 const (
@@ -77,14 +77,14 @@ func RegisterNodeManagerContract(native *native.NativeContract) {
 
 //Init node_manager contract
 func InitConfig(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	configuration := new(config.VBFTConfig)
-	if err := configuration.Deserialization(common.NewZeroCopySource(native.GetInput())); err != nil {
+	if err := utils.UnpackMethod(ABI, MethodInitConfig, configuration, ctx.Payload); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("initConfig, contract params deserialize error: %v", err)
 	}
-	contract := utils.NodeManagerContractAddress
 
 	// check if initConfig is already execute
-	peerPoolMapBytes, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(PEER_POOL)))
+	peerPoolMapBytes, err := native.GetCacheDB().Get(utils.ConcatKey(this, []byte(PEER_POOL)))
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("initConfig, get peerPoolMap error: %v", err)
 	}
@@ -98,23 +98,20 @@ func InitConfig(native *native.NativeContract) ([]byte, error) {
 		return utils.BYTE_FALSE, fmt.Errorf("initConfig, checkVBFTConfig failed: %v", err)
 	}
 
-	var view uint32 = 1
-	var maxId uint32
+	var view uint64 = 1
+	var maxId uint64
 
 	peerPoolMap := &PeerPoolMap{
 		PeerPoolMap: make(map[string]*PeerPoolItem),
 	}
 	for _, peer := range configuration.Peers {
-		if peer.Index > maxId {
-			maxId = peer.Index
+		if uint64(peer.Index) > maxId {
+			maxId = uint64(peer.Index)
 		}
-		address, err := common.AddressFromBase58(peer.Address)
-		if err != nil {
-			return utils.BYTE_FALSE, fmt.Errorf("initConfig, address format error: %v", err)
-		}
+		address := common.HexToAddress(peer.Address)
 
 		peerPoolItem := new(PeerPoolItem)
-		peerPoolItem.Index = peer.Index
+		peerPoolItem.Index = uint64(peer.Index)
 		peerPoolItem.PeerPubkey = peer.PeerPubkey
 		peerPoolItem.Address = address
 		peerPoolItem.Status = ConsensusStatus
@@ -125,32 +122,31 @@ func InitConfig(native *native.NativeContract) ([]byte, error) {
 			return utils.BYTE_FALSE, fmt.Errorf("initConfig, peerPubkey format error: %v", err)
 		}
 		index := peerPoolItem.Index
-		indexBytes := utils.GetUint32Bytes(index)
-		native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(PEER_INDEX), peerPubkeyPrefix), cstates.GenRawStorageItem(indexBytes))
+		indexBytes := utils.GetUint64Bytes(index)
+		native.GetCacheDB().Put(utils.ConcatKey(this, []byte(PEER_INDEX), peerPubkeyPrefix), cstates.GenRawStorageItem(indexBytes))
 	}
 
 	//init peer pool
 	putPeerPoolMap(native, peerPoolMap, 0)
 	putPeerPoolMap(native, peerPoolMap, view)
-	indexBytes := utils.GetUint32Bytes(maxId + 1)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(CANDIDITE_INDEX)), cstates.GenRawStorageItem(indexBytes))
+	indexBytes := utils.GetUint64Bytes(maxId + 1)
+	native.GetCacheDB().Put(utils.ConcatKey(this, []byte(CANDIDITE_INDEX)), cstates.GenRawStorageItem(indexBytes))
 
 	//init governance view
 	governanceView := &GovernanceView{
 		View:   view,
-		Height: native.GetHeight(),
-		TxHash: native.GetTx().Hash(),
+		Height: native.ContractRef().BlockHeight().Uint64(),
+		TxHash: native.ContractRef().TxHash(),
 	}
 	putGovernanceView(native, governanceView)
 
 	//init config
-	config := &Configuration{
-		BlockMsgDelay:        configuration.BlockMsgDelay,
-		HashMsgDelay:         configuration.HashMsgDelay,
-		PeerHandshakeTimeout: configuration.PeerHandshakeTimeout,
-		MaxBlockChangeView:   configuration.MaxBlockChangeView,
-	}
-	putConfig(native, config)
+	putConfig(native, &Configuration{
+		BlockMsgDelay:        uint64(configuration.BlockMsgDelay),
+		HashMsgDelay:         uint64(configuration.HashMsgDelay),
+		PeerHandshakeTimeout: uint64(configuration.PeerHandshakeTimeout),
+		MaxBlockChangeView:   uint64(configuration.MaxBlockChangeView),
+	})
 
 	return utils.BYTE_TRUE, nil
 }
@@ -314,7 +310,7 @@ func ApproveCandidate(native *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("approveCandidate, get value from raw storage item error:%v", err)
 		}
-		index := utils.GetBytesUint32(value)
+		index := utils.GetBytesUint64(value)
 		peerPoolItem.Index = index
 	} else {
 		//get candidate index
@@ -328,7 +324,7 @@ func ApproveCandidate(native *native.NativeContract) ([]byte, error) {
 		newCandidateIndex := candidateIndex + 1
 		putCandidateIndex(native, newCandidateIndex)
 
-		indexBytes := utils.GetUint32Bytes(peerPoolItem.Index)
+		indexBytes := utils.GetUint64Bytes(peerPoolItem.Index)
 		native.GetCacheDB().Put(utils.ConcatKey(this, []byte(PEER_INDEX), peerPubkeyPrefix), cstates.GenRawStorageItem(indexBytes))
 	}
 

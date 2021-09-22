@@ -20,6 +20,7 @@ package node_manager
 
 import (
 	"bytes"
+	"crypto/ecdsa"
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
@@ -27,10 +28,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ontio/ontology-crypto/keypair"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/polynetwork/poly/common/config"
 	cstates "github.com/polynetwork/poly/core/states"
-	"github.com/polynetwork/poly/core/types"
 )
 
 func GetPeerApply(native *native.NativeContract, peerPubkey string) (*RegisterPeerParam, error) {
@@ -57,24 +57,22 @@ func GetPeerApply(native *native.NativeContract, peerPubkey string) (*RegisterPe
 }
 
 func putPeerApply(native *native.NativeContract, peer *RegisterPeerParam) error {
-	contract := utils.NodeManagerContractAddress
 	peerPubkeyPrefix, err := hex.DecodeString(peer.PeerPubkey)
 	if err != nil {
 		return fmt.Errorf("putPeerApply, peerPubkey format error: %v", err)
 	}
 	sink := common.NewZeroCopySink(nil)
 	peer.Serialization(sink)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(PEER_APPLY), peerPubkeyPrefix), cstates.GenRawStorageItem(sink.Bytes()))
+	native.GetCacheDB().Put(utils.ConcatKey(this, []byte(PEER_APPLY), peerPubkeyPrefix), cstates.GenRawStorageItem(sink.Bytes()))
 	return nil
 }
 
-func GetPeerPoolMap(native *native.NativeContract, view uint32) (*PeerPoolMap, error) {
-	contract := utils.NodeManagerContractAddress
-	viewBytes := utils.GetUint32Bytes(view)
+func GetPeerPoolMap(native *native.NativeContract, view uint64) (*PeerPoolMap, error) {
+	viewBytes := utils.GetUint64Bytes(view)
 	peerPoolMap := &PeerPoolMap{
 		PeerPoolMap: make(map[string]*PeerPoolItem),
 	}
-	peerPoolMapBytes, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(PEER_POOL), viewBytes))
+	peerPoolMapBytes, err := native.GetCacheDB().Get(utils.ConcatKey(this, []byte(PEER_POOL), viewBytes))
 	if err != nil {
 		return nil, fmt.Errorf("getPeerPoolMap, get all peerPoolMap error: %v", err)
 	}
@@ -93,12 +91,11 @@ func GetPeerPoolMap(native *native.NativeContract, view uint32) (*PeerPoolMap, e
 	return peerPoolMap, nil
 }
 
-func putPeerPoolMap(native *native.NativeContract, peerPoolMap *PeerPoolMap, view uint32) {
-	contract := utils.NodeManagerContractAddress
-	viewBytes := utils.GetUint32Bytes(view)
+func putPeerPoolMap(native *native.NativeContract, peerPoolMap *PeerPoolMap, view uint64) {
+	viewBytes := utils.GetUint64Bytes(view)
 	sink := common.NewZeroCopySink(nil)
 	peerPoolMap.Serialization(sink)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(PEER_POOL), viewBytes), cstates.GenRawStorageItem(sink.Bytes()))
+	native.GetCacheDB().Put(utils.ConcatKey(this, []byte(PEER_POOL), viewBytes), cstates.GenRawStorageItem(sink.Bytes()))
 }
 
 func CheckVBFTConfig(configuration *config.VBFTConfig) error {
@@ -140,18 +137,16 @@ func CheckVBFTConfig(configuration *config.VBFTConfig) error {
 		if err := utils.ValidatePeerPubKeyFormat(peer.PeerPubkey); err != nil {
 			return fmt.Errorf("invalid peer pubkey")
 		}
-		_, err := common.AddressFromBase58(peer.Address)
-		if err != nil {
-			return fmt.Errorf("common.AddressFromBase58, address format error: %v", err)
+		if common.HexToAddress(peer.Address) == common.EmptyAddress {
+			return fmt.Errorf("invalid address")
 		}
 	}
 	return nil
 }
 
 func GetConfig(native *native.NativeContract) (*Configuration, error) {
-	contract := utils.NodeManagerContractAddress
-	config := new(Configuration)
-	configBytes, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(VBFT_CONFIG)))
+	c := new(Configuration)
+	configBytes, err := native.GetCacheDB().Get(utils.ConcatKey(this, []byte(VBFT_CONFIG)))
 	if err != nil {
 		return nil, fmt.Errorf("native.CacheDB.Get, get configBytes error: %v", err)
 	}
@@ -162,22 +157,20 @@ func GetConfig(native *native.NativeContract) (*Configuration, error) {
 	if err != nil {
 		return nil, fmt.Errorf("getConfig, deserialize from raw storage item err:%v", err)
 	}
-	if err := config.Deserialization(common.NewZeroCopySource(value)); err != nil {
+	if err := c.Deserialization(common.NewZeroCopySource(value)); err != nil {
 		return nil, fmt.Errorf("deserialize, deserialize config error: %v", err)
 	}
-	return config, nil
+	return c, nil
 }
 
 func putConfig(native *native.NativeContract, config *Configuration) {
-	contract := utils.NodeManagerContractAddress
 	sink := common.NewZeroCopySink(nil)
 	config.Serialization(sink)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(VBFT_CONFIG)), cstates.GenRawStorageItem(sink.Bytes()))
+	native.GetCacheDB().Put(utils.ConcatKey(this, []byte(VBFT_CONFIG)), cstates.GenRawStorageItem(sink.Bytes()))
 }
 
-func getCandidateIndex(native *native.NativeContract) (uint32, error) {
-	contract := utils.NodeManagerContractAddress
-	candidateIndexBytes, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(CANDIDITE_INDEX)))
+func getCandidateIndex(native *native.NativeContract) (uint64, error) {
+	candidateIndexBytes, err := native.GetCacheDB().Get(utils.ConcatKey(this, []byte(CANDIDITE_INDEX)))
 	if err != nil {
 		return 0, fmt.Errorf("native.CacheDB.Get, get candidateIndex error: %v", err)
 	}
@@ -188,20 +181,18 @@ func getCandidateIndex(native *native.NativeContract) (uint32, error) {
 		if err != nil {
 			return 0, fmt.Errorf("getCandidateIndex, deserialize from raw storage item err:%v", err)
 		}
-		candidateIndex := utils.GetBytesUint32(candidateIndexStore)
+		candidateIndex := utils.GetBytesUint64(candidateIndexStore)
 		return candidateIndex, nil
 	}
 }
 
-func putCandidateIndex(native *native.NativeContract, candidateIndex uint32) {
-	contract := utils.NodeManagerContractAddress
-	candidateIndexBytes := utils.GetUint32Bytes(candidateIndex)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(CANDIDITE_INDEX)), cstates.GenRawStorageItem(candidateIndexBytes))
+func putCandidateIndex(native *native.NativeContract, candidateIndex uint64) {
+	candidateIndexBytes := utils.GetUint64Bytes(candidateIndex)
+	native.GetCacheDB().Put(utils.ConcatKey(this, []byte(CANDIDITE_INDEX)), cstates.GenRawStorageItem(candidateIndexBytes))
 }
 
 func GetGovernanceView(native *native.NativeContract) (*GovernanceView, error) {
-	contract := utils.NodeManagerContractAddress
-	governanceViewBytes, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(GOVERNANCE_VIEW)))
+	governanceViewBytes, err := native.GetCacheDB().Get(utils.ConcatKey(this, []byte(GOVERNANCE_VIEW)))
 	if err != nil {
 		return nil, fmt.Errorf("getGovernanceView, get governanceViewBytes error: %v", err)
 	}
@@ -220,13 +211,12 @@ func GetGovernanceView(native *native.NativeContract) (*GovernanceView, error) {
 }
 
 func putGovernanceView(native *native.NativeContract, governanceView *GovernanceView) {
-	contract := utils.NodeManagerContractAddress
 	sink := common.NewZeroCopySink(nil)
 	governanceView.Serialization(sink)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(GOVERNANCE_VIEW)), cstates.GenRawStorageItem(sink.Bytes()))
+	native.GetCacheDB().Put(utils.ConcatKey(this, []byte(GOVERNANCE_VIEW)), cstates.GenRawStorageItem(sink.Bytes()))
 }
 
-func GetView(native *native.NativeContract) (uint32, error) {
+func GetView(native *native.NativeContract) (uint64, error) {
 	governanceView, err := GetGovernanceView(native)
 	if err != nil {
 		return 0, fmt.Errorf("getView, getGovernanceView error: %v", err)
@@ -235,8 +225,7 @@ func GetView(native *native.NativeContract) (uint32, error) {
 }
 
 func getConsensusSigns(native *native.NativeContract, key common.Hash) (*ConsensusSigns, error) {
-	contract := utils.NodeManagerContractAddress
-	consensusSignsStore, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(CONSENSUS_SIGNS), key.Bytes()))
+	consensusSignsStore, err := native.GetCacheDB().Get(utils.ConcatKey(this, []byte(CONSENSUS_SIGNS), key.Bytes()))
 	if err != nil {
 		return nil, fmt.Errorf("GetConsensusSigns, get consensusSignsStore error: %v", err)
 	}
@@ -256,15 +245,13 @@ func getConsensusSigns(native *native.NativeContract, key common.Hash) (*Consens
 }
 
 func putConsensusSigns(native *native.NativeContract, key common.Hash, consensusSigns *ConsensusSigns) {
-	contract := utils.NodeManagerContractAddress
 	sink := common.NewZeroCopySink(nil)
 	consensusSigns.Serialization(sink)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(CONSENSUS_SIGNS), key.Bytes()), cstates.GenRawStorageItem(sink.Bytes()))
+	native.GetCacheDB().Put(utils.ConcatKey(this, []byte(CONSENSUS_SIGNS), key.Bytes()), cstates.GenRawStorageItem(sink.Bytes()))
 }
 
 func deleteConsensusSigns(native *native.NativeContract, key common.Hash) {
-	contract := utils.NodeManagerContractAddress
-	native.GetCacheDB().Delete(utils.ConcatKey(contract, []byte(CONSENSUS_SIGNS), key.Bytes()))
+	native.GetCacheDB().Delete(utils.ConcatKey(this, []byte(CONSENSUS_SIGNS), key.Bytes()))
 }
 
 func CheckConsensusSigns(native *native.NativeContract, method string, input []byte, address common.Address) (bool, error) {
@@ -297,11 +284,11 @@ func CheckConsensusSigns(native *native.NativeContract, method string, input []b
 			if err != nil {
 				return false, fmt.Errorf("CheckConsensusSigns, hex.DecodeString public key error: %v", err)
 			}
-			publicKey, err := keypair.DeserializePublicKey(k)
+			publicKey, err := crypto.DecompressPubkey(k)
 			if err != nil {
 				return false, fmt.Errorf("CheckConsensusSigns, keypair.DeserializePublicKey error: %v", err)
 			}
-			_, ok := consensusSigns.SignsMap[types.AddressFromPubKey(publicKey)]
+			_, ok := consensusSigns.SignsMap[crypto.PubkeyToAddress(*publicKey)]
 			if ok {
 				num = num + 1
 			}
@@ -331,23 +318,51 @@ func GetCurConOperator(native *native.NativeContract) (common.Address, error) {
 	if peerPoolMap == nil {
 		return common.EmptyAddress, fmt.Errorf("GetCurConOperator, GetPeerPoolMap empty peerPoolMap")
 	}
-	publicKeys := make([]keypair.PublicKey, 0)
+	publicKeys := make([]*ecdsa.PublicKey, 0)
 	for key, v := range peerPoolMap.PeerPoolMap {
 		if v.Status == ConsensusStatus {
 			k, err := hex.DecodeString(key)
 			if err != nil {
 				return common.EmptyAddress, fmt.Errorf("GetCurConOperator, hex.DecodeString public key error: %v", err)
 			}
-			publicKey, err := keypair.DeserializePublicKey(k)
+			publicKey, err := crypto.DecompressPubkey(k)
 			if err != nil {
 				return common.EmptyAddress, fmt.Errorf("GetCurConOperator, keypair.DeserializePublicKey error: %v", err)
 			}
 			publicKeys = append(publicKeys, publicKey)
 		}
 	}
-	operator, err := types.AddressFromBookkeepers(publicKeys)
+	operator, err := AddressFromBookkeepers(publicKeys)
 	if err != nil {
 		return common.EmptyAddress, fmt.Errorf("GetCurConOperator, AddressFromBookkeepers error: %v", err)
 	}
 	return operator, nil
+}
+
+// todo
+/*
+func AddressFromBookkeepers(bookkeepers []keypair.PublicKey) (common.Address, error) {
+	if len(bookkeepers) == 1 {
+		return AddressFromPubKey(bookkeepers[0]), nil
+	}
+	return AddressFromMultiPubKeys(bookkeepers, len(bookkeepers)-(len(bookkeepers)-1)/3)
+}
+
+func AddressFromMultiPubKeys(pubkeys []keypair.PublicKey, m int) (common.Address, error) {
+	var addr common.Address
+	n := len(pubkeys)
+	if !(1 <= m && m <= n && n > 1 && n <= constants.MULTI_SIG_MAX_PUBKEY_SIZE) {
+		return addr, errors.New("wrong multi-sig param")
+	}
+
+	prog, err := program.ProgramFromMultiPubKey(pubkeys, m)
+	if err != nil {
+		return addr, err
+	}
+
+	return common.AddressFromVmCode(prog), nil
+}
+*/
+func AddressFromBookkeepers(list []*ecdsa.PublicKey) (common.Address, error) {
+	return common.EmptyAddress, nil
 }

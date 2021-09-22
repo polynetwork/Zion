@@ -153,10 +153,7 @@ func (p *PeerListParam) Deserialization(source *common.ZeroCopySource) error {
 	if eof {
 		return fmt.Errorf("source.NextVarBytes, deserialize address error")
 	}
-	addr, err := common.AddressParseFromBytes(address)
-	if err != nil {
-		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
-	}
+	addr := common.BytesToAddress(address)
 	p.PeerPubkeyList = peerPubkeyList
 	p.Address = addr
 	return nil
