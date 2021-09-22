@@ -62,6 +62,11 @@ const (
 	MIN_PEER_NUM = 4
 )
 
+func InitNodeManager() {
+	ABI = GetABI()
+	native.Contracts[this] = RegisterNodeManagerContract
+}
+
 //Register methods of node_manager contract
 func RegisterNodeManagerContract(native *native.NativeContract) {
 	native.Register(genesis.INIT_CONFIG, InitConfig)
@@ -208,8 +213,7 @@ func RegisterCandidate(native *native.NativeContract) ([]byte, error) {
 		return utils.BYTE_FALSE, fmt.Errorf("registerCandidate, peerPubkey is already in peerPoolMap")
 	}
 
-	err = putPeerApply(native, params)
-	if err != nil {
+	if err := putPeerApply(native, params); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("registerCandidate, put putPeerApply error: %v", err)
 	}
 
@@ -229,8 +233,7 @@ func UnRegisterCandidate(native *native.NativeContract) ([]byte, error) {
 	contract := utils.NodeManagerContractAddress
 
 	//check witness
-	err := xctrs.ValidateOwner(native, params.Address)
-	if err != nil {
+	if err := xctrs.ValidateOwner(native, params.Address); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("unRegisterCandidate, checkWitness error: %v", err)
 	}
 
@@ -564,7 +567,7 @@ func CommitDpos(native *native.NativeContract) ([]byte, error) {
 		return utils.BYTE_FALSE, fmt.Errorf("commitDpos, get config error: %v", err)
 	}
 
-	//get governace view
+	//get governance view
 	governanceView, err := GetGovernanceView(native)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("commitDpos, get GovernanceView error: %v", err)
@@ -586,10 +589,10 @@ func CommitDpos(native *native.NativeContract) ([]byte, error) {
 		}
 	}
 
-	err = executeCommitDpos(native)
-	if err != nil {
+	if err := executeCommitDpos(native); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("executeCommitDpos, executeCommitDpos error: %v", err)
 	}
+
 	if err := native.AddNotify(ABI, []string{EventCommitDpos}); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("executeCommitDpos, add notify error: %v", err)
 	}
