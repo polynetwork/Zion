@@ -21,16 +21,16 @@ package node_manager
 import (
 	"fmt"
 
-	"github.com/polynetwork/poly/native"
+	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/polynetwork/poly/native/service/utils"
 )
 
-func executeCommitDpos(native *native.NativeService) error {
+func executeCommitDpos(native *native.NativeContract) error {
 	governanceView, err := GetGovernanceView(native)
 	if err != nil {
 		return fmt.Errorf("executeCommitDpos, get GovernanceView error: %v", err)
 	}
-	if native.GetHeight() == governanceView.Height {
+	if native.ContractRef().BlockHeight().Uint64() == uint64(governanceView.Height) {
 		return fmt.Errorf("executeCommitDpos, can not do commitDpos twice in one block")
 	}
 	//get current view
@@ -62,10 +62,11 @@ func executeCommitDpos(native *native.NativeService) error {
 	native.GetCacheDB().Delete(utils.ConcatKey(utils.NodeManagerContractAddress, []byte(PEER_POOL), oldViewBytes))
 
 	//update view
+	// todo: uint64
 	governanceView = &GovernanceView{
 		View:   view + 1,
-		Height: native.GetHeight(),
-		TxHash: native.GetTx().Hash(),
+		Height: uint32(native.ContractRef().BlockHeight().Uint64()),
+		TxHash: native.ContractRef().TxHash(),
 	}
 	putGovernanceView(native, governanceView)
 	return nil

@@ -23,7 +23,7 @@ import (
 	"io"
 	"sort"
 
-	"github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 type Status uint8
@@ -152,7 +152,7 @@ func (this *PeerPoolItem) Deserialization(source *common.ZeroCopySource) error {
 type GovernanceView struct {
 	View   uint32
 	Height uint32
-	TxHash common.Uint256
+	TxHash common.Hash
 }
 
 func (this *GovernanceView) Serialization(sink *common.ZeroCopySink) {
@@ -191,7 +191,7 @@ func (this *ConsensusSigns) Serialization(sink *common.ZeroCopySink) {
 		signsList = append(signsList, k)
 	}
 	sort.SliceStable(signsList, func(i, j int) bool {
-		return signsList[i].ToHexString() > signsList[j].ToHexString()
+		return signsList[i].Hex() > signsList[j].Hex()
 	})
 	for _, v := range signsList {
 		sink.WriteVarBytes(v[:])

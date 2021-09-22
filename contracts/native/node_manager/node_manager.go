@@ -22,13 +22,13 @@ import (
 	"encoding/hex"
 	"fmt"
 
-	"github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/polynetwork/poly/common/config"
 	"github.com/polynetwork/poly/core/genesis"
 	cstates "github.com/polynetwork/poly/core/states"
-	"github.com/polynetwork/poly/native"
-	"github.com/polynetwork/poly/native/event"
-	"github.com/polynetwork/poly/native/service/utils"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	xctrs "github.com/ethereum/go-ethereum/contracts/native/contract"
 )
 
 const (
@@ -63,7 +63,7 @@ const (
 )
 
 //Register methods of node_manager contract
-func RegisterNodeManagerContract(native *native.NativeService) {
+func RegisterNodeManagerContract(native *native.NativeContract) {
 	native.Register(genesis.INIT_CONFIG, InitConfig)
 	native.Register(REGISTER_CANDIDATE, RegisterCandidate)
 	native.Register(UNREGISTER_CANDIDATE, UnRegisterCandidate)
@@ -76,7 +76,7 @@ func RegisterNodeManagerContract(native *native.NativeService) {
 }
 
 //Init node_manager contract
-func InitConfig(native *native.NativeService) ([]byte, error) {
+func InitConfig(native *native.NativeContract) ([]byte, error) {
 	configuration := new(config.VBFTConfig)
 	if err := configuration.Deserialization(common.NewZeroCopySource(native.GetInput())); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("initConfig, contract params deserialize error: %v", err)
@@ -156,15 +156,15 @@ func InitConfig(native *native.NativeService) ([]byte, error) {
 }
 
 //Register a candidate node, used by users.
-func RegisterCandidate(native *native.NativeService) ([]byte, error) {
+func RegisterCandidate(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := new(RegisterPeerParam)
-	if err := params.Deserialization(common.NewZeroCopySource(native.GetInput())); err != nil {
+	if err := utils.UnpackMethod(ABI, MethodRegisterCandidate, params, ctx.Payload); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("registerCandidate, contract params deserialize error: %v", err)
 	}
-	contract := utils.NodeManagerContractAddress
 
 	//check witness
-	err := utils.ValidateOwner(native, params.Address)
+	err := xctrs.ValidateOwner(native, params.Address)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("registerCandidate, checkWitness error: %v", err)
 	}
@@ -179,7 +179,7 @@ func RegisterCandidate(native *native.NativeService) ([]byte, error) {
 		return utils.BYTE_FALSE, fmt.Errorf("registerCandidate, peerPubkey format error: %v", err)
 	}
 	//get black list
-	blackList, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(BLACK_LIST), peerPubkeyPrefix))
+	blackList, err := native.GetCacheDB().Get(utils.ConcatKey(this, []byte(BLACK_LIST), peerPubkeyPrefix))
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("registerCandidate, get BlackList error: %v", err)
 	}
@@ -216,24 +216,24 @@ func RegisterCandidate(native *native.NativeService) ([]byte, error) {
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("registerCandidate, put putPeerApply error: %v", err)
 	}
-	native.AddNotify(
-		&event.NotifyEventInfo{
-			ContractAddress: utils.NodeManagerContractAddress,
-			States:          []interface{}{"registerCandidate", params.PeerPubkey},
-		})
+
+	if err := native.AddNotify(ABI, []string{EventRegisterCandidate}, params.PeerPubkey); err != nil {
+		return utils.BYTE_FALSE, fmt.Errorf("registerCandidate, add notify error: %v", err)
+	}
 	return utils.BYTE_TRUE, nil
 }
 
 //Unregister a registered candidate node, will remove node from pool
-func UnRegisterCandidate(native *native.NativeService) ([]byte, error) {
+func UnRegisterCandidate(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := new(PeerParam)
-	if err := params.Deserialization(common.NewZeroCopySource(native.GetInput())); err != nil {
+	if err := utils.UnpackMethod(ABI, MethodUnRegisterCandidate, params, ctx.Payload); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("unRegisterCandidate, contract params deserialize error: %v", err)
 	}
 	contract := utils.NodeManagerContractAddress
 
 	//check witness
-	err := utils.ValidateOwner(native, params.Address)
+	err := xctrs.ValidateOwner(native, params.Address)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("unRegisterCandidate, checkWitness error: %v", err)
 	}
@@ -256,24 +256,23 @@ func UnRegisterCandidate(native *native.NativeService) ([]byte, error) {
 		return utils.BYTE_FALSE, fmt.Errorf("unRegisterCandidate, peerPubkey format error: %v", err)
 	}
 	native.GetCacheDB().Delete(utils.ConcatKey(contract, []byte(PEER_APPLY), peerPubkeyPrefix))
-	native.AddNotify(
-		&event.NotifyEventInfo{
-			ContractAddress: utils.NodeManagerContractAddress,
-			States:          []interface{}{"unRegisterCandidate", params.PeerPubkey},
-		})
+
+	if err := native.AddNotify(ABI, []string{EventUnRegisterCandidate}, params.PeerPubkey); err != nil {
+		return utils.BYTE_FALSE, fmt.Errorf("unRegisterCandiate, add notify error: %v", err)
+	}
 	return utils.BYTE_TRUE, nil
 }
 
 //Approve a registered candidate node
-func ApproveCandidate(native *native.NativeService) ([]byte, error) {
+func ApproveCandidate(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := new(PeerParam)
-	if err := params.Deserialization(common.NewZeroCopySource(native.GetInput())); err != nil {
+	if err := utils.UnpackMethod(ABI, MethodApproveCandidate, params, ctx.Payload); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("approveCandidate, contract params deserialize error: %v", err)
 	}
-	contract := utils.NodeManagerContractAddress
 
 	//check witness
-	err := utils.ValidateOwner(native, params.Address)
+	err := xctrs.ValidateOwner(native, params.Address)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("approveCandidate, checkWitness error: %v", err)
 	}
@@ -306,7 +305,7 @@ func ApproveCandidate(native *native.NativeService) ([]byte, error) {
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("approveCandidate, peerPubkey format error: %v", err)
 	}
-	indexBytes, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(PEER_INDEX), peerPubkeyPrefix))
+	indexBytes, err := native.GetCacheDB().Get(utils.ConcatKey(this, []byte(PEER_INDEX), peerPubkeyPrefix))
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("approveCandidate, get indexBytes error: %v", err)
 	}
@@ -330,7 +329,7 @@ func ApproveCandidate(native *native.NativeService) ([]byte, error) {
 		putCandidateIndex(native, newCandidateIndex)
 
 		indexBytes := utils.GetUint32Bytes(peerPoolItem.Index)
-		native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(PEER_INDEX), peerPubkeyPrefix), cstates.GenRawStorageItem(indexBytes))
+		native.GetCacheDB().Put(utils.ConcatKey(this, []byte(PEER_INDEX), peerPubkeyPrefix), cstates.GenRawStorageItem(indexBytes))
 	}
 
 	//get current view
@@ -348,27 +347,25 @@ func ApproveCandidate(native *native.NativeService) ([]byte, error) {
 	peerPoolMap.PeerPoolMap[params.PeerPubkey] = peerPoolItem
 	putPeerPoolMap(native, peerPoolMap, view)
 
-	native.GetCacheDB().Delete(utils.ConcatKey(contract, []byte(PEER_APPLY), peerPubkeyPrefix))
+	native.GetCacheDB().Delete(utils.ConcatKey(this, []byte(PEER_APPLY), peerPubkeyPrefix))
 
-	native.AddNotify(
-		&event.NotifyEventInfo{
-			ContractAddress: utils.NodeManagerContractAddress,
-			States:          []interface{}{"approveCandidate", params.PeerPubkey},
-		})
+	if err := native.AddNotify(ABI, []string{EventApproveCandidate}, params.PeerPubkey); err != nil {
+		return utils.BYTE_FALSE, fmt.Errorf("approveCandidate, add notify error: %v", err)
+	}
 	return utils.BYTE_TRUE, nil
 }
 
 //Put a node into black list, remove node from pool
 //Node in black list can't be registered.
-func BlackNode(native *native.NativeService) ([]byte, error) {
+func BlackNode(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := new(PeerListParam)
-	if err := params.Deserialization(common.NewZeroCopySource(native.GetInput())); err != nil {
+	if err := utils.UnpackMethod(ABI, MethodBlackNode, params, ctx.Payload); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("blackNode, contract params deserialize error: %v", err)
 	}
-	contract := utils.NodeManagerContractAddress
 
 	//check witness
-	err := utils.ValidateOwner(native, params.Address)
+	err := xctrs.ValidateOwner(native, params.Address)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("blackNode, checkWitness error: %v", err)
 	}
@@ -435,7 +432,7 @@ func BlackNode(native *native.NativeService) ([]byte, error) {
 		sink := common.NewZeroCopySink(nil)
 		blackListItem.Serialization(sink)
 		//put peer into black list
-		native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(BLACK_LIST), peerPubkeyPrefix), cstates.GenRawStorageItem(sink.Bytes()))
+		native.GetCacheDB().Put(utils.ConcatKey(this, []byte(BLACK_LIST), peerPubkeyPrefix), cstates.GenRawStorageItem(sink.Bytes()))
 
 		//change peerPool status
 		if peerPoolItem.Status == ConsensusStatus {
@@ -453,24 +450,23 @@ func BlackNode(native *native.NativeService) ([]byte, error) {
 			return utils.BYTE_FALSE, fmt.Errorf("blackNode, executeCommitDpos error: %v", err)
 		}
 	}
-	native.AddNotify(
-		&event.NotifyEventInfo{
-			ContractAddress: utils.NodeManagerContractAddress,
-			States:          []interface{}{"blackNode", params.PeerPubkeyList},
-		})
+	if err := native.AddNotify(ABI, []string{EventBlackNode}, params.PeerPubkeyList); err != nil {
+		return utils.BYTE_FALSE, fmt.Errorf("blackNode, add notify error: %v", err)
+	}
 	return utils.BYTE_TRUE, nil
 }
 
 //Remove a node from black list, allow it to be registered
-func WhiteNode(native *native.NativeService) ([]byte, error) {
+func WhiteNode(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := new(PeerParam)
-	if err := params.Deserialization(common.NewZeroCopySource(native.GetInput())); err != nil {
+	if err := utils.UnpackMethod(ABI, MethodWhiteNode, params, ctx.Payload); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("whiteNode, contract params deserialize error: %v", err)
 	}
 	contract := utils.NodeManagerContractAddress
 
 	//check witness
-	err := utils.ValidateOwner(native, params.Address)
+	err := xctrs.ValidateOwner(native, params.Address)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("whiteNode, checkWitness error: %v", err)
 	}
@@ -499,24 +495,23 @@ func WhiteNode(native *native.NativeService) ([]byte, error) {
 
 	//remove peer from black list
 	native.GetCacheDB().Delete(utils.ConcatKey(contract, []byte(BLACK_LIST), peerPubkeyPrefix))
-	native.AddNotify(
-		&event.NotifyEventInfo{
-			ContractAddress: utils.NodeManagerContractAddress,
-			States:          []interface{}{"whiteNode", params.PeerPubkey},
-		})
+	if err := native.AddNotify(ABI, []string{EventWhiteNode}, params.PeerPubkey); err != nil {
+		return utils.BYTE_FALSE, fmt.Errorf("whiteNode, add notify error: %v", err)
+	}
 	return utils.BYTE_TRUE, nil
 }
 
 //Quit a registered node, used by node owner.
 //Remove node from pool
-func QuitNode(native *native.NativeService) ([]byte, error) {
+func QuitNode(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := new(PeerParam)
-	if err := params.Deserialization(common.NewZeroCopySource(native.GetInput())); err != nil {
+	if err := utils.UnpackMethod(ABI, MethodQuitNode, params, ctx.Payload); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("quitNode, contract params deserialize error: %v", err)
 	}
 
 	//check witness
-	err := utils.ValidateOwner(native, params.Address)
+	err := xctrs.ValidateOwner(native, params.Address)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("quitNode, checkWitness error: %v", err)
 	}
@@ -559,16 +554,14 @@ func QuitNode(native *native.NativeService) ([]byte, error) {
 
 	peerPoolMap.PeerPoolMap[params.PeerPubkey] = peerPoolItem
 	putPeerPoolMap(native, peerPoolMap, view)
-	native.AddNotify(
-		&event.NotifyEventInfo{
-			ContractAddress: utils.NodeManagerContractAddress,
-			States:          []interface{}{"quitNode", params.PeerPubkey},
-		})
+	if err := native.AddNotify(ABI, []string{EventQuitNode}, params.PeerPubkey); err != nil {
+		return utils.BYTE_FALSE, fmt.Errorf("quitNode, add notify error: %v", err)
+	}
 	return utils.BYTE_TRUE, nil
 }
 
 //Go to next consensus epoch
-func CommitDpos(native *native.NativeService) ([]byte, error) {
+func CommitDpos(native *native.NativeContract) ([]byte, error) {
 	// get config
 	config, err := GetConfig(native)
 	if err != nil {
@@ -588,9 +581,10 @@ func CommitDpos(native *native.NativeService) ([]byte, error) {
 	}
 
 	//check witness
-	err = utils.ValidateOwner(native, operatorAddress)
+	height := native.ContractRef().BlockHeight().Uint64()
+	err = xctrs.ValidateOwner(native, operatorAddress)
 	if err != nil {
-		cycle := (native.GetHeight() - governanceView.Height) >= config.MaxBlockChangeView
+		cycle := (height - governanceView.Height) >= config.MaxBlockChangeView
 		if !cycle {
 			return utils.BYTE_FALSE, fmt.Errorf("commitDpos, authentication Failed")
 		}
@@ -600,18 +594,17 @@ func CommitDpos(native *native.NativeService) ([]byte, error) {
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("executeCommitDpos, executeCommitDpos error: %v", err)
 	}
-	native.AddNotify(
-		&event.NotifyEventInfo{
-			ContractAddress: utils.NodeManagerContractAddress,
-			States:          []interface{}{"commitDpos"},
-		})
+	if err := native.AddNotify(ABI, []string{EventCommitDpos}); err != nil {
+		return utils.BYTE_FALSE, fmt.Errorf("executeCommitDpos, add notify error: %v", err)
+	}
 	return utils.BYTE_TRUE, nil
 }
 
 //Update VBFT config
-func UpdateConfig(native *native.NativeService) ([]byte, error) {
+func UpdateConfig(native *native.NativeContract) ([]byte, error) {
+	ctx := native.ContractRef().CurrentContext()
 	params := new(UpdateConfigParam)
-	if err := params.Deserialization(common.NewZeroCopySource(native.GetInput())); err != nil {
+	if err := utils.UnpackMethod(ABI, MethodUpdateConfig, params, ctx.Payload); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("updateConfig, deserialize configuration error: %v", err)
 	}
 	sink := common.NewZeroCopySink(nil)
@@ -623,7 +616,7 @@ func UpdateConfig(native *native.NativeService) ([]byte, error) {
 		return utils.BYTE_FALSE, fmt.Errorf("updateConfig, get current consensus operator address error: %v", err)
 	}
 	//check witness
-	err = utils.ValidateOwner(native, operatorAddress)
+	err = xctrs.ValidateOwner(native, operatorAddress)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("updateConfig, checkWitness error: %v", err)
 	}
@@ -642,10 +635,8 @@ func UpdateConfig(native *native.NativeService) ([]byte, error) {
 	}
 
 	putConfig(native, params.Configuration)
-	native.AddNotify(
-		&event.NotifyEventInfo{
-			ContractAddress: utils.NodeManagerContractAddress,
-			States:          []interface{}{"updateConfig", params.Configuration},
-		})
+	if err := native.AddNotify(ABI, []string{EventUpdateConfig}, params.Configuration); err != nil {
+		return utils.BYTE_FALSE, fmt.Errorf("updateConfig, add notify error: %v", err)
+	}
 	return utils.BYTE_TRUE, nil
 }

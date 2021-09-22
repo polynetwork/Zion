@@ -29,6 +29,11 @@ const (
 )
 
 var (
+	BYTE_FALSE = []byte{0}
+	BYTE_TRUE  = []byte{1}
+)
+
+var (
 	HeaderSyncContractAddress        = common.HexToAddress("0xb2799bDE6831449d73C1F22CE815f773D0CafCc5")
 	CrossChainManagerContractAddress = common.HexToAddress("0x5747C05FF236F8d18BB21Bc02ecc389deF853cae")
 	SideChainManagerContractAddress  = common.HexToAddress("0x864Ff06eC5fFc75aB6eaf64263308ef5fa7d6637")

@@ -20,8 +20,48 @@ package node_manager
 
 import (
 	"fmt"
+	"strings"
 
-	"github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+)
+
+const (
+	MethodApproveCandidate    = "MethodApproveCandidate"
+	MethodBlackNode           = "MethodBlackNode"
+	MethodCommitDpos          = "MethodCommitDpos"
+	MethodContractName        = "MethodContractName"
+	MethodInitConfig          = "MethodInitConfig"
+	MethodQuitNode            = "MethodQuitNode"
+	MethodRegisterCandidate   = "MethodRegisterCandidate"
+	MethodUnRegisterCandidate = "MethodUnRegisterCandidate"
+	MethodUpdateConfig        = "MethodUpdateConfig"
+	MethodWhiteNode           = "MethodWhiteNode"
+
+	EventApproveCandidate    = "EventApproveCandidate"
+	EventBlackNode           = "EventBlackNode"
+	EventCommitDpos          = "EventCommitDpos"
+	EventQuitNode            = "EventQuitNode"
+	EventRegisterCandidate   = "EventRegisterCandidate"
+	EventUnRegisterCandidate = "EventUnRegisterCandidate"
+	EventUpdateConfig        = "EventUpdateConfig"
+	EventWhiteNode           = "EventWhiteNode"
+	EventCheckConsensusSigns = "CheckConsensusSignsEvent"
+)
+
+func GetABI() *abi.ABI {
+	ab, err := abi.JSON(strings.NewReader(node_manager_abi.NodeManagerABI))
+	if err != nil {
+		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
+	}
+	return &ab
+}
+
+var (
+	ABI  *abi.ABI
+	this = utils.NodeManagerContractAddress
 )
 
 type RegisterPeerParam struct {
@@ -29,12 +69,12 @@ type RegisterPeerParam struct {
 	Address    common.Address
 }
 
-func (this *RegisterPeerParam) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteString(this.PeerPubkey)
-	sink.WriteVarBytes(this.Address[:])
+func (p *RegisterPeerParam) Serialization(sink *common.ZeroCopySink) {
+	sink.WriteString(p.PeerPubkey)
+	sink.WriteVarBytes(p.Address[:])
 }
 
-func (this *RegisterPeerParam) Deserialization(source *common.ZeroCopySource) error {
+func (p *RegisterPeerParam) Deserialization(source *common.ZeroCopySource) error {
 	peerPubkey, eof := source.NextString()
 	if eof {
 		return fmt.Errorf("source.NextString, deserialize peerPubkey error")
@@ -48,8 +88,8 @@ func (this *RegisterPeerParam) Deserialization(source *common.ZeroCopySource) er
 		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
 	}
 
-	this.PeerPubkey = peerPubkey
-	this.Address = addr
+	p.PeerPubkey = peerPubkey
+	p.Address = addr
 	return nil
 }
 
@@ -58,12 +98,12 @@ type PeerParam struct {
 	Address    common.Address
 }
 
-func (this *PeerParam) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteString(this.PeerPubkey)
-	sink.WriteVarBytes(this.Address[:])
+func (p *PeerParam) Serialization(sink *common.ZeroCopySink) {
+	sink.WriteString(p.PeerPubkey)
+	sink.WriteVarBytes(p.Address[:])
 }
 
-func (this *PeerParam) Deserialization(source *common.ZeroCopySource) error {
+func (p *PeerParam) Deserialization(source *common.ZeroCopySource) error {
 	peerPubkey, eof := source.NextString()
 	if eof {
 		return fmt.Errorf("source.NextString, deserialize peerPubkey error")
@@ -77,8 +117,8 @@ func (this *PeerParam) Deserialization(source *common.ZeroCopySource) error {
 		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
 	}
 
-	this.PeerPubkey = peerPubkey
-	this.Address = addr
+	p.PeerPubkey = peerPubkey
+	p.Address = addr
 	return nil
 }
 
@@ -87,15 +127,15 @@ type PeerListParam struct {
 	Address        common.Address
 }
 
-func (this *PeerListParam) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteVarUint(uint64(len(this.PeerPubkeyList)))
-	for _, v := range this.PeerPubkeyList {
+func (p *PeerListParam) Serialization(sink *common.ZeroCopySink) {
+	sink.WriteVarUint(uint64(len(p.PeerPubkeyList)))
+	for _, v := range p.PeerPubkeyList {
 		sink.WriteString(v)
 	}
-	sink.WriteVarBytes(this.Address[:])
+	sink.WriteVarBytes(p.Address[:])
 }
 
-func (this *PeerListParam) Deserialization(source *common.ZeroCopySource) error {
+func (p *PeerListParam) Deserialization(source *common.ZeroCopySource) error {
 	n, eof := source.NextVarUint()
 	if eof {
 		return fmt.Errorf("source.NextVarUint, deserialize PeerPubkeyList length error")
@@ -117,8 +157,8 @@ func (this *PeerListParam) Deserialization(source *common.ZeroCopySource) error 
 	if err != nil {
 		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
 	}
-	this.PeerPubkeyList = peerPubkeyList
-	this.Address = addr
+	p.PeerPubkeyList = peerPubkeyList
+	p.Address = addr
 	return nil
 }
 
@@ -126,16 +166,16 @@ type UpdateConfigParam struct {
 	Configuration *Configuration
 }
 
-func (this *UpdateConfigParam) Serialization(sink *common.ZeroCopySink) {
-	this.Configuration.Serialization(sink)
+func (p *UpdateConfigParam) Serialization(sink *common.ZeroCopySink) {
+	p.Configuration.Serialization(sink)
 }
 
-func (this *UpdateConfigParam) Deserialization(source *common.ZeroCopySource) error {
+func (p *UpdateConfigParam) Deserialization(source *common.ZeroCopySource) error {
 	configuration := new(Configuration)
 	err := configuration.Deserialization(source)
 	if err != nil {
 		return fmt.Errorf("configuration.Deserialization, deserialize configuration error: %s", err)
 	}
-	this.Configuration = configuration
+	p.Configuration = configuration
 	return nil
 }
