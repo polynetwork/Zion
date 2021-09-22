@@ -69,6 +69,7 @@ type Message interface {
 	CheckNonce() bool
 	Data() []byte
 	AccessList() types.AccessList
+	TxHash() common.Hash
 }
 
 // ExecutionResult includes all output after executing given evm

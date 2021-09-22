@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package native
 
 import (
@@ -34,6 +33,7 @@ type ContractRef struct {
 	stateDB     *state.StateDB
 	blockHeight *big.Int
 	origin      common.Address
+	txHash      common.Hash
 	caller      common.Address
 	evmHandler  EVMHandler
 	gasLeft     uint64
@@ -44,6 +44,7 @@ func NewContractRef(
 	origin common.Address,
 	caller common.Address,
 	blockHeight *big.Int,
+	txHash common.Hash,
 	suppliedGas uint64,
 	evmHandler EVMHandler) *ContractRef {
 
@@ -53,6 +54,7 @@ func NewContractRef(
 		origin:      origin,
 		caller:      caller,
 		blockHeight: blockHeight,
+		txHash:      txHash,
 		gasLeft:     suppliedGas,
 		evmHandler:  evmHandler,
 	}
@@ -90,6 +92,10 @@ func (s *ContractRef) StateDB() *state.StateDB {
 
 func (s *ContractRef) BlockHeight() *big.Int {
 	return s.blockHeight
+}
+
+func (s *ContractRef) TxHash() common.Hash {
+	return s.txHash
 }
 
 // MsgSender implement solidity grammar `msg.sender`
