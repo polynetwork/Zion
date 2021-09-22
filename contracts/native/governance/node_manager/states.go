@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package node_manager
 
 import (
@@ -6,21 +24,49 @@ import (
 	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
-	polycomm "github.com/polynetwork/poly/common"
 )
 
 type Status uint8
 
-func (this *Status) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteUint8(uint8(*this))
+func (s *Status) Serialization(sink *common.ZeroCopySink) {
+	sink.WriteUint8(uint8(*s))
 }
 
-func (this *Status) Deserialization(source *polycomm.ZeroCopySource) error {
+func (s *Status) Deserialization(source *common.ZeroCopySource) error {
 	status, eof := source.NextUint8()
 	if eof {
 		return fmt.Errorf("serialization.ReadUint8, deserialize status error: %v", io.ErrUnexpectedEOF)
 	}
-	*this = Status(status)
+	*s = Status(status)
+	return nil
+}
+
+type BlackListItem struct {
+	PeerPubkey string         //peerPubkey in black list
+	Address    common.Address //the owner of this peer
+}
+
+func (i *BlackListItem) Serialization(sink *common.ZeroCopySink) {
+	sink.WriteString(i.PeerPubkey)
+	sink.WriteVarBytes(i.Address[:])
+}
+
+func (i *BlackListItem) Deserialization(source *common.ZeroCopySource) error {
+	peerPubkey, eof := source.NextString()
+	if eof {
+		return fmt.Errorf("source.NextString, deserialize peerPubkey error")
+	}
+	address, eof := source.NextVarBytes()
+	if eof {
+		return fmt.Errorf("source.NextVarBytes, deserialize address error")
+	}
+	addr, err := common.AddressParseFromBytes(address)
+	if err != nil {
+		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
+	}
+
+	i.PeerPubkey = peerPubkey
+	i.Address = addr
 	return nil
 }
 
@@ -28,10 +74,10 @@ type PeerPoolMap struct {
 	PeerPoolMap map[string]*PeerPoolItem
 }
 
-func (this *PeerPoolMap) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteVarUint(uint64(len(this.PeerPoolMap)))
+func (m *PeerPoolMap) Serialization(sink *common.ZeroCopySink) {
+	sink.WriteVarUint(uint64(len(m.PeerPoolMap)))
 	var peerPoolItemList []*PeerPoolItem
-	for _, v := range this.PeerPoolMap {
+	for _, v := range m.PeerPoolMap {
 		peerPoolItemList = append(peerPoolItemList, v)
 	}
 	sort.SliceStable(peerPoolItemList, func(i, j int) bool {
@@ -42,7 +88,7 @@ func (this *PeerPoolMap) Serialization(sink *polycomm.ZeroCopySink) {
 	}
 }
 
-func (this *PeerPoolMap) Deserialization(source *polycomm.ZeroCopySource) error {
+func (m *PeerPoolMap) Deserialization(source *common.ZeroCopySource) error {
 	n, eof := source.NextVarUint()
 	if eof {
 		return fmt.Errorf("source.NextVarUint, deserialize PeerPoolMap length error")
@@ -55,26 +101,26 @@ func (this *PeerPoolMap) Deserialization(source *polycomm.ZeroCopySource) error 
 		}
 		peerPoolMap[peerPoolItem.PeerPubkey] = peerPoolItem
 	}
-	this.PeerPoolMap = peerPoolMap
+	m.PeerPoolMap = peerPoolMap
 	return nil
 }
 
 type PeerPoolItem struct {
-	Index      uint32         //peer index
+	Index      uint64         //peer index
 	PeerPubkey string         //peer pubkey
 	Address    common.Address //peer owner
 	Status     Status
 }
 
-func (this *PeerPoolItem) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteUint32(this.Index)
-	sink.WriteString(this.PeerPubkey)
-	sink.WriteVarBytes(this.Address[:])
-	this.Status.Serialization(sink)
+func (i *PeerPoolItem) Serialization(sink *common.ZeroCopySink) {
+	sink.WriteUint64(i.Index)
+	sink.WriteString(i.PeerPubkey)
+	sink.WriteVarBytes(i.Address[:])
+	i.Status.Serialization(sink)
 }
 
-func (this *PeerPoolItem) Deserialization(source *polycomm.ZeroCopySource) error {
-	index, eof := source.NextUint32()
+func (i *PeerPoolItem) Deserialization(source *common.ZeroCopySource) error {
+	index, eof := source.NextUint64()
 	if eof {
 		return fmt.Errorf("source.NextUint32, deserialize index error")
 	}
@@ -91,36 +137,33 @@ func (this *PeerPoolItem) Deserialization(source *polycomm.ZeroCopySource) error
 	if err != nil {
 		return fmt.Errorf("status.Deserialize. deserialize status error: %v", err)
 	}
-	addr, err := common.AddressParseFromBytes(address)
-	if err != nil {
-		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
-	}
+	addr := common.BytesToAddress(address)
 
-	this.Index = index
-	this.PeerPubkey = peerPubkey
-	this.Address = addr
-	this.Status = *status
+	i.Index = index
+	i.PeerPubkey = peerPubkey
+	i.Address = addr
+	i.Status = *status
 	return nil
 }
 
 type GovernanceView struct {
-	View   uint32
-	Height uint32
+	View   uint64
+	Height uint64
 	TxHash common.Hash
 }
 
-func (this *GovernanceView) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteUint32(this.View)
-	sink.WriteUint32(this.Height)
-	sink.WriteHash(polycomm.Uint256(this.TxHash))
+func (v *GovernanceView) Serialization(sink *common.ZeroCopySink) {
+	sink.WriteUint64(v.View)
+	sink.WriteUint64(v.Height)
+	sink.WriteHash(v.TxHash)
 }
 
-func (this *GovernanceView) Deserialization(source *polycomm.ZeroCopySource) error {
-	view, eof := source.NextUint32()
+func (v *GovernanceView) Deserialization(source *common.ZeroCopySource) error {
+	view, eof := source.NextUint64()
 	if eof {
 		return fmt.Errorf("source.NextUint32, deserialize view error")
 	}
-	height, eof := source.NextUint32()
+	height, eof := source.NextUint64()
 	if eof {
 		return fmt.Errorf("source.NextUint32, deserialize height error")
 	}
@@ -128,9 +171,9 @@ func (this *GovernanceView) Deserialization(source *polycomm.ZeroCopySource) err
 	if eof {
 		return fmt.Errorf("source.NextHash, deserialize txHash error")
 	}
-	this.View = view
-	this.Height = height
-	this.TxHash = common.Hash(txHash)
+	v.View = view
+	v.Height = height
+	v.TxHash = txHash
 	return nil
 }
 
@@ -138,10 +181,10 @@ type ConsensusSigns struct {
 	SignsMap map[common.Address]bool
 }
 
-func (this *ConsensusSigns) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteVarUint(uint64(len(this.SignsMap)))
+func (s *ConsensusSigns) Serialization(sink *common.ZeroCopySink) {
+	sink.WriteVarUint(uint64(len(s.SignsMap)))
 	var signsList []common.Address
-	for k := range this.SignsMap {
+	for k := range s.SignsMap {
 		signsList = append(signsList, k)
 	}
 	sort.SliceStable(signsList, func(i, j int) bool {
@@ -149,11 +192,11 @@ func (this *ConsensusSigns) Serialization(sink *polycomm.ZeroCopySink) {
 	})
 	for _, v := range signsList {
 		sink.WriteVarBytes(v[:])
-		sink.WriteBool(this.SignsMap[v])
+		sink.WriteBool(s.SignsMap[v])
 	}
 }
 
-func (this *ConsensusSigns) Deserialization(source *polycomm.ZeroCopySource) error {
+func (s *ConsensusSigns) Deserialization(source *common.ZeroCopySource) error {
 	n, eof := source.NextVarUint()
 	if eof {
 		return fmt.Errorf("source.NextVarUint, deserialize length of signsMap error")
@@ -174,6 +217,45 @@ func (this *ConsensusSigns) Deserialization(source *polycomm.ZeroCopySource) err
 		}
 		signsMap[addr] = v
 	}
-	this.SignsMap = signsMap
+	s.SignsMap = signsMap
+	return nil
+}
+
+type Configuration struct {
+	BlockMsgDelay        uint64
+	HashMsgDelay         uint64
+	PeerHandshakeTimeout uint64
+	MaxBlockChangeView   uint64
+}
+
+func (c *Configuration) Serialization(sink *common.ZeroCopySink) {
+	sink.WriteUint64(c.BlockMsgDelay)
+	sink.WriteUint64(c.HashMsgDelay)
+	sink.WriteUint64(c.PeerHandshakeTimeout)
+	sink.WriteUint64(c.MaxBlockChangeView)
+}
+
+func (c *Configuration) Deserialization(source *common.ZeroCopySource) error {
+	blockMsgDelay, eof := source.NextUint64()
+	if eof {
+		return fmt.Errorf("source.NextUint32, deserialize blockMsgDelay error")
+	}
+	hashMsgDelay, eof := source.NextUint64()
+	if eof {
+		return fmt.Errorf("source.NextUint32, deserialize hashMsgDelay error")
+	}
+	peerHandshakeTimeout, eof := source.NextUint64()
+	if eof {
+		return fmt.Errorf("source.NextUint32, deserialize peerHandshakeTimeout error")
+	}
+	maxBlockChangeView, eof := source.NextUint64()
+	if eof {
+		return fmt.Errorf("source.NextUint32, deserialize maxBlockChangeView error")
+	}
+
+	c.BlockMsgDelay = blockMsgDelay
+	c.HashMsgDelay = hashMsgDelay
+	c.PeerHandshakeTimeout = peerHandshakeTimeout
+	c.MaxBlockChangeView = maxBlockChangeView
 	return nil
 }
