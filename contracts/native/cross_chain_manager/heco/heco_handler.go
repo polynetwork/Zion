@@ -28,7 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -149,7 +149,7 @@ type ProofAccount struct {
 	Codehash ecommon.Hash
 }
 
-func verifyMerkleProof(hecoProof *Proof, blockData *types.Header, contractAddr []byte) ([]byte, error) {
+func verifyMerkleProof(hecoProof *Proof, blockData *eth.Header, contractAddr []byte) ([]byte, error) {
 	//1. prepare verify account
 	nodeList := new(light.NodeList)
 
