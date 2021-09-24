@@ -128,6 +128,46 @@ func (m *EpochInfo) Hash() common.Hash {
 	return v
 }
 
+type HashList struct {
+	List []common.Hash
+}
+
+func (m *HashList) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.List})
+}
+
+func (m *HashList) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		List []common.Hash
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.List = data.List
+	return nil
+}
+
+type AddressList struct {
+	List []common.Address
+}
+
+func (m *AddressList) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.List})
+}
+
+func (m *AddressList) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		List []common.Address
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.List = data.List
+	return nil
+}
+
 func RLPHash(v interface{}) (h common.Hash) {
 	hw := sha3.NewLegacyKeccak256()
 	rlp.Encode(hw, v)

@@ -65,3 +65,27 @@ func TestEpochInfo(t *testing.T) {
 	assert.NotEmpty(t, expect.hash)
 	assert.Equal(t, expectHash, expect.Hash())
 }
+
+func TestHashList(t *testing.T) {
+	expect := generateTestHashList(12)
+
+	enc, err := rlp.EncodeToBytes(expect)
+	assert.NoError(t, err)
+
+	var got *HashList
+	assert.NoError(t, rlp.DecodeBytes(enc, &got))
+
+	assert.Equal(t, expect, got)
+}
+
+func TestAddressList(t *testing.T) {
+	expect := generateTestAddressList(13)
+
+	enc, err := rlp.EncodeToBytes(expect)
+	assert.NoError(t, err)
+
+	var got *AddressList
+	assert.NoError(t, rlp.DecodeBytes(enc, &got))
+
+	assert.Equal(t, expect, got)
+}

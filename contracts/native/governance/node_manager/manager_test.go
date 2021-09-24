@@ -62,3 +62,24 @@ func generateTestHash(n int) common.Hash {
 	data := big.NewInt(int64(n))
 	return common.BytesToHash(data.Bytes())
 }
+
+func generateTestHashList(n int) *HashList {
+	data := &HashList{List: make([]common.Hash, n)}
+	for i := 0; i < n; i++ {
+		data.List[i] = generateTestHash(i + 1)
+	}
+	return data
+}
+
+func generateTestAddress(n int) common.Address {
+	data := big.NewInt(int64(n))
+	return common.BytesToAddress(data.Bytes())
+}
+
+func generateTestAddressList(n int) *AddressList {
+	data := &AddressList{List: make([]common.Address, n)}
+	for i := 0; i < n; i++ {
+		data.List[i] = generateTestAddress(i + 1)
+	}
+	return data
+}
