@@ -24,45 +24,37 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const contractName = "node manager"
 
 const (
-	MethodContractName        = "name"
-	MethodRegisterCandidate   = "registerCandidate"
-	MethodUnRegisterCandidate = "unRegisterCandidate"
-	MethodApproveCandidate    = "approveCandidate"
-	MethodBlackNode           = "blackNode"
-	MethodWhiteNode           = "whiteNode"
-	MethodQuitNode            = "quitNode"
-	MethodCommitDpos          = "commitDpos"
+	MethodContractName = "name"
+	MethodPropose      = "propose"
+	MethodVote         = "vote"
+	MethodEpoch        = "epoch"
+	MethodNextEpoch    = "nextEpoch"
 
-	EventApproveCandidate    = "EventApproveCandidate"
-	EventBlackNode           = "EventBlackNode"
-	EventCommitDpos          = "EventCommitDpos"
-	EventQuitNode            = "EventQuitNode"
-	EventRegisterCandidate   = "EventRegisterCandidate"
-	EventUnRegisterCandidate = "EventUnRegisterCandidate"
-	EventWhiteNode           = "EventWhiteNode"
-	EventCheckConsensusSigns = "CheckConsensusSignsEvent"
+	EventPropose      = "proposed"
+	EventVote         = "voted"
+	EventEpochChanged = "epochChanged"
 )
 
 const abijson = `[
     {"type":"function","name":"` + MethodContractName + `","inputs":[],"outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodRegisterCandidate + `","inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable"},
-    {"type":"function","name":"` + MethodUnRegisterCandidate + `","inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodApproveCandidate + `","inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRegisterRelayer + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRemoveRelayer + `","type":"event"},
-	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"applyID","type":"uint64"}],"name":"` + EventRegisterRelayer + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"removeID","type":"uint64"}],"name":"` + EventRemoveRelayer + `","type":"event"}
+	{"type":"function","name":"` + MethodPropose + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"},{"internalType":"bytes","name":"Peers","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
+    {"type":"function","name":"` + MethodVote + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"},{"internalType":"bytes","name":"Hash","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"EpochInfo","type":"bytes"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodNextEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"EpochInfo","type":"bytes"}],"stateMutability":"nonpayable"},
+    {"type":"event","name":"` + EventPropose + `","anonymous":false,"inputs":[{"internalType":"bytes","name":"EpochInfo","type":"bytes"}]},
+	{"type":"event","name":"` + EventVote + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"EpochID","type":"uint64"},{"indexed":false,"internalType":"bytes","name":"Hash","type":"bytes"},{"indexed":false,"internalType":"uint64","name":"VotedNumber","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"GroupSize","type":"uint64"}]},
+	{"type":"event","name":"` + EventEpochChanged + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"EpochInfo","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"NextEpochInfo","type":"bytes"}]}
 ]`
 
 func GetABI() *abi.ABI {
-	ab, err := abi.JSON(strings.NewReader(node_manager_abi.NodeManagerABI))
+	ab, err := abi.JSON(strings.NewReader(abijson))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
@@ -74,97 +66,135 @@ var (
 	this = utils.NodeManagerContractAddress
 )
 
-type RegisterPeerParam struct {
-	PeerPubkey string
-	Address    common.Address
+type MethodContractNameOutput struct {
+	Name string
 }
 
-func (p *RegisterPeerParam) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteString(p.PeerPubkey)
-	sink.WriteVarBytes(p.Address[:])
+func (m *MethodContractNameOutput) Encode(name string) ([]byte, error) {
+	m.Name = name
+	return utils.PackOutputs(ABI, MethodContractName, m.Name)
+}
+func (m *MethodContractNameOutput) Decode(payload []byte) error {
+	return utils.UnpackOutputs(ABI, MethodContractName, m, payload)
 }
 
-func (p *RegisterPeerParam) Deserialization(source *common.ZeroCopySource) error {
-	peerPubkey, eof := source.NextString()
-	if eof {
-		return fmt.Errorf("source.NextString, deserialize peerPubkey error")
-	}
-	address, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("source.NextVarBytes, deserialize address error")
-	}
-	addr, err := common.AddressParseFromBytes(address)
+type MethodProposeInput struct {
+	EpochID uint64
+	Peers   []byte
+}
+
+func (m *MethodProposeInput) Encode(epochID uint64, peers *Peers) ([]byte, error) {
+	enc, err := rlp.EncodeToBytes(peers)
 	if err != nil {
-		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
+		return nil, err
 	}
-
-	p.PeerPubkey = peerPubkey
-	p.Address = addr
-	return nil
+	m.EpochID = epochID
+	m.Peers = enc
+	return utils.PackMethod(ABI, MethodPropose, m.EpochID, m.Peers)
+}
+func (m *MethodProposeInput) Decode(payload []byte) (epochID uint64, peers *Peers, err error) {
+	if err = utils.UnpackMethod(ABI, MethodPropose, m, payload); err != nil {
+		return
+	}
+	epochID = m.EpochID
+	err = rlp.DecodeBytes(m.Peers, &peers)
+	return
 }
 
-type PeerParam struct {
-	PeerPubkey string
-	Address    common.Address
+type MethodProposeOutput struct {
+	Success bool
 }
 
-func (p *PeerParam) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteString(p.PeerPubkey)
-	sink.WriteVarBytes(p.Address[:])
+func (m *MethodProposeOutput) Encode(succeed bool) ([]byte, error) {
+	m.Success = succeed
+	return utils.PackOutputs(ABI, MethodPropose, m.Success)
+}
+func (m *MethodProposeOutput) Decode(payload []byte) error {
+	return utils.UnpackOutputs(ABI, MethodPropose, m, payload)
 }
 
-func (p *PeerParam) Deserialization(source *common.ZeroCopySource) error {
-	peerPubkey, eof := source.NextString()
-	if eof {
-		return fmt.Errorf("source.NextString, deserialize peerPubkey error")
-	}
-	address, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("source.NextVarBytes, deserialize address error")
-	}
-	addr, err := common.AddressParseFromBytes(address)
+type MethodVoteInput struct {
+	EpochID uint64
+	Hash    []byte
+}
+
+func (m *MethodVoteInput) Encode(epochID uint64, hash common.Hash) ([]byte, error) {
+	m.EpochID = epochID
+	m.Hash = hash.Bytes()
+	return utils.PackMethod(ABI, MethodVote, m.EpochID, m.Hash)
+}
+func (m *MethodVoteInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodVote, m, payload)
+}
+
+type MethodVoteOutput struct {
+	Success bool
+}
+
+func (m *MethodVoteOutput) Encode(succeed bool) ([]byte, error) {
+	m.Success = succeed
+	return utils.PackOutputs(ABI, MethodVote, m.Success)
+}
+func (m *MethodVoteOutput) Decode(payload []byte) error {
+	return utils.UnpackOutputs(ABI, MethodVote, m, payload)
+}
+
+// useless input
+//type MethodEpochInput struct{}
+type MethodEpochOutput struct {
+	EpochInfo []byte
+}
+
+func (m *MethodEpochOutput) Encode(epoch *EpochInfo) ([]byte, error) {
+	enc, err := rlp.EncodeToBytes(epoch)
 	if err != nil {
-		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
+		return nil, err
 	}
-
-	p.PeerPubkey = peerPubkey
-	p.Address = addr
-	return nil
+	m.EpochInfo = enc
+	return utils.PackOutputs(ABI, MethodEpoch, m.EpochInfo)
+}
+func (m *MethodEpochOutput) Decode(payload []byte) (epoch *EpochInfo, err error) {
+	if err = utils.UnpackOutputs(ABI, MethodEpoch, m, payload); err != nil {
+		return
+	}
+	err = rlp.DecodeBytes(m.EpochInfo, &epoch)
+	return
 }
 
-type PeerListParam struct {
-	PeerPubkeyList []string
-	Address        common.Address
+// useless input
+//type MethodNextEpochInput struct{}
+type MethodNextEpochOutput struct {
+	EpochInfo []byte
 }
 
-func (p *PeerListParam) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteVarUint(uint64(len(p.PeerPubkeyList)))
-	for _, v := range p.PeerPubkeyList {
-		sink.WriteString(v)
+func (m *MethodNextEpochOutput) Encode(epoch *EpochInfo) ([]byte, error) {
+	enc, err := rlp.EncodeToBytes(epoch)
+	if err != nil {
+		return nil, err
 	}
-	sink.WriteVarBytes(p.Address[:])
+	m.EpochInfo = enc
+	return utils.PackOutputs(ABI, MethodNextEpoch, m.EpochInfo)
+}
+func (m *MethodNextEpochOutput) Decode(payload []byte) (epoch *EpochInfo, err error) {
+	if err = utils.UnpackOutputs(ABI, MethodNextEpoch, m, payload); err != nil {
+		return
+	}
+	err = rlp.DecodeBytes(m.EpochInfo, &epoch)
+	return
 }
 
-func (p *PeerListParam) Deserialization(source *common.ZeroCopySource) error {
-	n, eof := source.NextVarUint()
-	if eof {
-		return fmt.Errorf("source.NextVarUint, deserialize PeerPubkeyList length error")
-	}
-	peerPubkeyList := make([]string, 0)
-	for i := 0; uint64(i) < n; i++ {
-		k, eof := source.NextString()
-		if eof {
-			return fmt.Errorf("source.NextString, deserialize peerPubkey error")
-		}
-		peerPubkeyList = append(peerPubkeyList, k)
-	}
+type EventProposed struct {
+	EpochInfo []byte
+}
 
-	address, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("source.NextVarBytes, deserialize address error")
-	}
-	addr := common.BytesToAddress(address)
-	p.PeerPubkeyList = peerPubkeyList
-	p.Address = addr
-	return nil
+type EventVoted struct {
+	EpochID     uint64
+	Hash        common.Hash
+	VotedNumber uint64
+	GroupSize   uint64
+}
+
+type EventEpochChange struct {
+	EpochInfo     []byte
+	NextEpochInfo []byte
 }

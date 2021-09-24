@@ -17,3 +17,48 @@
  */
 
 package node_manager
+
+import (
+	"math/big"
+	"os"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+)
+
+func TestMain(m *testing.M) {
+	ABI = GetABI()
+	os.Exit(m.Run())
+}
+
+// generateTestPeer ONLY used for testing
+func generateTestPeer() *PeerInfo {
+	pk, _ := crypto.GenerateKey()
+	return &PeerInfo{
+		PubKey:  common.Bytes2Hex(crypto.CompressPubkey(&pk.PublicKey)),
+		Address: crypto.PubkeyToAddress(pk.PublicKey),
+	}
+}
+
+func generateTestPeers(n int) *Peers {
+	peers := &Peers{List: make([]*PeerInfo, n)}
+	for i := 0; i < n; i++ {
+		peers.List[i] = generateTestPeer()
+	}
+	return peers
+}
+
+func generateTestEpochInfo(id, height uint64, peersNum int) *EpochInfo {
+	epoch := new(EpochInfo)
+	epoch.ID = id
+	epoch.StartHeight = height
+	epoch.EndHeight = 0
+	epoch.Peers = generateTestPeers(peersNum)
+	return epoch
+}
+
+func generateTestHash(n int) common.Hash {
+	data := big.NewInt(int64(n))
+	return common.BytesToHash(data.Bytes())
+}
