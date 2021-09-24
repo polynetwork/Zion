@@ -27,6 +27,8 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+// todo: issue, add field `len` for stat addressList and hashList
+
 // storage key prefix
 const (
 	SKP_EPOCH    = "st_epoch"
@@ -63,11 +65,20 @@ func getEpoch(s *native.NativeContract, epochHash common.Hash) (*EpochInfo, erro
 	return epoch, nil
 }
 
+func delEpoch(s *native.NativeContract, epochHash common.Hash) {
+	key := epochKey(epochHash)
+	s.GetCacheDB().Delete(key)
+}
+
 // proposal storage
 func storeProposal(s *native.NativeContract, epochHash common.Hash) error {
 	list, err := getProposals(s)
 	if err != nil {
-		return err
+		if err.Error() == "EOF" {
+			list = make([]common.Hash, 0)
+		} else {
+			return err
+		}
 	}
 	list = append(list, epochHash)
 	return setProposals(s, list)
@@ -95,6 +106,14 @@ func findProposal(s *native.NativeContract, epochHash common.Hash) bool {
 		}
 	}
 	return false
+}
+
+func proposalsNum(s *native.NativeContract) int {
+	list, err := getProposals(s)
+	if err != nil || list == nil {
+		return 0
+	}
+	return len(list)
 }
 
 func delProposal(s *native.NativeContract, epochHash common.Hash) error {
@@ -146,7 +165,11 @@ func getProposals(s *native.NativeContract) ([]common.Hash, error) {
 func storeVote(s *native.NativeContract, epochHash common.Hash, voter common.Address) error {
 	list, err := getVotes(s, epochHash)
 	if err != nil {
-		return err
+		if err.Error() == "EOF" {
+			list = make([]common.Address, 0)
+		} else {
+			return err
+		}
 	}
 	list = append(list, voter)
 	return setVotes(s, epochHash, list)
@@ -187,6 +210,11 @@ func deleteVote(s *native.NativeContract, epochHash common.Hash, voter common.Ad
 		}
 	}
 	return setVotes(s, epochHash, dst)
+}
+
+func clearVotes(s *native.NativeContract, epochHash common.Hash) {
+	key := voteKey(epochHash)
+	s.GetCacheDB().Put(key, common.EmptyHash.Bytes())
 }
 
 func setVotes(s *native.NativeContract, epochHash common.Hash, list []common.Address) error {

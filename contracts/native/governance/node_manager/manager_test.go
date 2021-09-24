@@ -24,11 +24,26 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
+)
+
+var (
+	testStateDB  *state.StateDB
+	testCacheDB  *state.CacheDB
+	testEmptyCtx *native.NativeContract
 )
 
 func TestMain(m *testing.M) {
 	ABI = GetABI()
+
+	db := rawdb.NewMemoryDatabase()
+	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
+	testCacheDB = (*state.CacheDB)(testStateDB)
+	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
+
 	os.Exit(m.Run())
 }
 
