@@ -26,27 +26,17 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	xctrs "github.com/ethereum/go-ethereum/contracts/native/contract"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/polynetwork/poly/common/config"
-	"github.com/polynetwork/poly/core/genesis"
 	cstates "github.com/polynetwork/poly/core/states"
 )
 
+// todo: 1.删除无效的relayer白名单, 2.删除updateConfig或者initConfig这种东西，3.relayer提交changeBookeeper的方式, 漏提交如何处理？
+// todo: 4.consensus模块如何提交区块头，应该包含什么信息保证合约收到新的区块头时能正确识别新的validators
 const (
 	//status
 	CandidateStatus Status = iota
 	ConsensusStatus
 	QuitingStatus
 	BlackStatus
-
-	//function name
-	REGISTER_CANDIDATE   = "registerCandidate"
-	UNREGISTER_CANDIDATE = "unRegisterCandidate"
-	APPROVE_CANDIDATE    = "approveCandidate"
-	BLACK_NODE           = "blackNode"
-	WHITE_NODE           = "whiteNode"
-	QUIT_NODE            = "quitNode"
-	UPDATE_CONFIG        = "updateConfig"
-	COMMIT_DPOS          = "commitDpos"
 
 	//key prefix
 	GOVERNANCE_VIEW = "governanceView"
@@ -69,91 +59,13 @@ func InitNodeManager() {
 
 //Register methods of node_manager contract
 func RegisterNodeManagerContract(native *native.NativeContract) {
-	native.Register(genesis.INIT_CONFIG, InitConfig)
-	native.Register(REGISTER_CANDIDATE, RegisterCandidate)
-	native.Register(UNREGISTER_CANDIDATE, UnRegisterCandidate)
-	native.Register(QUIT_NODE, QuitNode)
-	native.Register(APPROVE_CANDIDATE, ApproveCandidate)
-	native.Register(BLACK_NODE, BlackNode)
-	native.Register(WHITE_NODE, WhiteNode)
-	native.Register(UPDATE_CONFIG, UpdateConfig)
-	native.Register(COMMIT_DPOS, CommitDpos)
-}
-
-//Init node_manager contract
-func InitConfig(native *native.NativeContract) ([]byte, error) {
-	ctx := native.ContractRef().CurrentContext()
-	configuration := new(config.VBFTConfig)
-	if err := utils.UnpackMethod(ABI, MethodInitConfig, configuration, ctx.Payload); err != nil {
-		return utils.BYTE_FALSE, fmt.Errorf("initConfig, contract params deserialize error: %v", err)
-	}
-
-	// check if initConfig is already execute
-	peerPoolMapBytes, err := native.GetCacheDB().Get(utils.ConcatKey(this, []byte(PEER_POOL)))
-	if err != nil {
-		return utils.BYTE_FALSE, fmt.Errorf("initConfig, get peerPoolMap error: %v", err)
-	}
-	if peerPoolMapBytes != nil {
-		return utils.BYTE_FALSE, fmt.Errorf("initConfig. initConfig is already executed")
-	}
-
-	//check the configuration
-	err = CheckVBFTConfig(configuration)
-	if err != nil {
-		return utils.BYTE_FALSE, fmt.Errorf("initConfig, checkVBFTConfig failed: %v", err)
-	}
-
-	var view uint64 = 1
-	var maxId uint64
-
-	peerPoolMap := &PeerPoolMap{
-		PeerPoolMap: make(map[string]*PeerPoolItem),
-	}
-	for _, peer := range configuration.Peers {
-		if uint64(peer.Index) > maxId {
-			maxId = uint64(peer.Index)
-		}
-		address := common.HexToAddress(peer.Address)
-
-		peerPoolItem := new(PeerPoolItem)
-		peerPoolItem.Index = uint64(peer.Index)
-		peerPoolItem.PeerPubkey = peer.PeerPubkey
-		peerPoolItem.Address = address
-		peerPoolItem.Status = ConsensusStatus
-		peerPoolMap.PeerPoolMap[peerPoolItem.PeerPubkey] = peerPoolItem
-
-		peerPubkeyPrefix, err := hex.DecodeString(peerPoolItem.PeerPubkey)
-		if err != nil {
-			return utils.BYTE_FALSE, fmt.Errorf("initConfig, peerPubkey format error: %v", err)
-		}
-		index := peerPoolItem.Index
-		indexBytes := utils.GetUint64Bytes(index)
-		native.GetCacheDB().Put(utils.ConcatKey(this, []byte(PEER_INDEX), peerPubkeyPrefix), cstates.GenRawStorageItem(indexBytes))
-	}
-
-	//init peer pool
-	putPeerPoolMap(native, peerPoolMap, 0)
-	putPeerPoolMap(native, peerPoolMap, view)
-	indexBytes := utils.GetUint64Bytes(maxId + 1)
-	native.GetCacheDB().Put(utils.ConcatKey(this, []byte(CANDIDITE_INDEX)), cstates.GenRawStorageItem(indexBytes))
-
-	//init governance view
-	governanceView := &GovernanceView{
-		View:   view,
-		Height: native.ContractRef().BlockHeight().Uint64(),
-		TxHash: native.ContractRef().TxHash(),
-	}
-	putGovernanceView(native, governanceView)
-
-	//init config
-	putConfig(native, &Configuration{
-		BlockMsgDelay:        uint64(configuration.BlockMsgDelay),
-		HashMsgDelay:         uint64(configuration.HashMsgDelay),
-		PeerHandshakeTimeout: uint64(configuration.PeerHandshakeTimeout),
-		MaxBlockChangeView:   uint64(configuration.MaxBlockChangeView),
-	})
-
-	return utils.BYTE_TRUE, nil
+	native.Register(MethodRegisterCandidate, RegisterCandidate)
+	native.Register(MethodUnRegisterCandidate, UnRegisterCandidate)
+	native.Register(MethodApproveCandidate, ApproveCandidate)
+	native.Register(MethodQuitNode, QuitNode)
+	native.Register(MethodBlackNode, BlackNode)
+	native.Register(MethodWhiteNode, WhiteNode)
+	native.Register(MethodCommitDpos, CommitDpos)
 }
 
 //Register a candidate node, used by users.
@@ -286,7 +198,7 @@ func ApproveCandidate(native *native.NativeContract) ([]byte, error) {
 	}
 
 	//check consensus signs
-	ok, err := CheckConsensusSigns(native, APPROVE_CANDIDATE, []byte(params.PeerPubkey), params.Address)
+	ok, err := CheckConsensusSigns(native, MethodApproveCandidate, []byte(params.PeerPubkey), params.Address)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("approveCandidate, CheckConsensusSigns error: %v", err)
 	}
@@ -405,7 +317,7 @@ func BlackNode(native *native.NativeContract) ([]byte, error) {
 		input = append(input, []byte(v)...)
 	}
 	//check consensus signs
-	ok, err := CheckConsensusSigns(native, BLACK_NODE, input, params.Address)
+	ok, err := CheckConsensusSigns(native, MethodBlackNode, input, params.Address)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("blackNode, CheckConsensusSigns error: %v", err)
 	}
@@ -484,7 +396,7 @@ func WhiteNode(native *native.NativeContract) ([]byte, error) {
 	}
 
 	//check consensus signs
-	ok, err := CheckConsensusSigns(native, WHITE_NODE, []byte(params.PeerPubkey), params.Address)
+	ok, err := CheckConsensusSigns(native, MethodWhiteNode, []byte(params.PeerPubkey), params.Address)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("whiteNode, CheckConsensusSigns error: %v", err)
 	}
@@ -595,47 +507,6 @@ func CommitDpos(native *native.NativeContract) ([]byte, error) {
 
 	if err := native.AddNotify(ABI, []string{EventCommitDpos}); err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("executeCommitDpos, add notify error: %v", err)
-	}
-	return utils.BYTE_TRUE, nil
-}
-
-//Update VBFT config
-func UpdateConfig(native *native.NativeContract) ([]byte, error) {
-	ctx := native.ContractRef().CurrentContext()
-	params := new(UpdateConfigParam)
-	if err := utils.UnpackMethod(ABI, MethodUpdateConfig, params, ctx.Payload); err != nil {
-		return utils.BYTE_FALSE, fmt.Errorf("updateConfig, deserialize configuration error: %v", err)
-	}
-	sink := common.NewZeroCopySink(nil)
-	params.Configuration.Serialization(sink)
-
-	// Get current epoch operator
-	operatorAddress, err := GetCurConOperator(native)
-	if err != nil {
-		return utils.BYTE_FALSE, fmt.Errorf("updateConfig, get current consensus operator address error: %v", err)
-	}
-	//check witness
-	err = xctrs.ValidateOwner(native, operatorAddress)
-	if err != nil {
-		return utils.BYTE_FALSE, fmt.Errorf("updateConfig, checkWitness error: %v", err)
-	}
-
-	if params.Configuration.BlockMsgDelay < 5000 {
-		return utils.BYTE_FALSE, fmt.Errorf("updateConfig. BlockMsgDelay must >= 5000")
-	}
-	if params.Configuration.HashMsgDelay < 5000 {
-		return utils.BYTE_FALSE, fmt.Errorf("updateConfig. HashMsgDelay must >= 5000")
-	}
-	if params.Configuration.PeerHandshakeTimeout < 10 {
-		return utils.BYTE_FALSE, fmt.Errorf("updateConfig. PeerHandshakeTimeout must >= 10")
-	}
-	if params.Configuration.MaxBlockChangeView < 10000 {
-		return utils.BYTE_FALSE, fmt.Errorf("updateConfig. MaxBlockChangeView must >= 10000")
-	}
-
-	putConfig(native, params.Configuration)
-	if err := native.AddNotify(ABI, []string{EventUpdateConfig}, params.Configuration); err != nil {
-		return utils.BYTE_FALSE, fmt.Errorf("updateConfig, add notify error: %v", err)
 	}
 	return utils.BYTE_TRUE, nil
 }

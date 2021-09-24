@@ -28,17 +28,17 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
+const contractName = "node manager"
+
 const (
-	MethodApproveCandidate    = "MethodApproveCandidate"
-	MethodBlackNode           = "MethodBlackNode"
-	MethodCommitDpos          = "MethodCommitDpos"
-	MethodContractName        = "MethodContractName"
-	MethodInitConfig          = "MethodInitConfig"
-	MethodQuitNode            = "MethodQuitNode"
-	MethodRegisterCandidate   = "MethodRegisterCandidate"
-	MethodUnRegisterCandidate = "MethodUnRegisterCandidate"
-	MethodUpdateConfig        = "MethodUpdateConfig"
-	MethodWhiteNode           = "MethodWhiteNode"
+	MethodContractName        = "name"
+	MethodRegisterCandidate   = "registerCandidate"
+	MethodUnRegisterCandidate = "unRegisterCandidate"
+	MethodApproveCandidate    = "approveCandidate"
+	MethodBlackNode           = "blackNode"
+	MethodWhiteNode           = "whiteNode"
+	MethodQuitNode            = "quitNode"
+	MethodCommitDpos          = "commitDpos"
 
 	EventApproveCandidate    = "EventApproveCandidate"
 	EventBlackNode           = "EventBlackNode"
@@ -46,10 +46,20 @@ const (
 	EventQuitNode            = "EventQuitNode"
 	EventRegisterCandidate   = "EventRegisterCandidate"
 	EventUnRegisterCandidate = "EventUnRegisterCandidate"
-	EventUpdateConfig        = "EventUpdateConfig"
 	EventWhiteNode           = "EventWhiteNode"
 	EventCheckConsensusSigns = "CheckConsensusSignsEvent"
 )
+
+const abijson = `[
+    {"type":"function","name":"` + MethodContractName + `","inputs":[],"outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodRegisterCandidate + `","inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable"},
+    {"type":"function","name":"` + MethodUnRegisterCandidate + `","inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodApproveCandidate + `","inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRegisterRelayer + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRemoveRelayer + `","type":"event"},
+	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"applyID","type":"uint64"}],"name":"` + EventRegisterRelayer + `","type":"event"},
+    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"removeID","type":"uint64"}],"name":"` + EventRemoveRelayer + `","type":"event"}
+]`
 
 func GetABI() *abi.ABI {
 	ab, err := abi.JSON(strings.NewReader(node_manager_abi.NodeManagerABI))
@@ -156,23 +166,5 @@ func (p *PeerListParam) Deserialization(source *common.ZeroCopySource) error {
 	addr := common.BytesToAddress(address)
 	p.PeerPubkeyList = peerPubkeyList
 	p.Address = addr
-	return nil
-}
-
-type UpdateConfigParam struct {
-	Configuration *Configuration
-}
-
-func (p *UpdateConfigParam) Serialization(sink *common.ZeroCopySink) {
-	p.Configuration.Serialization(sink)
-}
-
-func (p *UpdateConfigParam) Deserialization(source *common.ZeroCopySource) error {
-	configuration := new(Configuration)
-	err := configuration.Deserialization(source)
-	if err != nil {
-		return fmt.Errorf("configuration.Deserialization, deserialize configuration error: %s", err)
-	}
-	p.Configuration = configuration
 	return nil
 }
