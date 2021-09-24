@@ -20,6 +20,9 @@ package node_manager
 
 import (
 	"fmt"
+	"sort"
+
+	"github.com/ethereum/go-ethereum/core/state"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -31,23 +34,15 @@ import (
 
 // storage key prefix
 const (
-	SKP_EPOCH    = "st_epoch"
-	SKP_PROPOSAL = "st_proposal"
-	SKP_VOTE     = "st_vote"
+	SKP_EPOCH     = "st_epoch"
+	SKP_PROPOSAL  = "st_proposal"
+	SKP_VOTE      = "st_vote"
+	SKP_CUR_EPOCH = "st_cur_epoch"
 )
 
 // epoch storage
 func storeEpoch(s *native.NativeContract, epoch *EpochInfo) error {
-	hash := epoch.Hash()
-	key := epochKey(hash)
-
-	value, err := rlp.EncodeToBytes(epoch)
-	if err != nil {
-		return err
-	}
-
-	s.GetCacheDB().Put(key, value)
-	return nil
+	return setEpoch(s.GetCacheDB(), epoch)
 }
 
 func getEpoch(s *native.NativeContract, epochHash common.Hash) (*EpochInfo, error) {
@@ -68,6 +63,34 @@ func getEpoch(s *native.NativeContract, epochHash common.Hash) (*EpochInfo, erro
 func delEpoch(s *native.NativeContract, epochHash common.Hash) {
 	key := epochKey(epochHash)
 	s.GetCacheDB().Delete(key)
+}
+
+func setEpoch(s *state.CacheDB, epoch *EpochInfo) error {
+	hash := epoch.Hash()
+	key := epochKey(hash)
+
+	value, err := rlp.EncodeToBytes(epoch)
+	if err != nil {
+		return err
+	}
+
+	s.Put(key, value)
+	return nil
+}
+
+// current epoch
+func storeCurrentEpoch(s *native.NativeContract, epochHash common.Hash) {
+	key := curEpochKey()
+	s.GetCacheDB().Put(key, epochHash.Bytes())
+}
+
+func getCurrentEpoch(s *native.NativeContract) (common.Hash, error) {
+	key := curEpochKey()
+	value, err := s.GetCacheDB().Get(key)
+	if err != nil {
+		return common.EmptyHash, err
+	}
+	return common.BytesToHash(value), nil
 }
 
 // proposal storage
@@ -142,13 +165,13 @@ func setProposals(s *native.NativeContract, list []common.Hash) error {
 		return err
 	}
 
-	key := proposalKey()
+	key := proposalsKey()
 	s.GetCacheDB().Put(key, value)
 	return nil
 }
 
 func getProposals(s *native.NativeContract) ([]common.Hash, error) {
-	key := proposalKey()
+	key := proposalsKey()
 	enc, err := s.GetCacheDB().Get(key)
 	if err != nil {
 		return nil, err
@@ -248,8 +271,12 @@ func epochKey(epochHash common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_EPOCH), epochHash.Bytes())
 }
 
-func proposalKey() []byte {
-	return utils.ConcatKey(this, []byte(SKP_PROPOSAL), []byte("1"))
+func curEpochKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_CUR_EPOCH), []byte("1"))
+}
+
+func proposalsKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_PROPOSAL), []byte("2"))
 }
 
 func voteKey(epochHash common.Hash) []byte {

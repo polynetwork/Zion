@@ -68,7 +68,6 @@ func generateTestEpochInfo(id, height uint64, peersNum int) *EpochInfo {
 	epoch := new(EpochInfo)
 	epoch.ID = id
 	epoch.StartHeight = height
-	epoch.EndHeight = 0
 	epoch.Peers = generateTestPeers(peersNum)
 	return epoch
 }

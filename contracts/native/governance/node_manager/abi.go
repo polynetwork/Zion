@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -39,18 +40,18 @@ const (
 
 	EventPropose      = "proposed"
 	EventVote         = "voted"
-	EventEpochChanged = "epochChanged"
+	EventEpochChange = "epochChanged"
 )
 
 const abijson = `[
     {"type":"function","name":"` + MethodContractName + `","inputs":[],"outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodPropose + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"},{"internalType":"bytes","name":"Peers","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodPropose + `","inputs":[{"internalType":"uint64","name":"StartHeight","type":"uint64"},{"internalType":"bytes","name":"Peers","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
     {"type":"function","name":"` + MethodVote + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"},{"internalType":"bytes","name":"Hash","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
 	{"type":"function","name":"` + MethodEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"EpochInfo","type":"bytes"}],"stateMutability":"nonpayable"},
 	{"type":"function","name":"` + MethodNextEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"EpochInfo","type":"bytes"}],"stateMutability":"nonpayable"},
     {"type":"event","name":"` + EventPropose + `","anonymous":false,"inputs":[{"internalType":"bytes","name":"EpochInfo","type":"bytes"}]},
 	{"type":"event","name":"` + EventVote + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"EpochID","type":"uint64"},{"indexed":false,"internalType":"bytes","name":"Hash","type":"bytes"},{"indexed":false,"internalType":"uint64","name":"VotedNumber","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"GroupSize","type":"uint64"}]},
-	{"type":"event","name":"` + EventEpochChanged + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"EpochInfo","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"NextEpochInfo","type":"bytes"}]}
+	{"type":"event","name":"` + EventEpochChange + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"EpochInfo","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"NextEpochInfo","type":"bytes"}]}
 ]`
 
 func GetABI() *abi.ABI {
@@ -79,8 +80,8 @@ func (m *MethodContractNameOutput) Decode(payload []byte) error {
 }
 
 type MethodProposeInput struct {
-	EpochID uint64
-	Peers   []byte
+	StartHeight uint64
+	Peers       []byte
 }
 
 func (m *MethodProposeInput) Encode(epochID uint64, peers *Peers) ([]byte, error) {
@@ -88,15 +89,15 @@ func (m *MethodProposeInput) Encode(epochID uint64, peers *Peers) ([]byte, error
 	if err != nil {
 		return nil, err
 	}
-	m.EpochID = epochID
+	m.StartHeight = epochID
 	m.Peers = enc
-	return utils.PackMethod(ABI, MethodPropose, m.EpochID, m.Peers)
+	return utils.PackMethod(ABI, MethodPropose, m.StartHeight, m.Peers)
 }
-func (m *MethodProposeInput) Decode(payload []byte) (epochID uint64, peers *Peers, err error) {
+func (m *MethodProposeInput) Decode(payload []byte) (startHeight uint64, peers *Peers, err error) {
 	if err = utils.UnpackMethod(ABI, MethodPropose, m, payload); err != nil {
 		return
 	}
-	epochID = m.EpochID
+	startHeight = m.StartHeight
 	err = rlp.DecodeBytes(m.Peers, &peers)
 	return
 }
@@ -187,6 +188,14 @@ type EventProposed struct {
 	EpochInfo []byte
 }
 
+func emitEventProposed(s *native.NativeContract, epoch *EpochInfo) error {
+	enc, err := rlp.EncodeToBytes(epoch)
+	if err != nil {
+		return err
+	}
+	return s.AddNotify(ABI, []string{EventPropose}, enc)
+}
+
 type EventVoted struct {
 	EpochID     uint64
 	Hash        common.Hash
@@ -194,7 +203,7 @@ type EventVoted struct {
 	GroupSize   uint64
 }
 
-type EventEpochChange struct {
+type EventEpochChanged struct {
 	EpochInfo     []byte
 	NextEpochInfo []byte
 }

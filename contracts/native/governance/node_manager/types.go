@@ -21,6 +21,7 @@ package node_manager
 import (
 	"fmt"
 	"io"
+	"strings"
 	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -76,17 +77,28 @@ func (m *Peers) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+func (m *Peers) Len() int {
+	return len(m.List)
+}
+
+func (m *Peers) Less(i, j int) bool {
+	return strings.Compare(m.List[i].Address.Hex(), m.List[j].Address.Hex()) < 0
+}
+
+func (m *Peers) Swap(i, j int) {
+	m.List[i], m.List[j] = m.List[j], m.List[i]
+}
+
 type EpochInfo struct {
 	ID          uint64
 	Peers       *Peers
 	StartHeight uint64
-	EndHeight   uint64
 
 	hash atomic.Value
 }
 
 func (m *EpochInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ID, m.Peers, m.StartHeight, m.EndHeight})
+	return rlp.Encode(w, []interface{}{m.ID, m.Peers, m.StartHeight})
 }
 
 func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
@@ -94,13 +106,12 @@ func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
 		ID          uint64
 		Peers       *Peers
 		StartHeight uint64
-		EndHeight   uint64
 	}
 
 	if err := s.Decode(&inf); err != nil {
 		return err
 	}
-	m.ID, m.Peers, m.StartHeight, m.EndHeight = inf.ID, inf.Peers, inf.StartHeight, inf.EndHeight
+	m.ID, m.Peers, m.StartHeight = inf.ID, inf.Peers, inf.StartHeight
 	return nil
 }
 
@@ -116,16 +127,25 @@ func (m *EpochInfo) Hash() common.Hash {
 		ID          uint64
 		Peers       *Peers
 		StartHeight uint64
-		EndHeight   uint64
 	}{
 		ID:          m.ID,
 		Peers:       m.Peers,
 		StartHeight: m.StartHeight,
-		EndHeight:   m.EndHeight,
 	}
 	v := RLPHash(inf)
 	m.hash.Store(v)
 	return v
+}
+
+func (m *EpochInfo) Members() map[common.Address]struct{} {
+	if m == nil || m.Peers == nil || m.Peers.List == nil {
+		return nil
+	}
+	data := make(map[common.Address]struct{})
+	for _, v := range m.Peers.List {
+		data[v.Address] = struct{}{}
+	}
+	return data
 }
 
 type HashList struct {
