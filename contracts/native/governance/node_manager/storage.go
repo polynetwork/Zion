@@ -42,6 +42,8 @@ const (
 	SKP_PROPOSAL  = "st_proposal"
 	SKP_VOTE      = "st_vote"
 	SKP_CUR_EPOCH = "st_cur_epoch"
+	SKP_SIGN      = "st_sign"
+	SKP_SIGNER    = "st_signer"
 )
 
 // epoch storage
@@ -301,6 +303,101 @@ func getVoteSize(s *native.NativeContract, epochHash common.Hash) int {
 	return len(votes)
 }
 
+// signatures
+func storeSign(s *native.NativeContract, sign *ConsensusSign) error {
+	key := signKey(sign.Hash())
+	value, err := rlp.EncodeToBytes(sign)
+	if err != nil {
+		return err
+	}
+	s.GetCacheDB().Put(key, value)
+	return nil
+}
+
+func delSign(s *native.NativeContract, hash common.Hash) {
+	key := signKey(hash)
+	s.GetCacheDB().Delete(key)
+}
+
+func getSign(s *native.NativeContract, hash common.Hash) (*ConsensusSign, error) {
+	key := signKey(hash)
+	value, err := s.GetCacheDB().Get(key)
+	if err != nil {
+		if err.Error() == "EOF" {
+			return nil, nil
+		} else {
+			return nil, err
+		}
+	}
+	var sign *ConsensusSign
+	if err := rlp.DecodeBytes(value, &sign); err != nil {
+		return nil, err
+	}
+	return sign, nil
+}
+
+func storeSigner(s *native.NativeContract, hash common.Hash, signer common.Address) error {
+	data, err := getSigners(s, hash)
+	if err != nil {
+		return err
+	}
+	data = append(data, signer)
+	list := &AddressList{List: data}
+
+	key := signerKey(hash)
+	value, err := rlp.EncodeToBytes(list)
+	if err != nil {
+		return err
+	}
+	s.GetCacheDB().Put(key, value)
+
+	return nil
+}
+
+func findSigner(s *native.NativeContract, hash common.Hash, signer common.Address) bool {
+	list, err := getSigners(s, hash)
+	if err != nil {
+		return false
+	}
+	for _, v := range list {
+		if v == signer {
+			return true
+		}
+	}
+	return false
+}
+
+func getSigners(s *native.NativeContract, hash common.Hash) ([]common.Address, error) {
+	key := signerKey(hash)
+	value, err := s.GetCacheDB().Get(key)
+	if err != nil {
+		if err.Error() == "EOF" {
+			return []common.Address{}, nil
+		} else {
+			return nil, err
+		}
+	}
+
+	var list *AddressList
+	if err := rlp.DecodeBytes(value, &list); err != nil {
+		return nil, err
+	}
+	return list.List, nil
+}
+
+func getSignerSize(s *native.NativeContract, hash common.Hash) int {
+	list, err := getSigners(s, hash)
+	if err != nil {
+		return 0
+	}
+	return len(list)
+}
+
+func clearSigner(s *native.NativeContract, hash common.Hash) {
+	key := signerKey(hash)
+	s.GetCacheDB().Delete(key)
+}
+
 // keys
 func epochKey(epochHash common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_EPOCH), epochHash.Bytes())
@@ -320,4 +417,12 @@ func proposalsKey() []byte {
 
 func voteKey(epochHash common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_VOTE), epochHash.Bytes())
+}
+
+func signKey(hash common.Hash) []byte {
+	return utils.ConcatKey(this, []byte(SKP_SIGN), hash.Bytes())
+}
+
+func signerKey(hash common.Hash) []byte {
+	return utils.ConcatKey(this, []byte(SKP_SIGNER), hash.Bytes())
 }

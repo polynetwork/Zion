@@ -261,5 +261,41 @@ func EpochProof(s *native.NativeContract) ([]byte, error) {
 }
 
 func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, address common.Address) (bool, error) {
+	epochHash, err := getCurrentEpochHash(s)
+	if err != nil {
+		return false, fmt.Errorf("checkConsensusSign, get current epoch hash failed, err: %v", err)
+	}
+	epoch, err := getEpoch(s, epochHash)
+	if err != nil {
+		return false, fmt.Errorf("checkConsensusSign, get current epoch info failed, err: %v", err)
+	}
+	if err := checkAuthority(address, epoch); err != nil {
+		return false, fmt.Errorf("checkConsensusSign, check authority failed, err: %v", err)
+	}
+
+	sign := &ConsensusSign{Method: method, Input: input}
+	if exist, err := getSign(s, sign.Hash()); err != nil {
+		return false, fmt.Errorf("checkConsensusSign, get sign failed, err: %v", err)
+	} else if exist == nil {
+		if err := storeSign(s, sign); err != nil {
+			return false, fmt.Errorf("checkConsensusSign, store sign failed, err: %v", err)
+		}
+	} else if exist.Hash() != sign.Hash() {
+		return false, fmt.Errorf("checkConsensusSign, expect sign hash %s got %s", exist.Hash().Hex(), sign.Hash().Hex())
+	}
+
+	if findSigner(s, sign.Hash(), address) {
+		return false, fmt.Errorf("checkConsensusSign, signer %s already exist", address.Hex())
+	}
+	if err := storeSigner(s, sign.Hash(), address); err != nil {
+		return false, fmt.Errorf("checkConsensusSign, store signers failed, hash %s, err: %v", sign.Hash().Hex(), err)
+	}
+	if size := getSignerSize(s, sign.Hash()); size >= epoch.QuorumSize() {
+		delSign(s, sign.Hash())
+		//todo: emit
+	} else {
+		// todo: emit event log
+	}
+
 	return true, nil
 }
