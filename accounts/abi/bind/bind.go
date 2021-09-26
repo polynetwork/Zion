@@ -43,6 +43,8 @@ const (
 	LangObjC
 )
 
+var Zion bool
+
 // Bind generates a Go wrapper around a contract ABI. This wrapper isn't meant
 // to be used as is in client code, but rather as an intermediate struct which
 // enforces compile time type safety and naming convention opposed to having to
@@ -138,7 +140,12 @@ func Bind(types []string, abis []string, bytecodes []string, fsigs []map[string]
 			normalized := original
 
 			// Ensure there is no duplicated identifier
-			normalizedName := methodNormalizer[lang](alias(aliases, original.Name))
+			var normalizedName string
+			if Zion {
+				normalizedName = methodNormalizer[lang](alias(aliases, strings.TrimPrefix(original.Name, "evt")))
+			} else {
+				normalizedName = methodNormalizer[lang](alias(aliases, original.Name))
+			}
 			if eventIdentifiers[normalizedName] {
 				return "", fmt.Errorf("duplicated identifier \"%s\"(normalized \"%s\"), use --alias for renaming", original.Name, normalizedName)
 			}
@@ -213,6 +220,7 @@ func Bind(types []string, abis []string, bytecodes []string, fsigs []map[string]
 		Contracts: contracts,
 		Libraries: libs,
 		Structs:   structs,
+		Zion:      Zion,
 	}
 	buffer := new(bytes.Buffer)
 

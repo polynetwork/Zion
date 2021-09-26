@@ -24,6 +24,7 @@ type tmplData struct {
 	Contracts map[string]*tmplContract // List of contracts to generate into this file
 	Libraries map[string]string        // Map the bytecode's link pattern to the library name
 	Structs   map[string]*tmplStruct   // Contract struct type definitions
+	Zion      bool
 }
 
 // tmplContract contains the data needed to generate an individual contract binding.
@@ -119,7 +120,20 @@ var (
 	}
 {{end}}
 
+
+
 {{range $contract := .Contracts}}
+	{{if .Zion}}
+		var (
+			{{range .Calls}}
+				Method{{.Normalized.Name}} = "{{.Original.Name}}"
+			{{end}}
+			{{range .Transacts}}
+				Method{{.Normalized.Name}} = "{{.Original.Name}}"
+			{{end}}
+		)
+	{{end}}
+
 	// {{.Type}}ABI is the input ABI used to generate the binding from.
 	const {{.Type}}ABI = "{{.InputABI}}"
 
