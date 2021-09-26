@@ -20,7 +20,7 @@ package native
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	abiPkg "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -41,7 +41,7 @@ type NativeContract struct {
 	db       *state.StateDB
 	handlers map[string]MethodHandler // map method id to method handler
 	gasTable map[string]uint64        // map method id to gas usage
-	ab       *abi.ABI
+	ab       *abiPkg.ABI
 }
 
 func NewNativeContract(db *state.StateDB, ref *ContractRef) *NativeContract {
@@ -64,7 +64,7 @@ func (s *NativeContract) StateDB() *state.StateDB {
 	return s.db
 }
 
-func (s *NativeContract) Prepare(ab *abi.ABI, gasTb map[string]uint64) {
+func (s *NativeContract) Prepare(ab *abiPkg.ABI, gasTb map[string]uint64) {
 	s.ab = ab
 	s.gasTable = make(map[string]uint64)
 	for name, gas := range gasTb {
@@ -127,14 +127,18 @@ func (s *NativeContract) Invoke() ([]byte, error) {
 	return ret, err
 }
 
-func (s *NativeContract) AddNotify(abi *abi.ABI, topics []string, data ...interface{}) (err error) {
+func (s *NativeContract) AddNotify(abi *abiPkg.ABI, topics []string, data ...interface{}) (err error) {
 
 	var topicIDs []common.Hash
 	for _, topic := range topics {
 		eventInfo, ok := abi.Events[topic]
 		if !ok {
-			err = fmt.Errorf("topic %s not exists", topic)
-			return
+			eventInfo, ok = abi.Events["evt"+abiPkg.ToCamelCase(topic)]
+			if !ok {
+				err = fmt.Errorf("topic %s not exists", topic)
+				return
+			}
+
 		}
 		topicIDs = append(topicIDs, eventInfo.ID)
 	}
