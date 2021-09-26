@@ -123,7 +123,7 @@ var (
 
 
 {{range $contract := .Contracts}}
-	{{if .Zion}}
+	{{if $.Zion}}
 		var (
 			{{range .Calls}}
 				Method{{.Normalized.Name}} = "{{.Original.Name}}"
