@@ -57,7 +57,8 @@ func TestPropose(t *testing.T) {
 
 	startHeight := uint64(2)
 	peers := generateTestPeers(15)
-	payload, err := new(MethodProposeInput).Encode(startHeight, peers)
+	input := &MethodProposeInput{StartHeight: startHeight, Peers: peers}
+	payload, err := input.Encode()
 	assert.NoError(t, err)
 
 	ret, gasLeft, err := ctx.NativeCall(caller, this, payload)

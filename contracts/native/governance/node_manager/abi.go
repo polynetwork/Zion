@@ -36,6 +36,7 @@ const (
 	MethodPropose      = "propose"
 	MethodVote         = "vote"
 	MethodEpoch        = "epoch"
+	MethodProof        = "proof"
 	MethodNextEpoch    = "nextEpoch"
 
 	EventPropose     = "proposed"
@@ -47,11 +48,12 @@ const abijson = `[
     {"type":"function","name":"` + MethodContractName + `","inputs":[],"outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable"},
 	{"type":"function","name":"` + MethodPropose + `","inputs":[{"internalType":"uint64","name":"StartHeight","type":"uint64"},{"internalType":"bytes","name":"Peers","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
     {"type":"function","name":"` + MethodVote + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"},{"internalType":"bytes","name":"Hash","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"EpochInfo","type":"bytes"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodNextEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"EpochInfo","type":"bytes"}],"stateMutability":"nonpayable"},
-    {"type":"event","name":"` + EventPropose + `","anonymous":false,"inputs":[{"internalType":"bytes","name":"EpochInfo","type":"bytes"}]},
+	{"type":"function","name":"` + MethodEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodNextEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodProof + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Hash","type":"bytes"}],"stateMutability":"nonpayable"},
+    {"type":"event","name":"` + EventPropose + `","anonymous":false,"inputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}]},
 	{"type":"event","name":"` + EventVote + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"EpochID","type":"uint64"},{"indexed":false,"internalType":"bytes","name":"Hash","type":"bytes"},{"indexed":false,"internalType":"uint64","name":"VotedNumber","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"GroupSize","type":"uint64"}]},
-	{"type":"event","name":"` + EventEpochChange + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"EpochInfo","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"NextEpochInfo","type":"bytes"}]}
+	{"type":"event","name":"` + EventEpochChange + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"Epoch","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"NextEpoch","type":"bytes"}]}
 ]`
 
 func GetABI() *abi.ABI {
@@ -71,8 +73,8 @@ type MethodContractNameOutput struct {
 	Name string
 }
 
-func (m *MethodContractNameOutput) Encode(name string) ([]byte, error) {
-	m.Name = name
+func (m *MethodContractNameOutput) Encode() ([]byte, error) {
+	m.Name = contractName
 	return utils.PackOutputs(ABI, MethodContractName, m.Name)
 }
 func (m *MethodContractNameOutput) Decode(payload []byte) error {
@@ -81,33 +83,33 @@ func (m *MethodContractNameOutput) Decode(payload []byte) error {
 
 type MethodProposeInput struct {
 	StartHeight uint64
-	Peers       []byte
+	Peers       *Peers
 }
 
-func (m *MethodProposeInput) Encode(epochID uint64, peers *Peers) ([]byte, error) {
-	enc, err := rlp.EncodeToBytes(peers)
+func (m *MethodProposeInput) Encode() ([]byte, error) {
+	enc, err := rlp.EncodeToBytes(m.Peers)
 	if err != nil {
 		return nil, err
 	}
-	m.StartHeight = epochID
-	m.Peers = enc
-	return utils.PackMethod(ABI, MethodPropose, m.StartHeight, m.Peers)
+	return utils.PackMethod(ABI, MethodPropose, m.StartHeight, enc)
 }
-func (m *MethodProposeInput) Decode(payload []byte) (startHeight uint64, peers *Peers, err error) {
-	if err = utils.UnpackMethod(ABI, MethodPropose, m, payload); err != nil {
-		return
+func (m *MethodProposeInput) Decode(payload []byte) error {
+	var data struct {
+		StartHeight uint64
+		Peers       []byte
 	}
-	startHeight = m.StartHeight
-	err = rlp.DecodeBytes(m.Peers, &peers)
-	return
+	if err := utils.UnpackMethod(ABI, MethodPropose, &data, payload); err != nil {
+		return err
+	}
+	m.StartHeight = data.StartHeight
+	return rlp.DecodeBytes(data.Peers, &m.Peers)
 }
 
 type MethodProposeOutput struct {
 	Success bool
 }
 
-func (m *MethodProposeOutput) Encode(succeed bool) ([]byte, error) {
-	m.Success = succeed
+func (m *MethodProposeOutput) Encode() ([]byte, error) {
 	return utils.PackOutputs(ABI, MethodPropose, m.Success)
 }
 func (m *MethodProposeOutput) Decode(payload []byte) error {
@@ -116,24 +118,31 @@ func (m *MethodProposeOutput) Decode(payload []byte) error {
 
 type MethodVoteInput struct {
 	EpochID uint64
-	Hash    []byte
+	Hash    common.Hash
 }
 
-func (m *MethodVoteInput) Encode(epochID uint64, hash common.Hash) ([]byte, error) {
-	m.EpochID = epochID
-	m.Hash = hash.Bytes()
-	return utils.PackMethod(ABI, MethodVote, m.EpochID, m.Hash)
+func (m *MethodVoteInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodVote, m.EpochID, m.Hash.Bytes())
 }
 func (m *MethodVoteInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodVote, m, payload)
+	var data struct {
+		EpochID uint64
+		Hash    []byte
+	}
+	if err := utils.UnpackMethod(ABI, MethodVote, &data, payload); err != nil {
+		return err
+	}
+
+	m.EpochID = data.EpochID
+	m.Hash = common.BytesToHash(data.Hash)
+	return nil
 }
 
 type MethodVoteOutput struct {
 	Success bool
 }
 
-func (m *MethodVoteOutput) Encode(succeed bool) ([]byte, error) {
-	m.Success = succeed
+func (m *MethodVoteOutput) Encode() ([]byte, error) {
 	return utils.PackOutputs(ABI, MethodVote, m.Success)
 }
 func (m *MethodVoteOutput) Decode(payload []byte) error {
@@ -143,49 +152,63 @@ func (m *MethodVoteOutput) Decode(payload []byte) error {
 // useless input
 //type MethodEpochInput struct{}
 type MethodEpochOutput struct {
-	EpochInfo []byte
+	Epoch *EpochInfo
 }
 
-func (m *MethodEpochOutput) Encode(epoch *EpochInfo) ([]byte, error) {
-	enc, err := rlp.EncodeToBytes(epoch)
+func (m *MethodEpochOutput) Encode() ([]byte, error) {
+	enc, err := rlp.EncodeToBytes(m.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	m.EpochInfo = enc
-	return utils.PackOutputs(ABI, MethodEpoch, m.EpochInfo)
+	return utils.PackOutputs(ABI, MethodEpoch, enc)
 }
-func (m *MethodEpochOutput) Decode(payload []byte) (epoch *EpochInfo, err error) {
-	if err = utils.UnpackOutputs(ABI, MethodEpoch, m, payload); err != nil {
-		return
+func (m *MethodEpochOutput) Decode(payload []byte) error {
+	var data struct {
+		Epoch []byte
 	}
-	err = rlp.DecodeBytes(m.EpochInfo, &epoch)
-	return
+	if err := utils.UnpackOutputs(ABI, MethodEpoch, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.Epoch, &m.Epoch)
 }
 
 // useless input
 //type MethodNextEpochInput struct{}
 type MethodNextEpochOutput struct {
-	EpochInfo []byte
+	Epoch *EpochInfo
 }
 
-func (m *MethodNextEpochOutput) Encode(epoch *EpochInfo) ([]byte, error) {
-	enc, err := rlp.EncodeToBytes(epoch)
+func (m *MethodNextEpochOutput) Encode() ([]byte, error) {
+	enc, err := rlp.EncodeToBytes(m.Epoch)
 	if err != nil {
 		return nil, err
 	}
-	m.EpochInfo = enc
-	return utils.PackOutputs(ABI, MethodNextEpoch, m.EpochInfo)
+	return utils.PackOutputs(ABI, MethodNextEpoch, enc)
 }
-func (m *MethodNextEpochOutput) Decode(payload []byte) (epoch *EpochInfo, err error) {
-	if err = utils.UnpackOutputs(ABI, MethodNextEpoch, m, payload); err != nil {
-		return
+func (m *MethodNextEpochOutput) Decode(payload []byte) error {
+	var data struct {
+		Epoch []byte
 	}
-	err = rlp.DecodeBytes(m.EpochInfo, &epoch)
-	return
+	if err := utils.UnpackOutputs(ABI, MethodNextEpoch, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.Epoch, &m.Epoch)
 }
 
-type EventProposed struct {
-	EpochInfo []byte
+type MethodProofOutput struct {
+	Hash common.Hash
+}
+
+func (m *MethodProofOutput) Encode() ([]byte, error) {
+	return utils.PackOutputs(ABI, MethodProof, m.Hash.Bytes())
+}
+func (m *MethodProofOutput) Decode(payload []byte) error {
+	var data common.Hash
+	if err := utils.UnpackOutputs(ABI, MethodProof, &data, payload); err != nil {
+		return err
+	}
+	m.Hash = data
+	return nil
 }
 
 func emitEventProposed(s *native.NativeContract, epoch *EpochInfo) error {
@@ -196,20 +219,8 @@ func emitEventProposed(s *native.NativeContract, epoch *EpochInfo) error {
 	return s.AddNotify(ABI, []string{EventPropose}, enc)
 }
 
-type EventVoted struct {
-	EpochID     uint64
-	Hash        common.Hash
-	VotedNumber uint64
-	GroupSize   uint64
-}
-
 func emitEventVoted(s *native.NativeContract, epochID uint64, hash common.Hash, curVotedNum int, groupSize int) error {
 	return s.AddNotify(ABI, []string{EventVote}, epochID, hash, uint64(curVotedNum), uint64(groupSize))
-}
-
-type EventEpochChanged struct {
-	EpochInfo     []byte
-	NextEpochInfo []byte
 }
 
 func emitEpochChange(s *native.NativeContract, curEpoch, nextEpoch *EpochInfo) error {

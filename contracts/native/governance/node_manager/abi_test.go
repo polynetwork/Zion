@@ -41,17 +41,15 @@ func TestABIMethodContractName(t *testing.T) {
 func TestABIMethodProposeInput(t *testing.T) {
 	expectEpochID := uint64(0)
 	expectPeers := generateTestPeers(10)
-	expect := new(MethodProposeInput)
+	expect := &MethodProposeInput{StartHeight: expectEpochID, Peers: expectPeers}
 
-	enc, err := expect.Encode(expectEpochID, expectPeers)
+	enc, err := expect.Encode()
 	assert.NoError(t, err)
 
 	got := new(MethodProposeInput)
-	gotEpochID, gotPeers, err := got.Decode(enc)
-	assert.NoError(t, err)
+	assert.NoError(t, got.Decode(enc))
 
-	assert.Equal(t, expectEpochID, gotEpochID)
-	assert.Equal(t, expectPeers, gotPeers)
+	assert.Equal(t, expect, got)
 }
 
 func TestABIMethodProposeOutput(t *testing.T) {
@@ -67,8 +65,8 @@ func TestABIMethodProposeOutput(t *testing.T) {
 	}
 
 	for _, testdata := range cases {
-		expect := new(MethodProposeOutput)
-		enc, err := expect.Encode(testdata.Result)
+		expect := &MethodProposeOutput{Success: testdata.Result}
+		enc, err := expect.Encode()
 		assert.NoError(t, err)
 
 		got := new(MethodProposeOutput)
@@ -94,8 +92,8 @@ func TestABIMethodVoteInput(t *testing.T) {
 	}
 
 	for _, testdata := range cases {
-		expect := new(MethodVoteInput)
-		enc, err := expect.Encode(testdata.EpochID, testdata.Hash)
+		expect := &MethodVoteInput{EpochID: testdata.EpochID, Hash: testdata.Hash}
+		enc, err := expect.Encode()
 		assert.NoError(t, err)
 
 		got := new(MethodVoteInput)
@@ -118,8 +116,8 @@ func TestABIMethodVoteOutput(t *testing.T) {
 	}
 
 	for _, testdata := range cases {
-		expect := new(MethodVoteOutput)
-		enc, err := expect.Encode(testdata.Result)
+		expect := &MethodVoteOutput{Success: testdata.Result}
+		enc, err := expect.Encode()
 		assert.NoError(t, err)
 
 		got := new(MethodVoteOutput)
@@ -130,27 +128,38 @@ func TestABIMethodVoteOutput(t *testing.T) {
 }
 
 func TestABIMethodEpochOutput(t *testing.T) {
-	origin := new(MethodEpochOutput)
-	expect := generateTestEpochInfo(1, 12, 15)
-	enc, err := origin.Encode(expect)
+	expect := new(MethodEpochOutput)
+	expect.Epoch = generateTestEpochInfo(1, 12, 15)
+	enc, err := expect.Encode()
 	assert.NoError(t, err)
 
-	dst := new(MethodEpochOutput)
-	got, err := dst.Decode(enc)
-	assert.NoError(t, err)
+	got := new(MethodEpochOutput)
+	assert.NoError(t, got.Decode(enc))
 
 	assert.Equal(t, expect, got)
 }
 
 func TestABIMethodNextEpochOutput(t *testing.T) {
-	origin := new(MethodNextEpochOutput)
-	expect := generateTestEpochInfo(1, 12, 15)
-	enc, err := origin.Encode(expect)
+	expect := new(MethodNextEpochOutput)
+	expect.Epoch = generateTestEpochInfo(1, 12, 15)
+	enc, err := expect.Encode()
 	assert.NoError(t, err)
 
-	dst := new(MethodNextEpochOutput)
-	got, err := dst.Decode(enc)
+	got := new(MethodNextEpochOutput)
+	assert.NoError(t, got.Decode(enc))
+
+	assert.Equal(t, expect, got)
+}
+
+func TestABIMethodProofOutput(t *testing.T) {
+	proof := generateTestHash(138345729384)
+	expect := &MethodProofOutput{Hash: proof}
+
+	enc, err := expect.Encode()
 	assert.NoError(t, err)
+
+	got := new(MethodProofOutput)
+	assert.NoError(t, got.Decode(enc))
 
 	assert.Equal(t, expect, got)
 }

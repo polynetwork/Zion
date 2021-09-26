@@ -20,12 +20,12 @@ package node_manager
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -83,12 +83,12 @@ func setEpoch(s *state.CacheDB, epoch *EpochInfo) error {
 }
 
 // current epoch
-func storeCurrentEpoch(s *native.NativeContract, epochHash common.Hash) {
+func storeCurrentEpochHash(s *native.NativeContract, epochHash common.Hash) {
 	key := curEpochKey()
 	s.GetCacheDB().Put(key, epochHash.Bytes())
 }
 
-func getCurrentEpoch(s *native.NativeContract) (common.Hash, error) {
+func getCurrentEpochHash(s *native.NativeContract) (common.Hash, error) {
 	key := curEpochKey()
 	value, err := s.GetCacheDB().Get(key)
 	if err != nil {
@@ -115,8 +115,9 @@ func getEpochProof(s *native.NativeContract, epochID uint64) (common.Hash, error
 var EpochProofDigest = common.HexToHash("e4bf3526f07c80af3a5de1411dd34471c71bdd5d04eedbfa1040da2c96802041")
 
 func EpochProofHash(epochID uint64) common.Hash {
-	hash := common.BytesToHash(new(big.Int).SetUint64(epochID).Bytes())
-	return RLPHash([]interface{}{EpochProofDigest, hash})
+	enc := EpochProofDigest.Bytes()
+	enc = append(enc, utils.GetUint64Bytes(epochID)...)
+	return crypto.Keccak256Hash(enc)
 }
 
 // proposal storage
