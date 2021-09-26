@@ -20,10 +20,8 @@ package node_manager
 
 import (
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -32,7 +30,7 @@ import (
 func StoreGenesisEpoch(s *state.StateDB, peers *Peers) error {
 	cache := (*state.CacheDB)(s)
 	epoch := &EpochInfo{
-		ID:          0,
+		ID:          StartEpoch,
 		Peers:       peers,
 		StartHeight: 0,
 	}
@@ -76,23 +74,17 @@ func getCurEpoch(cache *state.CacheDB) (*EpochInfo, error) {
 	return epoch, nil
 }
 
-func checkAuthority(s *native.NativeContract) error {
-	sender := s.ContractRef().TxOrigin()
-	epoch, err := getCurEpoch(s.GetCacheDB())
-	if err != nil {
-		return err
-	}
-
+func checkAuthority(origin common.Address, epoch *EpochInfo) error {
 	if epoch == nil || epoch.Peers == nil || epoch.Peers.List == nil {
 		return fmt.Errorf("invalid epoch")
 	}
 
 	for _, v := range epoch.Peers.List {
-		if v.Address == sender {
+		if v.Address == origin {
 			return nil
 		}
 	}
-	return fmt.Errorf("sender %s is not valid validator", sender.Hex())
+	return fmt.Errorf("tx origin %s is not valid validator", origin.Hex())
 }
 
 func checkPeer(peer *PeerInfo) error {

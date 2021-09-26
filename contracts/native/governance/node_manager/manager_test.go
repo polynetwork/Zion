@@ -19,32 +19,58 @@
 package node_manager
 
 import (
+	"crypto/rand"
 	"math/big"
 	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testStateDB  *state.StateDB
-	testCacheDB  *state.CacheDB
-	testEmptyCtx *native.NativeContract
+	testStateDB   *state.StateDB
+	testCacheDB   *state.CacheDB
+	testEmptyCtx  *native.NativeContract
+	testSupplyGas uint64 = 100000000000000000
 )
 
 func TestMain(m *testing.M) {
-	ABI = GetABI()
-
 	db := rawdb.NewMemoryDatabase()
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testCacheDB = (*state.CacheDB)(testStateDB)
 	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
 
+	InitNodeManager()
+
 	os.Exit(m.Run())
+}
+
+func TestPropose(t *testing.T) {
+	caller := generateTestAddress(12)
+	ctx := generateNativeContractRef(caller, 3)
+
+	startHeight := uint64(2)
+	peers := generateTestPeers(15)
+	payload, err := new(MethodProposeInput).Encode(startHeight, peers)
+	assert.NoError(t, err)
+
+	ret, gasLeft, err := ctx.NativeCall(caller, this, payload)
+	assert.NoError(t, err)
+	assert.Equal(t, testSupplyGas-gasTable[MethodPropose], gasLeft)
+	assert.Equal(t, utils.ByteSuccess, ret)
+}
+
+func generateNativeContractRef(origin common.Address, blockNum int) *native.ContractRef {
+	token := make([]byte, common.HashLength)
+	rand.Read(token)
+	hash := common.BytesToHash(token)
+	return native.NewContractRef(testStateDB, origin, origin, big.NewInt(int64(blockNum)), hash, testSupplyGas, nil)
 }
 
 // generateTestPeer ONLY used for testing

@@ -21,6 +21,7 @@ package node_manager
 import (
 	"fmt"
 	"io"
+	"math"
 	"strings"
 	"sync/atomic"
 
@@ -146,6 +147,14 @@ func (m *EpochInfo) Members() map[common.Address]struct{} {
 		data[v.Address] = struct{}{}
 	}
 	return data
+}
+
+func (m *EpochInfo) QuorumSize() int {
+	if m == nil || m.Peers == nil {
+		return 0
+	}
+	total := m.Peers.Len()
+	return int(math.Ceil(float64(2*total) / 3))
 }
 
 type HashList struct {

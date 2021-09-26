@@ -42,6 +42,21 @@ func TestStorageEpoch(t *testing.T) {
 	assert.Nil(t, got)
 }
 
+func TestStorageEpochProof(t *testing.T) {
+	startEpochProofHash := EpochProofHash(StartEpoch)
+	assert.NotEqual(t, EpochProofDigest, startEpochProofHash)
+	t.Logf("start epoch proof hash is %s", startEpochProofHash.Hex())
+
+	epochID := uint64(13)
+	expect := generateTestHash(15732478)
+
+	storeEpochProof(testEmptyCtx, epochID, expect)
+	got, err := getEpochProof(testEmptyCtx, epochID)
+	assert.NoError(t, err)
+
+	assert.Equal(t, expect, got)
+}
+
 func TestStorageProposal(t *testing.T) {
 	expectSize := int(100)
 	expect := generateTestHashList(expectSize).List

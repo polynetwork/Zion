@@ -63,12 +63,17 @@ func Name(s *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(ABI, MethodContractName, contractName)
 }
 
+// todo(fuk): hash sum all validator addresses and block height after voted success
 func Propose(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	height := s.ContractRef().BlockHeight().Uint64()
 
 	// check authority
-	if err := checkAuthority(s); err != nil {
+	curEpoch, err := getCurEpoch(s.GetCacheDB())
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("propose, get current epoch info err: %v", err)
+	}
+	if err := checkAuthority(s.ContractRef().TxOrigin(), curEpoch); err != nil {
 		return utils.ByteFailed, fmt.Errorf("propose, propose authority err: %v", err)
 	}
 
@@ -93,10 +98,6 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// check peers, number for proposal's peers should be at least 2/3 of old members
-	curEpoch, err := getCurEpoch(s.GetCacheDB())
-	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("propose, get current epoch info err: %v", err)
-	}
 	curMembers := curEpoch.Members()
 	if curMembers == nil {
 		return utils.ByteFailed, fmt.Errorf("propose, get current epoch members err: %v", err)
@@ -125,6 +126,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 
 	// sort and store proposal
 	epoch := &EpochInfo{
+		ID:          curEpoch.ID + 1,
 		Peers:       peers,
 		StartHeight: startHeight,
 	}
@@ -132,11 +134,14 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	if findProposal(s, epoch.Hash()) {
 		return utils.ByteFailed, fmt.Errorf("propose, proposal %s already exist", epoch.Hash().Hex())
 	}
+
+	if err := storeEpoch(s, epoch); err != nil {
+		return utils.ByteFailed, fmt.Errorf("propose, store epoch failed, err: %v", err)
+	}
 	if err := storeProposal(s, epoch.Hash()); err != nil {
 		return utils.ByteFailed, fmt.Errorf("propose, store proposal failed, err: %v", err)
 	}
-
-	// store vote
+	// vote to self proposal
 	if err := storeVote(s, epoch.Hash(), s.ContractRef().TxOrigin()); err != nil {
 		return utils.ByteFailed, fmt.Errorf("propose, proposer vote to self proposal err: %v", err)
 	}
@@ -150,13 +155,85 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 }
 
 func Vote(s *native.NativeContract) ([]byte, error) {
-	return nil, nil
+	ctx := s.ContractRef().CurrentContext()
+
+	// check authority
+	voter := s.ContractRef().TxOrigin()
+	curEpoch, err := getCurEpoch(s.GetCacheDB())
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("vote, get current epoch info err: %v", err)
+	}
+	if err := checkAuthority(voter, curEpoch); err != nil {
+		return utils.ByteFailed, fmt.Errorf("vote, propose authority err: %v", err)
+	}
+
+	// decode and check epoch info
+	input := new(MethodVoteInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		return utils.ByteFailed, fmt.Errorf("vote, decode input failed, err: %v", err)
+	}
+	if expectEpochID := curEpoch.ID + 1; input.EpochID != expectEpochID {
+		return utils.ByteFailed, fmt.Errorf("vote, epoch id expect %d, got %d", expectEpochID, curEpoch.ID)
+	}
+	proposal := common.BytesToHash(input.Hash)
+	if !findProposal(s, proposal) {
+		return utils.ByteFailed, fmt.Errorf("vote, can not find proposal %s", proposal.Hex())
+	}
+	epoch, err := getEpoch(s, proposal)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("vote, can not find proposal %s epoch info", proposal.Hex())
+	}
+	if input.EpochID != epoch.ID {
+		return utils.ByteFailed, fmt.Errorf("vote, vote epoch id %d not match proposal epoch id %d", input.EpochID, epoch.ID)
+	}
+	if proposal != epoch.Hash() {
+		return utils.ByteFailed, fmt.Errorf("vote, vote proposal hash %s not match epoch proposal %s", proposal.Hex(), epoch.Hash().Hex())
+	}
+
+	// forbid duplicate vote
+	if findVote(s, proposal, voter) {
+		return utils.ByteFailed, fmt.Errorf("vote, validator %s already voted to proposal %s", voter.Hex(), proposal.Hex())
+	}
+
+	// already reach quorum size
+	sizeBeforeVote := getVoteSize(s, proposal)
+	if sizeBeforeVote > curEpoch.QuorumSize() {
+		return utils.ByteSuccess, nil
+	}
+
+	// store vote
+	if err := storeVote(s, proposal, voter); err != nil {
+		return utils.ByteFailed, fmt.Errorf("vote, store proposal %s vote failed, err: %v", proposal.Hex(), err)
+	}
+	sizeAfterVote := getVoteSize(s, proposal)
+	groupSize := len(curEpoch.Members())
+	if err := emitEventVoted(s, input.EpochID, proposal, sizeAfterVote, groupSize); err != nil {
+		return utils.ByteFailed, fmt.Errorf("vote, emit event voted failed, err: %v", err)
+	}
+
+	// check point:
+	// 1. store current epoch
+	// 2. store current epoch proof
+	// 3. emit event log
+	if sizeAfterVote == curEpoch.QuorumSize() {
+		storeCurrentEpoch(s, epoch.Hash())
+		storeEpochProof(s, epoch.ID, epoch.Hash())
+		if err := emitEpochChange(s, curEpoch, epoch); err != nil {
+			return utils.ByteFailed, fmt.Errorf("vote, emit epoch changed failed, err: %v", err)
+		}
+	}
+
+	return utils.ByteSuccess, nil
 }
 
 func Epoch(s *native.NativeContract) ([]byte, error) {
 	return nil, nil
 }
 
-func CheckConsensusSigns(native *native.NativeContract, method string, input []byte, address common.Address) (bool, error) {
+func EpochProof(s *native.NativeContract) ([]byte, error) {
+	return nil, nil
+}
+
+func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, address common.Address) (bool, error) {
 	return true, nil
 }

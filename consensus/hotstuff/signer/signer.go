@@ -1,7 +1,6 @@
 package signer
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"fmt"
 
@@ -290,14 +289,17 @@ func (s *SignerImpl) VerifyCommittedSeal(valSet hotstuff.ValidatorSet, hash comm
 	return checkValidatorQuorum(signers, valSet)
 }
 
+// todo: useless of wrap committed seal. field of `commitSigSalt` used only to approve that participants sign block header hash
+// at the `commit` step in consensus.
 // wrapCommittedSeal returns a committed seal for the given hash
 func (s *SignerImpl) wrapCommittedSeal(hash common.Hash) []byte {
-	var (
-		buf bytes.Buffer
-	)
-	buf.Write(hash.Bytes())
-	buf.Write([]byte{s.commitSigSalt})
-	return buf.Bytes()
+	//var (
+	//	buf bytes.Buffer
+	//)
+	//buf.Write(hash.Bytes())
+	//buf.Write([]byte{s.commitSigSalt})
+	//return buf.Bytes()
+	return hash.Bytes()
 }
 
 func checkValidatorQuorum(committers []common.Address, valSet hotstuff.ValidatorSet) error {

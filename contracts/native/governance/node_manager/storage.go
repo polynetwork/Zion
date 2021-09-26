@@ -20,21 +20,25 @@ package node_manager
 
 import (
 	"fmt"
-	"sort"
-
-	"github.com/ethereum/go-ethereum/core/state"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // todo: issue, add field `len` for stat addressList and hashList
 
+const (
+	StartEpoch uint64 = 1 // epoch started from 1, NOT 0!
+)
+
 // storage key prefix
 const (
 	SKP_EPOCH     = "st_epoch"
+	SKP_PROOF     = "st_proof"
 	SKP_PROPOSAL  = "st_proposal"
 	SKP_VOTE      = "st_vote"
 	SKP_CUR_EPOCH = "st_cur_epoch"
@@ -91,6 +95,28 @@ func getCurrentEpoch(s *native.NativeContract) (common.Hash, error) {
 		return common.EmptyHash, err
 	}
 	return common.BytesToHash(value), nil
+}
+
+// proof
+func storeEpochProof(s *native.NativeContract, epochID uint64, epochHash common.Hash) {
+	key := epochProofKey(EpochProofHash(epochID))
+	s.GetCacheDB().Put(key, epochHash.Bytes())
+}
+
+func getEpochProof(s *native.NativeContract, epochID uint64) (common.Hash, error) {
+	key := epochProofKey(EpochProofHash(epochID))
+	value, err := s.GetCacheDB().Get(key)
+	if err != nil {
+		return common.EmptyHash, nil
+	}
+	return common.BytesToHash(value), nil
+}
+
+var EpochProofDigest = common.HexToHash("e4bf3526f07c80af3a5de1411dd34471c71bdd5d04eedbfa1040da2c96802041")
+
+func EpochProofHash(epochID uint64) common.Hash {
+	hash := common.BytesToHash(new(big.Int).SetUint64(epochID).Bytes())
+	return RLPHash([]interface{}{EpochProofDigest, hash})
 }
 
 // proposal storage
@@ -188,11 +214,7 @@ func getProposals(s *native.NativeContract) ([]common.Hash, error) {
 func storeVote(s *native.NativeContract, epochHash common.Hash, voter common.Address) error {
 	list, err := getVotes(s, epochHash)
 	if err != nil {
-		if err.Error() == "EOF" {
-			list = make([]common.Address, 0)
-		} else {
-			return err
-		}
+		return err
 	}
 	list = append(list, voter)
 	return setVotes(s, epochHash, list)
@@ -256,7 +278,11 @@ func getVotes(s *native.NativeContract, epochHash common.Hash) ([]common.Address
 	key := voteKey(epochHash)
 	enc, err := s.GetCacheDB().Get(key)
 	if err != nil {
-		return nil, err
+		if err.Error() == "EOF" {
+			return []common.Address{}, nil
+		} else {
+			return nil, err
+		}
 	}
 
 	var data *AddressList
@@ -266,9 +292,21 @@ func getVotes(s *native.NativeContract, epochHash common.Hash) ([]common.Address
 	return data.List, nil
 }
 
+func getVoteSize(s *native.NativeContract, epochHash common.Hash) int {
+	votes, err := getVotes(s, epochHash)
+	if err != nil {
+		return 0
+	}
+	return len(votes)
+}
+
 // keys
 func epochKey(epochHash common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_EPOCH), epochHash.Bytes())
+}
+
+func epochProofKey(proofHashKey common.Hash) []byte {
+	return utils.ConcatKey(this, []byte(SKP_PROOF), proofHashKey.Bytes())
 }
 
 func curEpochKey() []byte {

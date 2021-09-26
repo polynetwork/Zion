@@ -38,8 +38,8 @@ const (
 	MethodEpoch        = "epoch"
 	MethodNextEpoch    = "nextEpoch"
 
-	EventPropose      = "proposed"
-	EventVote         = "voted"
+	EventPropose     = "proposed"
+	EventVote        = "voted"
 	EventEpochChange = "epochChanged"
 )
 
@@ -203,7 +203,23 @@ type EventVoted struct {
 	GroupSize   uint64
 }
 
+func emitEventVoted(s *native.NativeContract, epochID uint64, hash common.Hash, curVotedNum int, groupSize int) error {
+	return s.AddNotify(ABI, []string{EventVote}, epochID, hash, uint64(curVotedNum), uint64(groupSize))
+}
+
 type EventEpochChanged struct {
 	EpochInfo     []byte
 	NextEpochInfo []byte
+}
+
+func emitEpochChange(s *native.NativeContract, curEpoch, nextEpoch *EpochInfo) error {
+	curEnc, err := rlp.EncodeToBytes(curEpoch)
+	if err != nil {
+		return err
+	}
+	nextEnc, err := rlp.EncodeToBytes(nextEpoch)
+	if err != nil {
+		return err
+	}
+	return s.AddNotify(ABI, []string{EventEpochChange}, curEnc, nextEnc)
 }
