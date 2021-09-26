@@ -116,6 +116,7 @@ func init() {
 		vyFlag,
 		vyperFlag,
 		excFlag,
+		zionFlag,
 		pkgFlag,
 		outFlag,
 		langFlag,
