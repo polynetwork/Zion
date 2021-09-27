@@ -39,9 +39,10 @@ const (
 	MethodProof        = "proof"
 	MethodNextEpoch    = "nextEpoch"
 
-	EventPropose     = "proposed"
-	EventVote        = "voted"
-	EventEpochChange = "epochChanged"
+	EventPropose         = "proposed"
+	EventVote            = "voted"
+	EventEpochChange     = "epochChanged"
+	EventConsensusSigned = "consensusSigned"
 )
 
 const abijson = `[
@@ -53,7 +54,8 @@ const abijson = `[
 	{"type":"function","name":"` + MethodProof + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Hash","type":"bytes"}],"stateMutability":"nonpayable"},
     {"type":"event","name":"` + EventPropose + `","anonymous":false,"inputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}]},
 	{"type":"event","name":"` + EventVote + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"EpochID","type":"uint64"},{"indexed":false,"internalType":"bytes","name":"Hash","type":"bytes"},{"indexed":false,"internalType":"uint64","name":"VotedNumber","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"GroupSize","type":"uint64"}]},
-	{"type":"event","name":"` + EventEpochChange + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"Epoch","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"NextEpoch","type":"bytes"}]}
+	{"type":"event","name":"` + EventEpochChange + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"Epoch","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"NextEpoch","type":"bytes"}]},
+	{"type":"event","name":"` + EventConsensusSigned + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Method","type":"string"},{"indexed":false,"internalType":"bytes","name":"Input","type":"bytes"},{"indexed":false,"internalType":"address","name":"Signer","type":"address"},{"indexed":false,"internalType":"uint64","name":"Size","type":"uint64"}]}
 ]`
 
 func GetABI() *abi.ABI {
@@ -233,4 +235,8 @@ func emitEpochChange(s *native.NativeContract, curEpoch, nextEpoch *EpochInfo) e
 		return err
 	}
 	return s.AddNotify(ABI, []string{EventEpochChange}, curEnc, nextEnc)
+}
+
+func emitConsensusSign(s *native.NativeContract, sign *ConsensusSign, signer common.Address, num int) error {
+	return s.AddNotify(ABI, []string{EventConsensusSigned}, sign.Method, sign.Input, signer, uint64(num))
 }

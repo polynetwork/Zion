@@ -261,6 +261,8 @@ func EpochProof(s *native.NativeContract) ([]byte, error) {
 }
 
 func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, address common.Address) (bool, error) {
+
+	// get epoch info
 	epochHash, err := getCurrentEpochHash(s)
 	if err != nil {
 		return false, fmt.Errorf("checkConsensusSign, get current epoch hash failed, err: %v", err)
@@ -269,10 +271,13 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	if err != nil {
 		return false, fmt.Errorf("checkConsensusSign, get current epoch info failed, err: %v", err)
 	}
+
+	// check authority
 	if err := checkAuthority(address, epoch); err != nil {
 		return false, fmt.Errorf("checkConsensusSign, check authority failed, err: %v", err)
 	}
 
+	// get or set consensus sign info
 	sign := &ConsensusSign{Method: method, Input: input}
 	if exist, err := getSign(s, sign.Hash()); err != nil {
 		return false, fmt.Errorf("checkConsensusSign, get sign failed, err: %v", err)
@@ -284,17 +289,24 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 		return false, fmt.Errorf("checkConsensusSign, expect sign hash %s got %s", exist.Hash().Hex(), sign.Hash().Hex())
 	}
 
+	// check duplicate signature
 	if findSigner(s, sign.Hash(), address) {
 		return false, fmt.Errorf("checkConsensusSign, signer %s already exist", address.Hex())
 	}
+
+	// store signer address and emit event log
 	if err := storeSigner(s, sign.Hash(), address); err != nil {
 		return false, fmt.Errorf("checkConsensusSign, store signers failed, hash %s, err: %v", sign.Hash().Hex(), err)
 	}
-	if size := getSignerSize(s, sign.Hash()); size >= epoch.QuorumSize() {
+	size := getSignerSize(s, sign.Hash())
+	if err := emitConsensusSign(s, sign, address, size); err != nil {
+		return false, fmt.Errorf("checkConsensusSign, emit event log failed, err: %v", err)
+	}
+
+	// clear quorum sign
+	if size >= epoch.QuorumSize() {
 		delSign(s, sign.Hash())
-		//todo: emit
-	} else {
-		// todo: emit event log
+		clearSigner(s, sign.Hash())
 	}
 
 	return true, nil
