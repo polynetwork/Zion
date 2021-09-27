@@ -54,7 +54,7 @@ var (
 )
 
 // SideChainManagerABI is the input ABI used to generate the binding from.
-const SideChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"evtapproveQuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"evtapproveRegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"evtapproveUpdateSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"evtquitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ContractAddress\",\"type\":\"string\"}],\"name\":\"evtregisterRedeem\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlocksToWait\",\"type\":\"uint64\"}],\"name\":\"evtregisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"RedeemChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"FeeRate\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"MinChange\",\"type\":\"uint64\"}],\"name\":\"evtsetBtcTxParam\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlocksToWait\",\"type\":\"uint64\"}],\"name\":\"evtupdateSideChain\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"Chainid\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveQuitSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"Chainid\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveRegisterSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"Chainid\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveUpdateSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"Chainid\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"quitSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"RedeemChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"ContractChainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"Redeem\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"CVersion\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"ContractAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes[]\",\"name\":\"Signs\",\"type\":\"bytes[]\"}],\"name\":\"registerRedeem\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"BlocksToWait\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"ExtraInfo\",\"type\":\"bytes\"}],\"name\":\"registerSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"Redeem\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"RedeemChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"Sigs\",\"type\":\"bytes[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"PVersion\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"FeeRate\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"MinChange\",\"type\":\"uint64\"}],\"internalType\":\"structside_chain_manager.BtcTxParamDetial\",\"name\":\"Detial\",\"type\":\"tuple\"}],\"name\":\"setBtcTxParam\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"BlocksToWait\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"ExtraInfo\",\"type\":\"bytes\"}],\"name\":\"updateSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const SideChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"evtApproveQuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"evtApproveRegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"evtApproveUpdateSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"evtQuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ContractAddress\",\"type\":\"string\"}],\"name\":\"evtRegisterRedeem\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlocksToWait\",\"type\":\"uint64\"}],\"name\":\"evtRegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"RedeemChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"FeeRate\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"MinChange\",\"type\":\"uint64\"}],\"name\":\"evtSetBtcTxParam\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlocksToWait\",\"type\":\"uint64\"}],\"name\":\"evtUpdateSideChain\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"Chainid\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveQuitSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"Chainid\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveRegisterSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"Chainid\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveUpdateSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"Chainid\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"quitSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"RedeemChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"ContractChainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"Redeem\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"CVersion\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"ContractAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes[]\",\"name\":\"Signs\",\"type\":\"bytes[]\"}],\"name\":\"registerRedeem\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"BlocksToWait\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"ExtraInfo\",\"type\":\"bytes\"}],\"name\":\"registerSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"Redeem\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"RedeemChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"Sigs\",\"type\":\"bytes[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"PVersion\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"FeeRate\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"MinChange\",\"type\":\"uint64\"}],\"internalType\":\"structside_chain_manager.BtcTxParamDetial\",\"name\":\"Detial\",\"type\":\"tuple\"}],\"name\":\"setBtcTxParam\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"BlocksToWait\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"ExtraInfo\",\"type\":\"bytes\"}],\"name\":\"updateSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // SideChainManagerFuncSigs maps the 4-byte function signature to its string representation.
 var SideChainManagerFuncSigs = map[string]string{
@@ -70,7 +70,7 @@ var SideChainManagerFuncSigs = map[string]string{
 }
 
 // SideChainManagerBin is the compiled bytecode used for deploying new contracts.
-var SideChainManagerBin = "0x608060405234801561001057600080fd5b50610608806100206000396000f3fe608060405234801561001057600080fd5b50600436106100935760003560e01c80637460736e116100665780637460736e146100da578063805b508e146100da578063ab7a2037146100f0578063ee9891e31461010b578063f7782f81146100f057600080fd5b806306fdde031461009857806333e1d41a146100b057806365764e16146100da5780636c8ac5c1146100da575b600080fd5b60606040516100a7919061050d565b60405180910390f35b6100ca6100be366004610454565b60009695505050505050565b60405190151581526020016100a7565b6100ca6100e8366004610421565b600092915050565b6100ca6100fe36600461027a565b6000979650505050505050565b6100ca61011936600461035c565b6000949350505050565b600067ffffffffffffffff83111561013d5761013d6105bc565b610150601f8401601f191660200161058b565b905082815283838301111561016457600080fd5b828260208301376000602084830101529392505050565b80356001600160a01b038116811461019257600080fd5b919050565b600082601f8301126101a857600080fd5b8135602067ffffffffffffffff808311156101c5576101c56105bc565b8260051b6101d483820161058b565b8481528381019087850183890186018a10156101ef57600080fd5b60009350835b8781101561022c5781358681111561020b578586fd5b6102198c89838e010161023b565b85525092860192908601906001016101f5565b50909998505050505050505050565b600082601f83011261024c57600080fd5b61025b83833560208501610123565b9392505050565b803567ffffffffffffffff8116811461019257600080fd5b600080600080600080600060e0888a03121561029557600080fd5b61029e8861017b565b96506102ac60208901610262565b95506102ba60408901610262565b9450606088013567ffffffffffffffff808211156102d757600080fd5b818a0191508a601f8301126102eb57600080fd5b6102fa8b833560208501610123565b955061030860808b01610262565b945060a08a013591508082111561031e57600080fd5b61032a8b838c0161023b565b935060c08a013591508082111561034057600080fd5b5061034d8a828b0161023b565b91505092959891949750929550565b60008060008084860360c081121561037357600080fd5b853567ffffffffffffffff8082111561038b57600080fd5b61039789838a0161023b565b96506103a560208901610262565b955060408801359150808211156103bb57600080fd5b506103c888828901610197565b9350506060605f19820112156103dd57600080fd5b506103e6610562565b6103f260608701610262565b815261040060808701610262565b602082015261041160a08701610262565b6040820152939692955090935050565b6000806040838503121561043457600080fd5b61043d83610262565b915061044b6020840161017b565b90509250929050565b60008060008060008060c0878903121561046d57600080fd5b61047687610262565b955061048460208801610262565b9450604087013567ffffffffffffffff808211156104a157600080fd5b6104ad8a838b0161023b565b95506104bb60608a01610262565b945060808901359150808211156104d157600080fd5b6104dd8a838b0161023b565b935060a08901359150808211156104f357600080fd5b5061050089828a01610197565b9150509295509295509295565b600060208083528351808285015260005b8181101561053a5785810183015185820160400152820161051e565b8181111561054c576000604083870101525b50601f01601f1916929092016040019392505050565b6040516060810167ffffffffffffffff81118282101715610585576105856105bc565b60405290565b604051601f8201601f1916810167ffffffffffffffff811182821017156105b4576105b46105bc565b604052919050565b634e487b7160e01b600052604160045260246000fdfea2646970667358221220d1b9e98a6c5cbd1ef8b35b50f41331275688b486821a013bc3c6715edffeab0364736f6c63430008060033"
+var SideChainManagerBin = "0x608060405234801561001057600080fd5b50610608806100206000396000f3fe608060405234801561001057600080fd5b50600436106100935760003560e01c80637460736e116100665780637460736e146100da578063805b508e146100da578063ab7a2037146100f0578063ee9891e31461010b578063f7782f81146100f057600080fd5b806306fdde031461009857806333e1d41a146100b057806365764e16146100da5780636c8ac5c1146100da575b600080fd5b60606040516100a7919061050d565b60405180910390f35b6100ca6100be366004610454565b60009695505050505050565b60405190151581526020016100a7565b6100ca6100e8366004610421565b600092915050565b6100ca6100fe36600461027a565b6000979650505050505050565b6100ca61011936600461035c565b6000949350505050565b600067ffffffffffffffff83111561013d5761013d6105bc565b610150601f8401601f191660200161058b565b905082815283838301111561016457600080fd5b828260208301376000602084830101529392505050565b80356001600160a01b038116811461019257600080fd5b919050565b600082601f8301126101a857600080fd5b8135602067ffffffffffffffff808311156101c5576101c56105bc565b8260051b6101d483820161058b565b8481528381019087850183890186018a10156101ef57600080fd5b60009350835b8781101561022c5781358681111561020b578586fd5b6102198c89838e010161023b565b85525092860192908601906001016101f5565b50909998505050505050505050565b600082601f83011261024c57600080fd5b61025b83833560208501610123565b9392505050565b803567ffffffffffffffff8116811461019257600080fd5b600080600080600080600060e0888a03121561029557600080fd5b61029e8861017b565b96506102ac60208901610262565b95506102ba60408901610262565b9450606088013567ffffffffffffffff808211156102d757600080fd5b818a0191508a601f8301126102eb57600080fd5b6102fa8b833560208501610123565b955061030860808b01610262565b945060a08a013591508082111561031e57600080fd5b61032a8b838c0161023b565b935060c08a013591508082111561034057600080fd5b5061034d8a828b0161023b565b91505092959891949750929550565b60008060008084860360c081121561037357600080fd5b853567ffffffffffffffff8082111561038b57600080fd5b61039789838a0161023b565b96506103a560208901610262565b955060408801359150808211156103bb57600080fd5b506103c888828901610197565b9350506060605f19820112156103dd57600080fd5b506103e6610562565b6103f260608701610262565b815261040060808701610262565b602082015261041160a08701610262565b6040820152939692955090935050565b6000806040838503121561043457600080fd5b61043d83610262565b915061044b6020840161017b565b90509250929050565b60008060008060008060c0878903121561046d57600080fd5b61047687610262565b955061048460208801610262565b9450604087013567ffffffffffffffff808211156104a157600080fd5b6104ad8a838b0161023b565b95506104bb60608a01610262565b945060808901359150808211156104d157600080fd5b6104dd8a838b0161023b565b935060a08901359150808211156104f357600080fd5b5061050089828a01610197565b9150509295509295509295565b600060208083528351808285015260005b8181101561053a5785810183015185820160400152820161051e565b8181111561054c576000604083870101525b50601f01601f1916929092016040019392505050565b6040516060810167ffffffffffffffff81118282101715610585576105856105bc565b60405290565b604051601f8201601f1916810167ffffffffffffffff811182821017156105b4576105b46105bc565b604052919050565b634e487b7160e01b600052604160045260246000fdfea26469706673582212201e30dd90c8f8c2bc2a8d03860a8d81c9f32d74209e8ba33de259f3bdaaaa078064736f6c63430008060033"
 
 // DeploySideChainManager deploys a new Ethereum contract, binding an instance of SideChainManager to it.
 func DeploySideChainManager(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *SideChainManager, error) {
@@ -490,24 +490,24 @@ type SideChainManagerApproveQuitSideChain struct {
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterApproveQuitSideChain is a free log retrieval operation binding the contract event 0x7a071399157fd2f983ee20bec6080b09559b877ebb294b8c4793cba73237f946.
+// FilterApproveQuitSideChain is a free log retrieval operation binding the contract event 0x2d8d546abdecb5e9d71f9df93e8bb1e939c865274bf2e59be647e053909634a1.
 //
-// Solidity: event evtapproveQuitSideChain(uint64 ChainId)
+// Solidity: event evtApproveQuitSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) FilterApproveQuitSideChain(opts *bind.FilterOpts) (*SideChainManagerApproveQuitSideChainIterator, error) {
 
-	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtapproveQuitSideChain")
+	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtApproveQuitSideChain")
 	if err != nil {
 		return nil, err
 	}
-	return &SideChainManagerApproveQuitSideChainIterator{contract: _SideChainManager.contract, event: "evtapproveQuitSideChain", logs: logs, sub: sub}, nil
+	return &SideChainManagerApproveQuitSideChainIterator{contract: _SideChainManager.contract, event: "evtApproveQuitSideChain", logs: logs, sub: sub}, nil
 }
 
-// WatchApproveQuitSideChain is a free log subscription operation binding the contract event 0x7a071399157fd2f983ee20bec6080b09559b877ebb294b8c4793cba73237f946.
+// WatchApproveQuitSideChain is a free log subscription operation binding the contract event 0x2d8d546abdecb5e9d71f9df93e8bb1e939c865274bf2e59be647e053909634a1.
 //
-// Solidity: event evtapproveQuitSideChain(uint64 ChainId)
+// Solidity: event evtApproveQuitSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) WatchApproveQuitSideChain(opts *bind.WatchOpts, sink chan<- *SideChainManagerApproveQuitSideChain) (event.Subscription, error) {
 
-	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtapproveQuitSideChain")
+	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtApproveQuitSideChain")
 	if err != nil {
 		return nil, err
 	}
@@ -518,7 +518,7 @@ func (_SideChainManager *SideChainManagerFilterer) WatchApproveQuitSideChain(opt
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(SideChainManagerApproveQuitSideChain)
-				if err := _SideChainManager.contract.UnpackLog(event, "evtapproveQuitSideChain", log); err != nil {
+				if err := _SideChainManager.contract.UnpackLog(event, "evtApproveQuitSideChain", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -539,12 +539,12 @@ func (_SideChainManager *SideChainManagerFilterer) WatchApproveQuitSideChain(opt
 	}), nil
 }
 
-// ParseApproveQuitSideChain is a log parse operation binding the contract event 0x7a071399157fd2f983ee20bec6080b09559b877ebb294b8c4793cba73237f946.
+// ParseApproveQuitSideChain is a log parse operation binding the contract event 0x2d8d546abdecb5e9d71f9df93e8bb1e939c865274bf2e59be647e053909634a1.
 //
-// Solidity: event evtapproveQuitSideChain(uint64 ChainId)
+// Solidity: event evtApproveQuitSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) ParseApproveQuitSideChain(log types.Log) (*SideChainManagerApproveQuitSideChain, error) {
 	event := new(SideChainManagerApproveQuitSideChain)
-	if err := _SideChainManager.contract.UnpackLog(event, "evtapproveQuitSideChain", log); err != nil {
+	if err := _SideChainManager.contract.UnpackLog(event, "evtApproveQuitSideChain", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -624,24 +624,24 @@ type SideChainManagerApproveRegisterSideChain struct {
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterApproveRegisterSideChain is a free log retrieval operation binding the contract event 0xc66b26485186b436027423a20776c800215b13fb1bf1b9eb2e3afc198304ff78.
+// FilterApproveRegisterSideChain is a free log retrieval operation binding the contract event 0x6517ffadca69f75ee51efa5c1e977750e009b25f0bd235ad2afc381ab9704e3e.
 //
-// Solidity: event evtapproveRegisterSideChain(uint64 ChainId)
+// Solidity: event evtApproveRegisterSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) FilterApproveRegisterSideChain(opts *bind.FilterOpts) (*SideChainManagerApproveRegisterSideChainIterator, error) {
 
-	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtapproveRegisterSideChain")
+	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtApproveRegisterSideChain")
 	if err != nil {
 		return nil, err
 	}
-	return &SideChainManagerApproveRegisterSideChainIterator{contract: _SideChainManager.contract, event: "evtapproveRegisterSideChain", logs: logs, sub: sub}, nil
+	return &SideChainManagerApproveRegisterSideChainIterator{contract: _SideChainManager.contract, event: "evtApproveRegisterSideChain", logs: logs, sub: sub}, nil
 }
 
-// WatchApproveRegisterSideChain is a free log subscription operation binding the contract event 0xc66b26485186b436027423a20776c800215b13fb1bf1b9eb2e3afc198304ff78.
+// WatchApproveRegisterSideChain is a free log subscription operation binding the contract event 0x6517ffadca69f75ee51efa5c1e977750e009b25f0bd235ad2afc381ab9704e3e.
 //
-// Solidity: event evtapproveRegisterSideChain(uint64 ChainId)
+// Solidity: event evtApproveRegisterSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) WatchApproveRegisterSideChain(opts *bind.WatchOpts, sink chan<- *SideChainManagerApproveRegisterSideChain) (event.Subscription, error) {
 
-	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtapproveRegisterSideChain")
+	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtApproveRegisterSideChain")
 	if err != nil {
 		return nil, err
 	}
@@ -652,7 +652,7 @@ func (_SideChainManager *SideChainManagerFilterer) WatchApproveRegisterSideChain
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(SideChainManagerApproveRegisterSideChain)
-				if err := _SideChainManager.contract.UnpackLog(event, "evtapproveRegisterSideChain", log); err != nil {
+				if err := _SideChainManager.contract.UnpackLog(event, "evtApproveRegisterSideChain", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -673,12 +673,12 @@ func (_SideChainManager *SideChainManagerFilterer) WatchApproveRegisterSideChain
 	}), nil
 }
 
-// ParseApproveRegisterSideChain is a log parse operation binding the contract event 0xc66b26485186b436027423a20776c800215b13fb1bf1b9eb2e3afc198304ff78.
+// ParseApproveRegisterSideChain is a log parse operation binding the contract event 0x6517ffadca69f75ee51efa5c1e977750e009b25f0bd235ad2afc381ab9704e3e.
 //
-// Solidity: event evtapproveRegisterSideChain(uint64 ChainId)
+// Solidity: event evtApproveRegisterSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) ParseApproveRegisterSideChain(log types.Log) (*SideChainManagerApproveRegisterSideChain, error) {
 	event := new(SideChainManagerApproveRegisterSideChain)
-	if err := _SideChainManager.contract.UnpackLog(event, "evtapproveRegisterSideChain", log); err != nil {
+	if err := _SideChainManager.contract.UnpackLog(event, "evtApproveRegisterSideChain", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -758,24 +758,24 @@ type SideChainManagerApproveUpdateSideChain struct {
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterApproveUpdateSideChain is a free log retrieval operation binding the contract event 0xb516c8b963a0736a643ae362a421deb7a0af1e9ff74ce90a8fecaba07c1af7de.
+// FilterApproveUpdateSideChain is a free log retrieval operation binding the contract event 0x4c14575dec13d2259a0de2653a8dbbce76780e169975f171b841b9764259252d.
 //
-// Solidity: event evtapproveUpdateSideChain(uint64 ChainId)
+// Solidity: event evtApproveUpdateSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) FilterApproveUpdateSideChain(opts *bind.FilterOpts) (*SideChainManagerApproveUpdateSideChainIterator, error) {
 
-	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtapproveUpdateSideChain")
+	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtApproveUpdateSideChain")
 	if err != nil {
 		return nil, err
 	}
-	return &SideChainManagerApproveUpdateSideChainIterator{contract: _SideChainManager.contract, event: "evtapproveUpdateSideChain", logs: logs, sub: sub}, nil
+	return &SideChainManagerApproveUpdateSideChainIterator{contract: _SideChainManager.contract, event: "evtApproveUpdateSideChain", logs: logs, sub: sub}, nil
 }
 
-// WatchApproveUpdateSideChain is a free log subscription operation binding the contract event 0xb516c8b963a0736a643ae362a421deb7a0af1e9ff74ce90a8fecaba07c1af7de.
+// WatchApproveUpdateSideChain is a free log subscription operation binding the contract event 0x4c14575dec13d2259a0de2653a8dbbce76780e169975f171b841b9764259252d.
 //
-// Solidity: event evtapproveUpdateSideChain(uint64 ChainId)
+// Solidity: event evtApproveUpdateSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) WatchApproveUpdateSideChain(opts *bind.WatchOpts, sink chan<- *SideChainManagerApproveUpdateSideChain) (event.Subscription, error) {
 
-	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtapproveUpdateSideChain")
+	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtApproveUpdateSideChain")
 	if err != nil {
 		return nil, err
 	}
@@ -786,7 +786,7 @@ func (_SideChainManager *SideChainManagerFilterer) WatchApproveUpdateSideChain(o
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(SideChainManagerApproveUpdateSideChain)
-				if err := _SideChainManager.contract.UnpackLog(event, "evtapproveUpdateSideChain", log); err != nil {
+				if err := _SideChainManager.contract.UnpackLog(event, "evtApproveUpdateSideChain", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -807,12 +807,12 @@ func (_SideChainManager *SideChainManagerFilterer) WatchApproveUpdateSideChain(o
 	}), nil
 }
 
-// ParseApproveUpdateSideChain is a log parse operation binding the contract event 0xb516c8b963a0736a643ae362a421deb7a0af1e9ff74ce90a8fecaba07c1af7de.
+// ParseApproveUpdateSideChain is a log parse operation binding the contract event 0x4c14575dec13d2259a0de2653a8dbbce76780e169975f171b841b9764259252d.
 //
-// Solidity: event evtapproveUpdateSideChain(uint64 ChainId)
+// Solidity: event evtApproveUpdateSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) ParseApproveUpdateSideChain(log types.Log) (*SideChainManagerApproveUpdateSideChain, error) {
 	event := new(SideChainManagerApproveUpdateSideChain)
-	if err := _SideChainManager.contract.UnpackLog(event, "evtapproveUpdateSideChain", log); err != nil {
+	if err := _SideChainManager.contract.UnpackLog(event, "evtApproveUpdateSideChain", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -892,24 +892,24 @@ type SideChainManagerQuitSideChain struct {
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterQuitSideChain is a free log retrieval operation binding the contract event 0xf6ca7d5e2c5289d939739787d4d59e25fbc06195ef6a2eff8f404e36bfecb5b5.
+// FilterQuitSideChain is a free log retrieval operation binding the contract event 0x7bf563d05c6f1e91715904f8c9e53945100b40362d910f37e54bdc4989a685c9.
 //
-// Solidity: event evtquitSideChain(uint64 ChainId)
+// Solidity: event evtQuitSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) FilterQuitSideChain(opts *bind.FilterOpts) (*SideChainManagerQuitSideChainIterator, error) {
 
-	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtquitSideChain")
+	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtQuitSideChain")
 	if err != nil {
 		return nil, err
 	}
-	return &SideChainManagerQuitSideChainIterator{contract: _SideChainManager.contract, event: "evtquitSideChain", logs: logs, sub: sub}, nil
+	return &SideChainManagerQuitSideChainIterator{contract: _SideChainManager.contract, event: "evtQuitSideChain", logs: logs, sub: sub}, nil
 }
 
-// WatchQuitSideChain is a free log subscription operation binding the contract event 0xf6ca7d5e2c5289d939739787d4d59e25fbc06195ef6a2eff8f404e36bfecb5b5.
+// WatchQuitSideChain is a free log subscription operation binding the contract event 0x7bf563d05c6f1e91715904f8c9e53945100b40362d910f37e54bdc4989a685c9.
 //
-// Solidity: event evtquitSideChain(uint64 ChainId)
+// Solidity: event evtQuitSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) WatchQuitSideChain(opts *bind.WatchOpts, sink chan<- *SideChainManagerQuitSideChain) (event.Subscription, error) {
 
-	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtquitSideChain")
+	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtQuitSideChain")
 	if err != nil {
 		return nil, err
 	}
@@ -920,7 +920,7 @@ func (_SideChainManager *SideChainManagerFilterer) WatchQuitSideChain(opts *bind
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(SideChainManagerQuitSideChain)
-				if err := _SideChainManager.contract.UnpackLog(event, "evtquitSideChain", log); err != nil {
+				if err := _SideChainManager.contract.UnpackLog(event, "evtQuitSideChain", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -941,12 +941,12 @@ func (_SideChainManager *SideChainManagerFilterer) WatchQuitSideChain(opts *bind
 	}), nil
 }
 
-// ParseQuitSideChain is a log parse operation binding the contract event 0xf6ca7d5e2c5289d939739787d4d59e25fbc06195ef6a2eff8f404e36bfecb5b5.
+// ParseQuitSideChain is a log parse operation binding the contract event 0x7bf563d05c6f1e91715904f8c9e53945100b40362d910f37e54bdc4989a685c9.
 //
-// Solidity: event evtquitSideChain(uint64 ChainId)
+// Solidity: event evtQuitSideChain(uint64 ChainId)
 func (_SideChainManager *SideChainManagerFilterer) ParseQuitSideChain(log types.Log) (*SideChainManagerQuitSideChain, error) {
 	event := new(SideChainManagerQuitSideChain)
-	if err := _SideChainManager.contract.UnpackLog(event, "evtquitSideChain", log); err != nil {
+	if err := _SideChainManager.contract.UnpackLog(event, "evtQuitSideChain", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1027,24 +1027,24 @@ type SideChainManagerRegisterRedeem struct {
 	Raw             types.Log // Blockchain specific contextual infos
 }
 
-// FilterRegisterRedeem is a free log retrieval operation binding the contract event 0xa9784dcef0434f9fa025c9cb7481643aa88ee018b70bd549f88b17cbb2ee2c87.
+// FilterRegisterRedeem is a free log retrieval operation binding the contract event 0x59fabb884927c5d2e368d355ea11674fd5974066f70ac78f9adab4f1e6a06a36.
 //
-// Solidity: event evtregisterRedeem(string rk, string ContractAddress)
+// Solidity: event evtRegisterRedeem(string rk, string ContractAddress)
 func (_SideChainManager *SideChainManagerFilterer) FilterRegisterRedeem(opts *bind.FilterOpts) (*SideChainManagerRegisterRedeemIterator, error) {
 
-	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtregisterRedeem")
+	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtRegisterRedeem")
 	if err != nil {
 		return nil, err
 	}
-	return &SideChainManagerRegisterRedeemIterator{contract: _SideChainManager.contract, event: "evtregisterRedeem", logs: logs, sub: sub}, nil
+	return &SideChainManagerRegisterRedeemIterator{contract: _SideChainManager.contract, event: "evtRegisterRedeem", logs: logs, sub: sub}, nil
 }
 
-// WatchRegisterRedeem is a free log subscription operation binding the contract event 0xa9784dcef0434f9fa025c9cb7481643aa88ee018b70bd549f88b17cbb2ee2c87.
+// WatchRegisterRedeem is a free log subscription operation binding the contract event 0x59fabb884927c5d2e368d355ea11674fd5974066f70ac78f9adab4f1e6a06a36.
 //
-// Solidity: event evtregisterRedeem(string rk, string ContractAddress)
+// Solidity: event evtRegisterRedeem(string rk, string ContractAddress)
 func (_SideChainManager *SideChainManagerFilterer) WatchRegisterRedeem(opts *bind.WatchOpts, sink chan<- *SideChainManagerRegisterRedeem) (event.Subscription, error) {
 
-	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtregisterRedeem")
+	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtRegisterRedeem")
 	if err != nil {
 		return nil, err
 	}
@@ -1055,7 +1055,7 @@ func (_SideChainManager *SideChainManagerFilterer) WatchRegisterRedeem(opts *bin
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(SideChainManagerRegisterRedeem)
-				if err := _SideChainManager.contract.UnpackLog(event, "evtregisterRedeem", log); err != nil {
+				if err := _SideChainManager.contract.UnpackLog(event, "evtRegisterRedeem", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1076,12 +1076,12 @@ func (_SideChainManager *SideChainManagerFilterer) WatchRegisterRedeem(opts *bin
 	}), nil
 }
 
-// ParseRegisterRedeem is a log parse operation binding the contract event 0xa9784dcef0434f9fa025c9cb7481643aa88ee018b70bd549f88b17cbb2ee2c87.
+// ParseRegisterRedeem is a log parse operation binding the contract event 0x59fabb884927c5d2e368d355ea11674fd5974066f70ac78f9adab4f1e6a06a36.
 //
-// Solidity: event evtregisterRedeem(string rk, string ContractAddress)
+// Solidity: event evtRegisterRedeem(string rk, string ContractAddress)
 func (_SideChainManager *SideChainManagerFilterer) ParseRegisterRedeem(log types.Log) (*SideChainManagerRegisterRedeem, error) {
 	event := new(SideChainManagerRegisterRedeem)
-	if err := _SideChainManager.contract.UnpackLog(event, "evtregisterRedeem", log); err != nil {
+	if err := _SideChainManager.contract.UnpackLog(event, "evtRegisterRedeem", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1164,24 +1164,24 @@ type SideChainManagerRegisterSideChain struct {
 	Raw          types.Log // Blockchain specific contextual infos
 }
 
-// FilterRegisterSideChain is a free log retrieval operation binding the contract event 0xf8bf3b3aa8aa1406ef52d832182ae66d128af83ed66fe6f1f722195c7f3a2eeb.
+// FilterRegisterSideChain is a free log retrieval operation binding the contract event 0x844fd8662935c80c93372c0cb9eb5fd6db52835a3078934d65f762a9bfd13ea2.
 //
-// Solidity: event evtregisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event evtRegisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
 func (_SideChainManager *SideChainManagerFilterer) FilterRegisterSideChain(opts *bind.FilterOpts) (*SideChainManagerRegisterSideChainIterator, error) {
 
-	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtregisterSideChain")
+	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtRegisterSideChain")
 	if err != nil {
 		return nil, err
 	}
-	return &SideChainManagerRegisterSideChainIterator{contract: _SideChainManager.contract, event: "evtregisterSideChain", logs: logs, sub: sub}, nil
+	return &SideChainManagerRegisterSideChainIterator{contract: _SideChainManager.contract, event: "evtRegisterSideChain", logs: logs, sub: sub}, nil
 }
 
-// WatchRegisterSideChain is a free log subscription operation binding the contract event 0xf8bf3b3aa8aa1406ef52d832182ae66d128af83ed66fe6f1f722195c7f3a2eeb.
+// WatchRegisterSideChain is a free log subscription operation binding the contract event 0x844fd8662935c80c93372c0cb9eb5fd6db52835a3078934d65f762a9bfd13ea2.
 //
-// Solidity: event evtregisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event evtRegisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
 func (_SideChainManager *SideChainManagerFilterer) WatchRegisterSideChain(opts *bind.WatchOpts, sink chan<- *SideChainManagerRegisterSideChain) (event.Subscription, error) {
 
-	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtregisterSideChain")
+	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtRegisterSideChain")
 	if err != nil {
 		return nil, err
 	}
@@ -1192,7 +1192,7 @@ func (_SideChainManager *SideChainManagerFilterer) WatchRegisterSideChain(opts *
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(SideChainManagerRegisterSideChain)
-				if err := _SideChainManager.contract.UnpackLog(event, "evtregisterSideChain", log); err != nil {
+				if err := _SideChainManager.contract.UnpackLog(event, "evtRegisterSideChain", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1213,12 +1213,12 @@ func (_SideChainManager *SideChainManagerFilterer) WatchRegisterSideChain(opts *
 	}), nil
 }
 
-// ParseRegisterSideChain is a log parse operation binding the contract event 0xf8bf3b3aa8aa1406ef52d832182ae66d128af83ed66fe6f1f722195c7f3a2eeb.
+// ParseRegisterSideChain is a log parse operation binding the contract event 0x844fd8662935c80c93372c0cb9eb5fd6db52835a3078934d65f762a9bfd13ea2.
 //
-// Solidity: event evtregisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event evtRegisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
 func (_SideChainManager *SideChainManagerFilterer) ParseRegisterSideChain(log types.Log) (*SideChainManagerRegisterSideChain, error) {
 	event := new(SideChainManagerRegisterSideChain)
-	if err := _SideChainManager.contract.UnpackLog(event, "evtregisterSideChain", log); err != nil {
+	if err := _SideChainManager.contract.UnpackLog(event, "evtRegisterSideChain", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1301,24 +1301,24 @@ type SideChainManagerSetBtcTxParam struct {
 	Raw           types.Log // Blockchain specific contextual infos
 }
 
-// FilterSetBtcTxParam is a free log retrieval operation binding the contract event 0x19f1698eff57f0682e9d86fe43e3ac836e71f60939bf910e09fcc28068d08fda.
+// FilterSetBtcTxParam is a free log retrieval operation binding the contract event 0x9d437e9e204401edf24ac2844b216c7276e0350ec67ec35417a8ca070ddbde7b.
 //
-// Solidity: event evtsetBtcTxParam(string rk, uint64 RedeemChainId, uint64 FeeRate, uint64 MinChange)
+// Solidity: event evtSetBtcTxParam(string rk, uint64 RedeemChainId, uint64 FeeRate, uint64 MinChange)
 func (_SideChainManager *SideChainManagerFilterer) FilterSetBtcTxParam(opts *bind.FilterOpts) (*SideChainManagerSetBtcTxParamIterator, error) {
 
-	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtsetBtcTxParam")
+	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtSetBtcTxParam")
 	if err != nil {
 		return nil, err
 	}
-	return &SideChainManagerSetBtcTxParamIterator{contract: _SideChainManager.contract, event: "evtsetBtcTxParam", logs: logs, sub: sub}, nil
+	return &SideChainManagerSetBtcTxParamIterator{contract: _SideChainManager.contract, event: "evtSetBtcTxParam", logs: logs, sub: sub}, nil
 }
 
-// WatchSetBtcTxParam is a free log subscription operation binding the contract event 0x19f1698eff57f0682e9d86fe43e3ac836e71f60939bf910e09fcc28068d08fda.
+// WatchSetBtcTxParam is a free log subscription operation binding the contract event 0x9d437e9e204401edf24ac2844b216c7276e0350ec67ec35417a8ca070ddbde7b.
 //
-// Solidity: event evtsetBtcTxParam(string rk, uint64 RedeemChainId, uint64 FeeRate, uint64 MinChange)
+// Solidity: event evtSetBtcTxParam(string rk, uint64 RedeemChainId, uint64 FeeRate, uint64 MinChange)
 func (_SideChainManager *SideChainManagerFilterer) WatchSetBtcTxParam(opts *bind.WatchOpts, sink chan<- *SideChainManagerSetBtcTxParam) (event.Subscription, error) {
 
-	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtsetBtcTxParam")
+	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtSetBtcTxParam")
 	if err != nil {
 		return nil, err
 	}
@@ -1329,7 +1329,7 @@ func (_SideChainManager *SideChainManagerFilterer) WatchSetBtcTxParam(opts *bind
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(SideChainManagerSetBtcTxParam)
-				if err := _SideChainManager.contract.UnpackLog(event, "evtsetBtcTxParam", log); err != nil {
+				if err := _SideChainManager.contract.UnpackLog(event, "evtSetBtcTxParam", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1350,12 +1350,12 @@ func (_SideChainManager *SideChainManagerFilterer) WatchSetBtcTxParam(opts *bind
 	}), nil
 }
 
-// ParseSetBtcTxParam is a log parse operation binding the contract event 0x19f1698eff57f0682e9d86fe43e3ac836e71f60939bf910e09fcc28068d08fda.
+// ParseSetBtcTxParam is a log parse operation binding the contract event 0x9d437e9e204401edf24ac2844b216c7276e0350ec67ec35417a8ca070ddbde7b.
 //
-// Solidity: event evtsetBtcTxParam(string rk, uint64 RedeemChainId, uint64 FeeRate, uint64 MinChange)
+// Solidity: event evtSetBtcTxParam(string rk, uint64 RedeemChainId, uint64 FeeRate, uint64 MinChange)
 func (_SideChainManager *SideChainManagerFilterer) ParseSetBtcTxParam(log types.Log) (*SideChainManagerSetBtcTxParam, error) {
 	event := new(SideChainManagerSetBtcTxParam)
-	if err := _SideChainManager.contract.UnpackLog(event, "evtsetBtcTxParam", log); err != nil {
+	if err := _SideChainManager.contract.UnpackLog(event, "evtSetBtcTxParam", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1438,24 +1438,24 @@ type SideChainManagerUpdateSideChain struct {
 	Raw          types.Log // Blockchain specific contextual infos
 }
 
-// FilterUpdateSideChain is a free log retrieval operation binding the contract event 0x34e03fd397579dc05afc0f8c8ec2bd74d3bffd609daba438eac5fcd0ceb3eec3.
+// FilterUpdateSideChain is a free log retrieval operation binding the contract event 0xefc07386ca56a4a4f14c5dfb934a955331872da7cc24748a6ca78be8c1741bbe.
 //
-// Solidity: event evtupdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event evtUpdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
 func (_SideChainManager *SideChainManagerFilterer) FilterUpdateSideChain(opts *bind.FilterOpts) (*SideChainManagerUpdateSideChainIterator, error) {
 
-	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtupdateSideChain")
+	logs, sub, err := _SideChainManager.contract.FilterLogs(opts, "evtUpdateSideChain")
 	if err != nil {
 		return nil, err
 	}
-	return &SideChainManagerUpdateSideChainIterator{contract: _SideChainManager.contract, event: "evtupdateSideChain", logs: logs, sub: sub}, nil
+	return &SideChainManagerUpdateSideChainIterator{contract: _SideChainManager.contract, event: "evtUpdateSideChain", logs: logs, sub: sub}, nil
 }
 
-// WatchUpdateSideChain is a free log subscription operation binding the contract event 0x34e03fd397579dc05afc0f8c8ec2bd74d3bffd609daba438eac5fcd0ceb3eec3.
+// WatchUpdateSideChain is a free log subscription operation binding the contract event 0xefc07386ca56a4a4f14c5dfb934a955331872da7cc24748a6ca78be8c1741bbe.
 //
-// Solidity: event evtupdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event evtUpdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
 func (_SideChainManager *SideChainManagerFilterer) WatchUpdateSideChain(opts *bind.WatchOpts, sink chan<- *SideChainManagerUpdateSideChain) (event.Subscription, error) {
 
-	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtupdateSideChain")
+	logs, sub, err := _SideChainManager.contract.WatchLogs(opts, "evtUpdateSideChain")
 	if err != nil {
 		return nil, err
 	}
@@ -1466,7 +1466,7 @@ func (_SideChainManager *SideChainManagerFilterer) WatchUpdateSideChain(opts *bi
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(SideChainManagerUpdateSideChain)
-				if err := _SideChainManager.contract.UnpackLog(event, "evtupdateSideChain", log); err != nil {
+				if err := _SideChainManager.contract.UnpackLog(event, "evtUpdateSideChain", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1487,12 +1487,12 @@ func (_SideChainManager *SideChainManagerFilterer) WatchUpdateSideChain(opts *bi
 	}), nil
 }
 
-// ParseUpdateSideChain is a log parse operation binding the contract event 0x34e03fd397579dc05afc0f8c8ec2bd74d3bffd609daba438eac5fcd0ceb3eec3.
+// ParseUpdateSideChain is a log parse operation binding the contract event 0xefc07386ca56a4a4f14c5dfb934a955331872da7cc24748a6ca78be8c1741bbe.
 //
-// Solidity: event evtupdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event evtUpdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
 func (_SideChainManager *SideChainManagerFilterer) ParseUpdateSideChain(log types.Log) (*SideChainManagerUpdateSideChain, error) {
 	event := new(SideChainManagerUpdateSideChain)
-	if err := _SideChainManager.contract.UnpackLog(event, "evtupdateSideChain", log); err != nil {
+	if err := _SideChainManager.contract.UnpackLog(event, "evtUpdateSideChain", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
