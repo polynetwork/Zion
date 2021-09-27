@@ -90,6 +90,18 @@ func (m *Peers) Swap(i, j int) {
 	m.List[i], m.List[j] = m.List[j], m.List[i]
 }
 
+func (m *Peers) Copy() *Peers {
+	enc, err := rlp.EncodeToBytes(m)
+	if err != nil {
+		return nil
+	}
+	var cp *Peers
+	if err := rlp.DecodeBytes(enc, &cp); err != nil {
+		return nil
+	}
+	return cp
+}
+
 type EpochInfo struct {
 	ID          uint64
 	Peers       *Peers

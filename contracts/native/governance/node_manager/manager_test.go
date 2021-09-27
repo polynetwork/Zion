@@ -24,9 +24,10 @@ import (
 	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -38,51 +39,147 @@ var (
 	testEmptyCtx *native.NativeContract
 
 	testSupplyGas    uint64 = 100000000000000000
-	testGenesisPeers        = generateTestPeers(4)
+	testGenesisNum   int    = 4
+	testCaller       common.Address
+	testGenesisEpoch *EpochInfo
 )
 
 func TestMain(m *testing.M) {
 	db := rawdb.NewMemoryDatabase()
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
-
-	_ = StoreGenesisEpoch(testStateDB, testGenesisPeers)
+	testGenesisPeers := generateTestPeers(testGenesisNum)
+	testGenesisEpoch, _ = StoreGenesisEpoch(testStateDB, testGenesisPeers)
 	InitNodeManager()
 
 	os.Exit(m.Run())
 }
 
 func TestPropose(t *testing.T) {
-	var cases = []struct {
-		TxOrigin    common.Address
-		BlockNum    int
-		StartHeight uint64
-		PeerNum     int
-		Err         error
-	}{
+	type TestCase struct {
+		BlockNum      int
+		StartHeight   uint64
+		Payload       []byte
+		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
+		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
+		Index         int
+		Expect        error
+	}
+
+	cases := []*TestCase{
 		{
-			TxOrigin:    generateTestAddress(12),
 			BlockNum:    3,
 			StartHeight: 2,
-			PeerNum:     15,
-			Err:         nil,
+			Index:       1,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := generateTestPeers(2)
+				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
+				c.Payload, _ = input.Encode()
+				delEpoch(ctx, testGenesisEpoch.Hash())
+			},
+			Expect: ErrEpochNotExist,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: 2,
+			Index:       2,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := generateTestPeers(2)
+				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
+				c.Payload, _ = input.Encode()
+				testCaller = generateTestAddress(78)
+			},
+			Expect: ErrInvalidAuthority,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: 2,
+			Index:       3,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				input := &MethodProposeInput{StartHeight: 0, Peers: nil}
+				payload, _ := input.Encode()
+				c.Payload = payload[0 : len(payload)-2]
+			},
+			Expect: ErrInvalidInput,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: 2,
+			Index:       4,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := generateTestPeers(3)
+				peers.List = nil
+				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
+				c.Payload, _ = input.Encode()
+			},
+			Expect: ErrInvalidPeers,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: 2,
+			Index:       5,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := generateTestPeers(MinProposalPeersLen - 1)
+				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
+				c.Payload, _ = input.Encode()
+			},
+			Expect: ErrProposalPeersOutOfRange,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: 2,
+			Index:       6,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := generateTestPeers(MaxProposalPeersLen + 1)
+				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
+				c.Payload, _ = input.Encode()
+			},
+			Expect: ErrProposalPeersOutOfRange,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: 2,
+			Index:       7,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := generateTestPeers(MinProposalPeersLen + 1)
+				peers.List[0].PubKey = "0ruf8nkj"
+				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
+				c.Payload, _ = input.Encode()
+			},
+			Expect: ErrInvalidPubKey,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: 2,
+			Index:       8,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := testGenesisEpoch.Peers.Copy()
+				newPeers := generateTestPeers(len(peers.List))
+				for i, _ := range peers.List {
+					if i%2 == 0 {
+						peers.List[i] = newPeers.List[i]
+					}
+				}
+				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
+				c.Payload, _ = input.Encode()
+			},
+			Expect: ErrOldParticipantsNumber,
 		},
 	}
 
 	for _, v := range cases {
-		peers := generateTestPeers(v.PeerNum)
-		input := &MethodProposeInput{StartHeight: v.StartHeight, Peers: peers}
-		payload, err := input.Encode()
-		assert.NoError(t, err)
-
-		ctx := generateNativeContractRef(v.TxOrigin, v.BlockNum)
-		ret, gasLeft, err := ctx.NativeCall(v.TxOrigin, this, payload)
-		if v.Err == nil {
-			assert.NoError(t, err)
-			assert.Equal(t, testSupplyGas-gasTable[MethodPropose], gasLeft)
-			assert.Equal(t, utils.ByteSuccess, ret)
-		} else {
-			t.Logf("error %v", err)
+		if v.Index == 8 {
+			t.Log("---")
+		}
+		resetTestContext()
+		ctx := generateNativeContract(testCaller, v.BlockNum)
+		if v.BeforeHandler != nil {
+			v.BeforeHandler(v, ctx)
+		}
+		_, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
+		assert.Equal(t, v.Expect, err)
+		if v.AfterHandler != nil {
+			v.AfterHandler(v, ctx)
 		}
 	}
 }
@@ -94,11 +191,25 @@ func generateNativeContractRef(origin common.Address, blockNum int) *native.Cont
 	return native.NewContractRef(testStateDB, origin, origin, big.NewInt(int64(blockNum)), hash, testSupplyGas, nil)
 }
 
+func generateNativeContract(origin common.Address, blockNum int) *native.NativeContract {
+	ref := generateNativeContractRef(origin, blockNum)
+	return native.NewNativeContract(testStateDB, ref)
+}
+
+func resetTestContext() {
+	db := rawdb.NewMemoryDatabase()
+	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
+	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
+	testGenesisPeers := generateTestPeers(testGenesisNum)
+	testGenesisEpoch, _ = StoreGenesisEpoch(testStateDB, testGenesisPeers)
+	testCaller = testGenesisEpoch.Peers.List[0].Address
+}
+
 // generateTestPeer ONLY used for testing
 func generateTestPeer() *PeerInfo {
 	pk, _ := crypto.GenerateKey()
 	return &PeerInfo{
-		PubKey:  common.Bytes2Hex(crypto.CompressPubkey(&pk.PublicKey)),
+		PubKey:  hexutil.Encode(crypto.CompressPubkey(&pk.PublicKey)),
 		Address: crypto.PubkeyToAddress(pk.PublicKey),
 	}
 }

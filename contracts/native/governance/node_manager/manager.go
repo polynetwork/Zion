@@ -68,6 +68,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	height := s.ContractRef().BlockHeight().Uint64()
 	proposer := s.ContractRef().TxOrigin()
+	caller := ctx.Caller
 
 	// check authority
 	curEpoch, err := getCurEpoch(s.GetCacheDB())
@@ -75,7 +76,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		log.Trace("propose", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
-	if err := checkAuthority(proposer, curEpoch); err != nil {
+	if err := checkAuthority(proposer, caller, curEpoch); err != nil {
 		log.Trace("propose", "check authority failed", err, "tx origin", proposer.Hex())
 		return utils.ByteFailed, ErrInvalidAuthority
 	}
@@ -90,7 +91,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	peers := input.Peers
 	startHeight := input.StartHeight
 	// check peers, try to match all peer's public key and address
-	if peers == nil || peers.List == nil {
+	if peers == nil || peers.List == nil || len(peers.List) == 0 {
 		log.Trace("propose", "check peers", "peer list is nil")
 		return utils.ByteFailed, ErrInvalidPeers
 	}
@@ -175,6 +176,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 func Vote(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	voter := s.ContractRef().TxOrigin()
+	caller := ctx.Caller
 
 	// check authority
 	curEpoch, err := getCurEpoch(s.GetCacheDB())
@@ -182,7 +184,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 		log.Trace("vote", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
-	if err := checkAuthority(voter, curEpoch); err != nil {
+	if err := checkAuthority(voter, caller, curEpoch); err != nil {
 		log.Trace("vote", "check authority failed", err, "voter", voter.Hex())
 		return utils.ByteFailed, ErrInvalidAuthority
 	}
@@ -293,7 +295,9 @@ func EpochProof(s *native.NativeContract) ([]byte, error) {
 	return output.Encode()
 }
 
-func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, address common.Address) (bool, error) {
+func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, signer common.Address) (bool, error) {
+	ctx := s.ContractRef().CurrentContext()
+	caller := ctx.Caller
 
 	// get epoch info
 	epochHash, err := getCurrentEpochHash(s)
@@ -308,7 +312,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	}
 
 	// check authority
-	if err := checkAuthority(address, epoch); err != nil {
+	if err := checkAuthority(signer, caller, epoch); err != nil {
 		log.Trace("checkConsensusSign", "check authority failed", err)
 		return false, ErrInvalidAuthority
 	}
@@ -331,8 +335,8 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	}
 
 	// check duplicate signature
-	if findSigner(s, sign.Hash(), address) {
-		log.Trace("checkConsensusSign", "signer already exist", address.Hex(), "hash", sign.Hash().Hex())
+	if findSigner(s, sign.Hash(), signer) {
+		log.Trace("checkConsensusSign", "signer already exist", signer.Hex(), "hash", sign.Hash().Hex())
 		return false, ErrDuplicateSigner
 	}
 
@@ -343,12 +347,12 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	}
 
 	// store signer address and emit event log
-	if err := storeSigner(s, sign.Hash(), address); err != nil {
+	if err := storeSigner(s, sign.Hash(), signer); err != nil {
 		log.Trace("checkConsensusSign", "store signer failed", err, "hash", sign.Hash().Hex())
 		return false, ErrStorage
 	}
 	sizeAfterSign := getSignerSize(s, sign.Hash())
-	if err := emitConsensusSign(s, sign, address, sizeAfterSign); err != nil {
+	if err := emitConsensusSign(s, sign, signer, sizeAfterSign); err != nil {
 		log.Trace("checkConsensusSign", "emit consensus sign log failed", err, "hash", sign.Hash().Hex())
 		return false, ErrEmitLog
 	}

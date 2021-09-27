@@ -75,11 +75,16 @@ func getCurEpoch(cache *state.CacheDB) (*EpochInfo, error) {
 	return epoch, nil
 }
 
-func checkAuthority(origin common.Address, epoch *EpochInfo) error {
+func checkAuthority(origin, caller common.Address, epoch *EpochInfo) error {
 	if epoch == nil || epoch.Peers == nil || epoch.Peers.List == nil {
 		return fmt.Errorf("invalid epoch")
 	}
-
+	if origin == common.EmptyAddress || caller == common.EmptyAddress {
+		return fmt.Errorf("origin/caller is empty address")
+	}
+	if origin != caller {
+		return fmt.Errorf("origin must be caller")
+	}
 	for _, v := range epoch.Peers.List {
 		if v.Address == origin {
 			return nil

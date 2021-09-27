@@ -35,7 +35,7 @@ var (
 
 	ErrInvalidInput = errors.New("decode input params failed")
 
-	ErrInvalidPeers = errors.New("proposal peers is nil")
+	ErrInvalidPeers = errors.New("invalid peers")
 
 	ErrInvalidSign = errors.New("sign invalid")
 
