@@ -41,7 +41,7 @@ var (
 )
 
 // Neo3StateManagerABI is the input ABI used to generate the binding from.
-const Neo3StateManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"evtapproveRegisterStateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"evtapproveRemoveStateValidator\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveRegisterStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveRemoveStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentStateValidator\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"Validator\",\"type\":\"bytes\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string[]\",\"name\":\"StateValidators\",\"type\":\"string[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"registerStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string[]\",\"name\":\"StateValidators\",\"type\":\"string[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"removeStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const Neo3StateManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"evtApproveRegisterStateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"evtApproveRemoveStateValidator\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveRegisterStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveRemoveStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentStateValidator\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"Validator\",\"type\":\"bytes\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string[]\",\"name\":\"StateValidators\",\"type\":\"string[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"registerStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string[]\",\"name\":\"StateValidators\",\"type\":\"string[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"removeStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // Neo3StateManagerFuncSigs maps the 4-byte function signature to its string representation.
 var Neo3StateManagerFuncSigs = map[string]string{
@@ -54,7 +54,7 @@ var Neo3StateManagerFuncSigs = map[string]string{
 }
 
 // Neo3StateManagerBin is the compiled bytecode used for deploying new contracts.
-var Neo3StateManagerBin = "0x608060405234801561001057600080fd5b50610321806100206000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c806306fdde03146100675780633473fd551461007f578063770fa9ad14610067578063ca1c4d1b1461007f578063d62c2f61146100a5578063f7531edd146100a5575b600080fd5b6060604051610076919061028a565b60405180910390f35b61009561008d3660046101fb565b600092915050565b6040519015158152602001610076565b61009561008d3660046100cf565b80356001600160a01b03811681146100ca57600080fd5b919050565b60008060408084860312156100e357600080fd5b833567ffffffffffffffff808211156100fb57600080fd5b818601915086601f83011261010f57600080fd5b8135602082821115610123576101236102d5565b8160051b6101328282016102a4565b8381528281019086840183880185018d101561014d57600080fd5b600093505b858410156101dc5780358781111561016957600080fd5b8801603f81018e1361017a57600080fd5b858101358881111561018e5761018e6102d5565b6101a0601f8201601f191688016102a4565b8181528f8c8385010111156101b457600080fd5b818c840189830137600091810188019190915284525060019390930192918401918401610152565b5098506101ed9150508882016100b3565b955050505050509250929050565b6000806040838503121561020e57600080fd5b823567ffffffffffffffff8116811461022657600080fd5b9150610234602084016100b3565b90509250929050565b6000815180845260005b8181101561026357602081850181015186830182015201610247565b81811115610275576000602083870101525b50601f01601f19169290920160200192915050565b60208152600061029d602083018461023d565b9392505050565b604051601f8201601f1916810167ffffffffffffffff811182821017156102cd576102cd6102d5565b604052919050565b634e487b7160e01b600052604160045260246000fdfea2646970667358221220470181c04c5098a28c18bfc9a231136cb879cdd68e2a921e1b4567dad68a782964736f6c63430008060033"
+var Neo3StateManagerBin = "0x608060405234801561001057600080fd5b50610321806100206000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c806306fdde03146100675780633473fd551461007f578063770fa9ad14610067578063ca1c4d1b1461007f578063d62c2f61146100a5578063f7531edd146100a5575b600080fd5b6060604051610076919061028a565b60405180910390f35b61009561008d3660046101fb565b600092915050565b6040519015158152602001610076565b61009561008d3660046100cf565b80356001600160a01b03811681146100ca57600080fd5b919050565b60008060408084860312156100e357600080fd5b833567ffffffffffffffff808211156100fb57600080fd5b818601915086601f83011261010f57600080fd5b8135602082821115610123576101236102d5565b8160051b6101328282016102a4565b8381528281019086840183880185018d101561014d57600080fd5b600093505b858410156101dc5780358781111561016957600080fd5b8801603f81018e1361017a57600080fd5b858101358881111561018e5761018e6102d5565b6101a0601f8201601f191688016102a4565b8181528f8c8385010111156101b457600080fd5b818c840189830137600091810188019190915284525060019390930192918401918401610152565b5098506101ed9150508882016100b3565b955050505050509250929050565b6000806040838503121561020e57600080fd5b823567ffffffffffffffff8116811461022657600080fd5b9150610234602084016100b3565b90509250929050565b6000815180845260005b8181101561026357602081850181015186830182015201610247565b81811115610275576000602083870101525b50601f01601f19169290920160200192915050565b60208152600061029d602083018461023d565b9392505050565b604051601f8201601f1916810167ffffffffffffffff811182821017156102cd576102cd6102d5565b604052919050565b634e487b7160e01b600052604160045260246000fdfea26469706673582212202c6e8dc15980e12ec1b93cc0fd811e701b6b90ebd3fd4b8985934601617ca04e64736f6c63430008060033"
 
 // DeployNeo3StateManager deploys a new Ethereum contract, binding an instance of Neo3StateManager to it.
 func DeployNeo3StateManager(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Neo3StateManager, error) {
@@ -411,24 +411,24 @@ type Neo3StateManagerApproveRegisterStateValidator struct {
 	Raw types.Log // Blockchain specific contextual infos
 }
 
-// FilterApproveRegisterStateValidator is a free log retrieval operation binding the contract event 0xd3169c56ba3cd9f0ac3f5b389322fadc58e88a7b62029d458d7607bdc2ca6946.
+// FilterApproveRegisterStateValidator is a free log retrieval operation binding the contract event 0xa2d1b53f6d5ea7964c14d81acde072ef679b771780c18a93206cd3319c6621d6.
 //
-// Solidity: event evtapproveRegisterStateValidator(uint64 ID)
+// Solidity: event evtApproveRegisterStateValidator(uint64 ID)
 func (_Neo3StateManager *Neo3StateManagerFilterer) FilterApproveRegisterStateValidator(opts *bind.FilterOpts) (*Neo3StateManagerApproveRegisterStateValidatorIterator, error) {
 
-	logs, sub, err := _Neo3StateManager.contract.FilterLogs(opts, "evtapproveRegisterStateValidator")
+	logs, sub, err := _Neo3StateManager.contract.FilterLogs(opts, "evtApproveRegisterStateValidator")
 	if err != nil {
 		return nil, err
 	}
-	return &Neo3StateManagerApproveRegisterStateValidatorIterator{contract: _Neo3StateManager.contract, event: "evtapproveRegisterStateValidator", logs: logs, sub: sub}, nil
+	return &Neo3StateManagerApproveRegisterStateValidatorIterator{contract: _Neo3StateManager.contract, event: "evtApproveRegisterStateValidator", logs: logs, sub: sub}, nil
 }
 
-// WatchApproveRegisterStateValidator is a free log subscription operation binding the contract event 0xd3169c56ba3cd9f0ac3f5b389322fadc58e88a7b62029d458d7607bdc2ca6946.
+// WatchApproveRegisterStateValidator is a free log subscription operation binding the contract event 0xa2d1b53f6d5ea7964c14d81acde072ef679b771780c18a93206cd3319c6621d6.
 //
-// Solidity: event evtapproveRegisterStateValidator(uint64 ID)
+// Solidity: event evtApproveRegisterStateValidator(uint64 ID)
 func (_Neo3StateManager *Neo3StateManagerFilterer) WatchApproveRegisterStateValidator(opts *bind.WatchOpts, sink chan<- *Neo3StateManagerApproveRegisterStateValidator) (event.Subscription, error) {
 
-	logs, sub, err := _Neo3StateManager.contract.WatchLogs(opts, "evtapproveRegisterStateValidator")
+	logs, sub, err := _Neo3StateManager.contract.WatchLogs(opts, "evtApproveRegisterStateValidator")
 	if err != nil {
 		return nil, err
 	}
@@ -439,7 +439,7 @@ func (_Neo3StateManager *Neo3StateManagerFilterer) WatchApproveRegisterStateVali
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(Neo3StateManagerApproveRegisterStateValidator)
-				if err := _Neo3StateManager.contract.UnpackLog(event, "evtapproveRegisterStateValidator", log); err != nil {
+				if err := _Neo3StateManager.contract.UnpackLog(event, "evtApproveRegisterStateValidator", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -460,12 +460,12 @@ func (_Neo3StateManager *Neo3StateManagerFilterer) WatchApproveRegisterStateVali
 	}), nil
 }
 
-// ParseApproveRegisterStateValidator is a log parse operation binding the contract event 0xd3169c56ba3cd9f0ac3f5b389322fadc58e88a7b62029d458d7607bdc2ca6946.
+// ParseApproveRegisterStateValidator is a log parse operation binding the contract event 0xa2d1b53f6d5ea7964c14d81acde072ef679b771780c18a93206cd3319c6621d6.
 //
-// Solidity: event evtapproveRegisterStateValidator(uint64 ID)
+// Solidity: event evtApproveRegisterStateValidator(uint64 ID)
 func (_Neo3StateManager *Neo3StateManagerFilterer) ParseApproveRegisterStateValidator(log types.Log) (*Neo3StateManagerApproveRegisterStateValidator, error) {
 	event := new(Neo3StateManagerApproveRegisterStateValidator)
-	if err := _Neo3StateManager.contract.UnpackLog(event, "evtapproveRegisterStateValidator", log); err != nil {
+	if err := _Neo3StateManager.contract.UnpackLog(event, "evtApproveRegisterStateValidator", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -545,24 +545,24 @@ type Neo3StateManagerApproveRemoveStateValidator struct {
 	Raw types.Log // Blockchain specific contextual infos
 }
 
-// FilterApproveRemoveStateValidator is a free log retrieval operation binding the contract event 0xebac2ec1582dc79bf0391eb97c3869a30eabfc367cc2a50f9c28db5cdb2c7667.
+// FilterApproveRemoveStateValidator is a free log retrieval operation binding the contract event 0x32050489af2e3d6571e4c66ba0ca36ccf2b8feed7a7059d23aab90998d263604.
 //
-// Solidity: event evtapproveRemoveStateValidator(uint64 ID)
+// Solidity: event evtApproveRemoveStateValidator(uint64 ID)
 func (_Neo3StateManager *Neo3StateManagerFilterer) FilterApproveRemoveStateValidator(opts *bind.FilterOpts) (*Neo3StateManagerApproveRemoveStateValidatorIterator, error) {
 
-	logs, sub, err := _Neo3StateManager.contract.FilterLogs(opts, "evtapproveRemoveStateValidator")
+	logs, sub, err := _Neo3StateManager.contract.FilterLogs(opts, "evtApproveRemoveStateValidator")
 	if err != nil {
 		return nil, err
 	}
-	return &Neo3StateManagerApproveRemoveStateValidatorIterator{contract: _Neo3StateManager.contract, event: "evtapproveRemoveStateValidator", logs: logs, sub: sub}, nil
+	return &Neo3StateManagerApproveRemoveStateValidatorIterator{contract: _Neo3StateManager.contract, event: "evtApproveRemoveStateValidator", logs: logs, sub: sub}, nil
 }
 
-// WatchApproveRemoveStateValidator is a free log subscription operation binding the contract event 0xebac2ec1582dc79bf0391eb97c3869a30eabfc367cc2a50f9c28db5cdb2c7667.
+// WatchApproveRemoveStateValidator is a free log subscription operation binding the contract event 0x32050489af2e3d6571e4c66ba0ca36ccf2b8feed7a7059d23aab90998d263604.
 //
-// Solidity: event evtapproveRemoveStateValidator(uint64 ID)
+// Solidity: event evtApproveRemoveStateValidator(uint64 ID)
 func (_Neo3StateManager *Neo3StateManagerFilterer) WatchApproveRemoveStateValidator(opts *bind.WatchOpts, sink chan<- *Neo3StateManagerApproveRemoveStateValidator) (event.Subscription, error) {
 
-	logs, sub, err := _Neo3StateManager.contract.WatchLogs(opts, "evtapproveRemoveStateValidator")
+	logs, sub, err := _Neo3StateManager.contract.WatchLogs(opts, "evtApproveRemoveStateValidator")
 	if err != nil {
 		return nil, err
 	}
@@ -573,7 +573,7 @@ func (_Neo3StateManager *Neo3StateManagerFilterer) WatchApproveRemoveStateValida
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
 				event := new(Neo3StateManagerApproveRemoveStateValidator)
-				if err := _Neo3StateManager.contract.UnpackLog(event, "evtapproveRemoveStateValidator", log); err != nil {
+				if err := _Neo3StateManager.contract.UnpackLog(event, "evtApproveRemoveStateValidator", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -594,12 +594,12 @@ func (_Neo3StateManager *Neo3StateManagerFilterer) WatchApproveRemoveStateValida
 	}), nil
 }
 
-// ParseApproveRemoveStateValidator is a log parse operation binding the contract event 0xebac2ec1582dc79bf0391eb97c3869a30eabfc367cc2a50f9c28db5cdb2c7667.
+// ParseApproveRemoveStateValidator is a log parse operation binding the contract event 0x32050489af2e3d6571e4c66ba0ca36ccf2b8feed7a7059d23aab90998d263604.
 //
-// Solidity: event evtapproveRemoveStateValidator(uint64 ID)
+// Solidity: event evtApproveRemoveStateValidator(uint64 ID)
 func (_Neo3StateManager *Neo3StateManagerFilterer) ParseApproveRemoveStateValidator(log types.Log) (*Neo3StateManagerApproveRemoveStateValidator, error) {
 	event := new(Neo3StateManagerApproveRemoveStateValidator)
-	if err := _Neo3StateManager.contract.UnpackLog(event, "evtapproveRemoveStateValidator", log); err != nil {
+	if err := _Neo3StateManager.contract.UnpackLog(event, "evtApproveRemoveStateValidator", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
