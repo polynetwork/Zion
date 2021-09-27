@@ -21,6 +21,8 @@ package node_manager
 import (
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/stretchr/testify/assert"
 )
 
@@ -122,4 +124,25 @@ func TestStorageVote(t *testing.T) {
 	// test clear votes
 	clearVotes(testEmptyCtx, epochHash)
 	assert.Equal(t, int(0), voteSize(testEmptyCtx, epochHash))
+}
+
+func TestSigns(t *testing.T) {
+	expectSign := &ConsensusSign{Method: "test", Input: []byte("jalksdfj")}
+	assert.NoError(t, storeSign(testEmptyCtx, expectSign))
+	gotSign, err := getSign(testEmptyCtx, expectSign.Hash())
+	assert.NoError(t, err)
+	assert.Equal(t, expectSign.Hash(), gotSign.Hash())
+
+	expectVoteNum := 10
+	expectSigners := make([]common.Address, expectVoteNum)
+	for i := 0; i < expectVoteNum; i++ {
+		expectSigners[i] = generateTestAddress(i + 10)
+		assert.NoError(t, storeSigner(testEmptyCtx, expectSign.Hash(), expectSigners[i]))
+	}
+	gotVoteNum := getSignerSize(testEmptyCtx, expectSign.Hash())
+	assert.Equal(t, expectVoteNum, gotVoteNum)
+
+	gotSigners, err := getSigners(testEmptyCtx, expectSign.Hash())
+	assert.NoError(t, err)
+	assert.Equal(t, expectSigners, gotSigners)
 }
