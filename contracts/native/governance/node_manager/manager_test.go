@@ -34,37 +34,57 @@ import (
 )
 
 var (
-	testStateDB   *state.StateDB
-	testCacheDB   *state.CacheDB
-	testEmptyCtx  *native.NativeContract
-	testSupplyGas uint64 = 100000000000000000
+	testStateDB  *state.StateDB
+	testEmptyCtx *native.NativeContract
+
+	testSupplyGas    uint64 = 100000000000000000
+	testGenesisPeers        = generateTestPeers(4)
 )
 
 func TestMain(m *testing.M) {
 	db := rawdb.NewMemoryDatabase()
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testCacheDB = (*state.CacheDB)(testStateDB)
 	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
 
+	_ = StoreGenesisEpoch(testStateDB, testGenesisPeers)
 	InitNodeManager()
 
 	os.Exit(m.Run())
 }
 
 func TestPropose(t *testing.T) {
-	caller := generateTestAddress(12)
-	ctx := generateNativeContractRef(caller, 3)
+	var cases = []struct {
+		TxOrigin    common.Address
+		BlockNum    int
+		StartHeight uint64
+		PeerNum     int
+		Err         error
+	}{
+		{
+			TxOrigin:    generateTestAddress(12),
+			BlockNum:    3,
+			StartHeight: 2,
+			PeerNum:     15,
+			Err:         nil,
+		},
+	}
 
-	startHeight := uint64(2)
-	peers := generateTestPeers(15)
-	input := &MethodProposeInput{StartHeight: startHeight, Peers: peers}
-	payload, err := input.Encode()
-	assert.NoError(t, err)
+	for _, v := range cases {
+		peers := generateTestPeers(v.PeerNum)
+		input := &MethodProposeInput{StartHeight: v.StartHeight, Peers: peers}
+		payload, err := input.Encode()
+		assert.NoError(t, err)
 
-	ret, gasLeft, err := ctx.NativeCall(caller, this, payload)
-	assert.NoError(t, err)
-	assert.Equal(t, testSupplyGas-gasTable[MethodPropose], gasLeft)
-	assert.Equal(t, utils.ByteSuccess, ret)
+		ctx := generateNativeContractRef(v.TxOrigin, v.BlockNum)
+		ret, gasLeft, err := ctx.NativeCall(v.TxOrigin, this, payload)
+		if v.Err == nil {
+			assert.NoError(t, err)
+			assert.Equal(t, testSupplyGas-gasTable[MethodPropose], gasLeft)
+			assert.Equal(t, utils.ByteSuccess, ret)
+		} else {
+			t.Logf("error %v", err)
+		}
+	}
 }
 
 func generateNativeContractRef(origin common.Address, blockNum int) *native.ContractRef {
