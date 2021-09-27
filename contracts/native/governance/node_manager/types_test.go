@@ -89,3 +89,15 @@ func TestAddressList(t *testing.T) {
 
 	assert.Equal(t, expect, got)
 }
+
+func TestConsensusSign(t *testing.T) {
+	expect := &ConsensusSign{Method: "test1", Input: []byte("jfaklsdjgladf")}
+	expectHash := expect.Hash()
+	enc, err := rlp.EncodeToBytes(expect)
+	assert.NoError(t, err)
+
+	var got *ConsensusSign
+	assert.NoError(t, rlp.DecodeBytes(enc, &got))
+
+	assert.Equal(t, expectHash, got.Hash())
+}

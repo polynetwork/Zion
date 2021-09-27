@@ -199,16 +199,17 @@ func (m *AddressList) DecodeRLP(s *rlp.Stream) error {
 
 type ConsensusSign struct {
 	Method string
-	Input []byte
-	hash atomic.Value
+	Input  []byte
+	hash   atomic.Value
 }
+
 func (m *ConsensusSign) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.Method, m.Input})
 }
 func (m *ConsensusSign) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		Method string
-		Input []byte
+		Input  []byte
 	}
 
 	if err := s.Decode(&data); err != nil {
@@ -223,10 +224,10 @@ func (m *ConsensusSign) Hash() common.Hash {
 	}
 	var inf = struct {
 		Method string
-		Input []byte
+		Input  []byte
 	}{
 		Method: m.Method,
-		Input: m.Input,
+		Input:  m.Input,
 	}
 	v := RLPHash(inf)
 	m.hash.Store(v)
