@@ -347,10 +347,10 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 		return false, ErrEmitLog
 	}
 
-	// clear quorum sign
+	// DONT clear quorum sign, keep it for checking
 	if size >= epoch.QuorumSize() {
-		delSign(s, sign.Hash())
-		clearSigner(s, sign.Hash())
+		//delSign(s, sign.Hash())
+		//clearSigner(s, sign.Hash())
 		return true, nil
 	} else {
 		return false, nil
