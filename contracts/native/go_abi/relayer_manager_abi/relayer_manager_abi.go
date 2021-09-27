@@ -26,20 +26,32 @@ var (
 	_ = event.NewSubscription
 )
 
+var (
+	MethodApproveRegisterRelayer = "approveRegisterRelayer"
+
+	MethodApproveRemoveRelayer = "approveRemoveRelayer"
+
+	MethodName = "name"
+
+	MethodRegisterRelayer = "registerRelayer"
+
+	MethodRemoveRelayer = "removeRelayer"
+)
+
 // RelayerManagerABI is the input ABI used to generate the binding from.
-const RelayerManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"EventApproveRegisterRelayer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"EventApproveRemoveRelayer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"applyID\",\"type\":\"uint64\"}],\"name\":\"EventRegisterRelayer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"removeID\",\"type\":\"uint64\"}],\"name\":\"EventRemoveRelayer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"MethodApproveRegisterRelayer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"MethodApproveRemoveRelayer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MethodContractName\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"AddressList\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"MethodRegisterRelayer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"AddressList\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"MethodRemoveRelayer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const RelayerManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"evtApproveRegisterRelayer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"evtApproveRemoveRelayer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"applyID\",\"type\":\"uint64\"}],\"name\":\"evtRegisterRelayer\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"removeID\",\"type\":\"uint64\"}],\"name\":\"evtRemoveRelayer\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveRegisterRelayer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveRemoveRelayer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"AddressList\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"registerRelayer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"AddressList\",\"type\":\"address[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"removeRelayer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // RelayerManagerFuncSigs maps the 4-byte function signature to its string representation.
 var RelayerManagerFuncSigs = map[string]string{
-	"2b999ab8": "MethodApproveRegisterRelayer(uint64,address)",
-	"c8e4f8af": "MethodApproveRemoveRelayer(uint64,address)",
-	"e50f8f44": "MethodContractName()",
-	"8df11025": "MethodRegisterRelayer(address[],address)",
-	"1791d10b": "MethodRemoveRelayer(address[],address)",
+	"07b8ca31": "approveRegisterRelayer(uint64,address)",
+	"2b1775dd": "approveRemoveRelayer(uint64,address)",
+	"06fdde03": "name()",
+	"d99802fe": "registerRelayer(address[],address)",
+	"0cffb52a": "removeRelayer(address[],address)",
 }
 
 // RelayerManagerBin is the compiled bytecode used for deploying new contracts.
-var RelayerManagerBin = "0x608060405234801561001057600080fd5b50610281806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c80631791d10b1461005c5780632b999ab8146100875780638df110251461005c578063c8e4f8af14610087578063e50f8f4414610095575b600080fd5b61007261006a3660046100c0565b600092915050565b60405190151581526020015b60405180910390f35b61007261006a36600461019e565b606060405161007e91906101e0565b80356001600160a01b03811681146100bb57600080fd5b919050565b600080604083850312156100d357600080fd5b823567ffffffffffffffff808211156100eb57600080fd5b818501915085601f8301126100ff57600080fd5b813560208282111561011357610113610235565b8160051b604051601f19603f8301168101818110868211171561013857610138610235565b604052838152828101945085830182870184018b101561015757600080fd5b600096505b848710156101815761016d816100a4565b86526001969096019594830194830161015c565b50965061019190508782016100a4565b9450505050509250929050565b600080604083850312156101b157600080fd5b823567ffffffffffffffff811681146101c957600080fd5b91506101d7602084016100a4565b90509250929050565b600060208083528351808285015260005b8181101561020d578581018301518582016040015282016101f1565b8181111561021f576000604083870101525b50601f01601f1916929092016040019392505050565b634e487b7160e01b600052604160045260246000fdfea264697066735822122076502f86b779cc75290e2a2a1b0adc83e53813015f428eb07cc5347a0084669464736f6c63430008060033"
+var RelayerManagerBin = "0x608060405234801561001057600080fd5b50610285806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806306fdde031461005c57806307b8ca31146100745780630cffb52a1461009a5780632b1775dd14610074578063d99802fe1461009a575b600080fd5b606060405161006b91906101e4565b60405180910390f35b61008a6100823660046101a2565b600092915050565b604051901515815260200161006b565b61008a6100823660046100c4565b80356001600160a01b03811681146100bf57600080fd5b919050565b600080604083850312156100d757600080fd5b823567ffffffffffffffff808211156100ef57600080fd5b818501915085601f83011261010357600080fd5b813560208282111561011757610117610239565b8160051b604051601f19603f8301168101818110868211171561013c5761013c610239565b604052838152828101945085830182870184018b101561015b57600080fd5b600096505b8487101561018557610171816100a8565b865260019690960195948301948301610160565b50965061019590508782016100a8565b9450505050509250929050565b600080604083850312156101b557600080fd5b823567ffffffffffffffff811681146101cd57600080fd5b91506101db602084016100a8565b90509250929050565b600060208083528351808285015260005b81811015610211578581018301518582016040015282016101f5565b81811115610223576000604083870101525b50601f01601f1916929092016040019392505050565b634e487b7160e01b600052604160045260246000fdfea2646970667358221220f8f573c9e4225c35f16c8b207ef9fe5a3541fabe38f3516118d08dbb43f7f78264736f6c63430008060033"
 
 // DeployRelayerManager deploys a new Ethereum contract, binding an instance of RelayerManager to it.
 func DeployRelayerManager(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *RelayerManager, error) {
@@ -197,114 +209,114 @@ func (_RelayerManager *RelayerManagerTransactorRaw) Transact(opts *bind.Transact
 	return _RelayerManager.Contract.contract.Transact(opts, method, params...)
 }
 
-// MethodApproveRegisterRelayer is a paid mutator transaction binding the contract method 0x2b999ab8.
+// ApproveRegisterRelayer is a paid mutator transaction binding the contract method 0x07b8ca31.
 //
-// Solidity: function MethodApproveRegisterRelayer(uint64 ID, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerTransactor) MethodApproveRegisterRelayer(opts *bind.TransactOpts, ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.contract.Transact(opts, "MethodApproveRegisterRelayer", ID, Address)
+// Solidity: function approveRegisterRelayer(uint64 ID, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerTransactor) ApproveRegisterRelayer(opts *bind.TransactOpts, ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.contract.Transact(opts, "approveRegisterRelayer", ID, Address)
 }
 
-// MethodApproveRegisterRelayer is a paid mutator transaction binding the contract method 0x2b999ab8.
+// ApproveRegisterRelayer is a paid mutator transaction binding the contract method 0x07b8ca31.
 //
-// Solidity: function MethodApproveRegisterRelayer(uint64 ID, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerSession) MethodApproveRegisterRelayer(ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.Contract.MethodApproveRegisterRelayer(&_RelayerManager.TransactOpts, ID, Address)
+// Solidity: function approveRegisterRelayer(uint64 ID, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerSession) ApproveRegisterRelayer(ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.Contract.ApproveRegisterRelayer(&_RelayerManager.TransactOpts, ID, Address)
 }
 
-// MethodApproveRegisterRelayer is a paid mutator transaction binding the contract method 0x2b999ab8.
+// ApproveRegisterRelayer is a paid mutator transaction binding the contract method 0x07b8ca31.
 //
-// Solidity: function MethodApproveRegisterRelayer(uint64 ID, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerTransactorSession) MethodApproveRegisterRelayer(ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.Contract.MethodApproveRegisterRelayer(&_RelayerManager.TransactOpts, ID, Address)
+// Solidity: function approveRegisterRelayer(uint64 ID, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerTransactorSession) ApproveRegisterRelayer(ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.Contract.ApproveRegisterRelayer(&_RelayerManager.TransactOpts, ID, Address)
 }
 
-// MethodApproveRemoveRelayer is a paid mutator transaction binding the contract method 0xc8e4f8af.
+// ApproveRemoveRelayer is a paid mutator transaction binding the contract method 0x2b1775dd.
 //
-// Solidity: function MethodApproveRemoveRelayer(uint64 ID, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerTransactor) MethodApproveRemoveRelayer(opts *bind.TransactOpts, ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.contract.Transact(opts, "MethodApproveRemoveRelayer", ID, Address)
+// Solidity: function approveRemoveRelayer(uint64 ID, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerTransactor) ApproveRemoveRelayer(opts *bind.TransactOpts, ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.contract.Transact(opts, "approveRemoveRelayer", ID, Address)
 }
 
-// MethodApproveRemoveRelayer is a paid mutator transaction binding the contract method 0xc8e4f8af.
+// ApproveRemoveRelayer is a paid mutator transaction binding the contract method 0x2b1775dd.
 //
-// Solidity: function MethodApproveRemoveRelayer(uint64 ID, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerSession) MethodApproveRemoveRelayer(ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.Contract.MethodApproveRemoveRelayer(&_RelayerManager.TransactOpts, ID, Address)
+// Solidity: function approveRemoveRelayer(uint64 ID, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerSession) ApproveRemoveRelayer(ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.Contract.ApproveRemoveRelayer(&_RelayerManager.TransactOpts, ID, Address)
 }
 
-// MethodApproveRemoveRelayer is a paid mutator transaction binding the contract method 0xc8e4f8af.
+// ApproveRemoveRelayer is a paid mutator transaction binding the contract method 0x2b1775dd.
 //
-// Solidity: function MethodApproveRemoveRelayer(uint64 ID, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerTransactorSession) MethodApproveRemoveRelayer(ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.Contract.MethodApproveRemoveRelayer(&_RelayerManager.TransactOpts, ID, Address)
+// Solidity: function approveRemoveRelayer(uint64 ID, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerTransactorSession) ApproveRemoveRelayer(ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.Contract.ApproveRemoveRelayer(&_RelayerManager.TransactOpts, ID, Address)
 }
 
-// MethodContractName is a paid mutator transaction binding the contract method 0xe50f8f44.
+// Name is a paid mutator transaction binding the contract method 0x06fdde03.
 //
-// Solidity: function MethodContractName() returns(string Name)
-func (_RelayerManager *RelayerManagerTransactor) MethodContractName(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _RelayerManager.contract.Transact(opts, "MethodContractName")
+// Solidity: function name() returns(string Name)
+func (_RelayerManager *RelayerManagerTransactor) Name(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _RelayerManager.contract.Transact(opts, "name")
 }
 
-// MethodContractName is a paid mutator transaction binding the contract method 0xe50f8f44.
+// Name is a paid mutator transaction binding the contract method 0x06fdde03.
 //
-// Solidity: function MethodContractName() returns(string Name)
-func (_RelayerManager *RelayerManagerSession) MethodContractName() (*types.Transaction, error) {
-	return _RelayerManager.Contract.MethodContractName(&_RelayerManager.TransactOpts)
+// Solidity: function name() returns(string Name)
+func (_RelayerManager *RelayerManagerSession) Name() (*types.Transaction, error) {
+	return _RelayerManager.Contract.Name(&_RelayerManager.TransactOpts)
 }
 
-// MethodContractName is a paid mutator transaction binding the contract method 0xe50f8f44.
+// Name is a paid mutator transaction binding the contract method 0x06fdde03.
 //
-// Solidity: function MethodContractName() returns(string Name)
-func (_RelayerManager *RelayerManagerTransactorSession) MethodContractName() (*types.Transaction, error) {
-	return _RelayerManager.Contract.MethodContractName(&_RelayerManager.TransactOpts)
+// Solidity: function name() returns(string Name)
+func (_RelayerManager *RelayerManagerTransactorSession) Name() (*types.Transaction, error) {
+	return _RelayerManager.Contract.Name(&_RelayerManager.TransactOpts)
 }
 
-// MethodRegisterRelayer is a paid mutator transaction binding the contract method 0x8df11025.
+// RegisterRelayer is a paid mutator transaction binding the contract method 0xd99802fe.
 //
-// Solidity: function MethodRegisterRelayer(address[] AddressList, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerTransactor) MethodRegisterRelayer(opts *bind.TransactOpts, AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.contract.Transact(opts, "MethodRegisterRelayer", AddressList, Address)
+// Solidity: function registerRelayer(address[] AddressList, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerTransactor) RegisterRelayer(opts *bind.TransactOpts, AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.contract.Transact(opts, "registerRelayer", AddressList, Address)
 }
 
-// MethodRegisterRelayer is a paid mutator transaction binding the contract method 0x8df11025.
+// RegisterRelayer is a paid mutator transaction binding the contract method 0xd99802fe.
 //
-// Solidity: function MethodRegisterRelayer(address[] AddressList, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerSession) MethodRegisterRelayer(AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.Contract.MethodRegisterRelayer(&_RelayerManager.TransactOpts, AddressList, Address)
+// Solidity: function registerRelayer(address[] AddressList, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerSession) RegisterRelayer(AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.Contract.RegisterRelayer(&_RelayerManager.TransactOpts, AddressList, Address)
 }
 
-// MethodRegisterRelayer is a paid mutator transaction binding the contract method 0x8df11025.
+// RegisterRelayer is a paid mutator transaction binding the contract method 0xd99802fe.
 //
-// Solidity: function MethodRegisterRelayer(address[] AddressList, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerTransactorSession) MethodRegisterRelayer(AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.Contract.MethodRegisterRelayer(&_RelayerManager.TransactOpts, AddressList, Address)
+// Solidity: function registerRelayer(address[] AddressList, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerTransactorSession) RegisterRelayer(AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.Contract.RegisterRelayer(&_RelayerManager.TransactOpts, AddressList, Address)
 }
 
-// MethodRemoveRelayer is a paid mutator transaction binding the contract method 0x1791d10b.
+// RemoveRelayer is a paid mutator transaction binding the contract method 0x0cffb52a.
 //
-// Solidity: function MethodRemoveRelayer(address[] AddressList, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerTransactor) MethodRemoveRelayer(opts *bind.TransactOpts, AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.contract.Transact(opts, "MethodRemoveRelayer", AddressList, Address)
+// Solidity: function removeRelayer(address[] AddressList, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerTransactor) RemoveRelayer(opts *bind.TransactOpts, AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.contract.Transact(opts, "removeRelayer", AddressList, Address)
 }
 
-// MethodRemoveRelayer is a paid mutator transaction binding the contract method 0x1791d10b.
+// RemoveRelayer is a paid mutator transaction binding the contract method 0x0cffb52a.
 //
-// Solidity: function MethodRemoveRelayer(address[] AddressList, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerSession) MethodRemoveRelayer(AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.Contract.MethodRemoveRelayer(&_RelayerManager.TransactOpts, AddressList, Address)
+// Solidity: function removeRelayer(address[] AddressList, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerSession) RemoveRelayer(AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.Contract.RemoveRelayer(&_RelayerManager.TransactOpts, AddressList, Address)
 }
 
-// MethodRemoveRelayer is a paid mutator transaction binding the contract method 0x1791d10b.
+// RemoveRelayer is a paid mutator transaction binding the contract method 0x0cffb52a.
 //
-// Solidity: function MethodRemoveRelayer(address[] AddressList, address Address) returns(bool success)
-func (_RelayerManager *RelayerManagerTransactorSession) MethodRemoveRelayer(AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
-	return _RelayerManager.Contract.MethodRemoveRelayer(&_RelayerManager.TransactOpts, AddressList, Address)
+// Solidity: function removeRelayer(address[] AddressList, address Address) returns(bool success)
+func (_RelayerManager *RelayerManagerTransactorSession) RemoveRelayer(AddressList []common.Address, Address common.Address) (*types.Transaction, error) {
+	return _RelayerManager.Contract.RemoveRelayer(&_RelayerManager.TransactOpts, AddressList, Address)
 }
 
-// RelayerManagerEventApproveRegisterRelayerIterator is returned from FilterEventApproveRegisterRelayer and is used to iterate over the raw logs and unpacked data for EventApproveRegisterRelayer events raised by the RelayerManager contract.
-type RelayerManagerEventApproveRegisterRelayerIterator struct {
-	Event *RelayerManagerEventApproveRegisterRelayer // Event containing the contract specifics and raw log
+// RelayerManagerApproveRegisterRelayerIterator is returned from FilterApproveRegisterRelayer and is used to iterate over the raw logs and unpacked data for ApproveRegisterRelayer events raised by the RelayerManager contract.
+type RelayerManagerApproveRegisterRelayerIterator struct {
+	Event *RelayerManagerApproveRegisterRelayer // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -318,7 +330,7 @@ type RelayerManagerEventApproveRegisterRelayerIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *RelayerManagerEventApproveRegisterRelayerIterator) Next() bool {
+func (it *RelayerManagerApproveRegisterRelayerIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -327,7 +339,7 @@ func (it *RelayerManagerEventApproveRegisterRelayerIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(RelayerManagerEventApproveRegisterRelayer)
+			it.Event = new(RelayerManagerApproveRegisterRelayer)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -342,7 +354,7 @@ func (it *RelayerManagerEventApproveRegisterRelayerIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(RelayerManagerEventApproveRegisterRelayer)
+		it.Event = new(RelayerManagerApproveRegisterRelayer)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -358,41 +370,41 @@ func (it *RelayerManagerEventApproveRegisterRelayerIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *RelayerManagerEventApproveRegisterRelayerIterator) Error() error {
+func (it *RelayerManagerApproveRegisterRelayerIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *RelayerManagerEventApproveRegisterRelayerIterator) Close() error {
+func (it *RelayerManagerApproveRegisterRelayerIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// RelayerManagerEventApproveRegisterRelayer represents a EventApproveRegisterRelayer event raised by the RelayerManager contract.
-type RelayerManagerEventApproveRegisterRelayer struct {
+// RelayerManagerApproveRegisterRelayer represents a ApproveRegisterRelayer event raised by the RelayerManager contract.
+type RelayerManagerApproveRegisterRelayer struct {
 	ID  uint64
 	Raw types.Log // Blockchain specific contextual infos
 }
 
-// FilterEventApproveRegisterRelayer is a free log retrieval operation binding the contract event 0x1ed91da95b8b4cb6c350992aedc9d61a9062bff0544bf96e58457d34f1212022.
+// FilterApproveRegisterRelayer is a free log retrieval operation binding the contract event 0x85f1458b6de2aa7d6fb453821800c90d0ed717c565c2d5cdb73699b3ba657570.
 //
-// Solidity: event EventApproveRegisterRelayer(uint64 ID)
-func (_RelayerManager *RelayerManagerFilterer) FilterEventApproveRegisterRelayer(opts *bind.FilterOpts) (*RelayerManagerEventApproveRegisterRelayerIterator, error) {
+// Solidity: event evtApproveRegisterRelayer(uint64 ID)
+func (_RelayerManager *RelayerManagerFilterer) FilterApproveRegisterRelayer(opts *bind.FilterOpts) (*RelayerManagerApproveRegisterRelayerIterator, error) {
 
-	logs, sub, err := _RelayerManager.contract.FilterLogs(opts, "EventApproveRegisterRelayer")
+	logs, sub, err := _RelayerManager.contract.FilterLogs(opts, "evtApproveRegisterRelayer")
 	if err != nil {
 		return nil, err
 	}
-	return &RelayerManagerEventApproveRegisterRelayerIterator{contract: _RelayerManager.contract, event: "EventApproveRegisterRelayer", logs: logs, sub: sub}, nil
+	return &RelayerManagerApproveRegisterRelayerIterator{contract: _RelayerManager.contract, event: "evtApproveRegisterRelayer", logs: logs, sub: sub}, nil
 }
 
-// WatchEventApproveRegisterRelayer is a free log subscription operation binding the contract event 0x1ed91da95b8b4cb6c350992aedc9d61a9062bff0544bf96e58457d34f1212022.
+// WatchApproveRegisterRelayer is a free log subscription operation binding the contract event 0x85f1458b6de2aa7d6fb453821800c90d0ed717c565c2d5cdb73699b3ba657570.
 //
-// Solidity: event EventApproveRegisterRelayer(uint64 ID)
-func (_RelayerManager *RelayerManagerFilterer) WatchEventApproveRegisterRelayer(opts *bind.WatchOpts, sink chan<- *RelayerManagerEventApproveRegisterRelayer) (event.Subscription, error) {
+// Solidity: event evtApproveRegisterRelayer(uint64 ID)
+func (_RelayerManager *RelayerManagerFilterer) WatchApproveRegisterRelayer(opts *bind.WatchOpts, sink chan<- *RelayerManagerApproveRegisterRelayer) (event.Subscription, error) {
 
-	logs, sub, err := _RelayerManager.contract.WatchLogs(opts, "EventApproveRegisterRelayer")
+	logs, sub, err := _RelayerManager.contract.WatchLogs(opts, "evtApproveRegisterRelayer")
 	if err != nil {
 		return nil, err
 	}
@@ -402,8 +414,8 @@ func (_RelayerManager *RelayerManagerFilterer) WatchEventApproveRegisterRelayer(
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(RelayerManagerEventApproveRegisterRelayer)
-				if err := _RelayerManager.contract.UnpackLog(event, "EventApproveRegisterRelayer", log); err != nil {
+				event := new(RelayerManagerApproveRegisterRelayer)
+				if err := _RelayerManager.contract.UnpackLog(event, "evtApproveRegisterRelayer", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -424,21 +436,21 @@ func (_RelayerManager *RelayerManagerFilterer) WatchEventApproveRegisterRelayer(
 	}), nil
 }
 
-// ParseEventApproveRegisterRelayer is a log parse operation binding the contract event 0x1ed91da95b8b4cb6c350992aedc9d61a9062bff0544bf96e58457d34f1212022.
+// ParseApproveRegisterRelayer is a log parse operation binding the contract event 0x85f1458b6de2aa7d6fb453821800c90d0ed717c565c2d5cdb73699b3ba657570.
 //
-// Solidity: event EventApproveRegisterRelayer(uint64 ID)
-func (_RelayerManager *RelayerManagerFilterer) ParseEventApproveRegisterRelayer(log types.Log) (*RelayerManagerEventApproveRegisterRelayer, error) {
-	event := new(RelayerManagerEventApproveRegisterRelayer)
-	if err := _RelayerManager.contract.UnpackLog(event, "EventApproveRegisterRelayer", log); err != nil {
+// Solidity: event evtApproveRegisterRelayer(uint64 ID)
+func (_RelayerManager *RelayerManagerFilterer) ParseApproveRegisterRelayer(log types.Log) (*RelayerManagerApproveRegisterRelayer, error) {
+	event := new(RelayerManagerApproveRegisterRelayer)
+	if err := _RelayerManager.contract.UnpackLog(event, "evtApproveRegisterRelayer", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// RelayerManagerEventApproveRemoveRelayerIterator is returned from FilterEventApproveRemoveRelayer and is used to iterate over the raw logs and unpacked data for EventApproveRemoveRelayer events raised by the RelayerManager contract.
-type RelayerManagerEventApproveRemoveRelayerIterator struct {
-	Event *RelayerManagerEventApproveRemoveRelayer // Event containing the contract specifics and raw log
+// RelayerManagerApproveRemoveRelayerIterator is returned from FilterApproveRemoveRelayer and is used to iterate over the raw logs and unpacked data for ApproveRemoveRelayer events raised by the RelayerManager contract.
+type RelayerManagerApproveRemoveRelayerIterator struct {
+	Event *RelayerManagerApproveRemoveRelayer // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -452,7 +464,7 @@ type RelayerManagerEventApproveRemoveRelayerIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *RelayerManagerEventApproveRemoveRelayerIterator) Next() bool {
+func (it *RelayerManagerApproveRemoveRelayerIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -461,7 +473,7 @@ func (it *RelayerManagerEventApproveRemoveRelayerIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(RelayerManagerEventApproveRemoveRelayer)
+			it.Event = new(RelayerManagerApproveRemoveRelayer)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -476,7 +488,7 @@ func (it *RelayerManagerEventApproveRemoveRelayerIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(RelayerManagerEventApproveRemoveRelayer)
+		it.Event = new(RelayerManagerApproveRemoveRelayer)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -492,41 +504,41 @@ func (it *RelayerManagerEventApproveRemoveRelayerIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *RelayerManagerEventApproveRemoveRelayerIterator) Error() error {
+func (it *RelayerManagerApproveRemoveRelayerIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *RelayerManagerEventApproveRemoveRelayerIterator) Close() error {
+func (it *RelayerManagerApproveRemoveRelayerIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// RelayerManagerEventApproveRemoveRelayer represents a EventApproveRemoveRelayer event raised by the RelayerManager contract.
-type RelayerManagerEventApproveRemoveRelayer struct {
+// RelayerManagerApproveRemoveRelayer represents a ApproveRemoveRelayer event raised by the RelayerManager contract.
+type RelayerManagerApproveRemoveRelayer struct {
 	ID  uint64
 	Raw types.Log // Blockchain specific contextual infos
 }
 
-// FilterEventApproveRemoveRelayer is a free log retrieval operation binding the contract event 0x1d5e8420b7108839cc5f3e9e1e3bfbf2ddb512b2a5e0506dedbba7200b012e28.
+// FilterApproveRemoveRelayer is a free log retrieval operation binding the contract event 0xff19e858c848163b5e0f8038dfb0870427c43f36f7446878ee73f9bd2ec491f4.
 //
-// Solidity: event EventApproveRemoveRelayer(uint64 ID)
-func (_RelayerManager *RelayerManagerFilterer) FilterEventApproveRemoveRelayer(opts *bind.FilterOpts) (*RelayerManagerEventApproveRemoveRelayerIterator, error) {
+// Solidity: event evtApproveRemoveRelayer(uint64 ID)
+func (_RelayerManager *RelayerManagerFilterer) FilterApproveRemoveRelayer(opts *bind.FilterOpts) (*RelayerManagerApproveRemoveRelayerIterator, error) {
 
-	logs, sub, err := _RelayerManager.contract.FilterLogs(opts, "EventApproveRemoveRelayer")
+	logs, sub, err := _RelayerManager.contract.FilterLogs(opts, "evtApproveRemoveRelayer")
 	if err != nil {
 		return nil, err
 	}
-	return &RelayerManagerEventApproveRemoveRelayerIterator{contract: _RelayerManager.contract, event: "EventApproveRemoveRelayer", logs: logs, sub: sub}, nil
+	return &RelayerManagerApproveRemoveRelayerIterator{contract: _RelayerManager.contract, event: "evtApproveRemoveRelayer", logs: logs, sub: sub}, nil
 }
 
-// WatchEventApproveRemoveRelayer is a free log subscription operation binding the contract event 0x1d5e8420b7108839cc5f3e9e1e3bfbf2ddb512b2a5e0506dedbba7200b012e28.
+// WatchApproveRemoveRelayer is a free log subscription operation binding the contract event 0xff19e858c848163b5e0f8038dfb0870427c43f36f7446878ee73f9bd2ec491f4.
 //
-// Solidity: event EventApproveRemoveRelayer(uint64 ID)
-func (_RelayerManager *RelayerManagerFilterer) WatchEventApproveRemoveRelayer(opts *bind.WatchOpts, sink chan<- *RelayerManagerEventApproveRemoveRelayer) (event.Subscription, error) {
+// Solidity: event evtApproveRemoveRelayer(uint64 ID)
+func (_RelayerManager *RelayerManagerFilterer) WatchApproveRemoveRelayer(opts *bind.WatchOpts, sink chan<- *RelayerManagerApproveRemoveRelayer) (event.Subscription, error) {
 
-	logs, sub, err := _RelayerManager.contract.WatchLogs(opts, "EventApproveRemoveRelayer")
+	logs, sub, err := _RelayerManager.contract.WatchLogs(opts, "evtApproveRemoveRelayer")
 	if err != nil {
 		return nil, err
 	}
@@ -536,8 +548,8 @@ func (_RelayerManager *RelayerManagerFilterer) WatchEventApproveRemoveRelayer(op
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(RelayerManagerEventApproveRemoveRelayer)
-				if err := _RelayerManager.contract.UnpackLog(event, "EventApproveRemoveRelayer", log); err != nil {
+				event := new(RelayerManagerApproveRemoveRelayer)
+				if err := _RelayerManager.contract.UnpackLog(event, "evtApproveRemoveRelayer", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -558,21 +570,21 @@ func (_RelayerManager *RelayerManagerFilterer) WatchEventApproveRemoveRelayer(op
 	}), nil
 }
 
-// ParseEventApproveRemoveRelayer is a log parse operation binding the contract event 0x1d5e8420b7108839cc5f3e9e1e3bfbf2ddb512b2a5e0506dedbba7200b012e28.
+// ParseApproveRemoveRelayer is a log parse operation binding the contract event 0xff19e858c848163b5e0f8038dfb0870427c43f36f7446878ee73f9bd2ec491f4.
 //
-// Solidity: event EventApproveRemoveRelayer(uint64 ID)
-func (_RelayerManager *RelayerManagerFilterer) ParseEventApproveRemoveRelayer(log types.Log) (*RelayerManagerEventApproveRemoveRelayer, error) {
-	event := new(RelayerManagerEventApproveRemoveRelayer)
-	if err := _RelayerManager.contract.UnpackLog(event, "EventApproveRemoveRelayer", log); err != nil {
+// Solidity: event evtApproveRemoveRelayer(uint64 ID)
+func (_RelayerManager *RelayerManagerFilterer) ParseApproveRemoveRelayer(log types.Log) (*RelayerManagerApproveRemoveRelayer, error) {
+	event := new(RelayerManagerApproveRemoveRelayer)
+	if err := _RelayerManager.contract.UnpackLog(event, "evtApproveRemoveRelayer", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// RelayerManagerEventRegisterRelayerIterator is returned from FilterEventRegisterRelayer and is used to iterate over the raw logs and unpacked data for EventRegisterRelayer events raised by the RelayerManager contract.
-type RelayerManagerEventRegisterRelayerIterator struct {
-	Event *RelayerManagerEventRegisterRelayer // Event containing the contract specifics and raw log
+// RelayerManagerRegisterRelayerIterator is returned from FilterRegisterRelayer and is used to iterate over the raw logs and unpacked data for RegisterRelayer events raised by the RelayerManager contract.
+type RelayerManagerRegisterRelayerIterator struct {
+	Event *RelayerManagerRegisterRelayer // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -586,7 +598,7 @@ type RelayerManagerEventRegisterRelayerIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *RelayerManagerEventRegisterRelayerIterator) Next() bool {
+func (it *RelayerManagerRegisterRelayerIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -595,7 +607,7 @@ func (it *RelayerManagerEventRegisterRelayerIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(RelayerManagerEventRegisterRelayer)
+			it.Event = new(RelayerManagerRegisterRelayer)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -610,7 +622,7 @@ func (it *RelayerManagerEventRegisterRelayerIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(RelayerManagerEventRegisterRelayer)
+		it.Event = new(RelayerManagerRegisterRelayer)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -626,41 +638,41 @@ func (it *RelayerManagerEventRegisterRelayerIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *RelayerManagerEventRegisterRelayerIterator) Error() error {
+func (it *RelayerManagerRegisterRelayerIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *RelayerManagerEventRegisterRelayerIterator) Close() error {
+func (it *RelayerManagerRegisterRelayerIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// RelayerManagerEventRegisterRelayer represents a EventRegisterRelayer event raised by the RelayerManager contract.
-type RelayerManagerEventRegisterRelayer struct {
+// RelayerManagerRegisterRelayer represents a RegisterRelayer event raised by the RelayerManager contract.
+type RelayerManagerRegisterRelayer struct {
 	ApplyID uint64
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterEventRegisterRelayer is a free log retrieval operation binding the contract event 0x413d9d4e393cff2595025983ee75b5ec5144d4301a803414d3760e490acaa4ee.
+// FilterRegisterRelayer is a free log retrieval operation binding the contract event 0xcde26c3470cafd5b40f89e103f29443624c7648f3751a6fb8b56fb8b25059430.
 //
-// Solidity: event EventRegisterRelayer(uint64 applyID)
-func (_RelayerManager *RelayerManagerFilterer) FilterEventRegisterRelayer(opts *bind.FilterOpts) (*RelayerManagerEventRegisterRelayerIterator, error) {
+// Solidity: event evtRegisterRelayer(uint64 applyID)
+func (_RelayerManager *RelayerManagerFilterer) FilterRegisterRelayer(opts *bind.FilterOpts) (*RelayerManagerRegisterRelayerIterator, error) {
 
-	logs, sub, err := _RelayerManager.contract.FilterLogs(opts, "EventRegisterRelayer")
+	logs, sub, err := _RelayerManager.contract.FilterLogs(opts, "evtRegisterRelayer")
 	if err != nil {
 		return nil, err
 	}
-	return &RelayerManagerEventRegisterRelayerIterator{contract: _RelayerManager.contract, event: "EventRegisterRelayer", logs: logs, sub: sub}, nil
+	return &RelayerManagerRegisterRelayerIterator{contract: _RelayerManager.contract, event: "evtRegisterRelayer", logs: logs, sub: sub}, nil
 }
 
-// WatchEventRegisterRelayer is a free log subscription operation binding the contract event 0x413d9d4e393cff2595025983ee75b5ec5144d4301a803414d3760e490acaa4ee.
+// WatchRegisterRelayer is a free log subscription operation binding the contract event 0xcde26c3470cafd5b40f89e103f29443624c7648f3751a6fb8b56fb8b25059430.
 //
-// Solidity: event EventRegisterRelayer(uint64 applyID)
-func (_RelayerManager *RelayerManagerFilterer) WatchEventRegisterRelayer(opts *bind.WatchOpts, sink chan<- *RelayerManagerEventRegisterRelayer) (event.Subscription, error) {
+// Solidity: event evtRegisterRelayer(uint64 applyID)
+func (_RelayerManager *RelayerManagerFilterer) WatchRegisterRelayer(opts *bind.WatchOpts, sink chan<- *RelayerManagerRegisterRelayer) (event.Subscription, error) {
 
-	logs, sub, err := _RelayerManager.contract.WatchLogs(opts, "EventRegisterRelayer")
+	logs, sub, err := _RelayerManager.contract.WatchLogs(opts, "evtRegisterRelayer")
 	if err != nil {
 		return nil, err
 	}
@@ -670,8 +682,8 @@ func (_RelayerManager *RelayerManagerFilterer) WatchEventRegisterRelayer(opts *b
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(RelayerManagerEventRegisterRelayer)
-				if err := _RelayerManager.contract.UnpackLog(event, "EventRegisterRelayer", log); err != nil {
+				event := new(RelayerManagerRegisterRelayer)
+				if err := _RelayerManager.contract.UnpackLog(event, "evtRegisterRelayer", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -692,21 +704,21 @@ func (_RelayerManager *RelayerManagerFilterer) WatchEventRegisterRelayer(opts *b
 	}), nil
 }
 
-// ParseEventRegisterRelayer is a log parse operation binding the contract event 0x413d9d4e393cff2595025983ee75b5ec5144d4301a803414d3760e490acaa4ee.
+// ParseRegisterRelayer is a log parse operation binding the contract event 0xcde26c3470cafd5b40f89e103f29443624c7648f3751a6fb8b56fb8b25059430.
 //
-// Solidity: event EventRegisterRelayer(uint64 applyID)
-func (_RelayerManager *RelayerManagerFilterer) ParseEventRegisterRelayer(log types.Log) (*RelayerManagerEventRegisterRelayer, error) {
-	event := new(RelayerManagerEventRegisterRelayer)
-	if err := _RelayerManager.contract.UnpackLog(event, "EventRegisterRelayer", log); err != nil {
+// Solidity: event evtRegisterRelayer(uint64 applyID)
+func (_RelayerManager *RelayerManagerFilterer) ParseRegisterRelayer(log types.Log) (*RelayerManagerRegisterRelayer, error) {
+	event := new(RelayerManagerRegisterRelayer)
+	if err := _RelayerManager.contract.UnpackLog(event, "evtRegisterRelayer", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// RelayerManagerEventRemoveRelayerIterator is returned from FilterEventRemoveRelayer and is used to iterate over the raw logs and unpacked data for EventRemoveRelayer events raised by the RelayerManager contract.
-type RelayerManagerEventRemoveRelayerIterator struct {
-	Event *RelayerManagerEventRemoveRelayer // Event containing the contract specifics and raw log
+// RelayerManagerRemoveRelayerIterator is returned from FilterRemoveRelayer and is used to iterate over the raw logs and unpacked data for RemoveRelayer events raised by the RelayerManager contract.
+type RelayerManagerRemoveRelayerIterator struct {
+	Event *RelayerManagerRemoveRelayer // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -720,7 +732,7 @@ type RelayerManagerEventRemoveRelayerIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *RelayerManagerEventRemoveRelayerIterator) Next() bool {
+func (it *RelayerManagerRemoveRelayerIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -729,7 +741,7 @@ func (it *RelayerManagerEventRemoveRelayerIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(RelayerManagerEventRemoveRelayer)
+			it.Event = new(RelayerManagerRemoveRelayer)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -744,7 +756,7 @@ func (it *RelayerManagerEventRemoveRelayerIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(RelayerManagerEventRemoveRelayer)
+		it.Event = new(RelayerManagerRemoveRelayer)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -760,41 +772,41 @@ func (it *RelayerManagerEventRemoveRelayerIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *RelayerManagerEventRemoveRelayerIterator) Error() error {
+func (it *RelayerManagerRemoveRelayerIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *RelayerManagerEventRemoveRelayerIterator) Close() error {
+func (it *RelayerManagerRemoveRelayerIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// RelayerManagerEventRemoveRelayer represents a EventRemoveRelayer event raised by the RelayerManager contract.
-type RelayerManagerEventRemoveRelayer struct {
+// RelayerManagerRemoveRelayer represents a RemoveRelayer event raised by the RelayerManager contract.
+type RelayerManagerRemoveRelayer struct {
 	RemoveID uint64
 	Raw      types.Log // Blockchain specific contextual infos
 }
 
-// FilterEventRemoveRelayer is a free log retrieval operation binding the contract event 0x5346c918bfcf400258e68a4fe4ddfdf407402418b51c535edc529deaade004d8.
+// FilterRemoveRelayer is a free log retrieval operation binding the contract event 0x8f7667d2acd70ab373b61b6e8f28ca5259bfa2d53467f35f65bcf19041b5ba7d.
 //
-// Solidity: event EventRemoveRelayer(uint64 removeID)
-func (_RelayerManager *RelayerManagerFilterer) FilterEventRemoveRelayer(opts *bind.FilterOpts) (*RelayerManagerEventRemoveRelayerIterator, error) {
+// Solidity: event evtRemoveRelayer(uint64 removeID)
+func (_RelayerManager *RelayerManagerFilterer) FilterRemoveRelayer(opts *bind.FilterOpts) (*RelayerManagerRemoveRelayerIterator, error) {
 
-	logs, sub, err := _RelayerManager.contract.FilterLogs(opts, "EventRemoveRelayer")
+	logs, sub, err := _RelayerManager.contract.FilterLogs(opts, "evtRemoveRelayer")
 	if err != nil {
 		return nil, err
 	}
-	return &RelayerManagerEventRemoveRelayerIterator{contract: _RelayerManager.contract, event: "EventRemoveRelayer", logs: logs, sub: sub}, nil
+	return &RelayerManagerRemoveRelayerIterator{contract: _RelayerManager.contract, event: "evtRemoveRelayer", logs: logs, sub: sub}, nil
 }
 
-// WatchEventRemoveRelayer is a free log subscription operation binding the contract event 0x5346c918bfcf400258e68a4fe4ddfdf407402418b51c535edc529deaade004d8.
+// WatchRemoveRelayer is a free log subscription operation binding the contract event 0x8f7667d2acd70ab373b61b6e8f28ca5259bfa2d53467f35f65bcf19041b5ba7d.
 //
-// Solidity: event EventRemoveRelayer(uint64 removeID)
-func (_RelayerManager *RelayerManagerFilterer) WatchEventRemoveRelayer(opts *bind.WatchOpts, sink chan<- *RelayerManagerEventRemoveRelayer) (event.Subscription, error) {
+// Solidity: event evtRemoveRelayer(uint64 removeID)
+func (_RelayerManager *RelayerManagerFilterer) WatchRemoveRelayer(opts *bind.WatchOpts, sink chan<- *RelayerManagerRemoveRelayer) (event.Subscription, error) {
 
-	logs, sub, err := _RelayerManager.contract.WatchLogs(opts, "EventRemoveRelayer")
+	logs, sub, err := _RelayerManager.contract.WatchLogs(opts, "evtRemoveRelayer")
 	if err != nil {
 		return nil, err
 	}
@@ -804,8 +816,8 @@ func (_RelayerManager *RelayerManagerFilterer) WatchEventRemoveRelayer(opts *bin
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(RelayerManagerEventRemoveRelayer)
-				if err := _RelayerManager.contract.UnpackLog(event, "EventRemoveRelayer", log); err != nil {
+				event := new(RelayerManagerRemoveRelayer)
+				if err := _RelayerManager.contract.UnpackLog(event, "evtRemoveRelayer", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -826,12 +838,12 @@ func (_RelayerManager *RelayerManagerFilterer) WatchEventRemoveRelayer(opts *bin
 	}), nil
 }
 
-// ParseEventRemoveRelayer is a log parse operation binding the contract event 0x5346c918bfcf400258e68a4fe4ddfdf407402418b51c535edc529deaade004d8.
+// ParseRemoveRelayer is a log parse operation binding the contract event 0x8f7667d2acd70ab373b61b6e8f28ca5259bfa2d53467f35f65bcf19041b5ba7d.
 //
-// Solidity: event EventRemoveRelayer(uint64 removeID)
-func (_RelayerManager *RelayerManagerFilterer) ParseEventRemoveRelayer(log types.Log) (*RelayerManagerEventRemoveRelayer, error) {
-	event := new(RelayerManagerEventRemoveRelayer)
-	if err := _RelayerManager.contract.UnpackLog(event, "EventRemoveRelayer", log); err != nil {
+// Solidity: event evtRemoveRelayer(uint64 removeID)
+func (_RelayerManager *RelayerManagerFilterer) ParseRemoveRelayer(log types.Log) (*RelayerManagerRemoveRelayer, error) {
+	event := new(RelayerManagerRemoveRelayer)
+	if err := _RelayerManager.contract.UnpackLog(event, "evtRemoveRelayer", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
