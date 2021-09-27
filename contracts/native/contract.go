@@ -135,7 +135,7 @@ func (s *NativeContract) AddNotify(abi *abiPkg.ABI, topics []string, data ...int
 		if !ok {
 			eventInfo, ok = abi.Events["evt"+abiPkg.ToCamelCase(topic)]
 			if !ok {
-				err = fmt.Errorf("topic %s not exists", topic)
+				err = fmt.Errorf("topic %s/%s not exists", topic, "evt"+abiPkg.ToCamelCase(topic))
 				return
 			}
 
@@ -143,7 +143,11 @@ func (s *NativeContract) AddNotify(abi *abiPkg.ABI, topics []string, data ...int
 		topicIDs = append(topicIDs, eventInfo.ID)
 	}
 
-	packedData, err := utils.PackEvents(abi, topics[0], data...)
+	topic := topics[0]
+	if _, ok := abi.Events[topic]; !ok {
+		topic = "evt" + abiPkg.ToCamelCase(topic)
+	}
+	packedData, err := utils.PackEvents(abi, topic, data...)
 	if err != nil {
 		err = fmt.Errorf("AddNotify, PackEvents error: %v", err)
 		return
