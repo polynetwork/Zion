@@ -28,7 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func StoreGenesisEpoch(s *state.StateDB, peers *Peers) error {
+func StoreGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
 	cache := (*state.CacheDB)(s)
 	epoch := &EpochInfo{
 		ID:          StartEpoch,
@@ -38,13 +38,13 @@ func StoreGenesisEpoch(s *state.StateDB, peers *Peers) error {
 
 	// store current epoch and epoch info
 	if err := setEpoch(cache, epoch); err != nil {
-		return err
+		return nil, err
 	}
 
 	// store current hash
 	curKey := curEpochKey()
 	cache.Put(curKey, epoch.Hash().Bytes())
-	return nil
+	return epoch, nil
 }
 
 func GetCurrentEpoch(s *state.StateDB) (*EpochInfo, error) {

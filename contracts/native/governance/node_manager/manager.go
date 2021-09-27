@@ -336,23 +336,22 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 		return false, ErrDuplicateSigner
 	}
 
+	// do not store redundancy sign
+	sizeBeforeSign := getSignerSize(s, sign.Hash())
+	if sizeBeforeSign >= epoch.QuorumSize() {
+		return true, nil
+	}
+
 	// store signer address and emit event log
 	if err := storeSigner(s, sign.Hash(), address); err != nil {
 		log.Trace("checkConsensusSign", "store signer failed", err, "hash", sign.Hash().Hex())
 		return false, ErrStorage
 	}
-	size := getSignerSize(s, sign.Hash())
-	if err := emitConsensusSign(s, sign, address, size); err != nil {
+	sizeAfterSign := getSignerSize(s, sign.Hash())
+	if err := emitConsensusSign(s, sign, address, sizeAfterSign); err != nil {
 		log.Trace("checkConsensusSign", "emit consensus sign log failed", err, "hash", sign.Hash().Hex())
 		return false, ErrEmitLog
 	}
 
-	// DONT clear quorum sign, keep it for checking
-	if size >= epoch.QuorumSize() {
-		//delSign(s, sign.Hash())
-		//clearSigner(s, sign.Hash())
-		return true, nil
-	} else {
-		return false, nil
-	}
+	return sizeAfterSign >= epoch.QuorumSize(), nil
 }
