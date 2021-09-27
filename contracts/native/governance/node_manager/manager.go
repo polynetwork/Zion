@@ -332,7 +332,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 
 	// check duplicate signature
 	if findSigner(s, sign.Hash(), address) {
-		log.Trace("checkConsensusSign", "signer alreayd exist", address.Hex(), "hash", sign.Hash().Hex())
+		log.Trace("checkConsensusSign", "signer already exist", address.Hex(), "hash", sign.Hash().Hex())
 		return false, ErrDuplicateSigner
 	}
 
@@ -351,7 +351,8 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	if size >= epoch.QuorumSize() {
 		delSign(s, sign.Hash())
 		clearSigner(s, sign.Hash())
+		return true, nil
+	} else {
+		return false, nil
 	}
-
-	return true, nil
 }
