@@ -484,17 +484,13 @@ func TestVote(t *testing.T) {
 func TestProposalPassed(t *testing.T) {
 	resetTestContext()
 
-	// member0 propose
+	// prepare propose data
 	peers := testGenesisEpoch.Peers.Copy()
 	oldMembers := make([]common.Address, 0)
-	newMembers := make([]common.Address, 0)
 	for _, v := range peers.List {
 		oldMembers = append(oldMembers, v.Address)
 	}
 	newList := generateTestPeers(1)
-	for _, v := range newList.List {
-		newMembers = append(newMembers, v.Address)
-	}
 	peers.List = append(peers.List, newList.List...)
 	sort.Sort(peers)
 
@@ -505,6 +501,7 @@ func TestProposalPassed(t *testing.T) {
 	input := &MethodProposeInput{StartHeight: epoch.StartHeight, Peers: epoch.Peers}
 	payload, _ := input.Encode()
 
+	// propose
 	proposer := oldMembers[0]
 	ctx := generateNativeContract(proposer, proposeBlockNum)
 	_, _, _ = ctx.ContractRef().NativeCall(proposer, this, payload)
@@ -512,6 +509,7 @@ func TestProposalPassed(t *testing.T) {
 	curEpoch, err := GetCurrentEpoch(ctx)
 	assert.NoError(t, err)
 
+	// prepare vote data
 	n := curEpoch.QuorumSize()
 	voteBlockNum := proposeBlockNum + 1
 	voteInput := &MethodVoteInput{EpochID: epoch.ID, Hash: epoch.Hash()}
