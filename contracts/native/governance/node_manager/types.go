@@ -122,34 +122,55 @@ func (m *Proposal) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+type ProposalStatusType uint8
+
+const (
+	ProposalStatusUnknown ProposalStatusType = 0
+	ProposalStatusPropose ProposalStatusType = 1
+	ProposalStatusPassed  ProposalStatusType = 2
+)
+
+func (p ProposalStatusType) String() string {
+	switch p {
+	case ProposalStatusPropose:
+		return "STATUS_PROPOSE"
+	case ProposalStatusPassed:
+		return "STATUS_PASSED"
+	default:
+		return "STATUS_UNKNOWN"
+	}
+}
+
 type EpochInfo struct {
 	ID          uint64
 	Peers       *Peers
 	StartHeight uint64
+	Status      ProposalStatusType
 
 	hash atomic.Value
 }
 
 func (m *EpochInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ID, m.Peers, m.StartHeight})
+	return rlp.Encode(w, []interface{}{m.ID, m.Peers, m.StartHeight, uint8(m.Status)})
 }
 
 func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
-	var inf struct {
+	var data struct {
 		ID          uint64
 		Peers       *Peers
 		StartHeight uint64
+		Status      uint8
 	}
 
-	if err := s.Decode(&inf); err != nil {
+	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.ID, m.Peers, m.StartHeight = inf.ID, inf.Peers, inf.StartHeight
+	m.ID, m.Peers, m.StartHeight, m.Status = data.ID, data.Peers, data.StartHeight, ProposalStatusType(data.Status)
 	return nil
 }
 
 func (m *EpochInfo) String() string {
-	return fmt.Sprintf("{ID: %d Start Height: %d}", m.ID, m.StartHeight)
+	return fmt.Sprintf("{ID: %d, Start Height: %d, Status: %s}", m.ID, m.StartHeight, m.Status.String())
 }
 
 func (m *EpochInfo) Hash() common.Hash {

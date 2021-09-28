@@ -222,7 +222,7 @@ func emitEventProposed(s *native.NativeContract, epoch *EpochInfo) error {
 }
 
 func emitEventVoted(s *native.NativeContract, epochID uint64, hash common.Hash, curVotedNum int, groupSize int) error {
-	return s.AddNotify(ABI, []string{EventVote}, epochID, hash, uint64(curVotedNum), uint64(groupSize))
+	return s.AddNotify(ABI, []string{EventVote}, epochID, hash.Bytes(), uint64(curVotedNum), uint64(groupSize))
 }
 
 func emitEpochChange(s *native.NativeContract, curEpoch, nextEpoch *EpochInfo) error {

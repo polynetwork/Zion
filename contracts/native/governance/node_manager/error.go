@@ -51,9 +51,13 @@ var (
 
 	ErrPeersNum = errors.New("proposal peers out of range")
 
+	ErrProposalPassed = errors.New("proposal already passed")
+
 	ErrOldParticipantsNumber = errors.New("old participants should >= 2/3")
 
 	ErrProposalStartHeight = errors.New("proposal start height invalid")
+
+	ErrVoteHeight = errors.New("too late to vote")
 
 	ErrStorage = errors.New("store key value failed")
 

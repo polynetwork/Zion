@@ -62,6 +62,7 @@ func TestProposalType(t *testing.T) {
 
 func TestEpochInfoType(t *testing.T) {
 	expect := generateTestEpochInfo(1, 32, 10)
+	expect.Status = ProposalStatusPassed
 
 	enc, err := rlp.EncodeToBytes(expect)
 	assert.NoError(t, err)
