@@ -22,7 +22,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-
 	"github.com/stretchr/testify/assert"
 )
 
@@ -61,14 +60,18 @@ func TestStorageEpochProof(t *testing.T) {
 
 func TestStorageProposal(t *testing.T) {
 	expectSize := int(100)
-	expect := generateTestHashList(expectSize).List
+	expectProposer := generateTestAddress(12)
+	expectHashList := generateTestHashList(expectSize).List
 	expectEpochID := uint64(2)
+	expect := make([]*Proposal, 0)
 
 	// test store proposal
-	for _, hash := range expect {
-		assert.NoError(t, storeProposal(testEmptyCtx, expectEpochID, hash))
+	for _, hash := range expectHashList {
+		proposal := &Proposal{Proposer: expectProposer, Hash: hash}
+		expect = append(expect, proposal)
+		assert.NoError(t, storeProposal(testEmptyCtx, expectEpochID, proposal.Proposer, proposal.Hash))
 	}
-	assert.Equal(t, expectSize, proposalsNum(testEmptyCtx, expectEpochID))
+	assert.Equal(t, expectSize, totalProposalsNum(testEmptyCtx, expectEpochID))
 
 	// test get proposals
 	got, err := getProposals(testEmptyCtx, expectEpochID)
@@ -76,20 +79,16 @@ func TestStorageProposal(t *testing.T) {
 	assert.Equal(t, expect, got)
 
 	// test find proposal
-	for _, hash := range expect {
-		assert.True(t, findProposal(testEmptyCtx, expectEpochID, hash))
+	for _, v := range expect {
+		assert.True(t, findProposal(testEmptyCtx, expectEpochID, v.Hash))
+		assert.True(t, checkProposal(testEmptyCtx, expectEpochID, expectProposer, v.Hash))
 	}
-
-	// test first proposal
-	//gotFirstProposal, err := firstProposal(testEmptyCtx)
-	//assert.NoError(t, err)
-	//assert.Equal(t, expectFirstHash, gotFirstProposal)
 
 	// test delete proposal
-	for _, hash := range expect {
-		assert.NoError(t, delProposal(testEmptyCtx, expectEpochID, hash))
+	for _, v := range expect {
+		assert.NoError(t, delProposal(testEmptyCtx, expectEpochID, v.Hash))
 	}
-	assert.Equal(t, int(0), proposalsNum(testEmptyCtx, expectEpochID))
+	assert.Equal(t, int(0), totalProposalsNum(testEmptyCtx, expectEpochID))
 }
 
 func TestStorageVote(t *testing.T) {

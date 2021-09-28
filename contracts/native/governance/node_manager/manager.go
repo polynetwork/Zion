@@ -43,8 +43,8 @@ const (
 	MaxEpochValidPeriod      uint64 = 86400 * 10
 	MinProposalPeersLen      int    = 4   // F = 1, n >= 3f + 1
 	MaxProposalPeersLen      int    = 100 // F = 33
-	MaxProposalNumPerEpoch   int    = 1024
-	DefaultEpochChangePeriod uint64 = 10 // 一轮epoch投票成功后，共识切换需要一定的时间间隔
+	MaxProposalNumPerEpoch   int    = 3   // 每个共识节点每个epoch最多有3次提案
+	DefaultEpochChangePeriod uint64 = 10  // 一轮epoch投票成功后，共识切换需要一定的时间间隔
 )
 
 func InitNodeManager() {
@@ -101,7 +101,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		log.Trace("propose", "check peers number",
 			fmt.Errorf("propose, peers length should be in range of [%d, %d]",
 				MinProposalPeersLen, MaxProposalPeersLen))
-		return utils.ByteFailed, ErrProposalPeersOutOfRange
+		return utils.ByteFailed, ErrPeersNum
 	}
 	for _, peer := range peers.List {
 		if err := checkPeer(peer); err != nil {
@@ -150,25 +150,21 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	}
 	proposal := epoch.Hash()
 
-	// check proposals number
-	list, err := getProposals(s, epochID)
-	if err == nil && len(list) >= MaxProposalNumPerEpoch {
-		log.Trace("propose", "check proposals number failed, expect", MaxProposalNumPerEpoch, "got", len(list))
-		return utils.ByteFailed, ErrProposalsNumPerEpochOutOfRange
-	}
-
-	// todo: proposer should not proposal too much times
-
-	if findProposal(s, epochID, proposal) {
+	// check duplicate proposal and validator's proposals number
+	if checkProposal(s, epochID, proposer, proposal) {
 		log.Trace("propose", "check proposal hash, dump proposal", proposal.Hex())
 		return utils.ByteFailed, ErrDuplicateProposal
+	}
+	if num := proposalsNum(s, epochID, proposer); num >= MaxProposalNumPerEpoch {
+		log.Trace("propose", "check validator proposal number, expect < ", MaxProposalNumPerEpoch, "got", num)
+		return utils.ByteFailed, ErrProposalsNum
 	}
 
 	if err := storeEpoch(s, epoch); err != nil {
 		log.Trace("propose", "store epoch failed", err)
 		return utils.ByteFailed, ErrStorage
 	}
-	if err := storeProposal(s, epochID, proposal); err != nil {
+	if err := storeProposal(s, epochID, proposer, proposal); err != nil {
 		log.Trace("propose", "store proposal hash failed", err)
 		return utils.ByteFailed, ErrStorage
 	}

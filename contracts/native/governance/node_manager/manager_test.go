@@ -123,7 +123,7 @@ func TestPropose(t *testing.T) {
 				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
 				c.Payload, _ = input.Encode()
 			},
-			Expect: ErrProposalPeersOutOfRange,
+			Expect: ErrPeersNum,
 		},
 		{
 			BlockNum:    3,
@@ -134,7 +134,7 @@ func TestPropose(t *testing.T) {
 				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
 				c.Payload, _ = input.Encode()
 			},
-			Expect: ErrProposalPeersOutOfRange,
+			Expect: ErrPeersNum,
 		},
 		{
 			BlockNum:    3,
@@ -205,7 +205,7 @@ func TestPropose(t *testing.T) {
 					StartHeight: c.StartHeight,
 					Peers:       peers,
 				}
-				storeProposal(ctx, epoch.ID, epoch.Hash())
+				storeProposal(ctx, epoch.ID, ctx.ContractRef().TxOrigin(), epoch.Hash())
 				c.Payload, _ = input.Encode()
 			},
 			Expect: ErrDuplicateProposal,
@@ -214,6 +214,38 @@ func TestPropose(t *testing.T) {
 			BlockNum:    3,
 			StartHeight: MinEpochValidPeriod + 10,
 			Index:       12,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := testGenesisEpoch.Peers.Copy()
+				peers.List = append(peers.List, generateTestPeers(1).List...)
+				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
+				sort.Sort(peers)
+				proposer := ctx.ContractRef().TxOrigin()
+				epoch1 := &EpochInfo{
+					ID:          testGenesisEpoch.ID + 1,
+					StartHeight: c.StartHeight + 2,
+					Peers:       peers,
+				}
+				epoch2 := &EpochInfo{
+					ID:          testGenesisEpoch.ID + 1,
+					StartHeight: c.StartHeight + 3,
+					Peers:       peers,
+				}
+				epoch3 := &EpochInfo{
+					ID:          testGenesisEpoch.ID + 1,
+					StartHeight: c.StartHeight + 4,
+					Peers:       peers,
+				}
+				storeProposal(ctx, epoch1.ID, proposer, epoch1.Hash())
+				storeProposal(ctx, epoch2.ID, proposer, epoch2.Hash())
+				storeProposal(ctx, epoch3.ID, proposer, epoch3.Hash())
+				c.Payload, _ = input.Encode()
+			},
+			Expect: ErrProposalsNum,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: MinEpochValidPeriod + 10,
+			Index:       13,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				peers := testGenesisEpoch.Peers.Copy()
 				peers.List = append(peers.List, generateTestPeers(1).List...)

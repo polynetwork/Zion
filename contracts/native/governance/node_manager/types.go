@@ -102,6 +102,28 @@ func (m *Peers) Copy() *Peers {
 	return cp
 }
 
+type Proposal struct {
+	Proposer common.Address
+	Hash     common.Hash
+}
+
+func (m *Proposal) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Proposer, m.Hash})
+}
+
+func (m *Proposal) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Proposer common.Address
+		Hash     common.Hash
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.Proposer, m.Hash = data.Proposer, data.Hash
+	return nil
+}
+
 type EpochInfo struct {
 	ID          uint64
 	Peers       *Peers
@@ -167,6 +189,26 @@ func (m *EpochInfo) QuorumSize() int {
 	}
 	total := m.Peers.Len()
 	return int(math.Ceil(float64(2*total) / 3))
+}
+
+type ProposalList struct {
+	List []*Proposal
+}
+
+func (m *ProposalList) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.List})
+}
+
+func (m *ProposalList) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		List []*Proposal
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.List = data.List
+	return nil
 }
 
 type HashList struct {

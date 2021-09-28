@@ -25,7 +25,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestPeerInfo(t *testing.T) {
+func TestPeerInfoType(t *testing.T) {
 	expect := generateTestPeer()
 
 	enc, err := rlp.EncodeToBytes(expect)
@@ -38,7 +38,7 @@ func TestPeerInfo(t *testing.T) {
 	t.Logf("peer info length %d", len(enc))
 }
 
-func TestPeers(t *testing.T) {
+func TestPeersType(t *testing.T) {
 	expect := generateTestPeers(10)
 
 	enc, err := rlp.EncodeToBytes(&expect)
@@ -49,7 +49,18 @@ func TestPeers(t *testing.T) {
 	assert.Equal(t, expect, got)
 }
 
-func TestEpochInfo(t *testing.T) {
+func TestProposalType(t *testing.T) {
+	expect := &Proposal{Proposer: generateTestAddress(1227348), Hash: generateTestHash(23742983)}
+
+	enc, err := rlp.EncodeToBytes(expect)
+	assert.NoError(t, err)
+
+	var got *Proposal
+	assert.NoError(t, rlp.DecodeBytes(enc, &got))
+	assert.Equal(t, expect, got)
+}
+
+func TestEpochInfoType(t *testing.T) {
 	expect := generateTestEpochInfo(1, 32, 10)
 
 	enc, err := rlp.EncodeToBytes(expect)
@@ -66,7 +77,7 @@ func TestEpochInfo(t *testing.T) {
 	assert.Equal(t, expectHash, expect.Hash())
 }
 
-func TestHashList(t *testing.T) {
+func TestHashListType(t *testing.T) {
 	expect := generateTestHashList(12)
 
 	enc, err := rlp.EncodeToBytes(expect)
@@ -78,7 +89,7 @@ func TestHashList(t *testing.T) {
 	assert.Equal(t, expect, got)
 }
 
-func TestAddressList(t *testing.T) {
+func TestAddressListType(t *testing.T) {
 	expect := generateTestAddressList(13)
 
 	enc, err := rlp.EncodeToBytes(expect)
@@ -90,7 +101,7 @@ func TestAddressList(t *testing.T) {
 	assert.Equal(t, expect, got)
 }
 
-func TestConsensusSign(t *testing.T) {
+func TestConsensusSignType(t *testing.T) {
 	expect := &ConsensusSign{Method: "test1", Input: []byte("jfaklsdjgladf")}
 	expectHash := expect.Hash()
 	enc, err := rlp.EncodeToBytes(expect)
