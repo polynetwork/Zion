@@ -47,6 +47,8 @@ var (
 
 	ErrDuplicateSigner = errors.New("duplicate signer")
 
+	ErrProposalsNumPerEpochOutOfRange = errors.New("proposals number out of range")
+
 	ErrProposalPeersOutOfRange = errors.New("proposal peers out of range")
 
 	ErrOldParticipantsNumber = errors.New("old participants should >= 2/3")

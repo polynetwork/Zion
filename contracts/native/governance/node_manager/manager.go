@@ -38,11 +38,13 @@ var (
 )
 
 const (
-	MinEpochValidPeriod     uint64 = 100
-	DefaultEpochValidPeriod uint64 = 86400
-	MaxEpochValidPeriod     uint64 = 86400 * 10
-	MinProposalPeersLen     int    = 4   // F = 1, n >= 3f + 1
-	MaxProposalPeersLen     int    = 100 // F = 33
+	MinEpochValidPeriod      uint64 = 100
+	DefaultEpochValidPeriod  uint64 = 86400
+	MaxEpochValidPeriod      uint64 = 86400 * 10
+	MinProposalPeersLen      int    = 4   // F = 1, n >= 3f + 1
+	MaxProposalPeersLen      int    = 100 // F = 33
+	MaxProposalNumPerEpoch   int    = 1024
+	DefaultEpochChangePeriod uint64 = 10 // 一轮epoch投票成功后，共识切换需要一定的时间间隔
 )
 
 func InitNodeManager() {
@@ -71,9 +73,9 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	caller := ctx.Caller
 
 	// check authority
-	curEpoch, err := getCurEpoch(s.GetCacheDB())
+	curEpoch, err := GetCurrentEpoch(s)
 	if err != nil {
-		log.Trace("propose", "get current epoch failed", err)
+		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
 	if err := checkAuthority(proposer, caller, curEpoch); err != nil {
@@ -138,15 +140,27 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		startHeight = height + DefaultEpochValidPeriod
 	}
 
-	// sort and store proposal
+	// generate new epoch as proposal
+	epochID := curEpoch.ID + 1
+	sort.Sort(peers)
 	epoch := &EpochInfo{
-		ID:          curEpoch.ID + 1,
+		ID:          epochID,
 		Peers:       peers,
 		StartHeight: startHeight,
 	}
-	sort.Sort(epoch.Peers)
-	if findProposal(s, epoch.Hash()) {
-		log.Trace("propose", "check proposal hash, dump proposal", epoch.Hash().Hex())
+	proposal := epoch.Hash()
+
+	// check proposals number
+	list, err := getProposals(s, epochID)
+	if err == nil && len(list) >= MaxProposalNumPerEpoch {
+		log.Trace("propose", "check proposals number failed, expect", MaxProposalNumPerEpoch, "got", len(list))
+		return utils.ByteFailed, ErrProposalsNumPerEpochOutOfRange
+	}
+
+	// todo: proposer should not proposal too much times
+
+	if findProposal(s, epochID, proposal) {
+		log.Trace("propose", "check proposal hash, dump proposal", proposal.Hex())
 		return utils.ByteFailed, ErrDuplicateProposal
 	}
 
@@ -154,15 +168,17 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		log.Trace("propose", "store epoch failed", err)
 		return utils.ByteFailed, ErrStorage
 	}
-	if err := storeProposal(s, epoch.Hash()); err != nil {
+	if err := storeProposal(s, epochID, proposal); err != nil {
 		log.Trace("propose", "store proposal hash failed", err)
 		return utils.ByteFailed, ErrStorage
 	}
+
 	// vote to self proposal
-	if err := storeVote(s, epoch.Hash(), s.ContractRef().TxOrigin()); err != nil {
+	if err := storeVote(s, proposal, proposer); err != nil {
 		log.Trace("propose", "store vote failed", err)
 		return utils.ByteFailed, ErrStorage
 	}
+	storeVoteTo(s, epochID, proposer, proposal)
 
 	// emit event log
 	if err := emitEventProposed(s, epoch); err != nil {
@@ -173,16 +189,15 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	return utils.ByteSuccess, nil
 }
 
-// todo(fuk): 同一个epoch期间一个voter只能投给一个proposal，不能投给多个不同的proposal
 func Vote(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	voter := s.ContractRef().TxOrigin()
 	caller := ctx.Caller
 
 	// check authority
-	curEpoch, err := getCurEpoch(s.GetCacheDB())
+	curEpoch, err := GetCurrentEpoch(s)
 	if err != nil {
-		log.Trace("vote", "get current epoch failed", err)
+		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
 	if err := checkAuthority(voter, caller, curEpoch); err != nil {
@@ -192,16 +207,17 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 
 	// decode and check epoch info
 	input := new(MethodVoteInput)
+	epochID := input.EpochID
+	proposal := input.Hash
 	if err := input.Decode(ctx.Payload); err != nil {
 		log.Trace("vote", "decode input failed", err)
 		return utils.ByteFailed, ErrInvalidInput
 	}
-	if expectEpochID := curEpoch.ID + 1; input.EpochID != expectEpochID {
+	if expectEpochID := curEpoch.ID + 1; epochID != expectEpochID {
 		log.Trace("vote", "check epoch ID failed, expect", expectEpochID, "got", curEpoch.ID)
 		return utils.ByteFailed, ErrInvalidEpoch
 	}
-	proposal := input.Hash
-	if !findProposal(s, proposal) {
+	if !findProposal(s, epochID, proposal) {
 		log.Trace("vote", "find proposal failed", proposal.Hex())
 		return utils.ByteFailed, ErrProposalNotExist
 	}
@@ -210,8 +226,8 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 		log.Trace("vote", "get epoch failed", proposal.Hex())
 		return utils.ByteFailed, ErrEpochNotExist
 	}
-	if input.EpochID != epoch.ID {
-		log.Trace("vote", "check epoch id failed, expect", input.EpochID, "got", epoch.ID)
+	if epochID != epoch.ID {
+		log.Trace("vote", "check epoch id failed, expect", epoch.ID, "got", epochID)
 		return utils.ByteFailed, ErrInvalidEpoch
 	}
 	if proposal != epoch.Hash() {
@@ -220,14 +236,23 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// forbid duplicate vote
-	if findVote(s, proposal, voter) {
-		log.Trace("vote", "check vote", "duplicate vote", "proposal", proposal.Hex(), "vote", voter.Hex())
-		return utils.ByteFailed, ErrDuplicateVote
+	lastVote2 := findVoteTo(s, epochID, voter)
+	if lastVote2 != common.EmptyHash {
+		if lastVote2 == proposal {
+			log.Trace("vote", "check vote", "duplicate vote", "proposal", proposal.Hex(), "vote", voter.Hex())
+			return utils.ByteFailed, ErrDuplicateVote
+		} else {
+			if err := deleteVote(s, proposal, voter); err != nil {
+				log.Trace("vote", "delete last voted proposal failed", err, "proposal", proposal.Hex(), "vote", voter.Hex())
+				return utils.ByteFailed, ErrStorage
+			}
+			delVoteTo(s, epochID, voter)
+		}
 	}
 
 	// already reach quorum size
 	sizeBeforeVote := getVoteSize(s, proposal)
-	if sizeBeforeVote > curEpoch.QuorumSize() {
+	if sizeBeforeVote >= curEpoch.QuorumSize() {
 		log.Trace("vote", "check size", "already reach quorum size", "num", sizeBeforeVote, "quorum size", curEpoch.QuorumSize())
 		return utils.ByteSuccess, nil
 	}
@@ -237,6 +262,8 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 		log.Trace("vote", "store vote failed", err)
 		return utils.ByteFailed, ErrStorage
 	}
+	storeVoteTo(s, input.EpochID, voter, proposal)
+
 	sizeAfterVote := getVoteSize(s, proposal)
 	groupSize := len(curEpoch.Members())
 	if err := emitEventVoted(s, input.EpochID, proposal, sizeAfterVote, groupSize); err != nil {
@@ -261,14 +288,9 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 }
 
 func Epoch(s *native.NativeContract) ([]byte, error) {
-	hash, err := getCurrentEpochHash(s)
+	epoch, err := GetCurrentEpoch(s)
 	if err != nil {
-		log.Trace("epoch", "get current proposal failed", err)
-		return utils.ByteFailed, ErrProposalNotExist
-	}
-	epoch, err := getEpoch(s, hash)
-	if err != nil {
-		log.Trace("epoch", "get current epoch failed", err)
+		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
 
@@ -277,14 +299,9 @@ func Epoch(s *native.NativeContract) ([]byte, error) {
 }
 
 func EpochProof(s *native.NativeContract) ([]byte, error) {
-	hash, err := getCurrentEpochHash(s)
+	epoch, err := GetCurrentEpoch(s)
 	if err != nil {
-		log.Trace("epoch proof", "get current proposal failed", err)
-		return utils.ByteFailed, ErrProposalNotExist
-	}
-	epoch, err := getEpoch(s, hash)
-	if err != nil {
-		log.Trace("epoch proof", "get current epoch failed", err)
+		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
 	proof, err := getEpochProof(s, epoch.ID)
@@ -301,12 +318,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	caller := ctx.Caller
 
 	// get epoch info
-	epochHash, err := getCurrentEpochHash(s)
-	if err != nil {
-		log.Trace("checkConsensusSign", "get current proposal failed", err)
-		return false, ErrProposalNotExist
-	}
-	epoch, err := getEpoch(s, epochHash)
+	epoch, err := GetCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return false, ErrEpochNotExist

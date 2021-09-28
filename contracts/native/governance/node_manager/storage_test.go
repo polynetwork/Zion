@@ -62,34 +62,34 @@ func TestStorageEpochProof(t *testing.T) {
 func TestStorageProposal(t *testing.T) {
 	expectSize := int(100)
 	expect := generateTestHashList(expectSize).List
-	expectFirstHash := expect[0]
+	expectEpochID := uint64(2)
 
 	// test store proposal
 	for _, hash := range expect {
-		assert.NoError(t, storeProposal(testEmptyCtx, hash))
+		assert.NoError(t, storeProposal(testEmptyCtx, expectEpochID, hash))
 	}
-	assert.Equal(t, expectSize, proposalsNum(testEmptyCtx))
+	assert.Equal(t, expectSize, proposalsNum(testEmptyCtx, expectEpochID))
 
 	// test get proposals
-	got, err := getProposals(testEmptyCtx)
+	got, err := getProposals(testEmptyCtx, expectEpochID)
 	assert.NoError(t, err)
 	assert.Equal(t, expect, got)
 
 	// test find proposal
 	for _, hash := range expect {
-		assert.True(t, findProposal(testEmptyCtx, hash))
+		assert.True(t, findProposal(testEmptyCtx, expectEpochID, hash))
 	}
 
 	// test first proposal
-	gotFirstProposal, err := firstProposal(testEmptyCtx)
-	assert.NoError(t, err)
-	assert.Equal(t, expectFirstHash, gotFirstProposal)
+	//gotFirstProposal, err := firstProposal(testEmptyCtx)
+	//assert.NoError(t, err)
+	//assert.Equal(t, expectFirstHash, gotFirstProposal)
 
 	// test delete proposal
 	for _, hash := range expect {
-		assert.NoError(t, delProposal(testEmptyCtx, hash))
+		assert.NoError(t, delProposal(testEmptyCtx, expectEpochID, hash))
 	}
-	assert.Equal(t, int(0), proposalsNum(testEmptyCtx))
+	assert.Equal(t, int(0), proposalsNum(testEmptyCtx, expectEpochID))
 }
 
 func TestStorageVote(t *testing.T) {

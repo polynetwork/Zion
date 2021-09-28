@@ -43,12 +43,17 @@ const (
 	SKP_PROOF     = "st_proof"
 	SKP_PROPOSAL  = "st_proposal"
 	SKP_VOTE      = "st_vote"
+	SKP_VOTE_TO   = "st_vote_to"
 	SKP_CUR_EPOCH = "st_cur_epoch"
 	SKP_SIGN      = "st_sign"
 	SKP_SIGNER    = "st_signer"
 )
 
-// epoch storage
+// ====================================================================
+//
+// `epoch` storage
+//
+// ====================================================================
 func storeEpoch(s *native.NativeContract, epoch *EpochInfo) error {
 	return setEpoch(s.GetCacheDB(), epoch)
 }
@@ -70,7 +75,7 @@ func getEpoch(s *native.NativeContract, epochHash common.Hash) (*EpochInfo, erro
 
 func delEpoch(s *native.NativeContract, epochHash common.Hash) {
 	key := epochKey(epochHash)
-	s.GetCacheDB().Delete(key)
+	del(s, key)
 }
 
 func setEpoch(s *state.CacheDB, epoch *EpochInfo) error {
@@ -86,7 +91,11 @@ func setEpoch(s *state.CacheDB, epoch *EpochInfo) error {
 	return nil
 }
 
-// current epoch
+// ====================================================================
+//
+// `current epoch hash` storage
+//
+// ====================================================================
 func storeCurrentEpochHash(s *native.NativeContract, epochHash common.Hash) {
 	key := curEpochKey()
 	set(s, key, epochHash.Bytes())
@@ -101,7 +110,12 @@ func getCurrentEpochHash(s *native.NativeContract) (common.Hash, error) {
 	return common.BytesToHash(value), nil
 }
 
-// proof
+// ====================================================================
+//
+// `epoch proof` storage
+//
+// ====================================================================
+
 func storeEpochProof(s *native.NativeContract, epochID uint64, epochHash common.Hash) {
 	key := epochProofKey(EpochProofHash(epochID))
 	set(s, key, epochHash.Bytes())
@@ -124,9 +138,13 @@ func EpochProofHash(epochID uint64) common.Hash {
 	return crypto.Keccak256Hash(enc)
 }
 
-// proposal storage
-func storeProposal(s *native.NativeContract, epochHash common.Hash) error {
-	list, err := getProposals(s)
+// ====================================================================
+//
+// `epoch hash(proposal)` storage
+//
+// ====================================================================
+func storeProposal(s *native.NativeContract, epochID uint64, epochHash common.Hash) error {
+	list, err := getProposals(s, epochID)
 	if err != nil {
 		if err.Error() == "EOF" {
 			list = make([]common.Hash, 0)
@@ -135,22 +153,22 @@ func storeProposal(s *native.NativeContract, epochHash common.Hash) error {
 		}
 	}
 	list = append(list, epochHash)
-	return setProposals(s, list)
+	return setProposals(s, epochID, list)
 }
 
-func firstProposal(s *native.NativeContract) (common.Hash, error) {
-	list, err := getProposals(s)
-	if err != nil {
-		return common.EmptyHash, nil
-	}
-	if list == nil || len(list) == 0 {
-		return common.EmptyHash, nil
-	}
-	return list[0], nil
-}
+//func firstProposal(s *native.NativeContract) (common.Hash, error) {
+//	list, err := getProposals(s)
+//	if err != nil {
+//		return common.EmptyHash, nil
+//	}
+//	if list == nil || len(list) == 0 {
+//		return common.EmptyHash, nil
+//	}
+//	return list[0], nil
+//}
 
-func findProposal(s *native.NativeContract, epochHash common.Hash) bool {
-	list, err := getProposals(s)
+func findProposal(s *native.NativeContract, epochID uint64, epochHash common.Hash) bool {
+	list, err := getProposals(s, epochID)
 	if err != nil {
 		return false
 	}
@@ -162,16 +180,16 @@ func findProposal(s *native.NativeContract, epochHash common.Hash) bool {
 	return false
 }
 
-func proposalsNum(s *native.NativeContract) int {
-	list, err := getProposals(s)
+func proposalsNum(s *native.NativeContract, epochID uint64) int {
+	list, err := getProposals(s, epochID)
 	if err != nil {
 		return 0
 	}
 	return len(list)
 }
 
-func delProposal(s *native.NativeContract, epochHash common.Hash) error {
-	list, err := getProposals(s)
+func delProposal(s *native.NativeContract, epochID uint64, epochHash common.Hash) error {
+	list, err := getProposals(s, epochID)
 	if err != nil {
 		return err
 	}
@@ -184,23 +202,27 @@ func delProposal(s *native.NativeContract, epochHash common.Hash) error {
 			dst = append(dst, hash)
 		}
 	}
-
-	return setProposals(s, dst)
+	if len(dst) > 0 {
+		return setProposals(s, epochID, dst)
+	} else {
+		del(s, proposalsKey(epochID))
+		return nil
+	}
 }
 
-func setProposals(s *native.NativeContract, list []common.Hash) error {
+func setProposals(s *native.NativeContract, epochID uint64, list []common.Hash) error {
 	value, err := rlp.EncodeToBytes(&HashList{List: list})
 	if err != nil {
 		return err
 	}
 
-	key := proposalsKey()
+	key := proposalsKey(epochID)
 	set(s, key, value)
 	return nil
 }
 
-func getProposals(s *native.NativeContract) ([]common.Hash, error) {
-	key := proposalsKey()
+func getProposals(s *native.NativeContract, epochID uint64) ([]common.Hash, error) {
+	key := proposalsKey(epochID)
 	enc, err := get(s, key)
 	if err != nil {
 		return nil, err
@@ -213,7 +235,12 @@ func getProposals(s *native.NativeContract) ([]common.Hash, error) {
 	return data.List, nil
 }
 
-// vote storage
+// ====================================================================
+//
+// `vote` storage
+//
+// ====================================================================
+
 func storeVote(s *native.NativeContract, epochHash common.Hash, voter common.Address) error {
 	list, err := getVotes(s, epochHash)
 	if err != nil {
@@ -262,12 +289,17 @@ func deleteVote(s *native.NativeContract, epochHash common.Hash, voter common.Ad
 			dst = append(dst, addr)
 		}
 	}
-	return setVotes(s, epochHash, dst)
+	if len(dst) > 0 {
+		return setVotes(s, epochHash, dst)
+	} else {
+		del(s, voteKey(epochHash))
+		return nil
+	}
 }
 
 func clearVotes(s *native.NativeContract, epochHash common.Hash) {
 	key := voteKey(epochHash)
-	set(s, key, common.EmptyHash.Bytes())
+	del(s, key)
 }
 
 func setVotes(s *native.NativeContract, epochHash common.Hash, list []common.Address) error {
@@ -303,7 +335,35 @@ func getVotes(s *native.NativeContract, epochHash common.Hash) ([]common.Address
 	return data.List, nil
 }
 
-// signatures
+// ====================================================================
+//
+// `vote to` storage
+//
+// ====================================================================
+func storeVoteTo(s *native.NativeContract, epochID uint64, voter common.Address, proposal common.Hash) {
+	key := voteToKey(epochID, voter)
+	set(s, key, proposal.Bytes())
+}
+
+func delVoteTo(s *native.NativeContract, epochID uint64, voter common.Address) {
+	key := voteToKey(epochID, voter)
+	del(s, key)
+}
+
+func findVoteTo(s *native.NativeContract, epochID uint64, voter common.Address) common.Hash {
+	key := voteToKey(epochID, voter)
+	value, err := get(s, key)
+	if err != nil {
+		return common.EmptyHash
+	}
+	return common.BytesToHash(value)
+}
+
+// ====================================================================
+//
+// `consensus sign` storage
+//
+// ====================================================================
 func storeSign(s *native.NativeContract, sign *ConsensusSign) error {
 	key := signKey(sign.Hash())
 	value, err := rlp.EncodeToBytes(sign)
@@ -316,7 +376,7 @@ func storeSign(s *native.NativeContract, sign *ConsensusSign) error {
 
 func delSign(s *native.NativeContract, hash common.Hash) {
 	key := signKey(hash)
-	s.GetCacheDB().Delete(key)
+	del(s, key)
 }
 
 func getSign(s *native.NativeContract, hash common.Hash) (*ConsensusSign, error) {
@@ -391,8 +451,14 @@ func getSignerSize(s *native.NativeContract, hash common.Hash) int {
 
 func clearSigner(s *native.NativeContract, hash common.Hash) {
 	key := signerKey(hash)
-	s.GetCacheDB().Delete(key)
+	del(s, key)
 }
+
+// ====================================================================
+//
+// storage basic operations
+//
+// ====================================================================
 
 func get(s *native.NativeContract, key []byte) ([]byte, error) {
 	return customGet(s.GetCacheDB(), key)
@@ -402,11 +468,15 @@ func set(s *native.NativeContract, key, value []byte) {
 	customSet(s.GetCacheDB(), key, value)
 }
 
+func del(s *native.NativeContract, key []byte) {
+	customDel(s.GetCacheDB(), key)
+}
+
 func customGet(db *state.CacheDB, key []byte) ([]byte, error) {
 	value, err := db.Get(key)
 	if err != nil {
 		return nil, err
-	} else if value == nil {
+	} else if value == nil || len(value) == 0 {
 		return nil, ErrEof
 	} else {
 		return value, nil
@@ -417,7 +487,16 @@ func customSet(db *state.CacheDB, key, value []byte) {
 	db.Put(key, value)
 }
 
-// keys
+func customDel(db *state.CacheDB, key []byte) {
+	db.Delete(key)
+}
+
+// ====================================================================
+//
+// storage keys
+//
+// ====================================================================
+
 func epochKey(epochHash common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_EPOCH), epochHash.Bytes())
 }
@@ -430,12 +509,16 @@ func curEpochKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_CUR_EPOCH), []byte("1"))
 }
 
-func proposalsKey() []byte {
-	return utils.ConcatKey(this, []byte(SKP_PROPOSAL), []byte("2"))
+func proposalsKey(epochID uint64) []byte {
+	return utils.ConcatKey(this, []byte(SKP_PROPOSAL), utils.GetUint64Bytes(epochID))
 }
 
 func voteKey(epochHash common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_VOTE), epochHash.Bytes())
+}
+
+func voteToKey(epochID uint64, voter common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VOTE_TO), utils.GetUint64Bytes(epochID), voter.Bytes())
 }
 
 func signKey(hash common.Hash) []byte {

@@ -23,9 +23,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 func StoreGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
@@ -47,33 +47,41 @@ func StoreGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
 	return epoch, nil
 }
 
-func GetCurrentEpoch(s *state.StateDB) (*EpochInfo, error) {
-	cache := (*state.CacheDB)(s)
-	return getCurEpoch(cache)
-}
-
-func getCurEpoch(cache *state.CacheDB) (*EpochInfo, error) {
-	// get current hash
-	curKey := curEpochKey()
-	enc, err := cache.Get(curKey)
+func GetCurrentEpoch(s *native.NativeContract) (*EpochInfo, error) {
+	epochHash, err := getCurrentEpochHash(s)
 	if err != nil {
 		return nil, err
 	}
-	hash := common.BytesToHash(enc)
-
-	// get current epoch info
-	key := epochKey(hash)
-	value, err := cache.Get(key)
+	epoch, err := getEpoch(s, epochHash)
 	if err != nil {
-		return nil, err
-	}
-
-	var epoch *EpochInfo
-	if err := rlp.DecodeBytes(value, &epoch); err != nil {
 		return nil, err
 	}
 	return epoch, nil
 }
+
+//
+//func getCurEpoch(cache *state.CacheDB) (*EpochInfo, error) {
+//	// get current hash
+//	curKey := curEpochKey()
+//	enc, err := cache.Get(curKey)
+//	if err != nil {
+//		return nil, err
+//	}
+//	hash := common.BytesToHash(enc)
+//
+//	// get current epoch info
+//	key := epochKey(hash)
+//	value, err := cache.Get(key)
+//	if err != nil {
+//		return nil, err
+//	}
+//
+//	var epoch *EpochInfo
+//	if err := rlp.DecodeBytes(value, &epoch); err != nil {
+//		return nil, err
+//	}
+//	return epoch, nil
+//}
 
 func checkAuthority(origin, caller common.Address, epoch *EpochInfo) error {
 	if epoch == nil || epoch.Peers == nil || epoch.Peers.List == nil {

@@ -25,9 +25,8 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -206,7 +205,7 @@ func TestPropose(t *testing.T) {
 					StartHeight: c.StartHeight,
 					Peers:       peers,
 				}
-				storeProposal(ctx, epoch.Hash())
+				storeProposal(ctx, epoch.ID, epoch.Hash())
 				c.Payload, _ = input.Encode()
 			},
 			Expect: ErrDuplicateProposal,
