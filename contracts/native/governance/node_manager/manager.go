@@ -111,18 +111,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// check peers, number for proposal's peers should be at least 2/3 of old members
-	curMembers := curEpoch.Members()
-	if curMembers == nil {
-		log.Trace("propose", "check current epoch members", "members is nil")
-		return utils.ByteFailed, ErrInvalidEpoch
-	}
-	oldMemberSize := 0
-	for _, peer := range peers.List {
-		if _, ok := curMembers[peer.Address]; ok {
-			oldMemberSize += 1
-		}
-	}
-	if 3*oldMemberSize < 2*len(curMembers) {
+	if curEpoch.OldMemberNum(peers) < curEpoch.QuorumSize() {
 		log.Trace("propose", "check old members", "proposal peers should be at least 2/3 old members")
 		return utils.ByteFailed, ErrOldParticipantsNumber
 	}

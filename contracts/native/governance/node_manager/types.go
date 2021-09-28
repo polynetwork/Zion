@@ -30,8 +30,6 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-const PeerInfoLength int = 91
-
 type PeerInfo struct {
 	PubKey  string
 	Address common.Address
@@ -189,6 +187,32 @@ func (m *EpochInfo) QuorumSize() int {
 	}
 	total := m.Peers.Len()
 	return int(math.Ceil(float64(2*total) / 3))
+}
+
+func (m *EpochInfo) OldMemberNum(peers *Peers) int {
+	if m == nil || m.Peers == nil || m.Peers.List == nil || len(m.Peers.List) == 0 {
+		return 0
+	}
+	if peers == nil || peers.List == nil || len(peers.List) == 0 {
+		return 0
+	}
+
+	isOldMember := func(addr common.Address) bool {
+		for _, v := range m.Peers.List {
+			if v.Address == addr {
+				return true
+			}
+		}
+		return false
+	}
+
+	num := 0
+	for _, v := range peers.List {
+		if isOldMember(v.Address) {
+			num += 1
+		}
+	}
+	return num
 }
 
 type ProposalList struct {
