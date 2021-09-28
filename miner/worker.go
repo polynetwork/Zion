@@ -19,6 +19,7 @@ package miner
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -28,6 +29,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -50,6 +54,9 @@ const (
 
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
+
+	// epochChangeChanSize is the size of channel listening to EpochChangeEvent.
+	epochChangeChanSize = 10
 
 	// resubmitAdjustChanSize is the size of resubmitting interval adjustment channel.
 	resubmitAdjustChanSize = 10
@@ -133,13 +140,19 @@ type worker struct {
 	pendingLogsFeed event.Feed
 
 	// Subscriptions
-	mux          *event.TypeMux
-	txsCh        chan core.NewTxsEvent
-	txsSub       event.Subscription
-	chainHeadCh  chan core.ChainHeadEvent
-	chainHeadSub event.Subscription
-	chainSideCh  chan core.ChainSideEvent
-	chainSideSub event.Subscription
+	mux            *event.TypeMux
+	txsCh          chan core.NewTxsEvent
+	txsSub         event.Subscription
+	chainHeadCh    chan core.ChainHeadEvent
+	chainHeadSub   event.Subscription
+	chainSideCh    chan core.ChainSideEvent
+	chainSideSub   event.Subscription
+	epochChangeCh  chan core.EpochChangeEvent
+	epochChangeSub event.Subscription
+
+	changeEpochFlag bool
+	nextEpoch       *core.EpochChangeEvent
+	epochMu         sync.Mutex
 
 	// Channels
 	newWorkCh          chan *newWorkReq
@@ -203,6 +216,7 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		txsCh:              make(chan core.NewTxsEvent, txChanSize),
 		chainHeadCh:        make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:        make(chan core.ChainSideEvent, chainSideChanSize),
+		epochChangeCh:      make(chan core.EpochChangeEvent, epochChangeChanSize),
 		newWorkCh:          make(chan *newWorkReq),
 		taskCh:             make(chan *task),
 		resultCh:           make(chan *types.Block, resultQueueSize),
@@ -216,6 +230,7 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+	worker.epochChangeSub = node_manager.SubscribeEpochChange(worker.epochChangeCh)
 
 	// Sanitize recommit interval if the user-specified one is too short.
 	recommit := worker.config.Recommit
@@ -394,6 +409,9 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
+
+		case change := <-w.epochChangeCh:
+			w.processEpochChange(&change)
 
 		case <-timer.C:
 			// If mining is running resubmit a new work cycle periodically to pull in
@@ -1054,4 +1072,48 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 		feesWei.Add(feesWei, new(big.Int).Mul(new(big.Int).SetUint64(receipts[i].GasUsed), tx.GasPrice()))
 	}
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
+}
+
+// todo:
+//  1. get current epoch info
+// 	2. set worker.nextEpoch
+// 	3. waiting for next epoch start height and restart consensus
+func (w *worker) processEpochChange(event *core.EpochChangeEvent) {
+	w.epochMu.Lock()
+	defer w.epochMu.Unlock()
+
+	w.changeEpochFlag = true
+	w.nextEpoch = event
+}
+
+func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) error {
+	contractAddr := utils.NodeManagerContractAddress
+	caller := w.coinbase
+	ref := native.NewContractRef(st, caller, caller, blockNum, common.EmptyHash, 0, nil)
+
+	method := node_manager.MethodEpoch
+	payload, err := utils.PackMethod(node_manager.ABI, method)
+	if err != nil {
+		log.Error("[miner worker]", "pack input failed", err, "method", method)
+		return err
+	}
+	enc, _, err := ref.NativeCall(caller, contractAddr, payload)
+	if err != nil {
+		log.Error("[miner worker]", "native call failed", err, "method", method)
+		return err
+	}
+
+	output := new(node_manager.MethodEpochOutput)
+	err = utils.UnpackOutputs(node_manager.ABI, method, output, enc)
+	if err != nil {
+		log.Error("[miner worker]", "unpack output failed", err, "method", method)
+		return err
+	}
+
+	if output.Epoch == nil || w.nextEpoch == nil || output.Epoch.Hash() != w.nextEpoch.Hash {
+		log.Errorf("[miner worker]", "check epoch failed", "epoch may be nil or hash not match")
+		return fmt.Errorf("invalid epoch")
+	}
+
+	return nil
 }

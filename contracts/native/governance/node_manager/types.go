@@ -77,6 +77,9 @@ func (m *Peers) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (m *Peers) Len() int {
+	if m == nil || m.List == nil {
+		return 0
+	}
 	return len(m.List)
 }
 
@@ -192,7 +195,7 @@ func (m *EpochInfo) Hash() common.Hash {
 }
 
 func (m *EpochInfo) Members() map[common.Address]struct{} {
-	if m == nil || m.Peers == nil || m.Peers.List == nil {
+	if m == nil || m.Peers == nil || m.Peers.List == nil || len(m.Peers.List) == 0 {
 		return nil
 	}
 	data := make(map[common.Address]struct{})
@@ -200,6 +203,17 @@ func (m *EpochInfo) Members() map[common.Address]struct{} {
 		data[v.Address] = struct{}{}
 	}
 	return data
+}
+
+func (m *EpochInfo) MemberList() []common.Address {
+	list := make([]common.Address, 0)
+	if m == nil || m.Peers == nil || m.Peers.List == nil || len(m.Peers.List) == 0 {
+		return list
+	}
+	for _, v := range m.Peers.List {
+		list = append(list, v.Address)
+	}
+	return list
 }
 
 func (m *EpochInfo) QuorumSize() int {
