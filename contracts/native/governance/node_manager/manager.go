@@ -173,6 +173,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	return utils.ByteSuccess, nil
 }
 
+// todo(fuk): 同一个epoch期间一个voter只能投给一个proposal，不能投给多个不同的proposal
 func Vote(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	voter := s.ContractRef().TxOrigin()

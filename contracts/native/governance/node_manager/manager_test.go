@@ -22,6 +22,7 @@ import (
 	"crypto/rand"
 	"math/big"
 	"os"
+	"sort"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -165,12 +166,66 @@ func TestPropose(t *testing.T) {
 			},
 			Expect: ErrOldParticipantsNumber,
 		},
+		{
+			BlockNum:    3,
+			StartHeight: 2,
+			Index:       9,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := testGenesisEpoch.Peers.Copy()
+				peers.List = append(peers.List, generateTestPeers(1).List...)
+				c.StartHeight += MinEpochValidPeriod - 1
+				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
+				c.Payload, _ = input.Encode()
+			},
+			Expect: ErrProposalStartHeight,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: 2,
+			Index:       10,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := testGenesisEpoch.Peers.Copy()
+				peers.List = append(peers.List, generateTestPeers(1).List...)
+				c.StartHeight += MaxEpochValidPeriod + 10
+				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
+				c.Payload, _ = input.Encode()
+			},
+			Expect: ErrProposalStartHeight,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: MinEpochValidPeriod + 10,
+			Index:       11,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := testGenesisEpoch.Peers.Copy()
+				peers.List = append(peers.List, generateTestPeers(1).List...)
+				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
+				sort.Sort(peers)
+				epoch := &EpochInfo{
+					ID:          testGenesisEpoch.ID + 1,
+					StartHeight: c.StartHeight,
+					Peers:       peers,
+				}
+				storeProposal(ctx, epoch.Hash())
+				c.Payload, _ = input.Encode()
+			},
+			Expect: ErrDuplicateProposal,
+		},
+		{
+			BlockNum:    3,
+			StartHeight: MinEpochValidPeriod + 10,
+			Index:       12,
+			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
+				peers := testGenesisEpoch.Peers.Copy()
+				peers.List = append(peers.List, generateTestPeers(1).List...)
+				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
+				c.Payload, _ = input.Encode()
+			},
+			Expect: nil,
+		},
 	}
 
 	for _, v := range cases {
-		if v.Index == 8 {
-			t.Log("---")
-		}
 		resetTestContext()
 		ctx := generateNativeContract(testCaller, v.BlockNum)
 		if v.BeforeHandler != nil {
