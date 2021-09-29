@@ -21,7 +21,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -152,7 +151,7 @@ type HotStuff interface {
 	// Start starts the engine
 	Start(chain ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
 
-	ResetValidators(valset hotstuff.ValidatorSet)
+	ResetValidators(list []common.Address)
 
 	// Stop stops the engine
 	Stop() error

@@ -25,14 +25,14 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 )
 
 var epochChangeFeed event.Feed
 
-func SubscribeEpochChange(ch chan<- core.EpochChangeEvent) event.Subscription {
+func SubscribeEpochChange(ch chan<- types.EpochChangeEvent) event.Subscription {
 	return epochChangeFeed.Subscribe(ch)
 }
 
@@ -297,7 +297,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 			return utils.ByteFailed, ErrEmitLog
 		}
 
-		epochChangeFeed.Send(core.EpochChangeEvent{
+		epochChangeFeed.Send(types.EpochChangeEvent{
 			EpochID:     epoch.StartHeight,
 			StartHeight: epoch.StartHeight,
 			Validators:  epoch.MemberList(),

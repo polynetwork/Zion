@@ -41,10 +41,3 @@ type ChainSideEvent struct {
 }
 
 type ChainHeadEvent struct{ Block *types.Block }
-
-type EpochChangeEvent struct {
-	EpochID     uint64
-	StartHeight uint64
-	Validators  []common.Address
-	Hash        common.Hash
-}

@@ -27,8 +27,6 @@ import (
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -148,12 +146,12 @@ type worker struct {
 	chainHeadSub   event.Subscription
 	chainSideCh    chan core.ChainSideEvent
 	chainSideSub   event.Subscription
-	epochChangeCh  chan core.EpochChangeEvent
+	epochChangeCh  chan types.EpochChangeEvent
 	epochChangeSub event.Subscription
 
 	changeEpochFlag bool
 	epochCheckFlag  bool
-	nextEpoch       *core.EpochChangeEvent
+	nextEpoch       *types.EpochChangeEvent
 	epochMu         sync.Mutex
 
 	// Channels
@@ -218,7 +216,7 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		txsCh:              make(chan core.NewTxsEvent, txChanSize),
 		chainHeadCh:        make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:        make(chan core.ChainSideEvent, chainSideChanSize),
-		epochChangeCh:      make(chan core.EpochChangeEvent, epochChangeChanSize),
+		epochChangeCh:      make(chan types.EpochChangeEvent, epochChangeChanSize),
 		newWorkCh:          make(chan *newWorkReq),
 		taskCh:             make(chan *task),
 		resultCh:           make(chan *types.Block, resultQueueSize),
@@ -1087,7 +1085,7 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
 }
 
-func (w *worker) processEpochChange(event *core.EpochChangeEvent) {
+func (w *worker) processEpochChange(event *types.EpochChangeEvent) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
 
@@ -1166,9 +1164,7 @@ func (w *worker) handleEpochChange(st *state.StateDB, height uint64) bool {
 
 	if inNextEpoch(w.coinbase) {
 		if engine, ok := w.engine.(consensus.HotStuff); ok {
-			list := w.nextEpoch.Validators
-			valset := validator.NewSet(list, hotstuff.RoundRobin)
-			engine.ResetValidators(valset)
+			engine.ResetValidators(w.nextEpoch.Validators)
 		}
 		w.Start()
 	}
@@ -1180,6 +1176,7 @@ func (w *worker) clearEpoch() {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
 
+	w.nextEpoch = nil
 	w.changeEpochFlag = false
 	w.epochCheckFlag = false
 }

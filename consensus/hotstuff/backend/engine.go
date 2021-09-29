@@ -7,6 +7,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -285,8 +286,8 @@ func (s *backend) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscri
 	return s.core.SubscribeRequest(ch)
 }
 
-func (s *backend) ResetValidators(valset hotstuff.ValidatorSet) {
-	s.valset = valset.Copy()
+func (s *backend) ResetValidators(list []common.Address) {
+	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
 	s.core.ResetValidators(s.valset)
 }
 
