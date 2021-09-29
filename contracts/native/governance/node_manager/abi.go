@@ -58,18 +58,25 @@ const abijson = `[
 	{"type":"event","name":"` + EventConsensusSigned + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Method","type":"string"},{"indexed":false,"internalType":"bytes","name":"Input","type":"bytes"},{"indexed":false,"internalType":"address","name":"Signer","type":"address"},{"indexed":false,"internalType":"uint64","name":"Size","type":"uint64"}]}
 ]`
 
-func GetABI() *abi.ABI {
+func InitABI() {
 	ab, err := abi.JSON(strings.NewReader(abijson))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
-	return &ab
+	ABI = &ab
 }
 
 var (
 	ABI  *abi.ABI
 	this = utils.NodeManagerContractAddress
 )
+
+type MethodContractNameInput struct{}
+
+func (m *MethodContractNameInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodContractName)
+}
+func (m *MethodContractNameInput) Decode(payload []byte) error { return nil }
 
 type MethodContractNameOutput struct {
 	Name string
@@ -152,7 +159,13 @@ func (m *MethodVoteOutput) Decode(payload []byte) error {
 }
 
 // useless input
-//type MethodEpochInput struct{}
+type MethodEpochInput struct{}
+
+func (m *MethodEpochInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodEpoch)
+}
+func (m *MethodEpochInput) Decode(payload []byte) error { return nil }
+
 type MethodEpochOutput struct {
 	Epoch *EpochInfo
 }

@@ -39,8 +39,8 @@ func SubscribeEpochChange(ch chan<- types.EpochChangeEvent) event.Subscription {
 var (
 	gasTable = map[string]uint64{
 		MethodContractName: 0,
-		MethodPropose:      100000000,
-		MethodVote:         100000,
+		MethodPropose:      20000,
+		MethodVote:         20000,
 		MethodEpoch:        0,
 	}
 )
@@ -58,7 +58,7 @@ const (
 )
 
 func InitNodeManager() {
-	ABI = GetABI()
+	InitABI()
 	native.Contracts[this] = RegisterNodeManagerContract
 }
 

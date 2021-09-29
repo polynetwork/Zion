@@ -111,7 +111,7 @@ func (s *NativeContract) Invoke() ([]byte, error) {
 		return nil, fmt.Errorf("failed to find method: [%s]", methodID)
 	}
 	gasLeft := s.ref.gasLeft
-	if gasLeft < needGas && gasLeft < MinGasUsage {
+	if gasLeft < needGas || gasLeft < MinGasUsage {
 		return nil, fmt.Errorf("gasLeft not enough, need %d", needGas)
 	}
 
@@ -123,7 +123,6 @@ func (s *NativeContract) Invoke() ([]byte, error) {
 	if needGas > 0 {
 		s.ref.gasLeft -= needGas
 	}
-
 	return ret, err
 }
 

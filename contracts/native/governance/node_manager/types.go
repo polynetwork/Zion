@@ -173,7 +173,13 @@ func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (m *EpochInfo) String() string {
-	return fmt.Sprintf("{ID: %d, Start Height: %d, Status: %s}", m.ID, m.StartHeight, m.Status.String())
+	pstr := ""
+	if m.Peers != nil && m.Peers.List != nil {
+		for _, v := range m.Peers.List {
+			pstr += fmt.Sprintf("peer: %s, pubkey: %s\r\n", v.Address.Hex(), v.PubKey)
+		}
+	}
+	return fmt.Sprintf("epochHash:%s\r\nepochId: %d\r\n%sstartHeight: %d\r\nstatus:%s", m.Hash().Hex(), m.ID, pstr, m.StartHeight, m.Status.String())
 }
 
 func (m *EpochInfo) Hash() common.Hash {

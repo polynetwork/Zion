@@ -76,6 +76,8 @@ func TestEpochInfoType(t *testing.T) {
 	expectHash := expect.Hash()
 	assert.NotEmpty(t, expect.hash)
 	assert.Equal(t, expectHash, expect.Hash())
+
+	t.Log(got.String())
 }
 
 func TestHashListType(t *testing.T) {
