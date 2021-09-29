@@ -918,11 +918,13 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	}
 
 	// check epoch and prepare to restart consensus engine
-	rs := w.current.state.Copy()
-	w.checkEpoch(rs, num)
-	if w.handleEpochChange(rs, header.Number.Uint64()) {
-		w.clearEpoch()
-		return
+	if w.current != nil && w.current.state != nil {
+		rs := w.current.state.Copy()
+		w.checkEpoch(rs, num)
+		if w.handleEpochChange(rs, header.Number.Uint64()) {
+			w.clearEpoch()
+			return
+		}
 	}
 
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
