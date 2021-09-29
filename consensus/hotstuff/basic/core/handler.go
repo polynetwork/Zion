@@ -54,6 +54,10 @@ func (c *core) Stop() error {
 	return nil
 }
 
+func (c *core) ResetValidators(valset hotstuff.ValidatorSet) {
+	c.valSet = valset
+}
+
 // ----------------------------------------------------------------------------
 
 // Subscribe both internal and external events

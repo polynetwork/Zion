@@ -19,7 +19,6 @@ package miner
 import (
 	"bytes"
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -28,6 +27,8 @@ import (
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -151,6 +152,7 @@ type worker struct {
 	epochChangeSub event.Subscription
 
 	changeEpochFlag bool
+	epochCheckFlag  bool
 	nextEpoch       *core.EpochChangeEvent
 	epochMu         sync.Mutex
 
@@ -305,9 +307,9 @@ func (w *worker) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription
 
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) Start() {
-	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
-		if err := istanbul.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
-			log.Warn("Failed to start hotstuff event-driven engine", "err", err)
+	if engine, ok := w.engine.(consensus.HotStuff); ok {
+		if err := engine.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
+			log.Warn("Failed to start hotstuff basic engine", "err", err)
 			return
 		}
 	}
@@ -317,8 +319,10 @@ func (w *worker) Start() {
 
 // stop sets the running status as 0.
 func (w *worker) Stop() {
-	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
-		istanbul.Stop()
+	if engine, ok := w.engine.(consensus.HotStuff); ok {
+		if err := engine.Stop(); err != nil {
+			log.Warn("Failed to stop hotstuff basic engine", "err", err)
+		}
 	}
 	atomic.StoreInt32(&w.running, 0)
 }
@@ -914,6 +918,15 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		Extra:      w.extra,
 		Time:       uint64(timestamp),
 	}
+
+	// check epoch and prepare to restart consensus engine
+	rs := w.current.state.Copy()
+	w.checkEpoch(rs, num)
+	if w.handleEpochChange(rs, header.Number.Uint64()) {
+		w.clearEpoch()
+		return
+	}
+
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
 	if w.IsRunning() {
 		if w.coinbase == (common.Address{}) {
@@ -1074,19 +1087,25 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
 }
 
-// todo:
-//  1. get current epoch info
-// 	2. set worker.nextEpoch
-// 	3. waiting for next epoch start height and restart consensus
 func (w *worker) processEpochChange(event *core.EpochChangeEvent) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
 
+	if w.changeEpochFlag {
+		return
+	}
 	w.changeEpochFlag = true
 	w.nextEpoch = event
 }
 
-func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) error {
+func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
+	w.epochMu.Lock()
+	defer w.epochMu.Unlock()
+
+	if !w.changeEpochFlag || w.epochCheckFlag {
+		return
+	}
+
 	contractAddr := utils.NodeManagerContractAddress
 	caller := w.coinbase
 	ref := native.NewContractRef(st, caller, caller, blockNum, common.EmptyHash, 0, nil)
@@ -1095,25 +1114,72 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) error {
 	payload, err := utils.PackMethod(node_manager.ABI, method)
 	if err != nil {
 		log.Error("[miner worker]", "pack input failed", err, "method", method)
-		return err
+		return
 	}
 	enc, _, err := ref.NativeCall(caller, contractAddr, payload)
 	if err != nil {
 		log.Error("[miner worker]", "native call failed", err, "method", method)
-		return err
+		return
 	}
 
 	output := new(node_manager.MethodEpochOutput)
-	err = utils.UnpackOutputs(node_manager.ABI, method, output, enc)
-	if err != nil {
+	if err = utils.UnpackOutputs(node_manager.ABI, method, output, enc); err != nil {
 		log.Error("[miner worker]", "unpack output failed", err, "method", method)
-		return err
+		return
 	}
 
 	if output.Epoch == nil || w.nextEpoch == nil || output.Epoch.Hash() != w.nextEpoch.Hash {
 		log.Errorf("[miner worker]", "check epoch failed", "epoch may be nil or hash not match")
-		return fmt.Errorf("invalid epoch")
+		return
 	}
 
-	return nil
+	w.epochCheckFlag = true
+	return
+}
+
+func (w *worker) handleEpochChange(st *state.StateDB, height uint64) bool {
+	w.epochMu.Lock()
+	defer w.epochMu.Unlock()
+
+	if !w.epochCheckFlag || w.nextEpoch == nil || height != w.nextEpoch.StartHeight {
+		return false
+	}
+
+	if w.nextEpoch == nil || w.nextEpoch.Validators == nil || len(w.nextEpoch.Validators) == 0 {
+		log.Warn("Failed to change epoch", "err", "epoch validators should not be empty")
+		return false
+	}
+
+	w.Stop()
+
+	// waiting for all stop
+	time.Sleep(10 * time.Second)
+
+	inNextEpoch := func(addr common.Address) bool {
+		for _, v := range w.nextEpoch.Validators {
+			if v == addr {
+				return true
+			}
+		}
+		return false
+	}
+
+	if inNextEpoch(w.coinbase) {
+		if engine, ok := w.engine.(consensus.HotStuff); ok {
+			list := w.nextEpoch.Validators
+			valset := validator.NewSet(list, hotstuff.RoundRobin)
+			engine.ResetValidators(valset)
+		}
+		w.Start()
+	}
+
+	return true
+}
+
+func (w *worker) clearEpoch() {
+	w.epochMu.Lock()
+	defer w.epochMu.Unlock()
+
+	w.changeEpochFlag = false
+	w.epochCheckFlag = false
 }
