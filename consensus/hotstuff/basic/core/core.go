@@ -118,6 +118,7 @@ func (c *core) startNewRound(round *big.Int) {
 
 	if !c.isRunning {
 		logger.Trace("Start engine first")
+		return
 	}
 
 	changeView := false
