@@ -29,7 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -230,7 +230,7 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
-	worker.epochChangeSub = node_manager.SubscribeEpochChange(worker.epochChangeCh)
+	worker.epochChangeSub = nm.SubscribeEpochChange(worker.epochChangeCh)
 
 	// Sanitize recommit interval if the user-specified one is too short.
 	recommit := worker.config.Recommit
@@ -413,6 +413,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			commit(false, commitInterruptNewHead)
 
 		case change := <-w.epochChangeCh:
+			log.Debug("[miner worker]", "receive epoch change event", change.Hash.Hex(), "ID", change.EpochID)
 			w.processEpochChange(&change)
 
 		case <-timer.C:
@@ -1106,25 +1107,23 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
 		return
 	}
 
-	contractAddr := utils.NodeManagerContractAddress
+	log.Debug("[miner worker], start check epoch")
+
 	caller := w.coinbase
 	ref := native.NewContractRef(st, caller, caller, blockNum, common.EmptyHash, 0, nil)
-
-	method := node_manager.MethodEpoch
-	payload, err := utils.PackMethod(node_manager.ABI, method)
+	payload, err := new(nm.MethodEpochInput).Encode()
 	if err != nil {
-		log.Error("[miner worker]", "pack input failed", err, "method", method)
+		log.Error("[miner worker]", "pack `epoch` input failed", err)
 		return
 	}
-	enc, _, err := ref.NativeCall(caller, contractAddr, payload)
+	enc, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
 	if err != nil {
-		log.Error("[miner worker]", "native call failed", err, "method", method)
+		log.Error("[miner worker]", "native call `epoch` failed", err)
 		return
 	}
-
-	output := new(node_manager.MethodEpochOutput)
-	if err = utils.UnpackOutputs(node_manager.ABI, method, output, enc); err != nil {
-		log.Error("[miner worker]", "unpack output failed", err, "method", method)
+	output := new(nm.MethodEpochOutput)
+	if err := output.Decode(enc); err != nil {
+		log.Error("[miner worker]", "unpack `epoch` output failed", err)
 		return
 	}
 
@@ -1134,6 +1133,7 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
 	}
 
 	w.epochCheckFlag = true
+	log.Debug("[miner worker]", "check epoch", "success")
 	return
 }
 
@@ -1144,6 +1144,8 @@ func (w *worker) handleEpochChange(st *state.StateDB, height uint64) bool {
 	if !w.epochCheckFlag || w.nextEpoch == nil || height != w.nextEpoch.StartHeight {
 		return false
 	}
+
+	log.Debug("[miner worker]", "handle epoch change, height", height)
 
 	if w.nextEpoch == nil || w.nextEpoch.Validators == nil || len(w.nextEpoch.Validators) == 0 {
 		log.Warn("Failed to change epoch", "err", "epoch validators should not be empty")
@@ -1169,6 +1171,9 @@ func (w *worker) handleEpochChange(st *state.StateDB, height uint64) bool {
 			engine.ResetValidators(w.nextEpoch.Validators)
 		}
 		w.Start()
+		log.Debug("Restart consensus engine")
+	} else {
+		log.Trace("Coinbase not in next epoch")
 	}
 
 	return true
@@ -1181,4 +1186,5 @@ func (w *worker) clearEpoch() {
 	w.nextEpoch = nil
 	w.changeEpochFlag = false
 	w.epochCheckFlag = false
+	log.Debug("Clear miner epoch")
 }

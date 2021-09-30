@@ -69,6 +69,9 @@ func (s *NativeContract) Prepare(ab *abi.ABI, gasTb map[string]uint64) {
 	s.gasTable = make(map[string]uint64)
 	for name, gas := range gasTb {
 		id := utils.MethodID(s.ab, name)
+		if gas > 0 && gas < FailedTxGasUsage {
+			panic(fmt.Sprintf("Tx writing gas usage should be above %d", FailedTxGasUsage))
+		}
 		s.gasTable[id] = gas
 	}
 }
@@ -111,14 +114,14 @@ func (s *NativeContract) Invoke() ([]byte, error) {
 		return nil, fmt.Errorf("failed to find method: [%s]", methodID)
 	}
 	gasLeft := s.ref.gasLeft
-	if gasLeft < needGas || gasLeft < MinGasUsage {
-		return nil, fmt.Errorf("gasLeft not enough, need %d", needGas)
+	if gasLeft < needGas {
+		return nil, fmt.Errorf("gasLeft not enough, need %d, got %d", needGas, gasLeft)
 	}
 
 	// execute transaction and cost gas
 	ret, err := handler(s)
-	if err != nil && needGas > MinGasUsage {
-		needGas = MinGasUsage
+	if err != nil && needGas > FailedTxGasUsage {
+		needGas = FailedTxGasUsage
 	}
 	if needGas > 0 {
 		s.ref.gasLeft -= needGas

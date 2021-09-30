@@ -46,7 +46,7 @@ var (
 )
 
 const (
-	MinEpochValidPeriod     uint64 = 100
+	MinEpochValidPeriod     uint64 = 60
 	DefaultEpochValidPeriod uint64 = 86400
 	MaxEpochValidPeriod     uint64 = 86400 * 10
 	MinProposalPeersLen     int    = 4   // F = 1, n >= 3f + 1
@@ -182,6 +182,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, ErrEmitLog
 	}
 
+	log.Debug("propose", "validator send an proposal", proposer.Hex(), "epoch", epoch.String())
 	return utils.ByteSuccess, nil
 }
 
@@ -264,6 +265,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 		}
 	}
 
+	log.Debug("vote", "validator vote to proposal", epoch.Hash(), "voter", voter.Hex(), "epoch ID", epochID)
 	// store vote
 	storeVoteTo(s, input.EpochID, voter, proposal)
 	if err := storeVote(s, proposal, voter); err != nil {
@@ -303,6 +305,8 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 			Validators:  epoch.MemberList(),
 			Hash:        epoch.Hash(),
 		})
+
+		log.Debug("vote", "proposal passed", epoch.Hash())
 	}
 
 	return utils.ByteSuccess, nil

@@ -22,8 +22,8 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
-// MinGasUsage tx's gas usage should not be greater than an minimum fixed value if it execute failed.
-const MinGasUsage = uint64(100)
+// FailedTxGasUsage tx's gas usage should not be greater than an minimum fixed value if it execute failed.
+const FailedTxGasUsage = uint64(100)
 
 const (
 	NativeGovernance       = "governance"
