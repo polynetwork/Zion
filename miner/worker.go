@@ -1146,35 +1146,24 @@ func (w *worker) handleEpochChange(st *state.StateDB, height uint64) bool {
 	}
 
 	log.Debug("[miner worker]", "handle epoch change, height", height)
-
 	if w.nextEpoch == nil || w.nextEpoch.Validators == nil || len(w.nextEpoch.Validators) == 0 {
 		log.Warn("Failed to change epoch", "err", "epoch validators should not be empty")
 		return false
 	}
 
-	w.Stop()
-
-	// waiting for all stop
-	time.Sleep(10 * time.Second)
-
-	inNextEpoch := func(addr common.Address) bool {
-		for _, v := range w.nextEpoch.Validators {
-			if v == addr {
-				return true
-			}
-		}
+	engine, ok := w.engine.(consensus.HotStuff)
+	if !ok {
+		log.Warn("Only basic-hotstuff support `change-epoch`")
 		return false
 	}
 
-	if inNextEpoch(w.coinbase) {
-		if engine, ok := w.engine.(consensus.HotStuff); ok {
-			engine.ResetValidators(w.nextEpoch.Validators)
-		}
-		w.Start()
-		log.Debug("Restart consensus engine")
-	} else {
-		log.Trace("Coinbase not in next epoch")
+	log.Debug("Restart consensus engine")
+	w.Stop()
+	if err := engine.ChangeEpoch(w.nextEpoch.StartHeight, w.nextEpoch.Validators); err != nil {
+		log.Error("Change Epoch", "change failed", err)
+		return false
 	}
+	w.Start()
 
 	return true
 }

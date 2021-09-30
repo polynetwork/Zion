@@ -286,9 +286,9 @@ func (s *backend) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscri
 	return s.core.SubscribeRequest(ch)
 }
 
-func (s *backend) ResetValidators(list []common.Address) {
+func (s *backend) ChangeEpoch(epochStartHeight uint64, list []common.Address) error {
 	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
-	s.core.ResetValidators(s.valset)
+	return s.core.ChangeEpoch(epochStartHeight, s.valset)
 }
 
 func (s *backend) getPendingParentHeader(chain consensus.ChainHeaderReader, header *types.Header) (*types.Header, error) {
