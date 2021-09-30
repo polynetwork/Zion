@@ -49,16 +49,16 @@ func TestPeersType(t *testing.T) {
 	assert.Equal(t, expect, got)
 }
 
-func TestProposalType(t *testing.T) {
-	expect := &Proposal{Proposer: generateTestAddress(1227348), Hash: generateTestHash(23742983)}
-
-	enc, err := rlp.EncodeToBytes(expect)
-	assert.NoError(t, err)
-
-	var got *Proposal
-	assert.NoError(t, rlp.DecodeBytes(enc, &got))
-	assert.Equal(t, expect, got)
-}
+//func TestProposalType(t *testing.T) {
+//	expect := &Proposal{Proposer: generateTestAddress(1227348), Hash: generateTestHash(23742983)}
+//
+//	enc, err := rlp.EncodeToBytes(expect)
+//	assert.NoError(t, err)
+//
+//	var got *Proposal
+//	assert.NoError(t, rlp.DecodeBytes(enc, &got))
+//	assert.Equal(t, expect, got)
+//}
 
 func TestEpochInfoType(t *testing.T) {
 	expect := generateTestEpochInfo(1, 32, 10)

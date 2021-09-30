@@ -103,28 +103,6 @@ func (m *Peers) Copy() *Peers {
 	return cp
 }
 
-type Proposal struct {
-	Proposer common.Address
-	Hash     common.Hash
-}
-
-func (m *Proposal) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Proposer, m.Hash})
-}
-
-func (m *Proposal) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Proposer common.Address
-		Hash     common.Hash
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Proposer, m.Hash = data.Proposer, data.Hash
-	return nil
-}
-
 type ProposalStatusType uint8
 
 const (
@@ -148,13 +126,14 @@ type EpochInfo struct {
 	ID          uint64
 	Peers       *Peers
 	StartHeight uint64
+	Proposer    common.Address // hash generating without fields of `Proposer` and `Status`
 	Status      ProposalStatusType
 
 	hash atomic.Value
 }
 
 func (m *EpochInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ID, m.Peers, m.StartHeight, uint8(m.Status)})
+	return rlp.Encode(w, []interface{}{m.ID, m.Peers, m.StartHeight, m.Proposer, uint8(m.Status)})
 }
 
 func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
@@ -162,13 +141,14 @@ func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
 		ID          uint64
 		Peers       *Peers
 		StartHeight uint64
+		Proposer    common.Address
 		Status      uint8
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.ID, m.Peers, m.StartHeight, m.Status = data.ID, data.Peers, data.StartHeight, ProposalStatusType(data.Status)
+	m.ID, m.Peers, m.StartHeight, m.Proposer, m.Status = data.ID, data.Peers, data.StartHeight, data.Proposer, ProposalStatusType(data.Status)
 	return nil
 }
 
@@ -179,7 +159,8 @@ func (m *EpochInfo) String() string {
 			pstr += fmt.Sprintf("peer: %s, pubkey: %s\r\n", v.Address.Hex(), v.PubKey)
 		}
 	}
-	return fmt.Sprintf("epochHash:%s\r\nepochId: %d\r\n%sstartHeight: %d\r\nstatus:%s", m.Hash().Hex(), m.ID, pstr, m.StartHeight, m.Status.String())
+	return fmt.Sprintf("epochHash:%s\r\nepochId: %d\r\n%sstartHeight: %d\r\nproposer:%s\r\nstatus:%s",
+		m.Hash().Hex(), m.ID, pstr, m.StartHeight, m.Proposer.Hex(), m.Status.String())
 }
 
 func (m *EpochInfo) Hash() common.Hash {
@@ -254,26 +235,6 @@ func (m *EpochInfo) OldMemberNum(peers *Peers) int {
 		}
 	}
 	return num
-}
-
-type ProposalList struct {
-	List []*Proposal
-}
-
-func (m *ProposalList) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.List})
-}
-
-func (m *ProposalList) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		List []*Proposal
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.List = data.List
-	return nil
 }
 
 type HashList struct {

@@ -143,26 +143,26 @@ func EpochProofHash(epochID uint64) common.Hash {
 // `epoch hash(proposal)` storage
 //
 // ====================================================================
-func storeProposal(s *native.NativeContract, epochID uint64, proposer common.Address, hash common.Hash) error {
+func storeProposal(s *native.NativeContract, epochID uint64, hash common.Hash) error {
 	list, err := getProposals(s, epochID)
 	if err != nil {
 		if err.Error() == "EOF" {
-			list = make([]*Proposal, 0)
+			list = make([]common.Hash, 0)
 		} else {
 			return err
 		}
 	}
-	list = append(list, &Proposal{Proposer: proposer, Hash: hash})
+	list = append(list, hash)
 	return setProposals(s, epochID, list)
 }
 
-func checkProposal(s *native.NativeContract, epochID uint64, proposer common.Address, epochHash common.Hash) bool {
+func checkProposal(s *native.NativeContract, epochID uint64, epochHash common.Hash) bool {
 	list, err := getProposals(s, epochID)
 	if err != nil {
 		return false
 	}
 	for _, v := range list {
-		if v.Proposer == proposer && v.Hash == epochHash {
+		if v == epochHash {
 			return true
 		}
 	}
@@ -175,25 +175,11 @@ func findProposal(s *native.NativeContract, epochID uint64, epochHash common.Has
 		return false
 	}
 	for _, v := range list {
-		if v.Hash == epochHash {
+		if v == epochHash {
 			return true
 		}
 	}
 	return false
-}
-
-func proposalsNum(s *native.NativeContract, epochID uint64, proposer common.Address) int {
-	list, err := getProposals(s, epochID)
-	if err != nil {
-		return 0
-	}
-	num := 0
-	for _, v := range list {
-		if v.Proposer == proposer {
-			num += 1
-		}
-	}
-	return num
 }
 
 func totalProposalsNum(s *native.NativeContract, epochID uint64) int {
@@ -210,9 +196,9 @@ func delProposal(s *native.NativeContract, epochID uint64, epochHash common.Hash
 		return err
 	}
 
-	dst := make([]*Proposal, 0)
+	dst := make([]common.Hash, 0)
 	for _, v := range list {
-		if v.Hash == epochHash {
+		if v == epochHash {
 			continue
 		} else {
 			dst = append(dst, v)
@@ -226,8 +212,8 @@ func delProposal(s *native.NativeContract, epochID uint64, epochHash common.Hash
 	}
 }
 
-func setProposals(s *native.NativeContract, epochID uint64, list []*Proposal) error {
-	value, err := rlp.EncodeToBytes(&ProposalList{List: list})
+func setProposals(s *native.NativeContract, epochID uint64, list []common.Hash) error {
+	value, err := rlp.EncodeToBytes(&HashList{List: list})
 	if err != nil {
 		return err
 	}
@@ -237,18 +223,34 @@ func setProposals(s *native.NativeContract, epochID uint64, list []*Proposal) er
 	return nil
 }
 
-func getProposals(s *native.NativeContract, epochID uint64) ([]*Proposal, error) {
+func getProposals(s *native.NativeContract, epochID uint64) ([]common.Hash, error) {
 	key := proposalsKey(epochID)
 	enc, err := get(s, key)
 	if err != nil {
 		return nil, err
 	}
 
-	var data *ProposalList
+	var data *HashList
 	if err := rlp.DecodeBytes(enc, &data); err != nil {
 		return nil, err
 	}
 	return data.List, nil
+}
+
+func proposalsNum(s *native.NativeContract, epochID uint64, proposer common.Address) int {
+	list, err := getProposals(s, epochID)
+	if err != nil {
+		return 0
+	}
+	num := 0
+	for _, v := range list {
+		if epoch, err := getEpoch(s, v); err == nil {
+			if epoch.Proposer == proposer {
+				num += 1
+			}
+		}
+	}
+	return num
 }
 
 // ====================================================================
@@ -328,14 +330,6 @@ func setVotes(s *native.NativeContract, epochHash common.Hash, list []common.Add
 
 	set(s, key, value)
 	return nil
-}
-
-func getVoteSize(s *native.NativeContract, epochHash common.Hash) int {
-	votes, err := getVotes(s, epochHash)
-	if err != nil {
-		return 0
-	}
-	return len(votes)
 }
 
 func getVotes(s *native.NativeContract, epochHash common.Hash) ([]common.Address, error) {

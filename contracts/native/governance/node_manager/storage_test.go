@@ -60,16 +60,14 @@ func TestStorageEpochProof(t *testing.T) {
 
 func TestStorageProposal(t *testing.T) {
 	expectSize := int(100)
-	expectProposer := generateTestAddress(12)
 	expectHashList := generateTestHashList(expectSize).List
 	expectEpochID := uint64(2)
-	expect := make([]*Proposal, 0)
+	expect := make([]common.Hash, 0)
 
 	// test store proposal
 	for _, hash := range expectHashList {
-		proposal := &Proposal{Proposer: expectProposer, Hash: hash}
-		expect = append(expect, proposal)
-		assert.NoError(t, storeProposal(testEmptyCtx, expectEpochID, proposal.Proposer, proposal.Hash))
+		expect = append(expect, hash)
+		assert.NoError(t, storeProposal(testEmptyCtx, expectEpochID, hash))
 	}
 	assert.Equal(t, expectSize, totalProposalsNum(testEmptyCtx, expectEpochID))
 
@@ -80,15 +78,32 @@ func TestStorageProposal(t *testing.T) {
 
 	// test find proposal
 	for _, v := range expect {
-		assert.True(t, findProposal(testEmptyCtx, expectEpochID, v.Hash))
-		assert.True(t, checkProposal(testEmptyCtx, expectEpochID, expectProposer, v.Hash))
+		assert.True(t, findProposal(testEmptyCtx, expectEpochID, v))
+		assert.True(t, checkProposal(testEmptyCtx, expectEpochID, v))
 	}
 
 	// test delete proposal
 	for _, v := range expect {
-		assert.NoError(t, delProposal(testEmptyCtx, expectEpochID, v.Hash))
+		assert.NoError(t, delProposal(testEmptyCtx, expectEpochID, v))
 	}
 	assert.Equal(t, int(0), totalProposalsNum(testEmptyCtx, expectEpochID))
+}
+
+func TestProposalsNum(t *testing.T) {
+	s := testEmptyCtx
+	epochID := uint64(2)
+	proposer := generateTestAddress(12334)
+	list := []*EpochInfo{
+		&EpochInfo{ID: epochID, Proposer: proposer, Peers: generateTestPeers(11), StartHeight: 13},
+		&EpochInfo{ID: epochID, Proposer: proposer, Peers: generateTestPeers(9), StartHeight: 14},
+		&EpochInfo{ID: epochID, Proposer: proposer, Peers: generateTestPeers(8), StartHeight: 15},
+		&EpochInfo{ID: epochID, Proposer: proposer, Peers: generateTestPeers(18), StartHeight: 13},
+	}
+	for _, v := range list {
+		assert.NoError(t, storeProposal(s, v.ID, v.Hash()))
+		assert.NoError(t, storeEpoch(s, v))
+	}
+	assert.Equal(t, len(list), proposalsNum(s, epochID, proposer))
 }
 
 func TestStorageVote(t *testing.T) {

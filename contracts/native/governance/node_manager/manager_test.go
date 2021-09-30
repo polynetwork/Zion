@@ -205,8 +205,9 @@ func TestPropose(t *testing.T) {
 					ID:          testGenesisEpoch.ID + 1,
 					StartHeight: c.StartHeight,
 					Peers:       peers,
+					Proposer:    ctx.ContractRef().TxOrigin(),
 				}
-				storeProposal(ctx, epoch.ID, ctx.ContractRef().TxOrigin(), epoch.Hash())
+				storeProposal(ctx, epoch.ID, epoch.Hash())
 				c.Payload, _ = input.Encode()
 			},
 			Expect: ErrDuplicateProposal,
@@ -225,20 +226,26 @@ func TestPropose(t *testing.T) {
 					ID:          testGenesisEpoch.ID + 1,
 					StartHeight: c.StartHeight + 2,
 					Peers:       peers,
+					Proposer:    proposer,
 				}
 				epoch2 := &EpochInfo{
 					ID:          testGenesisEpoch.ID + 1,
 					StartHeight: c.StartHeight + 3,
 					Peers:       peers,
+					Proposer:    proposer,
 				}
 				epoch3 := &EpochInfo{
 					ID:          testGenesisEpoch.ID + 1,
 					StartHeight: c.StartHeight + 4,
 					Peers:       peers,
+					Proposer:    proposer,
 				}
-				storeProposal(ctx, epoch1.ID, proposer, epoch1.Hash())
-				storeProposal(ctx, epoch2.ID, proposer, epoch2.Hash())
-				storeProposal(ctx, epoch3.ID, proposer, epoch3.Hash())
+				storeProposal(ctx, epoch1.ID, epoch1.Hash())
+				storeEpoch(ctx, epoch1)
+				storeProposal(ctx, epoch2.ID, epoch2.Hash())
+				storeEpoch(ctx, epoch2)
+				storeProposal(ctx, epoch3.ID, epoch3.Hash())
+				storeEpoch(ctx, epoch3)
 				c.Payload, _ = input.Encode()
 			},
 			Expect: ErrProposalsNum,
@@ -537,6 +544,57 @@ func TestProposalPassed(t *testing.T) {
 	assert.Equal(t, ProposalStatusPassed, curEpoch.Status)
 }
 
+func TestDirtyJob(t *testing.T) {
+	s := testEmptyCtx
+	epochID := uint64(2)
+	peers := generateTestPeers(12)
+	voters := []common.Address{peers.List[2].Address, peers.List[3].Address}
+
+	// store last epoch
+	lastEpoch := &EpochInfo{ID: epochID - 1, Proposer: peers.List[0].Address, Peers: peers, StartHeight: 60}
+	assert.NoError(t, storeEpoch(s, lastEpoch))
+	assert.NoError(t, storeProposal(s, lastEpoch.ID, lastEpoch.Hash()))
+
+	// store current useless epoch and votes
+	eps := []*EpochInfo{
+		{ID: epochID, Proposer: peers.List[0].Address, Peers: &Peers{List: peers.List[:5]}, StartHeight: 270},
+		{ID: epochID, Proposer: peers.List[1].Address, Peers: &Peers{List: peers.List[:6]}, StartHeight: 290},
+	}
+	for i, v := range eps {
+		assert.NoError(t, storeEpoch(s, v))
+		assert.NoError(t, storeProposal(s, v.ID, v.Hash()))
+		assert.NoError(t, storeVote(s, v.Hash(), voters[i]))
+		storeVoteTo(s, v.ID, voters[i], v.Hash())
+	}
+
+	curEpoch := generateTestEpochInfo(epochID, 270, 13)
+	assert.NoError(t, storeEpoch(s, curEpoch))
+	assert.NoError(t, storeProposal(s, curEpoch.ID, curEpoch.Hash()))
+
+	// before dirty job
+	list, err := getProposals(s, epochID)
+	assert.NoError(t, err)
+	assert.Equal(t, 1+len(eps), len(list))
+	for _, v := range eps {
+		assert.Equal(t, 1, voteSize(s, v.Hash()))
+	}
+
+	dirtyJob(s, lastEpoch, curEpoch)
+
+	// after dirty job
+	// proposal number should be only 1 with same epochID
+	list, err = getProposals(s, epochID)
+	assert.NoError(t, err)
+	assert.Equal(t, int(1), len(list))
+	assert.Equal(t, curEpoch.Hash(), list[0])
+
+	for _, v := range eps {
+		inf, _ := getEpoch(s, v.Hash())
+		assert.Nil(t, inf)
+		assert.Equal(t, 0, voteSize(s, v.Hash()))
+	}
+}
+
 func generateNativeContractRef(origin common.Address, blockNum int) *native.ContractRef {
 	token := make([]byte, common.HashLength)
 	rand.Read(token)
@@ -580,6 +638,7 @@ func generateTestEpochInfo(id, height uint64, peersNum int) *EpochInfo {
 	epoch.ID = id
 	epoch.StartHeight = height
 	epoch.Peers = generateTestPeers(peersNum)
+	epoch.Proposer = epoch.Peers.List[0].Address
 	return epoch
 }
 

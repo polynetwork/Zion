@@ -39,8 +39,8 @@ func SubscribeEpochChange(ch chan<- types.EpochChangeEvent) event.Subscription {
 var (
 	gasTable = map[string]uint64{
 		MethodContractName: 0,
-		MethodPropose:      20000,
-		MethodVote:         20000,
+		MethodPropose:      30000,
+		MethodVote:         30000,
 		MethodEpoch:        0,
 	}
 )
@@ -76,6 +76,7 @@ func Name(s *native.NativeContract) ([]byte, error) {
 	return new(MethodContractNameOutput).Encode()
 }
 
+// Propose participant propose new `epoch change` schema
 func Propose(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	height := s.ContractRef().BlockHeight().Uint64()
@@ -146,12 +147,13 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		ID:          epochID,
 		Peers:       peers,
 		StartHeight: startHeight,
+		Proposer:    proposer,
 		Status:      ProposalStatusPropose,
 	}
 	proposal := epoch.Hash()
 
 	// check duplicate proposal and validator's proposals number
-	if checkProposal(s, epochID, proposer, proposal) {
+	if checkProposal(s, epochID, proposal) {
 		log.Trace("propose", "check proposal hash, dump proposal", proposal.Hex())
 		return utils.ByteFailed, ErrDuplicateProposal
 	}
@@ -164,7 +166,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		log.Trace("propose", "store epoch failed", err)
 		return utils.ByteFailed, ErrStorage
 	}
-	if err := storeProposal(s, epochID, proposer, proposal); err != nil {
+	if err := storeProposal(s, epoch.ID, epoch.Hash()); err != nil {
 		log.Trace("propose", "store proposal hash failed", err)
 		return utils.ByteFailed, ErrStorage
 	}
@@ -186,6 +188,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	return utils.ByteSuccess, nil
 }
 
+// Vote participants vote to proposal
 func Vote(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	voter := s.ContractRef().TxOrigin()
@@ -245,7 +248,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// already reach quorum size
-	sizeBeforeVote := getVoteSize(s, proposal)
+	sizeBeforeVote := voteSize(s, proposal)
 	if sizeBeforeVote >= curEpoch.QuorumSize() {
 		log.Trace("vote", "check size", "already reach quorum size", "num", sizeBeforeVote, "quorum size", curEpoch.QuorumSize())
 		return utils.ByteSuccess, nil
@@ -273,7 +276,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, ErrStorage
 	}
 
-	sizeAfterVote := getVoteSize(s, proposal)
+	sizeAfterVote := voteSize(s, proposal)
 	groupSize := len(curEpoch.Members())
 	if err := emitEventVoted(s, input.EpochID, proposal, sizeAfterVote, groupSize); err != nil {
 		log.Trace("vote", "emit voted log failed", err)
@@ -284,7 +287,8 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 	// 1. update status and store current epoch
 	// 2. store current epoch proof
 	// 3. emit event log
-	// 4. pub epoch change event to miner worker
+	// 4. dirty job which used to clear all useless storage
+	// 5. pub epoch change event to miner worker
 	if sizeAfterVote == curEpoch.QuorumSize() {
 		epoch.Status = ProposalStatusPassed
 		if err := storeEpoch(s, epoch); err != nil {
@@ -299,6 +303,8 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 			return utils.ByteFailed, ErrEmitLog
 		}
 
+		dirtyJob(s, curEpoch, epoch)
+
 		epochChangeFeed.Send(types.EpochChangeEvent{
 			EpochID:     epoch.StartHeight,
 			StartHeight: epoch.StartHeight,
@@ -310,6 +316,28 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 	}
 
 	return utils.ByteSuccess, nil
+}
+
+// dirtyJob filter current epoch and clear storage of `epoch`, `proposal`, `vote`, `voteTo`
+func dirtyJob(s *native.NativeContract, last, cur *EpochInfo) {
+	proposals, _ := getProposals(s, cur.ID)
+	for _, v := range proposals {
+		if v == cur.Hash() {
+			continue
+		}
+
+		delEpoch(s, v)
+		if err := delProposal(s, cur.ID, v); err != nil {
+			log.Error("vote", "dirty job failed", err)
+		}
+
+		clearVotes(s, v)
+		if last != nil && last.Peers != nil && last.Peers.List != nil {
+			for _, v := range last.Peers.List {
+				delVoteTo(s, cur.ID, v.Address)
+			}
+		}
+	}
 }
 
 func Epoch(s *native.NativeContract) ([]byte, error) {
