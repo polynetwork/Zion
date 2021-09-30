@@ -5,10 +5,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -114,16 +112,7 @@ func TestEncodeSalt(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		enc, err := hexutil.Decode("0x" + v.NodeKey)
-		if err != nil {
-			t.Fatal(err)
-		}
-		privateKey, err := crypto.ToECDSA(enc)
-		if err != nil {
-			t.Fatal(err)
-		}
-		pubKeyHex := hexutil.Encode(crypto.CompressPubkey(&privateKey.PublicKey))
-		t.Logf("addr: %s nodeKey: %s static-node-info:%s pubkey:%s", v.Address, v.NodeKey, nodeInf, pubKeyHex)
+		t.Logf("addr: %s nodeKey: %s static-node-info:%s", v.Address, v.NodeKey, nodeInf)
 		staticNodes = append(staticNodes, NodeStaticInfoTemp(nodeInf))
 	}
 	t.Log("==================================================================")
