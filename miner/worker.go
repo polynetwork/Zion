@@ -28,6 +28,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -50,6 +53,9 @@ const (
 
 	// chainSideChanSize is the size of channel listening to ChainSideEvent.
 	chainSideChanSize = 10
+
+	// epochChangeChanSize is the size of channel listening to EpochChangeEvent.
+	epochChangeChanSize = 10
 
 	// resubmitAdjustChanSize is the size of resubmitting interval adjustment channel.
 	resubmitAdjustChanSize = 10
@@ -133,13 +139,20 @@ type worker struct {
 	pendingLogsFeed event.Feed
 
 	// Subscriptions
-	mux          *event.TypeMux
-	txsCh        chan core.NewTxsEvent
-	txsSub       event.Subscription
-	chainHeadCh  chan core.ChainHeadEvent
-	chainHeadSub event.Subscription
-	chainSideCh  chan core.ChainSideEvent
-	chainSideSub event.Subscription
+	mux            *event.TypeMux
+	txsCh          chan core.NewTxsEvent
+	txsSub         event.Subscription
+	chainHeadCh    chan core.ChainHeadEvent
+	chainHeadSub   event.Subscription
+	chainSideCh    chan core.ChainSideEvent
+	chainSideSub   event.Subscription
+	epochChangeCh  chan types.EpochChangeEvent
+	epochChangeSub event.Subscription
+
+	changeEpochFlag bool
+	epochCheckFlag  bool
+	nextEpoch       *types.EpochChangeEvent
+	epochMu         sync.Mutex
 
 	// Channels
 	newWorkCh          chan *newWorkReq
@@ -203,6 +216,7 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		txsCh:              make(chan core.NewTxsEvent, txChanSize),
 		chainHeadCh:        make(chan core.ChainHeadEvent, chainHeadChanSize),
 		chainSideCh:        make(chan core.ChainSideEvent, chainSideChanSize),
+		epochChangeCh:      make(chan types.EpochChangeEvent, epochChangeChanSize),
 		newWorkCh:          make(chan *newWorkReq),
 		taskCh:             make(chan *task),
 		resultCh:           make(chan *types.Block, resultQueueSize),
@@ -216,6 +230,7 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	worker.chainSideSub = eth.BlockChain().SubscribeChainSideEvent(worker.chainSideCh)
+	worker.epochChangeSub = nm.SubscribeEpochChange(worker.epochChangeCh)
 
 	// Sanitize recommit interval if the user-specified one is too short.
 	recommit := worker.config.Recommit
@@ -290,9 +305,9 @@ func (w *worker) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription
 
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) Start() {
-	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
-		if err := istanbul.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
-			log.Warn("Failed to start hotstuff event-driven engine", "err", err)
+	if engine, ok := w.engine.(consensus.HotStuff); ok {
+		if err := engine.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
+			log.Warn("Failed to start hotstuff basic engine", "err", err)
 			return
 		}
 	}
@@ -302,8 +317,10 @@ func (w *worker) Start() {
 
 // stop sets the running status as 0.
 func (w *worker) Stop() {
-	if istanbul, ok := w.engine.(consensus.HotStuff); ok {
-		istanbul.Stop()
+	if engine, ok := w.engine.(consensus.HotStuff); ok {
+		if err := engine.Stop(); err != nil {
+			log.Warn("Failed to stop hotstuff basic engine", "err", err)
+		}
 	}
 	atomic.StoreInt32(&w.running, 0)
 }
@@ -389,11 +406,17 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
 
-		// chainHead是触发commit的主要因素，共识完成后广播区块，节点接收到新的区块头之后，进入新一轮的共识
 		case head := <-w.chainHeadCh:
+			if h, ok := w.engine.(consensus.Handler); ok {
+				h.NewChainHead(head.Block.Header())
+			}
 			clearPending(head.Block.NumberU64())
 			timestamp = time.Now().Unix()
 			commit(false, commitInterruptNewHead)
+
+		case change := <-w.epochChangeCh:
+			log.Debug("[miner worker]", "receive epoch change event", change.Hash.Hex(), "ID", change.EpochID)
+			w.processEpochChange(&change)
 
 		case <-timer.C:
 			// If mining is running resubmit a new work cycle periodically to pull in
@@ -896,6 +919,17 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		Extra:      w.extra,
 		Time:       uint64(timestamp),
 	}
+
+	// check epoch and prepare to restart consensus engine
+	if w.current != nil && w.current.state != nil {
+		rs := w.current.state.Copy()
+		w.checkEpoch(rs, num)
+		if w.handleEpochChange(rs, header.Number.Uint64()) {
+			w.clearEpoch()
+			return
+		}
+	}
+
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
 	if w.IsRunning() {
 		if w.coinbase == (common.Address{}) {
@@ -1054,4 +1088,94 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 		feesWei.Add(feesWei, new(big.Int).Mul(new(big.Int).SetUint64(receipts[i].GasUsed), tx.GasPrice()))
 	}
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
+}
+
+func (w *worker) processEpochChange(event *types.EpochChangeEvent) {
+	w.epochMu.Lock()
+	defer w.epochMu.Unlock()
+
+	if w.changeEpochFlag {
+		return
+	}
+	w.changeEpochFlag = true
+	w.nextEpoch = event
+}
+
+func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
+	w.epochMu.Lock()
+	defer w.epochMu.Unlock()
+
+	if !w.changeEpochFlag || w.epochCheckFlag {
+		return
+	}
+
+	log.Debug("[miner worker], start check epoch")
+
+	caller := w.coinbase
+	ref := native.NewContractRef(st, caller, caller, blockNum, common.EmptyHash, 0, nil)
+	payload, err := new(nm.MethodEpochInput).Encode()
+	if err != nil {
+		log.Error("[miner worker]", "pack `epoch` input failed", err)
+		return
+	}
+	enc, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
+	if err != nil {
+		log.Error("[miner worker]", "native call `epoch` failed", err)
+		return
+	}
+	output := new(nm.MethodEpochOutput)
+	if err := output.Decode(enc); err != nil {
+		log.Error("[miner worker]", "unpack `epoch` output failed", err)
+		return
+	}
+
+	if output.Epoch == nil || w.nextEpoch == nil || output.Epoch.Hash() != w.nextEpoch.Hash {
+		log.Errorf("[miner worker]", "check epoch failed", "epoch may be nil or hash not match")
+		return
+	}
+
+	w.epochCheckFlag = true
+	log.Debug("[miner worker]", "check epoch", "success")
+	return
+}
+
+func (w *worker) handleEpochChange(st *state.StateDB, height uint64) bool {
+	w.epochMu.Lock()
+	defer w.epochMu.Unlock()
+
+	if !w.epochCheckFlag || w.nextEpoch == nil || height != w.nextEpoch.StartHeight {
+		return false
+	}
+
+	log.Debug("[miner worker]", "handle epoch change, height", height)
+	if w.nextEpoch == nil || w.nextEpoch.Validators == nil || len(w.nextEpoch.Validators) == 0 {
+		log.Warn("Failed to change epoch", "err", "epoch validators should not be empty")
+		return false
+	}
+
+	engine, ok := w.engine.(consensus.HotStuff)
+	if !ok {
+		log.Warn("Only basic-hotstuff support `change-epoch`")
+		return false
+	}
+
+	log.Debug("Restart consensus engine")
+	w.Stop()
+	if err := engine.ChangeEpoch(w.nextEpoch.StartHeight, w.nextEpoch.Validators); err != nil {
+		log.Error("Change Epoch", "change failed", err)
+		return false
+	}
+	w.Start()
+
+	return true
+}
+
+func (w *worker) clearEpoch() {
+	w.epochMu.Lock()
+	defer w.epochMu.Unlock()
+
+	w.nextEpoch = nil
+	w.changeEpochFlag = false
+	w.epochCheckFlag = false
+	log.Debug("Clear miner epoch")
 }

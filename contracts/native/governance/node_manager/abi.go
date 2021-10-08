@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package node_manager
 
 import (
@@ -23,87 +24,232 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
+const contractName = "node manager"
+
 const (
-	EventRegisterCandidate   = "registerCandidate"
-	EventUnRegisterCandidate = "unRegisterCandidate"
-	EventApproveCandidate    = "approveCandidate"
-	EventBlackNode           = "blackNode"
-	EventWhiteNode           = "whiteNode"
-	EventQuitNode            = "quitNode"
-	EventUpdateConfig        = "updateConfig"
-	EventCommitDpos          = "commitDpos"
+	MethodContractName = "name"
+	MethodPropose      = "propose"
+	MethodVote         = "vote"
+	MethodEpoch        = "epoch"
+	MethodProof        = "proof"
+	MethodNextEpoch    = "nextEpoch"
+
+	EventPropose         = "proposed"
+	EventVote            = "voted"
+	EventEpochChange     = "epochChanged"
+	EventConsensusSigned = "consensusSigned"
 )
 
 const abijson = `[
-	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"signs","type":"uint64"}],"name":"CheckConsensusSignsEvent","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventApproveCandidate + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string[]","name":"PubkeyList","type":"string[]"}],"name":"` + EventBlackNode + `","type":"event"},
-    {"anonymous":false,"inputs":[],"name":"` + EventCommitDpos + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventQuitNode + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventRegisterCandidate + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventUnRegisterCandidate + `","type":"event"},
-    {"anonymous":false,"inputs":[{"components":[{"internalType":"uint32","name":"BlockMsgDelay","type":"uint32"},{"internalType":"uint32","name":"HashMsgDelay","type":"uint32"},{"internalType":"uint32","name":"PeerHandshakeTimeout","type":"uint32"},{"internalType":"uint32","name":"MaxBlockChangeView","type":"uint32"}],"indexed":false,"internalType":"struct node_manager.Configuration","name":"Config","type":"tuple"}],"name":"` + EventUpdateConfig + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Pubkey","type":"string"}],"name":"` + EventWhiteNode + `","type":"event"},
-    {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveCandidate + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"string[]","name":"PeerPubkeyList","type":"string[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodBlackNode + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[],"name":"` + MethodCommitDpos + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint32","name":"BlockMsgDelay","type":"uint32"},{"internalType":"uint32","name":"HashMsgDelay","type":"uint32"},{"internalType":"uint32","name":"PeerHandshakeTimeout","type":"uint32"},{"internalType":"uint32","name":"MaxBlockChangeView","type":"uint32"},{"internalType":"string","name":"VrfValue","type":"string"},{"internalType":"string","name":"VrfProof","type":"string"},{"components":[{"internalType":"uint32","name":"Index","type":"uint32"},{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"string","name":"Address","type":"string"}],"internalType":"struct node_manager.VBFTPeerInfo","name":"Peers","type":"tuple"}],"name":"` + MethodInitConfig + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodQuitNode + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRegisterCandidate + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodUnRegisterCandidate + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"components":[{"components":[{"internalType":"uint32","name":"BlockMsgDelay","type":"uint32"},{"internalType":"uint32","name":"HashMsgDelay","type":"uint32"},{"internalType":"uint32","name":"PeerHandshakeTimeout","type":"uint32"},{"internalType":"uint32","name":"MaxBlockChangeView","type":"uint32"}],"internalType":"struct node_manager.Configuration","name":"Config","type":"tuple"}],"internalType":"struct node_manager.UpdateConfigParam","name":"ConfigParam","type":"tuple"}],"name":"` + MethodUpdateConfig + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"string","name":"PeerPubkey","type":"string"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodWhiteNode + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
+    {"type":"function","name":"` + MethodContractName + `","inputs":[],"outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodPropose + `","inputs":[{"internalType":"uint64","name":"StartHeight","type":"uint64"},{"internalType":"bytes","name":"Peers","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
+    {"type":"function","name":"` + MethodVote + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"},{"internalType":"bytes","name":"Hash","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodNextEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodProof + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Hash","type":"bytes"}],"stateMutability":"nonpayable"},
+    {"type":"event","name":"` + EventPropose + `","anonymous":false,"inputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}]},
+	{"type":"event","name":"` + EventVote + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"EpochID","type":"uint64"},{"indexed":false,"internalType":"bytes","name":"Hash","type":"bytes"},{"indexed":false,"internalType":"uint64","name":"VotedNumber","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"GroupSize","type":"uint64"}]},
+	{"type":"event","name":"` + EventEpochChange + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"Epoch","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"NextEpoch","type":"bytes"}]},
+	{"type":"event","name":"` + EventConsensusSigned + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Method","type":"string"},{"indexed":false,"internalType":"bytes","name":"Input","type":"bytes"},{"indexed":false,"internalType":"address","name":"Signer","type":"address"},{"indexed":false,"internalType":"uint64","name":"Size","type":"uint64"}]}
 ]`
 
-func GetABI() *abi.ABI {
+func InitABI() {
 	ab, err := abi.JSON(strings.NewReader(abijson))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
-	return &ab
+	ABI = &ab
 }
 
-type VBFTConfig struct {
-	BlockMsgDelay        uint32          `json:"block_msg_delay"`
-	HashMsgDelay         uint32          `json:"hash_msg_delay"`
-	PeerHandshakeTimeout uint32          `json:"peer_handshake_timeout"`
-	MaxBlockChangeView   uint32          `json:"max_block_change_view"`
-	VrfValue             string          `json:"vrf_value"`
-	VrfProof             string          `json:"vrf_proof"`
-	Peers                []*VBFTPeerInfo `json:"peers"`
+var (
+	ABI  *abi.ABI
+	this = utils.NodeManagerContractAddress
+)
+
+type MethodContractNameInput struct{}
+
+func (m *MethodContractNameInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodContractName)
+}
+func (m *MethodContractNameInput) Decode(payload []byte) error { return nil }
+
+type MethodContractNameOutput struct {
+	Name string
 }
 
-type VBFTPeerInfo struct {
-	Index      uint32 `json:"index"`
-	PeerPubkey string `json:"peerPubkey"`
-	Address    string `json:"address"`
+func (m *MethodContractNameOutput) Encode() ([]byte, error) {
+	m.Name = contractName
+	return utils.PackOutputs(ABI, MethodContractName, m.Name)
+}
+func (m *MethodContractNameOutput) Decode(payload []byte) error {
+	return utils.UnpackOutputs(ABI, MethodContractName, m, payload)
 }
 
-type RegisterPeerParam struct {
-	PeerPubkey string
-	Address    common.Address
+type MethodProposeInput struct {
+	StartHeight uint64
+	Peers       *Peers
 }
 
-type PeerParam struct {
-	PeerPubkey string
-	Address    common.Address
+func (m *MethodProposeInput) Encode() ([]byte, error) {
+	enc, err := rlp.EncodeToBytes(m.Peers)
+	if err != nil {
+		return nil, err
+	}
+	return utils.PackMethod(ABI, MethodPropose, m.StartHeight, enc)
+}
+func (m *MethodProposeInput) Decode(payload []byte) error {
+	var data struct {
+		StartHeight uint64
+		Peers       []byte
+	}
+	if err := utils.UnpackMethod(ABI, MethodPropose, &data, payload); err != nil {
+		return err
+	}
+	m.StartHeight = data.StartHeight
+	return rlp.DecodeBytes(data.Peers, &m.Peers)
 }
 
-type PeerListParam struct {
-	PeerPubkeyList []string
-	Address        common.Address
+type MethodProposeOutput struct {
+	Success bool
 }
 
-type UpdateConfigParam struct {
-	Configuration *Configuration
+func (m *MethodProposeOutput) Encode() ([]byte, error) {
+	return utils.PackOutputs(ABI, MethodPropose, m.Success)
+}
+func (m *MethodProposeOutput) Decode(payload []byte) error {
+	return utils.UnpackOutputs(ABI, MethodPropose, m, payload)
 }
 
-type Configuration struct {
-	BlockMsgDelay        uint32
-	HashMsgDelay         uint32
-	PeerHandshakeTimeout uint32
-	MaxBlockChangeView   uint32
+type MethodVoteInput struct {
+	EpochID uint64
+	Hash    common.Hash
+}
+
+func (m *MethodVoteInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodVote, m.EpochID, m.Hash.Bytes())
+}
+func (m *MethodVoteInput) Decode(payload []byte) error {
+	var data struct {
+		EpochID uint64
+		Hash    []byte
+	}
+	if err := utils.UnpackMethod(ABI, MethodVote, &data, payload); err != nil {
+		return err
+	}
+
+	m.EpochID = data.EpochID
+	m.Hash = common.BytesToHash(data.Hash)
+	return nil
+}
+
+type MethodVoteOutput struct {
+	Success bool
+}
+
+func (m *MethodVoteOutput) Encode() ([]byte, error) {
+	return utils.PackOutputs(ABI, MethodVote, m.Success)
+}
+func (m *MethodVoteOutput) Decode(payload []byte) error {
+	return utils.UnpackOutputs(ABI, MethodVote, m, payload)
+}
+
+// useless input
+type MethodEpochInput struct{}
+
+func (m *MethodEpochInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodEpoch)
+}
+func (m *MethodEpochInput) Decode(payload []byte) error { return nil }
+
+type MethodEpochOutput struct {
+	Epoch *EpochInfo
+}
+
+func (m *MethodEpochOutput) Encode() ([]byte, error) {
+	enc, err := rlp.EncodeToBytes(m.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	return utils.PackOutputs(ABI, MethodEpoch, enc)
+}
+func (m *MethodEpochOutput) Decode(payload []byte) error {
+	var data struct {
+		Epoch []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodEpoch, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.Epoch, &m.Epoch)
+}
+
+// useless input
+//type MethodNextEpochInput struct{}
+type MethodNextEpochOutput struct {
+	Epoch *EpochInfo
+}
+
+func (m *MethodNextEpochOutput) Encode() ([]byte, error) {
+	enc, err := rlp.EncodeToBytes(m.Epoch)
+	if err != nil {
+		return nil, err
+	}
+	return utils.PackOutputs(ABI, MethodNextEpoch, enc)
+}
+func (m *MethodNextEpochOutput) Decode(payload []byte) error {
+	var data struct {
+		Epoch []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodNextEpoch, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.Epoch, &m.Epoch)
+}
+
+type MethodProofOutput struct {
+	Hash common.Hash
+}
+
+func (m *MethodProofOutput) Encode() ([]byte, error) {
+	return utils.PackOutputs(ABI, MethodProof, m.Hash.Bytes())
+}
+func (m *MethodProofOutput) Decode(payload []byte) error {
+	var data common.Hash
+	if err := utils.UnpackOutputs(ABI, MethodProof, &data, payload); err != nil {
+		return err
+	}
+	m.Hash = data
+	return nil
+}
+
+func emitEventProposed(s *native.NativeContract, epoch *EpochInfo) error {
+	enc, err := rlp.EncodeToBytes(epoch)
+	if err != nil {
+		return err
+	}
+	return s.AddNotify(ABI, []string{EventPropose}, enc)
+}
+
+func emitEventVoted(s *native.NativeContract, epochID uint64, hash common.Hash, curVotedNum int, groupSize int) error {
+	return s.AddNotify(ABI, []string{EventVote}, epochID, hash.Bytes(), uint64(curVotedNum), uint64(groupSize))
+}
+
+func emitEpochChange(s *native.NativeContract, curEpoch, nextEpoch *EpochInfo) error {
+	curEnc, err := rlp.EncodeToBytes(curEpoch)
+	if err != nil {
+		return err
+	}
+	nextEnc, err := rlp.EncodeToBytes(nextEpoch)
+	if err != nil {
+		return err
+	}
+	return s.AddNotify(ABI, []string{EventEpochChange}, curEnc, nextEnc)
+}
+
+func emitConsensusSign(s *native.NativeContract, sign *ConsensusSign, signer common.Address, num int) error {
+	return s.AddNotify(ABI, []string{EventConsensusSigned}, sign.Method, sign.Input, signer, uint64(num))
 }

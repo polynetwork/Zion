@@ -1,15 +1,16 @@
 package backend
 
 import (
-	"github.com/ethereum/go-ethereum/event"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -283,6 +284,11 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 
 func (s *backend) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
 	return s.core.SubscribeRequest(ch)
+}
+
+func (s *backend) ChangeEpoch(epochStartHeight uint64, list []common.Address) error {
+	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
+	return s.core.ChangeEpoch(epochStartHeight, s.valset)
 }
 
 func (s *backend) getPendingParentHeader(chain consensus.ChainHeaderReader, header *types.Header) (*types.Header, error) {

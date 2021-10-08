@@ -110,3 +110,7 @@ func (c *core) GetHeader(hash common.Hash, number uint64) *types.Header {
 func (c *core) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
 	return c.feed.Subscribe(ch)
 }
+
+func (c *core) ChangeEpoch(epochStartHeight uint64, valset hotstuff.ValidatorSet) error {
+	return nil
+}

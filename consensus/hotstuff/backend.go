@@ -17,10 +17,10 @@
 package hotstuff
 
 import (
-	"github.com/ethereum/go-ethereum/consensus"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 )
@@ -107,6 +107,8 @@ type CoreEngine interface {
 
 	// SubscribeRequest notify to miner worker that event-driven engine need an new proposal
 	SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription
+
+	ChangeEpoch(epochStartHeight uint64, valset ValidatorSet) error
 }
 
 type HotstuffProtocol string

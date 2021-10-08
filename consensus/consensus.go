@@ -18,12 +18,12 @@
 package consensus
 
 import (
-	"github.com/ethereum/go-ethereum/event"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -151,6 +151,8 @@ type HotStuff interface {
 	// Start starts the engine
 	Start(chain ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
 
+	ChangeEpoch(epochStartHeight uint64, list []common.Address) error
+
 	// Stop stops the engine
 	Stop() error
 }
@@ -158,7 +160,7 @@ type HotStuff interface {
 // Handler should be implemented is the consensus needs to handle and send peer's message
 type Handler interface {
 	// NewChainHead handles a new head block comes
-	NewChainHead() error
+	NewChainHead(header *types.Header) error
 
 	// HandleMsg handles a message from peer
 	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
@@ -177,5 +179,5 @@ type PoW interface {
 
 type AskRequest struct {
 	Parent *types.Block
-	Number     *big.Int
+	Number *big.Int
 }

@@ -73,6 +73,16 @@ func (c *core) checkVote(vote *Vote) error {
 	return nil
 }
 
+func (c *core) checkProposal(hash common.Hash) error {
+	if c.current == nil || c.current.Proposal() == nil {
+		return fmt.Errorf("current proposal is nil")
+	}
+	if expect := c.current.Proposal().Hash(); hash != expect {
+		return fmt.Errorf("hash expect %s got %s", expect.Hex(), hash.Hex())
+	}
+	return nil
+}
+
 func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
 	isLocked, proposal := c.current.LastLockedProposal()
 	if !isLocked {
