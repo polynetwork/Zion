@@ -3,6 +3,7 @@ package core
 import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
 )
 
 func (c *core) handleCommitVote(data *hotstuff.Message, src hotstuff.Validator) error {
@@ -58,9 +59,11 @@ func (c *core) handleCommitVote(data *hotstuff.Message, src hotstuff.Validator) 
 // signals should be related with sync header or body. in fact, we DONT need this function to start an new round,
 // because that the function `startNewRound` will sync header to preparing new consensus round args.
 // we just kept it here for backup.
-func (c *core) handleFinalCommitted() error {
+func (c *core) handleFinalCommitted(header *types.Header) error {
 	logger := c.newLogger()
 	logger.Trace("handleFinalCommitted")
-	c.startNewRound(common.Big0)
+	if header.Number.Uint64() > c.currentView().Height.Uint64() {
+		c.startNewRound(common.Big0)
+	}
 	return nil
 }

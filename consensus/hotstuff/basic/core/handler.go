@@ -147,12 +147,15 @@ func (c *core) handleEvents() {
 			}
 			c.handleTimeoutMsg()
 
-		case _, ok := <-c.finalCommittedSub.Chan():
+		case evt, ok := <-c.finalCommittedSub.Chan():
 			if !ok {
 				logger.Error("Failed to receive finalCommitted Event")
 				return
 			}
-			c.handleFinalCommitted()
+			switch ev := evt.Data.(type) {
+			case hotstuff.FinalCommittedEvent:
+				c.handleFinalCommitted(ev.Header)
+			}
 		}
 	}
 }

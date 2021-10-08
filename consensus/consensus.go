@@ -160,7 +160,7 @@ type HotStuff interface {
 // Handler should be implemented is the consensus needs to handle and send peer's message
 type Handler interface {
 	// NewChainHead handles a new head block comes
-	NewChainHead() error
+	NewChainHead(header *types.Header) error
 
 	// HandleMsg handles a message from peer
 	HandleMsg(address common.Address, data p2p.Msg) (bool, error)
