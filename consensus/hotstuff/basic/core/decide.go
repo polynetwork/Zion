@@ -61,9 +61,9 @@ func (c *core) handleCommitVote(data *hotstuff.Message, src hotstuff.Validator) 
 // we just kept it here for backup.
 func (c *core) handleFinalCommitted(header *types.Header) error {
 	logger := c.newLogger()
-	logger.Trace("handleFinalCommitted")
-	if header.Number.Uint64() > c.currentView().Height.Uint64() {
+	if height := header.Number.Uint64(); height >= c.currentView().Height.Uint64() {
 		c.startNewRound(common.Big0)
+		logger.Trace("handleFinalCommitted", "height", height)
 	}
 	return nil
 }
