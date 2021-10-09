@@ -135,6 +135,25 @@ func NodeKey2NodeInfo(key string) (string, error) {
 	return id.String(), nil
 }
 
+func NodeKey2PublicInfo(key string) (string, error) {
+	if !strings.Contains(key, "0x") {
+		key = "0x" + key
+	}
+
+	dec, err := hexutil.Decode(key)
+	if err != nil {
+		return "", err
+	}
+
+	privKey, err := crypto.ToECDSA(dec)
+	if err != nil {
+		return "", err
+	}
+
+	enc := crypto.CompressPubkey(&privKey.PublicKey)
+	return hexutil.Encode(enc), nil
+}
+
 func NodeStaticInfoTemp(src string) string {
 	return fmt.Sprintf("enode://%s@127.0.0.1:30300?discport=0", src)
 }
