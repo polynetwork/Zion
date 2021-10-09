@@ -63,45 +63,33 @@ func TestEncode(t *testing.T) {
 
 var testOriginValAndNodeKeys = []*Node{
 	{
-		Address: "0xc095448424a5ecd5ca7ccdadfaad127a9d7e88ec",
-		NodeKey: "49e26aa4d60196153153388a24538c2693d65f0010a3a488c0c4c2b2a64b2de4",
-	},
-	{
-		Address: "0xd47a4e56e9262543db39d9203cf1a2e53735f834",
-		NodeKey: "9fc1723cff3bc4c11e903a53edb3b31c57b604bfc88a5d16cfec6a64fbf3141c",
-	},
-	{
 		Address: "0x258af48e28e4a6846e931ddff8e1cdf8579821e5",
 		NodeKey: "4b0c9b9d685db17ac9f295cb12f9d7d2369f5bf524b3ce52ce424031cafda1ae",
-	},
-	{
-		Address: "0x8c09d936a1b408d6e0afaa537ba4e06c4504a0ae",
-		NodeKey: "cc69b13ca2c5cd4d76bb881f6ad18d93bd947042c0f3a7adc80bdd17dac68210",
-	},
-	{
-		Address: "0xbfb558f0dceb07fbb09e1c283048b551a4310921",
-		NodeKey: "5555ebb339d3d5ed1efbf0ca96f5b145134e5ce8044fec693558056d268776ae",
 	},
 	{
 		Address: "0x6a708455c8777630aac9d1e7702d13f7a865b27c",
 		NodeKey: "3d9c828244d3b2da70233a0a2aea7430feda17bded6edd7f0c474163802a431c",
 	},
 	{
+		Address: "0x8c09d936a1b408d6e0afaa537ba4e06c4504a0ae",
+		NodeKey: "cc69b13ca2c5cd4d76bb881f6ad18d93bd947042c0f3a7adc80bdd17dac68210",
+	},
+	{
 		Address: "0xad3bf5ed640cc72f37bd21d64a65c3c756e9c88c",
 		NodeKey: "018c71d5e3b245117ffba0975e46129371473c6a1d231c5eddf7a8364d704846",
 	},
-	{
-		Address: "0x03ff6beb65feb5da87ca1b5468b3e95da767255e",
-		NodeKey: "c8d3e5e3fbc72898d1b90dedff34d6043fcbaaadeecd0bcb211a05c7c9a33af7",
-	},
-	{
-		Address: "0xc191f60e7e3633f46d01557508ec817c4a7c724b",
-		NodeKey: "e0f5429b336cb2c803383d0ef39cb0a0003d4d701c96a2e7b15e468740ed72f7",
-	},
-	{
-		Address: "0x8b0c92a3380d3527a649dfe18aefaba57ed82785",
-		NodeKey: "c124e7f77166ee5cd4ba490b838db0ee251d9d5a7ce64cbb3cababf8ae99bd37",
-	},
+	//{
+	//	Address: "0xc095448424a5ecd5ca7ccdadfaad127a9d7e88ec",
+	//	NodeKey: "49e26aa4d60196153153388a24538c2693d65f0010a3a488c0c4c2b2a64b2de4",
+	//},
+	//{
+	//	Address: "0xd47a4e56e9262543db39d9203cf1a2e53735f834",
+	//	NodeKey: "9fc1723cff3bc4c11e903a53edb3b31c57b604bfc88a5d16cfec6a64fbf3141c",
+	//},
+	//{
+	//	Address: "0xbfb558f0dceb07fbb09e1c283048b551a4310921",
+	//	NodeKey: "5555ebb339d3d5ed1efbf0ca96f5b145134e5ce8044fec693558056d268776ae",
+	//},
 }
 
 func TestEncodeSalt(t *testing.T) {
@@ -112,7 +100,11 @@ func TestEncodeSalt(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		t.Logf("addr: %s nodeKey: %s static-node-info:%s", v.Address, v.NodeKey, nodeInf)
+		pubInf, err := NodeKey2PublicInfo(v.NodeKey)
+		if err != nil {
+			t.Fatal(err)
+		}
+		t.Logf("addr: %s, pubKey: %s, nodeKey: %s, static-node-info:%s", v.Address, pubInf, v.NodeKey, nodeInf)
 		staticNodes = append(staticNodes, NodeStaticInfoTemp(nodeInf))
 	}
 	t.Log("==================================================================")

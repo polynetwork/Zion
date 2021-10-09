@@ -190,6 +190,11 @@ func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
+
+	if index, _ := s.valset.GetByAddress(s.Address()); index < 0 {
+		return ErrEpochValidator
+	}
+
 	if s.coreStarted {
 		return ErrStartedEngine
 	}

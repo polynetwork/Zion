@@ -3,6 +3,8 @@ package backend
 import "errors"
 
 var (
+	// ErrValidator is returned if the validator is not the participant of current epoch
+	ErrEpochValidator = errors.New("validator not epoch participant")
 	// ErrStartedEngine is returned if the engine is already started
 	ErrStartedEngine = errors.New("started engine")
 	// ErrStoppedEngine is returned if the engine is stopped
