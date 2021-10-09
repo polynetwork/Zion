@@ -26,21 +26,35 @@ var (
 	_ = event.NewSubscription
 )
 
+var (
+	MethodApproveRegisterStateValidator = "approveRegisterStateValidator"
+
+	MethodApproveRemoveStateValidator = "approveRemoveStateValidator"
+
+	MethodGetCurrentStateValidator = "getCurrentStateValidator"
+
+	MethodName = "name"
+
+	MethodRegisterStateValidator = "registerStateValidator"
+
+	MethodRemoveStateValidator = "removeStateValidator"
+)
+
 // Neo3StateManagerABI is the input ABI used to generate the binding from.
-const Neo3StateManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"EventApproveRegisterStateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"EventApproveRemoveStateValidator\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"MethodApproveRegisterStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"MethodApproveRemoveStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MethodContractName\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"MethodGetCurrentStateValidator\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"Validator\",\"type\":\"bytes\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string[]\",\"name\":\"StateValidators\",\"type\":\"string[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"MethodRegisterStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string[]\",\"name\":\"StateValidators\",\"type\":\"string[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"MethodRemoveStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const Neo3StateManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"evtApproveRegisterStateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"}],\"name\":\"evtApproveRemoveStateValidator\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveRegisterStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ID\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"approveRemoveStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentStateValidator\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"Validator\",\"type\":\"bytes\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string[]\",\"name\":\"StateValidators\",\"type\":\"string[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"registerStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string[]\",\"name\":\"StateValidators\",\"type\":\"string[]\"},{\"internalType\":\"address\",\"name\":\"Address\",\"type\":\"address\"}],\"name\":\"removeStateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // Neo3StateManagerFuncSigs maps the 4-byte function signature to its string representation.
 var Neo3StateManagerFuncSigs = map[string]string{
-	"db3a5951": "MethodApproveRegisterStateValidator(uint64,address)",
-	"a27b72f9": "MethodApproveRemoveStateValidator(uint64,address)",
-	"e50f8f44": "MethodContractName()",
-	"495d18a4": "MethodGetCurrentStateValidator()",
-	"42753232": "MethodRegisterStateValidator(string[],address)",
-	"60d23093": "MethodRemoveStateValidator(string[],address)",
+	"ca1c4d1b": "approveRegisterStateValidator(uint64,address)",
+	"3473fd55": "approveRemoveStateValidator(uint64,address)",
+	"770fa9ad": "getCurrentStateValidator()",
+	"06fdde03": "name()",
+	"f7531edd": "registerStateValidator(string[],address)",
+	"d62c2f61": "removeStateValidator(string[],address)",
 }
 
 // Neo3StateManagerBin is the compiled bytecode used for deploying new contracts.
-var Neo3StateManagerBin = "0x608060405234801561001057600080fd5b5061031d806100206000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c80634275323214610067578063495d18a41461009257806360d2309314610067578063a27b72f9146100a1578063db3a5951146100a1578063e50f8f4414610092575b600080fd5b61007d6100753660046100cb565b600092915050565b60405190151581526020015b60405180910390f35b60606040516100899190610286565b61007d6100753660046101f7565b80356001600160a01b03811681146100c657600080fd5b919050565b60008060408084860312156100df57600080fd5b833567ffffffffffffffff808211156100f757600080fd5b818601915086601f83011261010b57600080fd5b813560208282111561011f5761011f6102d1565b8160051b61012e8282016102a0565b8381528281019086840183880185018d101561014957600080fd5b600093505b858410156101d85780358781111561016557600080fd5b8801603f81018e1361017657600080fd5b858101358881111561018a5761018a6102d1565b61019c601f8201601f191688016102a0565b8181528f8c8385010111156101b057600080fd5b818c84018983013760009181018801919091528452506001939093019291840191840161014e565b5098506101e99150508882016100af565b955050505050509250929050565b6000806040838503121561020a57600080fd5b823567ffffffffffffffff8116811461022257600080fd5b9150610230602084016100af565b90509250929050565b6000815180845260005b8181101561025f57602081850181015186830182015201610243565b81811115610271576000602083870101525b50601f01601f19169290920160200192915050565b6020815260006102996020830184610239565b9392505050565b604051601f8201601f1916810167ffffffffffffffff811182821017156102c9576102c96102d1565b604052919050565b634e487b7160e01b600052604160045260246000fdfea26469706673582212208decd5be1b43984fd9d415af4f2132079b00c5e3190935fa4e7d700e3b3706d864736f6c63430008060033"
+var Neo3StateManagerBin = "0x608060405234801561001057600080fd5b50610321806100206000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c806306fdde03146100675780633473fd551461007f578063770fa9ad14610067578063ca1c4d1b1461007f578063d62c2f61146100a5578063f7531edd146100a5575b600080fd5b6060604051610076919061028a565b60405180910390f35b61009561008d3660046101fb565b600092915050565b6040519015158152602001610076565b61009561008d3660046100cf565b80356001600160a01b03811681146100ca57600080fd5b919050565b60008060408084860312156100e357600080fd5b833567ffffffffffffffff808211156100fb57600080fd5b818601915086601f83011261010f57600080fd5b8135602082821115610123576101236102d5565b8160051b6101328282016102a4565b8381528281019086840183880185018d101561014d57600080fd5b600093505b858410156101dc5780358781111561016957600080fd5b8801603f81018e1361017a57600080fd5b858101358881111561018e5761018e6102d5565b6101a0601f8201601f191688016102a4565b8181528f8c8385010111156101b457600080fd5b818c840189830137600091810188019190915284525060019390930192918401918401610152565b5098506101ed9150508882016100b3565b955050505050509250929050565b6000806040838503121561020e57600080fd5b823567ffffffffffffffff8116811461022657600080fd5b9150610234602084016100b3565b90509250929050565b6000815180845260005b8181101561026357602081850181015186830182015201610247565b81811115610275576000602083870101525b50601f01601f19169290920160200192915050565b60208152600061029d602083018461023d565b9392505050565b604051601f8201601f1916810167ffffffffffffffff811182821017156102cd576102cd6102d5565b604052919050565b634e487b7160e01b600052604160045260246000fdfea26469706673582212202c6e8dc15980e12ec1b93cc0fd811e701b6b90ebd3fd4b8985934601617ca04e64736f6c63430008060033"
 
 // DeployNeo3StateManager deploys a new Ethereum contract, binding an instance of Neo3StateManager to it.
 func DeployNeo3StateManager(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *Neo3StateManager, error) {
@@ -198,135 +212,135 @@ func (_Neo3StateManager *Neo3StateManagerTransactorRaw) Transact(opts *bind.Tran
 	return _Neo3StateManager.Contract.contract.Transact(opts, method, params...)
 }
 
-// MethodApproveRegisterStateValidator is a paid mutator transaction binding the contract method 0xdb3a5951.
+// ApproveRegisterStateValidator is a paid mutator transaction binding the contract method 0xca1c4d1b.
 //
-// Solidity: function MethodApproveRegisterStateValidator(uint64 ID, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerTransactor) MethodApproveRegisterStateValidator(opts *bind.TransactOpts, ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.contract.Transact(opts, "MethodApproveRegisterStateValidator", ID, Address)
+// Solidity: function approveRegisterStateValidator(uint64 ID, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerTransactor) ApproveRegisterStateValidator(opts *bind.TransactOpts, ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.contract.Transact(opts, "approveRegisterStateValidator", ID, Address)
 }
 
-// MethodApproveRegisterStateValidator is a paid mutator transaction binding the contract method 0xdb3a5951.
+// ApproveRegisterStateValidator is a paid mutator transaction binding the contract method 0xca1c4d1b.
 //
-// Solidity: function MethodApproveRegisterStateValidator(uint64 ID, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerSession) MethodApproveRegisterStateValidator(ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodApproveRegisterStateValidator(&_Neo3StateManager.TransactOpts, ID, Address)
+// Solidity: function approveRegisterStateValidator(uint64 ID, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerSession) ApproveRegisterStateValidator(ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.ApproveRegisterStateValidator(&_Neo3StateManager.TransactOpts, ID, Address)
 }
 
-// MethodApproveRegisterStateValidator is a paid mutator transaction binding the contract method 0xdb3a5951.
+// ApproveRegisterStateValidator is a paid mutator transaction binding the contract method 0xca1c4d1b.
 //
-// Solidity: function MethodApproveRegisterStateValidator(uint64 ID, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerTransactorSession) MethodApproveRegisterStateValidator(ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodApproveRegisterStateValidator(&_Neo3StateManager.TransactOpts, ID, Address)
+// Solidity: function approveRegisterStateValidator(uint64 ID, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerTransactorSession) ApproveRegisterStateValidator(ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.ApproveRegisterStateValidator(&_Neo3StateManager.TransactOpts, ID, Address)
 }
 
-// MethodApproveRemoveStateValidator is a paid mutator transaction binding the contract method 0xa27b72f9.
+// ApproveRemoveStateValidator is a paid mutator transaction binding the contract method 0x3473fd55.
 //
-// Solidity: function MethodApproveRemoveStateValidator(uint64 ID, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerTransactor) MethodApproveRemoveStateValidator(opts *bind.TransactOpts, ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.contract.Transact(opts, "MethodApproveRemoveStateValidator", ID, Address)
+// Solidity: function approveRemoveStateValidator(uint64 ID, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerTransactor) ApproveRemoveStateValidator(opts *bind.TransactOpts, ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.contract.Transact(opts, "approveRemoveStateValidator", ID, Address)
 }
 
-// MethodApproveRemoveStateValidator is a paid mutator transaction binding the contract method 0xa27b72f9.
+// ApproveRemoveStateValidator is a paid mutator transaction binding the contract method 0x3473fd55.
 //
-// Solidity: function MethodApproveRemoveStateValidator(uint64 ID, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerSession) MethodApproveRemoveStateValidator(ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodApproveRemoveStateValidator(&_Neo3StateManager.TransactOpts, ID, Address)
+// Solidity: function approveRemoveStateValidator(uint64 ID, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerSession) ApproveRemoveStateValidator(ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.ApproveRemoveStateValidator(&_Neo3StateManager.TransactOpts, ID, Address)
 }
 
-// MethodApproveRemoveStateValidator is a paid mutator transaction binding the contract method 0xa27b72f9.
+// ApproveRemoveStateValidator is a paid mutator transaction binding the contract method 0x3473fd55.
 //
-// Solidity: function MethodApproveRemoveStateValidator(uint64 ID, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerTransactorSession) MethodApproveRemoveStateValidator(ID uint64, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodApproveRemoveStateValidator(&_Neo3StateManager.TransactOpts, ID, Address)
+// Solidity: function approveRemoveStateValidator(uint64 ID, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerTransactorSession) ApproveRemoveStateValidator(ID uint64, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.ApproveRemoveStateValidator(&_Neo3StateManager.TransactOpts, ID, Address)
 }
 
-// MethodContractName is a paid mutator transaction binding the contract method 0xe50f8f44.
+// GetCurrentStateValidator is a paid mutator transaction binding the contract method 0x770fa9ad.
 //
-// Solidity: function MethodContractName() returns(string Name)
-func (_Neo3StateManager *Neo3StateManagerTransactor) MethodContractName(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Neo3StateManager.contract.Transact(opts, "MethodContractName")
+// Solidity: function getCurrentStateValidator() returns(bytes Validator)
+func (_Neo3StateManager *Neo3StateManagerTransactor) GetCurrentStateValidator(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Neo3StateManager.contract.Transact(opts, "getCurrentStateValidator")
 }
 
-// MethodContractName is a paid mutator transaction binding the contract method 0xe50f8f44.
+// GetCurrentStateValidator is a paid mutator transaction binding the contract method 0x770fa9ad.
 //
-// Solidity: function MethodContractName() returns(string Name)
-func (_Neo3StateManager *Neo3StateManagerSession) MethodContractName() (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodContractName(&_Neo3StateManager.TransactOpts)
+// Solidity: function getCurrentStateValidator() returns(bytes Validator)
+func (_Neo3StateManager *Neo3StateManagerSession) GetCurrentStateValidator() (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.GetCurrentStateValidator(&_Neo3StateManager.TransactOpts)
 }
 
-// MethodContractName is a paid mutator transaction binding the contract method 0xe50f8f44.
+// GetCurrentStateValidator is a paid mutator transaction binding the contract method 0x770fa9ad.
 //
-// Solidity: function MethodContractName() returns(string Name)
-func (_Neo3StateManager *Neo3StateManagerTransactorSession) MethodContractName() (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodContractName(&_Neo3StateManager.TransactOpts)
+// Solidity: function getCurrentStateValidator() returns(bytes Validator)
+func (_Neo3StateManager *Neo3StateManagerTransactorSession) GetCurrentStateValidator() (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.GetCurrentStateValidator(&_Neo3StateManager.TransactOpts)
 }
 
-// MethodGetCurrentStateValidator is a paid mutator transaction binding the contract method 0x495d18a4.
+// Name is a paid mutator transaction binding the contract method 0x06fdde03.
 //
-// Solidity: function MethodGetCurrentStateValidator() returns(bytes Validator)
-func (_Neo3StateManager *Neo3StateManagerTransactor) MethodGetCurrentStateValidator(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _Neo3StateManager.contract.Transact(opts, "MethodGetCurrentStateValidator")
+// Solidity: function name() returns(string Name)
+func (_Neo3StateManager *Neo3StateManagerTransactor) Name(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _Neo3StateManager.contract.Transact(opts, "name")
 }
 
-// MethodGetCurrentStateValidator is a paid mutator transaction binding the contract method 0x495d18a4.
+// Name is a paid mutator transaction binding the contract method 0x06fdde03.
 //
-// Solidity: function MethodGetCurrentStateValidator() returns(bytes Validator)
-func (_Neo3StateManager *Neo3StateManagerSession) MethodGetCurrentStateValidator() (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodGetCurrentStateValidator(&_Neo3StateManager.TransactOpts)
+// Solidity: function name() returns(string Name)
+func (_Neo3StateManager *Neo3StateManagerSession) Name() (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.Name(&_Neo3StateManager.TransactOpts)
 }
 
-// MethodGetCurrentStateValidator is a paid mutator transaction binding the contract method 0x495d18a4.
+// Name is a paid mutator transaction binding the contract method 0x06fdde03.
 //
-// Solidity: function MethodGetCurrentStateValidator() returns(bytes Validator)
-func (_Neo3StateManager *Neo3StateManagerTransactorSession) MethodGetCurrentStateValidator() (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodGetCurrentStateValidator(&_Neo3StateManager.TransactOpts)
+// Solidity: function name() returns(string Name)
+func (_Neo3StateManager *Neo3StateManagerTransactorSession) Name() (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.Name(&_Neo3StateManager.TransactOpts)
 }
 
-// MethodRegisterStateValidator is a paid mutator transaction binding the contract method 0x42753232.
+// RegisterStateValidator is a paid mutator transaction binding the contract method 0xf7531edd.
 //
-// Solidity: function MethodRegisterStateValidator(string[] StateValidators, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerTransactor) MethodRegisterStateValidator(opts *bind.TransactOpts, StateValidators []string, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.contract.Transact(opts, "MethodRegisterStateValidator", StateValidators, Address)
+// Solidity: function registerStateValidator(string[] StateValidators, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerTransactor) RegisterStateValidator(opts *bind.TransactOpts, StateValidators []string, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.contract.Transact(opts, "registerStateValidator", StateValidators, Address)
 }
 
-// MethodRegisterStateValidator is a paid mutator transaction binding the contract method 0x42753232.
+// RegisterStateValidator is a paid mutator transaction binding the contract method 0xf7531edd.
 //
-// Solidity: function MethodRegisterStateValidator(string[] StateValidators, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerSession) MethodRegisterStateValidator(StateValidators []string, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodRegisterStateValidator(&_Neo3StateManager.TransactOpts, StateValidators, Address)
+// Solidity: function registerStateValidator(string[] StateValidators, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerSession) RegisterStateValidator(StateValidators []string, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.RegisterStateValidator(&_Neo3StateManager.TransactOpts, StateValidators, Address)
 }
 
-// MethodRegisterStateValidator is a paid mutator transaction binding the contract method 0x42753232.
+// RegisterStateValidator is a paid mutator transaction binding the contract method 0xf7531edd.
 //
-// Solidity: function MethodRegisterStateValidator(string[] StateValidators, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerTransactorSession) MethodRegisterStateValidator(StateValidators []string, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodRegisterStateValidator(&_Neo3StateManager.TransactOpts, StateValidators, Address)
+// Solidity: function registerStateValidator(string[] StateValidators, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerTransactorSession) RegisterStateValidator(StateValidators []string, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.RegisterStateValidator(&_Neo3StateManager.TransactOpts, StateValidators, Address)
 }
 
-// MethodRemoveStateValidator is a paid mutator transaction binding the contract method 0x60d23093.
+// RemoveStateValidator is a paid mutator transaction binding the contract method 0xd62c2f61.
 //
-// Solidity: function MethodRemoveStateValidator(string[] StateValidators, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerTransactor) MethodRemoveStateValidator(opts *bind.TransactOpts, StateValidators []string, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.contract.Transact(opts, "MethodRemoveStateValidator", StateValidators, Address)
+// Solidity: function removeStateValidator(string[] StateValidators, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerTransactor) RemoveStateValidator(opts *bind.TransactOpts, StateValidators []string, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.contract.Transact(opts, "removeStateValidator", StateValidators, Address)
 }
 
-// MethodRemoveStateValidator is a paid mutator transaction binding the contract method 0x60d23093.
+// RemoveStateValidator is a paid mutator transaction binding the contract method 0xd62c2f61.
 //
-// Solidity: function MethodRemoveStateValidator(string[] StateValidators, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerSession) MethodRemoveStateValidator(StateValidators []string, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodRemoveStateValidator(&_Neo3StateManager.TransactOpts, StateValidators, Address)
+// Solidity: function removeStateValidator(string[] StateValidators, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerSession) RemoveStateValidator(StateValidators []string, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.RemoveStateValidator(&_Neo3StateManager.TransactOpts, StateValidators, Address)
 }
 
-// MethodRemoveStateValidator is a paid mutator transaction binding the contract method 0x60d23093.
+// RemoveStateValidator is a paid mutator transaction binding the contract method 0xd62c2f61.
 //
-// Solidity: function MethodRemoveStateValidator(string[] StateValidators, address Address) returns(bool success)
-func (_Neo3StateManager *Neo3StateManagerTransactorSession) MethodRemoveStateValidator(StateValidators []string, Address common.Address) (*types.Transaction, error) {
-	return _Neo3StateManager.Contract.MethodRemoveStateValidator(&_Neo3StateManager.TransactOpts, StateValidators, Address)
+// Solidity: function removeStateValidator(string[] StateValidators, address Address) returns(bool success)
+func (_Neo3StateManager *Neo3StateManagerTransactorSession) RemoveStateValidator(StateValidators []string, Address common.Address) (*types.Transaction, error) {
+	return _Neo3StateManager.Contract.RemoveStateValidator(&_Neo3StateManager.TransactOpts, StateValidators, Address)
 }
 
-// Neo3StateManagerEventApproveRegisterStateValidatorIterator is returned from FilterEventApproveRegisterStateValidator and is used to iterate over the raw logs and unpacked data for EventApproveRegisterStateValidator events raised by the Neo3StateManager contract.
-type Neo3StateManagerEventApproveRegisterStateValidatorIterator struct {
-	Event *Neo3StateManagerEventApproveRegisterStateValidator // Event containing the contract specifics and raw log
+// Neo3StateManagerApproveRegisterStateValidatorIterator is returned from FilterApproveRegisterStateValidator and is used to iterate over the raw logs and unpacked data for ApproveRegisterStateValidator events raised by the Neo3StateManager contract.
+type Neo3StateManagerApproveRegisterStateValidatorIterator struct {
+	Event *Neo3StateManagerApproveRegisterStateValidator // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -340,7 +354,7 @@ type Neo3StateManagerEventApproveRegisterStateValidatorIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *Neo3StateManagerEventApproveRegisterStateValidatorIterator) Next() bool {
+func (it *Neo3StateManagerApproveRegisterStateValidatorIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -349,7 +363,7 @@ func (it *Neo3StateManagerEventApproveRegisterStateValidatorIterator) Next() boo
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(Neo3StateManagerEventApproveRegisterStateValidator)
+			it.Event = new(Neo3StateManagerApproveRegisterStateValidator)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -364,7 +378,7 @@ func (it *Neo3StateManagerEventApproveRegisterStateValidatorIterator) Next() boo
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(Neo3StateManagerEventApproveRegisterStateValidator)
+		it.Event = new(Neo3StateManagerApproveRegisterStateValidator)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -380,41 +394,41 @@ func (it *Neo3StateManagerEventApproveRegisterStateValidatorIterator) Next() boo
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *Neo3StateManagerEventApproveRegisterStateValidatorIterator) Error() error {
+func (it *Neo3StateManagerApproveRegisterStateValidatorIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *Neo3StateManagerEventApproveRegisterStateValidatorIterator) Close() error {
+func (it *Neo3StateManagerApproveRegisterStateValidatorIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// Neo3StateManagerEventApproveRegisterStateValidator represents a EventApproveRegisterStateValidator event raised by the Neo3StateManager contract.
-type Neo3StateManagerEventApproveRegisterStateValidator struct {
+// Neo3StateManagerApproveRegisterStateValidator represents a ApproveRegisterStateValidator event raised by the Neo3StateManager contract.
+type Neo3StateManagerApproveRegisterStateValidator struct {
 	ID  uint64
 	Raw types.Log // Blockchain specific contextual infos
 }
 
-// FilterEventApproveRegisterStateValidator is a free log retrieval operation binding the contract event 0x5f1a0b61a603a9ca51716619dd9f1da0e41ed981eaf2964dc19a807542aab580.
+// FilterApproveRegisterStateValidator is a free log retrieval operation binding the contract event 0xa2d1b53f6d5ea7964c14d81acde072ef679b771780c18a93206cd3319c6621d6.
 //
-// Solidity: event EventApproveRegisterStateValidator(uint64 ID)
-func (_Neo3StateManager *Neo3StateManagerFilterer) FilterEventApproveRegisterStateValidator(opts *bind.FilterOpts) (*Neo3StateManagerEventApproveRegisterStateValidatorIterator, error) {
+// Solidity: event evtApproveRegisterStateValidator(uint64 ID)
+func (_Neo3StateManager *Neo3StateManagerFilterer) FilterApproveRegisterStateValidator(opts *bind.FilterOpts) (*Neo3StateManagerApproveRegisterStateValidatorIterator, error) {
 
-	logs, sub, err := _Neo3StateManager.contract.FilterLogs(opts, "EventApproveRegisterStateValidator")
+	logs, sub, err := _Neo3StateManager.contract.FilterLogs(opts, "evtApproveRegisterStateValidator")
 	if err != nil {
 		return nil, err
 	}
-	return &Neo3StateManagerEventApproveRegisterStateValidatorIterator{contract: _Neo3StateManager.contract, event: "EventApproveRegisterStateValidator", logs: logs, sub: sub}, nil
+	return &Neo3StateManagerApproveRegisterStateValidatorIterator{contract: _Neo3StateManager.contract, event: "evtApproveRegisterStateValidator", logs: logs, sub: sub}, nil
 }
 
-// WatchEventApproveRegisterStateValidator is a free log subscription operation binding the contract event 0x5f1a0b61a603a9ca51716619dd9f1da0e41ed981eaf2964dc19a807542aab580.
+// WatchApproveRegisterStateValidator is a free log subscription operation binding the contract event 0xa2d1b53f6d5ea7964c14d81acde072ef679b771780c18a93206cd3319c6621d6.
 //
-// Solidity: event EventApproveRegisterStateValidator(uint64 ID)
-func (_Neo3StateManager *Neo3StateManagerFilterer) WatchEventApproveRegisterStateValidator(opts *bind.WatchOpts, sink chan<- *Neo3StateManagerEventApproveRegisterStateValidator) (event.Subscription, error) {
+// Solidity: event evtApproveRegisterStateValidator(uint64 ID)
+func (_Neo3StateManager *Neo3StateManagerFilterer) WatchApproveRegisterStateValidator(opts *bind.WatchOpts, sink chan<- *Neo3StateManagerApproveRegisterStateValidator) (event.Subscription, error) {
 
-	logs, sub, err := _Neo3StateManager.contract.WatchLogs(opts, "EventApproveRegisterStateValidator")
+	logs, sub, err := _Neo3StateManager.contract.WatchLogs(opts, "evtApproveRegisterStateValidator")
 	if err != nil {
 		return nil, err
 	}
@@ -424,8 +438,8 @@ func (_Neo3StateManager *Neo3StateManagerFilterer) WatchEventApproveRegisterStat
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(Neo3StateManagerEventApproveRegisterStateValidator)
-				if err := _Neo3StateManager.contract.UnpackLog(event, "EventApproveRegisterStateValidator", log); err != nil {
+				event := new(Neo3StateManagerApproveRegisterStateValidator)
+				if err := _Neo3StateManager.contract.UnpackLog(event, "evtApproveRegisterStateValidator", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -446,21 +460,21 @@ func (_Neo3StateManager *Neo3StateManagerFilterer) WatchEventApproveRegisterStat
 	}), nil
 }
 
-// ParseEventApproveRegisterStateValidator is a log parse operation binding the contract event 0x5f1a0b61a603a9ca51716619dd9f1da0e41ed981eaf2964dc19a807542aab580.
+// ParseApproveRegisterStateValidator is a log parse operation binding the contract event 0xa2d1b53f6d5ea7964c14d81acde072ef679b771780c18a93206cd3319c6621d6.
 //
-// Solidity: event EventApproveRegisterStateValidator(uint64 ID)
-func (_Neo3StateManager *Neo3StateManagerFilterer) ParseEventApproveRegisterStateValidator(log types.Log) (*Neo3StateManagerEventApproveRegisterStateValidator, error) {
-	event := new(Neo3StateManagerEventApproveRegisterStateValidator)
-	if err := _Neo3StateManager.contract.UnpackLog(event, "EventApproveRegisterStateValidator", log); err != nil {
+// Solidity: event evtApproveRegisterStateValidator(uint64 ID)
+func (_Neo3StateManager *Neo3StateManagerFilterer) ParseApproveRegisterStateValidator(log types.Log) (*Neo3StateManagerApproveRegisterStateValidator, error) {
+	event := new(Neo3StateManagerApproveRegisterStateValidator)
+	if err := _Neo3StateManager.contract.UnpackLog(event, "evtApproveRegisterStateValidator", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// Neo3StateManagerEventApproveRemoveStateValidatorIterator is returned from FilterEventApproveRemoveStateValidator and is used to iterate over the raw logs and unpacked data for EventApproveRemoveStateValidator events raised by the Neo3StateManager contract.
-type Neo3StateManagerEventApproveRemoveStateValidatorIterator struct {
-	Event *Neo3StateManagerEventApproveRemoveStateValidator // Event containing the contract specifics and raw log
+// Neo3StateManagerApproveRemoveStateValidatorIterator is returned from FilterApproveRemoveStateValidator and is used to iterate over the raw logs and unpacked data for ApproveRemoveStateValidator events raised by the Neo3StateManager contract.
+type Neo3StateManagerApproveRemoveStateValidatorIterator struct {
+	Event *Neo3StateManagerApproveRemoveStateValidator // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -474,7 +488,7 @@ type Neo3StateManagerEventApproveRemoveStateValidatorIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *Neo3StateManagerEventApproveRemoveStateValidatorIterator) Next() bool {
+func (it *Neo3StateManagerApproveRemoveStateValidatorIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -483,7 +497,7 @@ func (it *Neo3StateManagerEventApproveRemoveStateValidatorIterator) Next() bool 
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(Neo3StateManagerEventApproveRemoveStateValidator)
+			it.Event = new(Neo3StateManagerApproveRemoveStateValidator)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -498,7 +512,7 @@ func (it *Neo3StateManagerEventApproveRemoveStateValidatorIterator) Next() bool 
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(Neo3StateManagerEventApproveRemoveStateValidator)
+		it.Event = new(Neo3StateManagerApproveRemoveStateValidator)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -514,41 +528,41 @@ func (it *Neo3StateManagerEventApproveRemoveStateValidatorIterator) Next() bool 
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *Neo3StateManagerEventApproveRemoveStateValidatorIterator) Error() error {
+func (it *Neo3StateManagerApproveRemoveStateValidatorIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *Neo3StateManagerEventApproveRemoveStateValidatorIterator) Close() error {
+func (it *Neo3StateManagerApproveRemoveStateValidatorIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// Neo3StateManagerEventApproveRemoveStateValidator represents a EventApproveRemoveStateValidator event raised by the Neo3StateManager contract.
-type Neo3StateManagerEventApproveRemoveStateValidator struct {
+// Neo3StateManagerApproveRemoveStateValidator represents a ApproveRemoveStateValidator event raised by the Neo3StateManager contract.
+type Neo3StateManagerApproveRemoveStateValidator struct {
 	ID  uint64
 	Raw types.Log // Blockchain specific contextual infos
 }
 
-// FilterEventApproveRemoveStateValidator is a free log retrieval operation binding the contract event 0xb3af0407c3807615e9840ef2aaeb42ba5174e45fce7f1793350965c6ecb13fa7.
+// FilterApproveRemoveStateValidator is a free log retrieval operation binding the contract event 0x32050489af2e3d6571e4c66ba0ca36ccf2b8feed7a7059d23aab90998d263604.
 //
-// Solidity: event EventApproveRemoveStateValidator(uint64 ID)
-func (_Neo3StateManager *Neo3StateManagerFilterer) FilterEventApproveRemoveStateValidator(opts *bind.FilterOpts) (*Neo3StateManagerEventApproveRemoveStateValidatorIterator, error) {
+// Solidity: event evtApproveRemoveStateValidator(uint64 ID)
+func (_Neo3StateManager *Neo3StateManagerFilterer) FilterApproveRemoveStateValidator(opts *bind.FilterOpts) (*Neo3StateManagerApproveRemoveStateValidatorIterator, error) {
 
-	logs, sub, err := _Neo3StateManager.contract.FilterLogs(opts, "EventApproveRemoveStateValidator")
+	logs, sub, err := _Neo3StateManager.contract.FilterLogs(opts, "evtApproveRemoveStateValidator")
 	if err != nil {
 		return nil, err
 	}
-	return &Neo3StateManagerEventApproveRemoveStateValidatorIterator{contract: _Neo3StateManager.contract, event: "EventApproveRemoveStateValidator", logs: logs, sub: sub}, nil
+	return &Neo3StateManagerApproveRemoveStateValidatorIterator{contract: _Neo3StateManager.contract, event: "evtApproveRemoveStateValidator", logs: logs, sub: sub}, nil
 }
 
-// WatchEventApproveRemoveStateValidator is a free log subscription operation binding the contract event 0xb3af0407c3807615e9840ef2aaeb42ba5174e45fce7f1793350965c6ecb13fa7.
+// WatchApproveRemoveStateValidator is a free log subscription operation binding the contract event 0x32050489af2e3d6571e4c66ba0ca36ccf2b8feed7a7059d23aab90998d263604.
 //
-// Solidity: event EventApproveRemoveStateValidator(uint64 ID)
-func (_Neo3StateManager *Neo3StateManagerFilterer) WatchEventApproveRemoveStateValidator(opts *bind.WatchOpts, sink chan<- *Neo3StateManagerEventApproveRemoveStateValidator) (event.Subscription, error) {
+// Solidity: event evtApproveRemoveStateValidator(uint64 ID)
+func (_Neo3StateManager *Neo3StateManagerFilterer) WatchApproveRemoveStateValidator(opts *bind.WatchOpts, sink chan<- *Neo3StateManagerApproveRemoveStateValidator) (event.Subscription, error) {
 
-	logs, sub, err := _Neo3StateManager.contract.WatchLogs(opts, "EventApproveRemoveStateValidator")
+	logs, sub, err := _Neo3StateManager.contract.WatchLogs(opts, "evtApproveRemoveStateValidator")
 	if err != nil {
 		return nil, err
 	}
@@ -558,8 +572,8 @@ func (_Neo3StateManager *Neo3StateManagerFilterer) WatchEventApproveRemoveStateV
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(Neo3StateManagerEventApproveRemoveStateValidator)
-				if err := _Neo3StateManager.contract.UnpackLog(event, "EventApproveRemoveStateValidator", log); err != nil {
+				event := new(Neo3StateManagerApproveRemoveStateValidator)
+				if err := _Neo3StateManager.contract.UnpackLog(event, "evtApproveRemoveStateValidator", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -580,12 +594,12 @@ func (_Neo3StateManager *Neo3StateManagerFilterer) WatchEventApproveRemoveStateV
 	}), nil
 }
 
-// ParseEventApproveRemoveStateValidator is a log parse operation binding the contract event 0xb3af0407c3807615e9840ef2aaeb42ba5174e45fce7f1793350965c6ecb13fa7.
+// ParseApproveRemoveStateValidator is a log parse operation binding the contract event 0x32050489af2e3d6571e4c66ba0ca36ccf2b8feed7a7059d23aab90998d263604.
 //
-// Solidity: event EventApproveRemoveStateValidator(uint64 ID)
-func (_Neo3StateManager *Neo3StateManagerFilterer) ParseEventApproveRemoveStateValidator(log types.Log) (*Neo3StateManagerEventApproveRemoveStateValidator, error) {
-	event := new(Neo3StateManagerEventApproveRemoveStateValidator)
-	if err := _Neo3StateManager.contract.UnpackLog(event, "EventApproveRemoveStateValidator", log); err != nil {
+// Solidity: event evtApproveRemoveStateValidator(uint64 ID)
+func (_Neo3StateManager *Neo3StateManagerFilterer) ParseApproveRemoveStateValidator(log types.Log) (*Neo3StateManagerApproveRemoveStateValidator, error) {
+	event := new(Neo3StateManagerApproveRemoveStateValidator)
+	if err := _Neo3StateManager.contract.UnpackLog(event, "evtApproveRemoveStateValidator", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

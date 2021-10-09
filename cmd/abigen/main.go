@@ -98,6 +98,10 @@ var (
 		Name:  "alias",
 		Usage: "Comma separated aliases for function and event renaming, e.g. original1=alias1, original2=alias2",
 	}
+	zionFlag = cli.BoolFlag{
+		Name:  "zion",
+		Usage: "whether to generate bindings for zion native conventions",
+	}
 )
 
 func init() {
@@ -112,6 +116,7 @@ func init() {
 		vyFlag,
 		vyperFlag,
 		excFlag,
+		zionFlag,
 		pkgFlag,
 		outFlag,
 		langFlag,
@@ -252,6 +257,9 @@ func abigen(c *cli.Context) error {
 		for _, match := range submatches {
 			aliases[match[1]] = match[2]
 		}
+	}
+	if c.GlobalBool(zionFlag.Name) {
+		bind.Zion = true
 	}
 	// Generate the contract binding
 	code, err := bind.Bind(types, abis, bins, sigs, c.GlobalString(pkgFlag.Name), lang, libs, aliases)

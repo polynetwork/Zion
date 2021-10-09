@@ -22,13 +22,14 @@ import (
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/contracts/native/go_abi/header_sync_abi"
 )
 
-const (
-	MethodContractName      = "name"
-	MethodSyncGenesisHeader = "syncGenesisHeader"
-	MethodSyncBlockHeader   = "syncBlockHeader"
-	MethodSyncCrossChainMsg = "syncCrossChainMsg"
+var (
+	MethodContractName      = header_sync_abi.MethodName
+	MethodSyncGenesisHeader = header_sync_abi.MethodSyncGenesisHeader
+	MethodSyncBlockHeader   = header_sync_abi.MethodSyncBlockHeader
+	MethodSyncCrossChainMsg = header_sync_abi.MethodSyncCrossChainMsg
 )
 
 var GasTable = map[string]uint64{
@@ -38,17 +39,8 @@ var GasTable = map[string]uint64{
 	MethodSyncCrossChainMsg: 0,
 }
 
-const abijson = `[
-	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"chainID","type":"uint64"},{"indexed":false,"internalType":"string","name":"BlockHash","type":"string"},{"indexed":false,"internalType":"uint64","name":"Height","type":"uint64"},{"indexed":false,"internalType":"string","name":"NextValidatorsHash","type":"string"},{"indexed":false,"internalType":"string","name":"InfoChainID","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlockHeight","type":"uint64"}],"name":"OKEpochSwitchInfoEvent","type":"event"},
-	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"chainID","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"height","type":"uint64"},{"indexed":false,"internalType":"string","name":"blockHash","type":"string"},{"indexed":false,"internalType":"uint256","name":"BlockHeight","type":"uint256"}],"name":"` + SYNC_HEADER_NAME_EVENT + `","type":"event"},
-    {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint64","name":"ChainID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"},{"internalType":"bytes[]","name":"Headers","type":"bytes[]"}],"name":"` + MethodSyncBlockHeader + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint64","name":"ChainID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"},{"internalType":"bytes[]","name":"CrossChainMsgs","type":"bytes[]"}],"name":"` + MethodSyncCrossChainMsg + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint64","name":"ChainID","type":"uint64"},{"internalType":"bytes","name":"GenesisHeader","type":"bytes"}],"name":"` + MethodSyncGenesisHeader + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
-]`
-
 func GetABI() *abi.ABI {
-	ab, err := abi.JSON(strings.NewReader(abijson))
+	ab, err := abi.JSON(strings.NewReader(header_sync_abi.HeaderSyncABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
