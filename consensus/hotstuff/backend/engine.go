@@ -191,10 +191,6 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 
-	//if index, _ := s.valset.GetByAddress(s.Address()); index < 0 {
-	//	return ErrEpochValidator
-	//}
-
 	if s.coreStarted {
 		return ErrStartedEngine
 	}
