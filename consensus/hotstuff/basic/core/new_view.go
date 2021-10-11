@@ -52,7 +52,7 @@ func (c *core) handleNewView(data *hotstuff.Message, src hotstuff.Validator) err
 		return err
 	}
 
-	if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
+	if err := c.verifyCrossEpochQC(msg.PrepareQC); err != nil {
 		logger.Trace("Failed to verify highQC", "msg", msgTyp, "err", err)
 		return err
 	}
