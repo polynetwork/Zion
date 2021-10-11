@@ -223,7 +223,7 @@ func (s *backend) Stop() error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if !s.coreStarted {
-		return ErrStoppedEngine
+		return nil
 	}
 	if err := s.core.Stop(); err != nil {
 		return err
@@ -284,6 +284,9 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 
 	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
 	snap := s.snap().Copy()
+	if height := header.Number.Uint64(); s.lastEpochValSet != nil && s.curEpochStartHeight > height && s.curEpochStartHeight == height+1 {
+		snap = s.lastEpochValSet.Copy()
+	}
 	return s.signer.VerifyHeader(header, snap, seal)
 }
 
@@ -292,6 +295,8 @@ func (s *backend) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscri
 }
 
 func (s *backend) ChangeEpoch(epochStartHeight uint64, list []common.Address) error {
+	s.lastEpochValSet = s.valset.Copy()
+	s.curEpochStartHeight = epochStartHeight
 	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
 	return s.core.ChangeEpoch(epochStartHeight, s.valset)
 }

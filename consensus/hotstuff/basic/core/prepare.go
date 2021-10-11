@@ -149,7 +149,7 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) e
 	if !ok {
 		return fmt.Errorf("invalid proposal: hash %s", proposal.Hash())
 	}
-	if err := c.signer.VerifyQC(highQC, c.valSet); err != nil {
+	if err := c.verifyCrossEpochQC(highQC); err != nil {
 		return err
 	}
 	if highQC.Hash != block.ParentHash() {

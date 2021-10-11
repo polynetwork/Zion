@@ -82,6 +82,8 @@ func (c *core) ChangeEpoch(epochStartHeight uint64, valset hotstuff.ValidatorSet
 		}
 	}
 
+	c.lastEpochValSet = c.valSet.Copy()
+	c.curEpochStartHeight = epochStartHeight
 	c.valSet = valset
 	c.requests = newRequestSet()
 	c.backlogs = newBackLog()

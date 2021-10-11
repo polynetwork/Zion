@@ -99,6 +99,22 @@ func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
 	return nil
 }
 
+// verifyCrossEpochQC verify quorum certificate with current validator set or
+// last epoch's val set if current height equals to epoch start height
+func (c *core) verifyCrossEpochQC(qc *hotstuff.QuorumCert) error {
+	valset := c.valSet
+	if c.current.Height().Uint64() == c.curEpochStartHeight {
+		if c.lastEpochValSet == nil {
+			return errBadEpochValidators
+		}
+		valset = c.lastEpochValSet
+	}
+	if err := c.signer.VerifyQC(qc, valset); err != nil {
+		return err
+	}
+	return nil
+}
+
 // checkView checks the Message state, remote msg view should not be nil(local view WONT be nil).
 // if the view is ahead of current view we name the Message to be future Message, and if the view
 // is behind of current view, we name it as old Message. `old Message` and `invalid Message` will

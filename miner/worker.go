@@ -924,10 +924,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	if w.current != nil && w.current.state != nil {
 		rs := w.current.state.Copy()
 		w.checkEpoch(rs, num)
-		if w.handleEpochChange(rs, header.Number.Uint64()) {
-			w.clearEpoch()
-			return
-		}
+		w.handleEpochChange(rs, header.Number.Uint64())
 	}
 
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
@@ -1139,43 +1136,37 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
 	return
 }
 
-func (w *worker) handleEpochChange(st *state.StateDB, height uint64) bool {
+func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
 
 	if !w.epochCheckFlag || w.nextEpoch == nil || height != w.nextEpoch.StartHeight {
-		return false
+		return
 	}
+
+	defer func() {
+		w.nextEpoch = nil
+		w.changeEpochFlag = false
+		w.epochCheckFlag = false
+	}()
 
 	log.Debug("[miner worker]", "handle epoch change, height", height)
 	if w.nextEpoch == nil || w.nextEpoch.Validators == nil || len(w.nextEpoch.Validators) == 0 {
 		log.Warn("Failed to change epoch", "err", "epoch validators should not be empty")
-		return false
+		return
 	}
 
 	engine, ok := w.engine.(consensus.HotStuff)
 	if !ok {
 		log.Warn("Only basic-hotstuff support `change-epoch`")
-		return false
+		return
 	}
 
 	log.Debug("Restart consensus engine")
 	w.Stop()
 	if err := engine.ChangeEpoch(w.nextEpoch.StartHeight, w.nextEpoch.Validators); err != nil {
 		log.Error("Change Epoch", "change failed", err)
-		return false
+		return
 	}
 	w.Start()
-
-	return true
-}
-
-func (w *worker) clearEpoch() {
-	w.epochMu.Lock()
-	defer w.epochMu.Unlock()
-
-	w.nextEpoch = nil
-	w.changeEpochFlag = false
-	w.epochCheckFlag = false
-	log.Debug("Clear miner epoch")
 }

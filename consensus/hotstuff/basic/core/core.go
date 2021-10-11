@@ -24,9 +24,11 @@ type core struct {
 	backend hotstuff.Backend
 	signer  hotstuff.Signer
 
-	valSet   hotstuff.ValidatorSet
-	requests *requestSet
-	backlogs *backlog
+	lastEpochValSet     hotstuff.ValidatorSet
+	curEpochStartHeight uint64
+	valSet              hotstuff.ValidatorSet
+	requests            *requestSet
+	backlogs            *backlog
 
 	events            *event.TypeMuxSubscription
 	timeoutSub        *event.TypeMuxSubscription

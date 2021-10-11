@@ -61,6 +61,9 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
+	lastEpochValSet     hotstuff.ValidatorSet
+	curEpochStartHeight uint64
+
 	proposedBlockHashes map[common.Hash]struct{}
 
 	// The channels for hotstuff engine notifications
