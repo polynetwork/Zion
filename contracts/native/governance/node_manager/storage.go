@@ -45,6 +45,7 @@ const (
 	SKP_VOTE      = "st_vote"
 	SKP_VOTE_TO   = "st_vote_to"
 	SKP_CUR_EPOCH = "st_cur_epoch"
+	SKP_LST_EPOCH = "st_lst_epoch"
 	SKP_SIGN      = "st_sign"
 	SKP_SIGNER    = "st_signer"
 )
@@ -103,6 +104,25 @@ func storeCurrentEpochHash(s *native.NativeContract, epochHash common.Hash) {
 
 func getCurrentEpochHash(s *native.NativeContract) (common.Hash, error) {
 	key := curEpochKey()
+	value, err := get(s, key)
+	if err != nil {
+		return common.EmptyHash, err
+	}
+	return common.BytesToHash(value), nil
+}
+
+// ====================================================================
+//
+// `last epoch hash` storage
+//
+// ====================================================================
+func storeLastEpochHash(s *native.NativeContract, epochHash common.Hash) {
+	key := lastEpochKey()
+	set(s, key, epochHash.Bytes())
+}
+
+func getLastEpochHash(s *native.NativeContract) (common.Hash, error) {
+	key := lastEpochKey()
 	value, err := get(s, key)
 	if err != nil {
 		return common.EmptyHash, err
@@ -517,6 +537,10 @@ func epochProofKey(proofHashKey common.Hash) []byte {
 
 func curEpochKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_CUR_EPOCH), []byte("1"))
+}
+
+func lastEpochKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_LST_EPOCH), []byte("1"))
 }
 
 func proposalsKey(epochID uint64) []byte {

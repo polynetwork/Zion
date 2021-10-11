@@ -44,6 +44,11 @@ func StoreGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
 	// store current hash
 	curKey := curEpochKey()
 	cache.Put(curKey, epoch.Hash().Bytes())
+
+	// store genesis epoch proof
+	key := epochProofKey(EpochProofHash(epoch.ID))
+	cache.Put(key, epoch.Hash().Bytes())
+
 	return epoch, nil
 }
 
