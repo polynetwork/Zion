@@ -222,30 +222,16 @@ func TestPropose(t *testing.T) {
 				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
 				sort.Sort(peers)
 				proposer := ctx.ContractRef().TxOrigin()
-				epoch1 := &EpochInfo{
-					ID:          testGenesisEpoch.ID + 1,
-					StartHeight: c.StartHeight + 2,
-					Peers:       peers,
-					Proposer:    proposer,
+				for i := 0; i < MaxProposalNumPerEpoch; i++ {
+					epoch := &EpochInfo{
+						ID:          testGenesisEpoch.ID + 1,
+						StartHeight: c.StartHeight + 2 + uint64(i),
+						Peers:       peers,
+						Proposer:    proposer,
+					}
+					storeProposal(ctx, epoch.ID, epoch.Hash())
+					storeEpoch(ctx, epoch)
 				}
-				epoch2 := &EpochInfo{
-					ID:          testGenesisEpoch.ID + 1,
-					StartHeight: c.StartHeight + 3,
-					Peers:       peers,
-					Proposer:    proposer,
-				}
-				epoch3 := &EpochInfo{
-					ID:          testGenesisEpoch.ID + 1,
-					StartHeight: c.StartHeight + 4,
-					Peers:       peers,
-					Proposer:    proposer,
-				}
-				storeProposal(ctx, epoch1.ID, epoch1.Hash())
-				storeEpoch(ctx, epoch1)
-				storeProposal(ctx, epoch2.ID, epoch2.Hash())
-				storeEpoch(ctx, epoch2)
-				storeProposal(ctx, epoch3.ID, epoch3.Hash())
-				storeEpoch(ctx, epoch3)
 				c.Payload, _ = input.Encode()
 			},
 			Expect: ErrProposalsNum,
@@ -513,7 +499,7 @@ func TestProposalPassed(t *testing.T) {
 	ctx := generateNativeContract(proposer, proposeBlockNum)
 	_, _, _ = ctx.ContractRef().NativeCall(proposer, this, payload)
 
-	curEpoch, err := GetCurrentEpoch(ctx)
+	curEpoch, err := getCurrentEpoch(ctx)
 	assert.NoError(t, err)
 
 	// prepare vote data
@@ -545,6 +531,8 @@ func TestProposalPassed(t *testing.T) {
 }
 
 func TestDirtyJob(t *testing.T) {
+	resetTestContext()
+
 	s := testEmptyCtx
 	epochID := uint64(2)
 	peers := generateTestPeers(12)

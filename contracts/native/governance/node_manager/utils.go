@@ -31,7 +31,7 @@ import (
 func StoreGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
 	cache := (*state.CacheDB)(s)
 	epoch := &EpochInfo{
-		ID:          StartEpoch,
+		ID:          StartEpochID,
 		Peers:       peers,
 		StartHeight: 0,
 	}
@@ -44,44 +44,42 @@ func StoreGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
 	// store current hash
 	curKey := curEpochKey()
 	cache.Put(curKey, epoch.Hash().Bytes())
+
+	// store genesis epoch proof
+	key := epochProofKey(EpochProofHash(epoch.ID))
+	cache.Put(key, epoch.Hash().Bytes())
+
 	return epoch, nil
 }
 
-func GetCurrentEpoch(s *native.NativeContract) (*EpochInfo, error) {
-	epochHash, err := getCurrentEpochHash(s)
-	if err != nil {
-		return nil, err
-	}
-	epoch, err := getEpoch(s, epochHash)
-	if err != nil {
-		return nil, err
-	}
-	return epoch, nil
-}
+func getCurrentEpoch(s *native.NativeContract) (*EpochInfo, error) {
 
-//
-//func getCurEpoch(cache *state.CacheDB) (*EpochInfo, error) {
-//	// get current hash
-//	curKey := curEpochKey()
-//	enc, err := cache.Get(curKey)
-//	if err != nil {
-//		return nil, err
-//	}
-//	hash := common.BytesToHash(enc)
-//
-//	// get current epoch info
-//	key := epochKey(hash)
-//	value, err := cache.Get(key)
-//	if err != nil {
-//		return nil, err
-//	}
-//
-//	var epoch *EpochInfo
-//	if err := rlp.DecodeBytes(value, &epoch); err != nil {
-//		return nil, err
-//	}
-//	return epoch, nil
-//}
+	// current epoch taking effective
+	curEpochHash, err := getCurrentEpochHash(s)
+	if err != nil {
+		return nil, err
+	}
+	cur, err := getEpoch(s, curEpochHash)
+	if err != nil {
+		return nil, err
+	}
+
+	if cur.ID == StartEpochID {
+		return cur, nil
+	}
+
+	height := s.ContractRef().BlockHeight().Uint64()
+	if height >= cur.StartHeight {
+		return cur, nil
+	}
+
+	// current epoch not taking effective, return last epoch
+	lastEpochHash, err := getLastEpochHash(s)
+	if err != nil {
+		return nil, err
+	}
+	return getEpoch(s, lastEpochHash)
+}
 
 func checkAuthority(origin, caller common.Address, epoch *EpochInfo) error {
 	if epoch == nil || epoch.Peers == nil || epoch.Peers.List == nil {

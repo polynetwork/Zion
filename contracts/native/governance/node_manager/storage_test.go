@@ -44,7 +44,7 @@ func TestStorageEpoch(t *testing.T) {
 }
 
 func TestStorageEpochProof(t *testing.T) {
-	startEpochProofHash := EpochProofHash(StartEpoch)
+	startEpochProofHash := EpochProofHash(StartEpochID)
 	assert.NotEqual(t, EpochProofDigest, startEpochProofHash)
 	t.Logf("start epoch proof hash is %s", startEpochProofHash.Hex())
 
@@ -159,4 +159,12 @@ func TestSigns(t *testing.T) {
 	gotSigners, err := getSigners(testEmptyCtx, expectSign.Hash())
 	assert.NoError(t, err)
 	assert.Equal(t, expectSigners, gotSigners)
+}
+
+func TestLastEpochHash(t *testing.T) {
+	expect := generateTestHash(1242)
+	storeLastEpochHash(testEmptyCtx, expect)
+	got, err := getLastEpochHash(testEmptyCtx)
+	assert.NoError(t, err)
+	assert.Equal(t, expect, got)
 }

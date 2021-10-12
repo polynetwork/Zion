@@ -46,15 +46,20 @@ var (
 )
 
 const (
-	MinEpochValidPeriod     uint64 = 60
+	// The minimum distance between two adjacent epochs is 60 blocks
+	MinEpochValidPeriod uint64 = 60
+	// The default value of distance for two adjacent epochs
 	DefaultEpochValidPeriod uint64 = 86400
-	MaxEpochValidPeriod     uint64 = 86400 * 10
-	MinProposalPeersLen     int    = 4   // F = 1, n >= 3f + 1
-	MaxProposalPeersLen     int    = 100 // F = 33
-	MaxProposalNumPerEpoch  int    = 3   // 每个共识节点每个epoch最多有3次提案
-
-	// 提案生成后必须在有效时间内完成投票，否则无法实现change epoch
-	MinVoteEffectivePeriod uint64 = 10 // 一轮epoch投票成功后，共识切换需要一定的时间间隔
+	// The max distance between two adjacent epochs
+	MaxEpochValidPeriod uint64 = 86400 * 10
+	// Consensus engine allows at least 4 validators, this denote F >= 1
+	MinProposalPeersLen int = 4
+	// Consensus engine allows at most 100 validators, this denote F <= 33
+	MaxProposalPeersLen int = 100
+	// Every validator can propose at most 6 proposals in an epoch
+	MaxProposalNumPerEpoch int = 6
+	// Proposal should be voted and passed in period
+	MinVoteEffectivePeriod uint64 = 10
 )
 
 func InitNodeManager() {
@@ -84,7 +89,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	caller := ctx.Caller
 
 	// check authority
-	curEpoch, err := GetCurrentEpoch(s)
+	curEpoch, err := getCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
@@ -196,7 +201,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 	height := s.ContractRef().BlockHeight().Uint64()
 
 	// check authority
-	curEpoch, err := GetCurrentEpoch(s)
+	curEpoch, err := getCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
@@ -296,6 +301,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 			return utils.ByteFailed, ErrStorage
 		}
 
+		storeLastEpochHash(s, curEpoch.Hash())
 		storeCurrentEpochHash(s, epoch.Hash())
 		storeEpochProof(s, epoch.ID, epoch.Hash())
 		if err := emitEpochChange(s, curEpoch, epoch); err != nil {
@@ -341,18 +347,17 @@ func dirtyJob(s *native.NativeContract, last, cur *EpochInfo) {
 }
 
 func Epoch(s *native.NativeContract) ([]byte, error) {
-	epoch, err := GetCurrentEpoch(s)
+	epoch, err := getCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
-
 	output := &MethodEpochOutput{Epoch: epoch}
 	return output.Encode()
 }
 
 func EpochProof(s *native.NativeContract) ([]byte, error) {
-	epoch, err := GetCurrentEpoch(s)
+	epoch, err := getCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
@@ -371,7 +376,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	caller := ctx.Caller
 
 	// get epoch info
-	epoch, err := GetCurrentEpoch(s)
+	epoch, err := getCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return false, ErrEpochNotExist
