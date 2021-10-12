@@ -61,7 +61,6 @@ func New(
 	c *hotstuff.Config,
 	db ethdb.Database,
 	signer hotstuff.Signer,
-	valset hotstuff.ValidatorSet,
 ) hotstuff.CoreEngine {
 
 	addr := signer.Address()
@@ -74,11 +73,9 @@ func New(
 
 	engine.smr = newSMR()
 	engine.address = addr
-	engine.valset = valset
 	engine.signer = signer
 	engine.started = false
 	engine.backlogs = newBackLog()
-	engine.messages = NewMessagePool(valset)
 	engine.validateFn = engine.checkValidatorSignature
 
 	return engine

@@ -31,9 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	hsb "github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/gasprice"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -218,15 +216,15 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 	if chainConfig.HotStuff != nil {
 		config := hotstuff.DefaultBasicConfig
 		nodeKey := stack.Config().NodeKey()
-		genesisNodeList := stack.Config().StaticNodes()
-		validators := make([]common.Address, 0)
-		for _, v := range genesisNodeList {
-			pubkey := v.Pubkey()
-			validators = append(validators, crypto.PubkeyToAddress(*pubkey))
-		}
-		valset := validator.NewSet(validators, hotstuff.RoundRobin)
+		//genesisNodeList := stack.Config().StaticNodes()
+		//validators := make([]common.Address, 0)
+		//for _, v := range genesisNodeList {
+		//	pubkey := v.Pubkey()
+		//	validators = append(validators, crypto.PubkeyToAddress(*pubkey))
+		//}
+		//valset := validator.NewSet(validators, hotstuff.RoundRobin)
 		protocol := hotstuff.HotstuffProtocol(chainConfig.HotStuff.Protocol)
-		return hsb.New(config, nodeKey, db, valset, protocol)
+		return hsb.New(config, nodeKey, db, protocol)
 	}
 	// Otherwise assume proof-of-work
 	switch config.PowMode {

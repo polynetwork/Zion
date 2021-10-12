@@ -111,6 +111,11 @@ func (c *core) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscripti
 	return c.feed.Subscribe(ch)
 }
 
+func (c *core) InitValidators(valset hotstuff.ValidatorSet) {
+	c.valset = valset
+	c.messages = NewMessagePool(valset)
+}
+
 func (c *core) ChangeEpoch(epochStartHeight uint64, valset hotstuff.ValidatorSet) error {
 	return nil
 }

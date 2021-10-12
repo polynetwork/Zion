@@ -151,6 +151,8 @@ type HotStuff interface {
 	// Start starts the engine
 	Start(chain ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
 
+	InitValidators(list []common.Address)
+
 	ChangeEpoch(epochStartHeight uint64, list []common.Address) error
 
 	// Stop stops the engine
