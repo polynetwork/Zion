@@ -216,13 +216,6 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 	if chainConfig.HotStuff != nil {
 		config := hotstuff.DefaultBasicConfig
 		nodeKey := stack.Config().NodeKey()
-		//genesisNodeList := stack.Config().StaticNodes()
-		//validators := make([]common.Address, 0)
-		//for _, v := range genesisNodeList {
-		//	pubkey := v.Pubkey()
-		//	validators = append(validators, crypto.PubkeyToAddress(*pubkey))
-		//}
-		//valset := validator.NewSet(validators, hotstuff.RoundRobin)
 		protocol := hotstuff.HotstuffProtocol(chainConfig.HotStuff.Protocol)
 		return hsb.New(config, nodeKey, db, protocol)
 	}
