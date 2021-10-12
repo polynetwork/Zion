@@ -108,6 +108,8 @@ type CoreEngine interface {
 	// SubscribeRequest notify to miner worker that event-driven engine need an new proposal
 	SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription
 
+	InitValidators(valset ValidatorSet)
+
 	ChangeEpoch(epochStartHeight uint64, valset ValidatorSet) error
 }
 

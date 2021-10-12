@@ -24,6 +24,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -83,7 +85,7 @@ type backend struct {
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, valset hotstuff.ValidatorSet, protocol hotstuff.HotstuffProtocol) consensus.HotStuff {
+func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, protocol hotstuff.HotstuffProtocol) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
@@ -93,7 +95,6 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		config: config,
 		//db:             db,
 		logger:              log.New(),
-		valset:              valset,
 		commitCh:            make(chan *types.Block, 1),
 		coreStarted:         false,
 		eventMux:            new(event.TypeMux),
@@ -107,13 +108,18 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 
 	switch protocol {
 	case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
-		backend.core = hsb.New(backend, config, signer, valset)
+		backend.core = hsb.New(backend, config, signer)
 	case hotstuff.HOTSTUFF_PROTOCOL_EVENT_DRIVEN:
-		backend.core = hse.New(backend, config, db, signer, valset)
+		backend.core = hse.New(backend, config, db, signer)
 	default:
 		panic("unknown hotstuff protocol")
 	}
 	return backend
+}
+
+func (s *backend) InitValidators(list []common.Address) {
+	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
+	s.core.InitValidators(s.valset)
 }
 
 // Address implements hotstuff.Backend.Address

@@ -32,6 +32,9 @@ import (
 	"github.com/ethereum/go-ethereum/common/mclock"
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
@@ -338,6 +341,17 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 			}
 		}
 	}
+
+	if engine, ok := bc.engine.(consensus.HotStuff); ok {
+		vals, err := bc.getValidators()
+		if err != nil {
+			return nil, err
+		} else {
+			engine.InitValidators(vals)
+			log.Infof("init block chain engine", "epoch validators", vals)
+		}
+	}
+
 	// The first thing the node will do is reconstruct the verification data for
 	// the head block (ethash cache or clique voting snapshot). Might as well do
 	// it in advance.
@@ -395,6 +409,39 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 		}()
 	}
 	return bc, nil
+}
+
+func (bc *BlockChain) getValidators() ([]common.Address, error) {
+	block := bc.CurrentBlock()
+	st, err := bc.StateAt(block.Root())
+	if err != nil {
+		return nil, err
+	}
+
+	caller := common.EmptyAddress
+	ref := native.NewContractRef(st, caller, caller, block.Number(), common.EmptyHash, 0, nil)
+	payload, err := new(nm.MethodEpochInput).Encode()
+	if err != nil {
+		return nil, err
+	}
+	enc, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
+	if err != nil {
+		return nil, err
+	}
+	output := new(nm.MethodEpochOutput)
+	if err := output.Decode(enc); err != nil {
+		return nil, err
+	}
+
+	if output.Epoch == nil || output.Epoch.Peers == nil || output.Epoch.Peers.List == nil {
+		return nil, errors.New("epoch is nil")
+	}
+
+	list := make([]common.Address, 0)
+	for _, v := range output.Epoch.Peers.List {
+		list = append(list, v.Address)
+	}
+	return list, nil
 }
 
 // GetVMConfig returns the block chain VM config.

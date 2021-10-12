@@ -41,7 +41,7 @@ type core struct {
 }
 
 // New creates an HotStuff consensus core
-func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer, valSet hotstuff.ValidatorSet) hotstuff.CoreEngine {
+func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer) hotstuff.CoreEngine {
 	c := &core{
 		config:  config,
 		logger:  log.New("address", backend.Address()),
@@ -50,7 +50,6 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 	c.requests = newRequestSet()
 	c.backlogs = newBackLog()
 	c.validateFn = c.checkValidatorSignature
-	c.valSet = valSet
 	c.signer = signer
 
 	// todo(fuk): delete after test

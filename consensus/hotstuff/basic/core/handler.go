@@ -60,6 +60,10 @@ func (c *core) Stop() error {
 	return nil
 }
 
+func (c *core) InitValidators(valset hotstuff.ValidatorSet) {
+	c.valSet = valset
+}
+
 func (c *core) ChangeEpoch(epochStartHeight uint64, valset hotstuff.ValidatorSet) error {
 	if c.isRunning {
 		return fmt.Errorf("consensus engine need stop first")
