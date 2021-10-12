@@ -89,7 +89,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	caller := ctx.Caller
 
 	// check authority
-	curEpoch, err := GetCurrentEpoch(s)
+	curEpoch, err := getCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
@@ -201,7 +201,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 	height := s.ContractRef().BlockHeight().Uint64()
 
 	// check authority
-	curEpoch, err := GetCurrentEpoch(s)
+	curEpoch, err := getCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
@@ -347,18 +347,17 @@ func dirtyJob(s *native.NativeContract, last, cur *EpochInfo) {
 }
 
 func Epoch(s *native.NativeContract) ([]byte, error) {
-	epoch, err := GetCurrentEpoch(s)
+	epoch, err := getCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
-
 	output := &MethodEpochOutput{Epoch: epoch}
 	return output.Encode()
 }
 
 func EpochProof(s *native.NativeContract) ([]byte, error) {
-	epoch, err := GetCurrentEpoch(s)
+	epoch, err := getCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
@@ -377,7 +376,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	caller := ctx.Caller
 
 	// get epoch info
-	epoch, err := GetCurrentEpoch(s)
+	epoch, err := getCurrentEpoch(s)
 	if err != nil {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return false, ErrEpochNotExist

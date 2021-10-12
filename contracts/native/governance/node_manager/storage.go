@@ -29,10 +29,8 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// todo: issue, add field `len` for stat addressList and hashList
-
 const (
-	StartEpoch uint64 = 1 // epoch started from 1, NOT 0!
+	StartEpochID uint64 = 1 // epoch started from 1, NOT 0!
 )
 
 var ErrEof = errors.New("EOF")

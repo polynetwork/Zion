@@ -44,7 +44,7 @@ func TestStorageEpoch(t *testing.T) {
 }
 
 func TestStorageEpochProof(t *testing.T) {
-	startEpochProofHash := EpochProofHash(StartEpoch)
+	startEpochProofHash := EpochProofHash(StartEpochID)
 	assert.NotEqual(t, EpochProofDigest, startEpochProofHash)
 	t.Logf("start epoch proof hash is %s", startEpochProofHash.Hex())
 
