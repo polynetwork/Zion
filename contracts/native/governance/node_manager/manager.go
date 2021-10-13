@@ -334,7 +334,7 @@ func dirtyJob(s *native.NativeContract, last, cur *EpochInfo) {
 
 		delEpoch(s, v)
 		if err := delProposal(s, cur.ID, v); err != nil {
-			log.Error("vote", "dirty job failed", err)
+			log.Error("dirtyJob", "dirty job failed", err)
 		}
 
 		clearVotes(s, v)
@@ -347,10 +347,10 @@ func dirtyJob(s *native.NativeContract, last, cur *EpochInfo) {
 
 	list, err := getProposals(s, cur.ID)
 	if err != nil {
-		log.Warn("vote", "check proposal number after dirty job, can't get proposals", err)
+		log.Warn("dirtyJob", "check proposal number after dirty job, can't get proposals", err)
 	}
 	if len(list) < 0 || len(list) > 1 {
-		log.Warn("vote", "check proposal number after dirty job, expect", 1, "got", len(list))
+		log.Warn("dirtyJob", "check proposal number after dirty job, expect", 1, "got", len(list))
 	}
 }
 
@@ -372,7 +372,7 @@ func GetEpochByID(s *native.NativeContract) ([]byte, error) {
 	// decode input
 	input := new(MethodGetEpochByIDInput)
 	if err := input.Decode(ctx.Payload); err != nil {
-		log.Trace("propose", "decode input failed", err)
+		log.Trace("getEpochByID", "decode input failed", err)
 		return utils.ByteFailed, ErrInvalidInput
 	}
 
@@ -391,13 +391,13 @@ func GetEpochProof(s *native.NativeContract) ([]byte, error) {
 	// decode input
 	input := new(MethodProofInput)
 	if err := input.Decode(ctx.Payload); err != nil {
-		log.Trace("propose", "decode input failed", err)
+		log.Trace("proof", "decode input failed", err)
 		return utils.ByteFailed, ErrInvalidInput
 	}
 
 	proof, err := getEpochProof(s, input.EpochID)
 	if err != nil {
-		log.Trace("epochProof", "get current epoch proof failed", err)
+		log.Trace("proof", "get current epoch proof failed", err)
 		return utils.ByteFailed, ErrEpochProofNotExist
 	}
 	output := &MethodProofOutput{Hash: proof}
