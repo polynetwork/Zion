@@ -73,8 +73,9 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Register(MethodContractName, Name)
 	s.Register(MethodPropose, Propose)
 	s.Register(MethodVote, Vote)
-	s.Register(MethodEpoch, Epoch)
-	s.Register(MethodProof, EpochProof)
+	s.Register(MethodEpoch, GetCurrentEpoch)
+	s.Register(MethodGetEpochByID, GetEpochByID)
+	s.Register(MethodProof, GetEpochProof)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -301,7 +302,6 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 			return utils.ByteFailed, ErrStorage
 		}
 
-		storeLastEpochHash(s, curEpoch.Hash())
 		storeCurrentEpochHash(s, epoch.Hash())
 		storeEpochProof(s, epoch.ID, epoch.Hash())
 		if err := emitEpochChange(s, curEpoch, epoch); err != nil {
@@ -344,27 +344,60 @@ func dirtyJob(s *native.NativeContract, last, cur *EpochInfo) {
 			}
 		}
 	}
+
+	list, err := getProposals(s, cur.ID)
+	if err != nil {
+		log.Warn("vote", "check proposal number after dirty job, can't get proposals", err)
+	}
+	if len(list) < 0 || len(list) > 1 {
+		log.Warn("vote", "check proposal number after dirty job, expect", 1, "got", len(list))
+	}
 }
 
-func Epoch(s *native.NativeContract) ([]byte, error) {
+// GetCurrentEpoch retrieve current effective epoch info
+func GetCurrentEpoch(s *native.NativeContract) ([]byte, error) {
 	epoch, err := getCurrentEpoch(s)
 	if err != nil {
-		log.Trace("checkConsensusSign", "get current epoch failed", err)
+		log.Trace("epoch", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
 	output := &MethodEpochOutput{Epoch: epoch}
 	return output.Encode()
 }
 
-func EpochProof(s *native.NativeContract) ([]byte, error) {
-	epoch, err := getCurrentEpoch(s)
+// GetEpochByID retrieve history effective epoch with epochID
+func GetEpochByID(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// decode input
+	input := new(MethodGetEpochByIDInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("propose", "decode input failed", err)
+		return utils.ByteFailed, ErrInvalidInput
+	}
+
+	epoch, err := getEffectiveEpochByID(s, input.EpochID)
 	if err != nil {
-		log.Trace("checkConsensusSign", "get current epoch failed", err)
+		log.Trace("getEpochByID", "get history epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
-	proof, err := getEpochProof(s, epoch.ID)
+	output := MethodEpochOutput{Epoch: epoch}
+	return output.Encode()
+}
+
+func GetEpochProof(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// decode input
+	input := new(MethodProofInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("propose", "decode input failed", err)
+		return utils.ByteFailed, ErrInvalidInput
+	}
+
+	proof, err := getEpochProof(s, input.EpochID)
 	if err != nil {
-		log.Trace("epoch proof", "get current epoch proof failed", err)
+		log.Trace("epochProof", "get current epoch proof failed", err)
 		return utils.ByteFailed, ErrEpochProofNotExist
 	}
 	output := &MethodProofOutput{Hash: proof}

@@ -139,13 +139,25 @@ func TestABIMethodEpochOutput(t *testing.T) {
 	assert.Equal(t, expect, got)
 }
 
-func TestABIMethodNextEpochOutput(t *testing.T) {
-	expect := new(MethodNextEpochOutput)
-	expect.Epoch = generateTestEpochInfo(1, 12, 15)
+func TestABIMethodGetEpochByID(t *testing.T) {
+	expect := new(MethodGetEpochByIDInput)
+	expect.EpochID = uint64(56)
 	enc, err := expect.Encode()
 	assert.NoError(t, err)
 
-	got := new(MethodNextEpochOutput)
+	got := new(MethodGetEpochByIDInput)
+	assert.NoError(t, got.Decode(enc))
+
+	assert.Equal(t, expect, got)
+}
+
+func TestABIMethodProofInput(t *testing.T) {
+	expect := new(MethodProofInput)
+	expect.EpochID = uint64(9932)
+	enc, err := expect.Encode()
+	assert.NoError(t, err)
+
+	got := new(MethodProofInput)
 	assert.NoError(t, got.Decode(enc))
 
 	assert.Equal(t, expect, got)

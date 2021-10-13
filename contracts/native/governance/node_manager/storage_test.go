@@ -161,10 +161,3 @@ func TestSigns(t *testing.T) {
 	assert.Equal(t, expectSigners, gotSigners)
 }
 
-func TestLastEpochHash(t *testing.T) {
-	expect := generateTestHash(1242)
-	storeLastEpochHash(testEmptyCtx, expect)
-	got, err := getLastEpochHash(testEmptyCtx)
-	assert.NoError(t, err)
-	assert.Equal(t, expect, got)
-}
