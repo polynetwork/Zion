@@ -583,6 +583,53 @@ func TestDirtyJob(t *testing.T) {
 	}
 }
 
+func TestGetEpochByID(t *testing.T) {
+	resetTestContext()
+
+	s := testEmptyCtx
+
+	block := uint64(100)
+	epoch := generateTestEpochInfo(2, block, 7)
+
+	assert.NoError(t, storeEpoch(s, epoch))
+	assert.NoError(t, storeProposal(s, epoch.ID, epoch.Hash()))
+	storeEpochProof(s, epoch.ID, epoch.Hash())
+
+	input := new(MethodGetEpochByIDInput)
+	input.EpochID = epoch.ID
+	payload, err := input.Encode()
+	assert.NoError(t, err)
+	ctx := generateNativeContract(common.EmptyAddress, int(block+1))
+	enc, _, err := ctx.ContractRef().NativeCall(common.EmptyAddress, this, payload)
+	assert.NoError(t, err)
+
+	output := new(MethodEpochOutput)
+	assert.NoError(t, output.Decode(enc))
+	assert.Equal(t, epoch.Hash(), output.Epoch.Hash())
+}
+
+func TestGetProofByID(t *testing.T) {
+	resetTestContext()
+
+	s := testEmptyCtx
+
+	block := uint64(100)
+	epoch := generateTestEpochInfo(2, block, 7)
+	storeEpochProof(s, epoch.ID, epoch.Hash())
+
+	input := new(MethodProofInput)
+	input.EpochID = epoch.ID
+	payload, err := input.Encode()
+	assert.NoError(t, err)
+	ctx := generateNativeContract(common.EmptyAddress, int(block+1))
+	enc, _, err := ctx.ContractRef().NativeCall(common.EmptyAddress, this, payload)
+	assert.NoError(t, err)
+
+	output := new(MethodProofOutput)
+	assert.NoError(t, output.Decode(enc))
+	assert.Equal(t, epoch.Hash(), output.Hash)
+}
+
 func generateNativeContractRef(origin common.Address, blockNum int) *native.ContractRef {
 	token := make([]byte, common.HashLength)
 	rand.Read(token)
