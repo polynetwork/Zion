@@ -22,12 +22,16 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestABIShowJonString(t *testing.T) {
 	t.Log(abijson)
+	for name, v := range ABI.Methods {
+		t.Logf("method %s, id %s", name, hexutil.Encode(v.ID))
+	}
 }
 
 func TestABIMethodContractName(t *testing.T) {
