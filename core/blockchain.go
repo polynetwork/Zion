@@ -418,30 +418,6 @@ func (bc *BlockChain) getValidators() ([]common.Address, error) {
 	}
 
 	return RegBlockChain(st, block.Number())
-	//caller := common.EmptyAddress
-	//ref := native.NewContractRef(st, caller, caller, block.Number(), common.EmptyHash, 0, nil)
-	//payload, err := new(nm.MethodEpochInput).Encode()
-	//if err != nil {
-	//	return nil, err
-	//}
-	//enc, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
-	//if err != nil {
-	//	return nil, err
-	//}
-	//output := new(nm.MethodEpochOutput)
-	//if err := output.Decode(enc); err != nil {
-	//	return nil, err
-	//}
-	//
-	//if output.Epoch == nil || output.Epoch.Peers == nil || output.Epoch.Peers.List == nil {
-	//	return nil, errors.New("epoch is nil")
-	//}
-	//
-	//list := make([]common.Address, 0)
-	//for _, v := range output.Epoch.Peers.List {
-	//	list = append(list, v.Address)
-	//}
-	//return list, nil
 }
 
 // GetVMConfig returns the block chain VM config.

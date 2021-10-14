@@ -255,6 +255,8 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	}
 }
 
+var RegGenesis func(db *state.StateDB, data GenesisAlloc) error
+
 // ToBlock creates the genesis block and writes state of a genesis specification
 // to the given database (or discards it if nil).
 func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
@@ -280,7 +282,6 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	if err := RegGenesis(statedb, g.Alloc); err != nil {
 		panic(err)
 	}
-	//g.storeGenesisPeers(statedb)
 
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
@@ -316,25 +317,6 @@ func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 		db.SetNonce(addr, 1)
 	}
 }
-
-var RegGenesis func(db *state.StateDB, data GenesisAlloc) error
-
-//func (g *Genesis) storeGenesisPeers(db *state.StateDB) {
-//	peers := &node_manager.Peers{List: make([]*node_manager.PeerInfo, 0)}
-//	for addr, v := range g.Alloc {
-//		pubkey, err := crypto.DecompressPubkey(v.PublicKey)
-//		if err != nil {
-//			panic(fmt.Sprintf("store genesis peers, decompress pubkey failed, err: %v", err))
-//		}
-//		if got := crypto.PubkeyToAddress(*pubkey); got != addr {
-//			panic(fmt.Sprintf("store genesis peers, expect address %s got %s", addr.Hex(), got.Hex()))
-//		}
-//		peer := &node_manager.PeerInfo{Address: addr, PubKey: hexutil.Encode(v.PublicKey)}
-//		peers.List = append(peers.List, peer)
-//	}
-//	sort.Sort(peers)
-//	node_manager.StoreGenesisEpoch(db, peers)
-//}
 
 // Commit writes the block and state of a genesis specification to the database.
 // The block is committed as the canonical head block.
