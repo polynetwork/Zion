@@ -25,41 +25,15 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const contractName = "node manager"
 
-const (
-	MethodContractName = "name"
-	MethodPropose      = "propose"
-	MethodVote         = "vote"
-	MethodEpoch        = "epoch"
-	MethodGetEpochByID = "getEpochByID"
-	MethodProof        = "proof"
-
-	EventPropose         = "proposed"
-	EventVote            = "voted"
-	EventEpochChange     = "epochChanged"
-	EventConsensusSigned = "consensusSigned"
-)
-
-const abijson = `[
-    {"type":"function","name":"` + MethodContractName + `","inputs":[],"outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodPropose + `","inputs":[{"internalType":"uint64","name":"StartHeight","type":"uint64"},{"internalType":"bytes","name":"Peers","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
-    {"type":"function","name":"` + MethodVote + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"},{"internalType":"bytes","name":"Hash","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodGetEpochByID + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"}],"outputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodProof + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"}],"outputs":[{"internalType":"bytes","name":"Hash","type":"bytes"}],"stateMutability":"nonpayable"},
-    {"type":"event","name":"` + EventPropose + `","anonymous":false,"inputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}]},
-	{"type":"event","name":"` + EventVote + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"EpochID","type":"uint64"},{"indexed":false,"internalType":"bytes","name":"Hash","type":"bytes"},{"indexed":false,"internalType":"uint64","name":"VotedNumber","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"GroupSize","type":"uint64"}]},
-	{"type":"event","name":"` + EventEpochChange + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"Epoch","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"NextEpoch","type":"bytes"}]},
-	{"type":"event","name":"` + EventConsensusSigned + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"Method","type":"string"},{"indexed":false,"internalType":"bytes","name":"Input","type":"bytes"},{"indexed":false,"internalType":"address","name":"Signer","type":"address"},{"indexed":false,"internalType":"uint64","name":"Size","type":"uint64"}]}
-]`
-
 func InitABI() {
-	ab, err := abi.JSON(strings.NewReader(abijson))
+	ab, err := abi.JSON(strings.NewReader(INodeManagerABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
@@ -74,7 +48,7 @@ var (
 type MethodContractNameInput struct{}
 
 func (m *MethodContractNameInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodContractName)
+	return utils.PackMethod(ABI, MethodName)
 }
 func (m *MethodContractNameInput) Decode(payload []byte) error { return nil }
 
@@ -84,10 +58,10 @@ type MethodContractNameOutput struct {
 
 func (m *MethodContractNameOutput) Encode() ([]byte, error) {
 	m.Name = contractName
-	return utils.PackOutputs(ABI, MethodContractName, m.Name)
+	return utils.PackOutputs(ABI, MethodName, m.Name)
 }
 func (m *MethodContractNameOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodContractName, m, payload)
+	return utils.UnpackOutputs(ABI, MethodName, m, payload)
 }
 
 type MethodProposeInput struct {
@@ -126,24 +100,24 @@ func (m *MethodProposeOutput) Decode(payload []byte) error {
 }
 
 type MethodVoteInput struct {
-	EpochID uint64
-	Hash    common.Hash
+	EpochID   uint64
+	EpochHash common.Hash
 }
 
 func (m *MethodVoteInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodVote, m.EpochID, m.Hash.Bytes())
+	return utils.PackMethod(ABI, MethodVote, m.EpochID, m.EpochHash.Bytes())
 }
 func (m *MethodVoteInput) Decode(payload []byte) error {
 	var data struct {
-		EpochID uint64
-		Hash    []byte
+		EpochID   uint64
+		EpochHash []byte
 	}
 	if err := utils.UnpackMethod(ABI, MethodVote, &data, payload); err != nil {
 		return err
 	}
 
 	m.EpochID = data.EpochID
-	m.Hash = common.BytesToHash(data.Hash)
+	m.EpochHash = common.BytesToHash(data.EpochHash)
 	return nil
 }
 
@@ -244,11 +218,11 @@ func emitEventProposed(s *native.NativeContract, epoch *EpochInfo) error {
 	if err != nil {
 		return err
 	}
-	return s.AddNotify(ABI, []string{EventPropose}, enc)
+	return s.AddNotify(ABI, []string{EventProposed}, enc)
 }
 
 func emitEventVoted(s *native.NativeContract, epochID uint64, hash common.Hash, curVotedNum int, groupSize int) error {
-	return s.AddNotify(ABI, []string{EventVote}, epochID, hash.Bytes(), uint64(curVotedNum), uint64(groupSize))
+	return s.AddNotify(ABI, []string{EventVoted}, epochID, hash.Bytes(), uint64(curVotedNum), uint64(groupSize))
 }
 
 func emitEpochChange(s *native.NativeContract, curEpoch, nextEpoch *EpochInfo) error {
@@ -260,7 +234,7 @@ func emitEpochChange(s *native.NativeContract, curEpoch, nextEpoch *EpochInfo) e
 	if err != nil {
 		return err
 	}
-	return s.AddNotify(ABI, []string{EventEpochChange}, curEnc, nextEnc)
+	return s.AddNotify(ABI, []string{EventEpochChanged}, curEnc, nextEnc)
 }
 
 func emitConsensusSign(s *native.NativeContract, sign *ConsensusSign, signer common.Address, num int) error {

@@ -49,7 +49,7 @@ func TestMain(m *testing.M) {
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
 	testGenesisPeers := generateTestPeers(testGenesisNum)
-	testGenesisEpoch, _ = StoreGenesisEpoch(testStateDB, testGenesisPeers)
+	testGenesisEpoch, _ = storeGenesisEpoch(testStateDB, testGenesisPeers)
 	InitNodeManager()
 
 	os.Exit(m.Run())
@@ -321,7 +321,7 @@ func TestVote(t *testing.T) {
 			Index:               1,
 			BeforeHandler: func(c *TestCase) {
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: epochID, Hash: generateTestHash(12)}
+				input := &MethodVoteInput{EpochID: epochID, EpochHash: generateTestHash(12)}
 				c.Payload, _ = input.Encode()
 
 				delEpoch(c.Ctx, testGenesisEpoch.Hash())
@@ -337,7 +337,7 @@ func TestVote(t *testing.T) {
 			BeforeHandler: func(c *TestCase) {
 				c.Caller = generateTestAddress(1)
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, Hash: c.Epoch.Hash()}
+				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
 				c.Payload, _ = input.Encode()
 			},
 			Expect: ErrInvalidAuthority,
@@ -351,7 +351,7 @@ func TestVote(t *testing.T) {
 			BeforeHandler: func(c *TestCase) {
 				c.Caller = c.NewMembers[0]
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, Hash: c.Epoch.Hash()}
+				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
 				c.Payload, _ = input.Encode()
 			},
 			Expect: ErrInvalidAuthority,
@@ -366,7 +366,7 @@ func TestVote(t *testing.T) {
 				c.Caller = c.OldMembers[0]
 				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod - 10)
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, Hash: c.Epoch.Hash()}
+				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
 				payload, _ := input.Encode()
 				c.Payload = payload[0 : len(payload)-2]
 			},
@@ -382,7 +382,7 @@ func TestVote(t *testing.T) {
 				c.Caller = c.OldMembers[0]
 				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod - 10)
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID + 1, Hash: c.Epoch.Hash()}
+				input := &MethodVoteInput{EpochID: c.Epoch.ID + 1, EpochHash: c.Epoch.Hash()}
 				c.Payload, _ = input.Encode()
 			},
 			Expect: ErrInvalidInput,
@@ -397,7 +397,7 @@ func TestVote(t *testing.T) {
 				c.Caller = c.OldMembers[0]
 				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod - 10)
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, Hash: c.Epoch.Hash()}
+				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
 				c.Payload, _ = input.Encode()
 
 				delProposal(c.Ctx, c.Epoch.ID, c.Epoch.Hash())
@@ -415,7 +415,7 @@ func TestVote(t *testing.T) {
 				c.Caller = c.OldMembers[0]
 				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod - 10)
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, Hash: c.Epoch.Hash()}
+				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
 				c.Payload, _ = input.Encode()
 
 				epoch, _ := getEpoch(c.Ctx, c.Epoch.Hash())
@@ -434,7 +434,7 @@ func TestVote(t *testing.T) {
 				c.Caller = c.OldMembers[0]
 				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod + 1)
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, Hash: c.Epoch.Hash()}
+				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
 				c.Payload, _ = input.Encode()
 			},
 			Expect: ErrVoteHeight,
@@ -449,7 +449,7 @@ func TestVote(t *testing.T) {
 				c.Caller = c.OldMembers[0]
 				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod - 10)
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, Hash: c.Epoch.Hash()}
+				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
 				c.Payload, _ = input.Encode()
 			},
 			Expect: nil,
@@ -505,7 +505,7 @@ func TestProposalPassed(t *testing.T) {
 	// prepare vote data
 	n := curEpoch.QuorumSize()
 	voteBlockNum := proposeBlockNum + 1
-	voteInput := &MethodVoteInput{EpochID: epoch.ID, Hash: epoch.Hash()}
+	voteInput := &MethodVoteInput{EpochID: epoch.ID, EpochHash: epoch.Hash()}
 	votePayload, err := voteInput.Encode()
 	assert.NoError(t, err)
 
@@ -647,7 +647,7 @@ func resetTestContext() {
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
 	testGenesisPeers := generateTestPeers(testGenesisNum)
-	testGenesisEpoch, _ = StoreGenesisEpoch(testStateDB, testGenesisPeers)
+	testGenesisEpoch, _ = storeGenesisEpoch(testStateDB, testGenesisPeers)
 	testCaller = testGenesisEpoch.Peers.List[0].Address
 }
 

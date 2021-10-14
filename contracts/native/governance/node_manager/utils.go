@@ -21,46 +21,11 @@ package node_manager
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/rlp"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 )
-
-func StoreGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
-	cache := (*state.CacheDB)(s)
-	epoch := &EpochInfo{
-		ID:          StartEpochID,
-		Peers:       peers,
-		StartHeight: 0,
-	}
-
-	// store current epoch and epoch info
-	if err := setEpoch(cache, epoch); err != nil {
-		return nil, err
-	}
-
-	// store current hash
-	curKey := curEpochKey()
-	cache.Put(curKey, epoch.Hash().Bytes())
-
-	// store genesis epoch id to list
-	value, err := rlp.EncodeToBytes(&HashList{List: []common.Hash{epoch.Hash()}})
-	if err != nil {
-		return nil, err
-	}
-	proposalKey := proposalsKey(epoch.ID)
-	cache.Put(proposalKey, value)
-
-	// store genesis epoch proof
-	key := epochProofKey(EpochProofHash(epoch.ID))
-	cache.Put(key, epoch.Hash().Bytes())
-
-	return epoch, nil
-}
 
 func getCurrentEpoch(s *native.NativeContract) (*EpochInfo, error) {
 	// current epoch taking effective

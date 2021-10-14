@@ -78,18 +78,18 @@ var testOriginValAndNodeKeys = []*Node{
 		Address: "0xad3bf5ed640cc72f37bd21d64a65c3c756e9c88c",
 		NodeKey: "018c71d5e3b245117ffba0975e46129371473c6a1d231c5eddf7a8364d704846",
 	},
-	//{
-	//	Address: "0xc095448424a5ecd5ca7ccdadfaad127a9d7e88ec",
-	//	NodeKey: "49e26aa4d60196153153388a24538c2693d65f0010a3a488c0c4c2b2a64b2de4",
-	//},
-	//{
-	//	Address: "0xd47a4e56e9262543db39d9203cf1a2e53735f834",
-	//	NodeKey: "9fc1723cff3bc4c11e903a53edb3b31c57b604bfc88a5d16cfec6a64fbf3141c",
-	//},
-	//{
-	//	Address: "0xbfb558f0dceb07fbb09e1c283048b551a4310921",
-	//	NodeKey: "5555ebb339d3d5ed1efbf0ca96f5b145134e5ce8044fec693558056d268776ae",
-	//},
+	{
+		Address: "0xc095448424a5ecd5ca7ccdadfaad127a9d7e88ec",
+		NodeKey: "49e26aa4d60196153153388a24538c2693d65f0010a3a488c0c4c2b2a64b2de4",
+	},
+	{
+		Address: "0xd47a4e56e9262543db39d9203cf1a2e53735f834",
+		NodeKey: "9fc1723cff3bc4c11e903a53edb3b31c57b604bfc88a5d16cfec6a64fbf3141c",
+	},
+	{
+		Address: "0xbfb558f0dceb07fbb09e1c283048b551a4310921",
+		NodeKey: "5555ebb339d3d5ed1efbf0ca96f5b145134e5ce8044fec693558056d268776ae",
+	},
 }
 
 func TestEncodeSalt(t *testing.T) {

@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -38,7 +39,7 @@ func SubscribeEpochChange(ch chan<- types.EpochChangeEvent) event.Subscription {
 
 var (
 	gasTable = map[string]uint64{
-		MethodContractName: 0,
+		MethodName:         0,
 		MethodPropose:      30000,
 		MethodVote:         30000,
 		MethodEpoch:        0,
@@ -72,7 +73,7 @@ func InitNodeManager() {
 func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
-	s.Register(MethodContractName, Name)
+	s.Register(MethodName, Name)
 	s.Register(MethodPropose, Propose)
 	s.Register(MethodVote, Vote)
 	s.Register(MethodEpoch, GetCurrentEpoch)
@@ -221,7 +222,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, ErrInvalidInput
 	}
 	epochID := input.EpochID
-	proposal := input.Hash
+	proposal := input.EpochHash
 
 	if expectEpochID := curEpoch.ID + 1; epochID != expectEpochID {
 		log.Trace("vote", "check epoch ID failed, expect", expectEpochID, "got", curEpoch.ID)
