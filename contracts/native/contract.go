@@ -20,7 +20,7 @@ package native
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/accounts/abi"
+	abiPkg "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -41,7 +41,7 @@ type NativeContract struct {
 	db       *state.StateDB
 	handlers map[string]MethodHandler // map method id to method handler
 	gasTable map[string]uint64        // map method id to gas usage
-	ab       *abi.ABI
+	ab       *abiPkg.ABI
 }
 
 func NewNativeContract(db *state.StateDB, ref *ContractRef) *NativeContract {
@@ -64,11 +64,14 @@ func (s *NativeContract) StateDB() *state.StateDB {
 	return s.db
 }
 
-func (s *NativeContract) Prepare(ab *abi.ABI, gasTb map[string]uint64) {
+func (s *NativeContract) Prepare(ab *abiPkg.ABI, gasTb map[string]uint64) {
 	s.ab = ab
 	s.gasTable = make(map[string]uint64)
 	for name, gas := range gasTb {
 		id := utils.MethodID(s.ab, name)
+		if gas > 0 && gas < FailedTxGasUsage {
+			panic(fmt.Sprintf("Tx writing gas usage should be above %d", FailedTxGasUsage))
+		}
 		s.gasTable[id] = gas
 	}
 }
@@ -111,35 +114,42 @@ func (s *NativeContract) Invoke() ([]byte, error) {
 		return nil, fmt.Errorf("failed to find method: [%s]", methodID)
 	}
 	gasLeft := s.ref.gasLeft
-	if gasLeft < needGas && gasLeft < MinGasUsage {
-		return nil, fmt.Errorf("gasLeft not enough, need %d", needGas)
+	if gasLeft < needGas {
+		return nil, fmt.Errorf("gasLeft not enough, need %d, got %d", needGas, gasLeft)
 	}
 
 	// execute transaction and cost gas
 	ret, err := handler(s)
-	if err != nil && needGas > MinGasUsage {
-		needGas = MinGasUsage
+	if err != nil && needGas > FailedTxGasUsage {
+		needGas = FailedTxGasUsage
 	}
 	if needGas > 0 {
 		s.ref.gasLeft -= needGas
 	}
-
 	return ret, err
 }
 
-func (s *NativeContract) AddNotify(abi *abi.ABI, topics []string, data ...interface{}) (err error) {
+func (s *NativeContract) AddNotify(abi *abiPkg.ABI, topics []string, data ...interface{}) (err error) {
 
 	var topicIDs []common.Hash
 	for _, topic := range topics {
 		eventInfo, ok := abi.Events[topic]
 		if !ok {
-			err = fmt.Errorf("topic %s not exists", topic)
-			return
+			eventInfo, ok = abi.Events["evt"+abiPkg.ToCamelCase(topic)]
+			if !ok {
+				err = fmt.Errorf("topic %s/%s not exists", topic, "evt"+abiPkg.ToCamelCase(topic))
+				return
+			}
+
 		}
 		topicIDs = append(topicIDs, eventInfo.ID)
 	}
 
-	packedData, err := utils.PackEvents(abi, topics[0], data...)
+	topic := topics[0]
+	if _, ok := abi.Events[topic]; !ok {
+		topic = "evt" + abiPkg.ToCamelCase(topic)
+	}
+	packedData, err := utils.PackEvents(abi, topic, data...)
 	if err != nil {
 		err = fmt.Errorf("AddNotify, PackEvents error: %v", err)
 		return

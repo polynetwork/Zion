@@ -1,15 +1,16 @@
 package backend
 
 import (
-	"github.com/ethereum/go-ethereum/event"
 	"math/big"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -189,6 +190,7 @@ func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
+
 	if s.coreStarted {
 		return ErrStartedEngine
 	}
@@ -217,7 +219,7 @@ func (s *backend) Stop() error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 	if !s.coreStarted {
-		return ErrStoppedEngine
+		return nil
 	}
 	if err := s.core.Stop(); err != nil {
 		return err
@@ -278,11 +280,21 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 
 	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
 	snap := s.snap().Copy()
+	if height := header.Number.Uint64(); s.lastEpochValSet != nil && s.curEpochStartHeight > height && s.curEpochStartHeight == height+1 {
+		snap = s.lastEpochValSet.Copy()
+	}
 	return s.signer.VerifyHeader(header, snap, seal)
 }
 
 func (s *backend) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
 	return s.core.SubscribeRequest(ch)
+}
+
+func (s *backend) ChangeEpoch(epochStartHeight uint64, list []common.Address) error {
+	s.lastEpochValSet = s.valset.Copy()
+	s.curEpochStartHeight = epochStartHeight
+	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
+	return s.core.ChangeEpoch(epochStartHeight, s.valset)
 }
 
 func (s *backend) getPendingParentHeader(chain consensus.ChainHeaderReader, header *types.Header) (*types.Header, error) {

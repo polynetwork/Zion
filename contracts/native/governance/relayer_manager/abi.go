@@ -23,30 +23,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/go_abi/relayer_manager_abi"
 	polycomm "github.com/polynetwork/poly/common"
 )
 
-const (
-	EventRegisterRelayer        = "registerRelayer"
-	EventApproveRegisterRelayer = "approveRegisterRelayer"
-	EventRemoveRelayer          = "removeRelayer"
-	EventApproveRemoveRelayer   = "approveRemoveRelayer"
+var (
+	EventRegisterRelayer        = relayer_manager_abi.MethodRegisterRelayer
+	EventApproveRegisterRelayer = relayer_manager_abi.MethodApproveRegisterRelayer
+	EventRemoveRelayer          = relayer_manager_abi.MethodRemoveRelayer
+	EventApproveRemoveRelayer   = relayer_manager_abi.MethodApproveRemoveRelayer
 )
 
-const abijson = `[
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRegisterRelayer + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRemoveRelayer + `","type":"event"},
-	{"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"applyID","type":"uint64"}],"name":"` + EventRegisterRelayer + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"removeID","type":"uint64"}],"name":"` + EventRemoveRelayer + `","type":"event"},
-    {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRegisterRelayer + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRemoveRelayer + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"address[]","name":"AddressList","type":"address[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRegisterRelayer + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"address[]","name":"AddressList","type":"address[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRemoveRelayer + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
-	]`
-
 func GetABI() *abi.ABI {
-	ab, err := abi.JSON(strings.NewReader(abijson))
+	ab, err := abi.JSON(strings.NewReader(relayer_manager_abi.RelayerManagerABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}

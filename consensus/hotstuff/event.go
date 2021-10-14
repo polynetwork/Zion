@@ -16,6 +16,8 @@
 
 package hotstuff
 
+import "github.com/ethereum/go-ethereum/core/types"
+
 // RequestEvent is posted to propose a proposal (posting the incoming block to
 // the main hotstuff engine anyway regardless of being the speaker or delegators)
 type RequestEvent struct {
@@ -30,4 +32,5 @@ type MessageEvent struct {
 
 // FinalCommittedEvent is posted when a proposal is committed
 type FinalCommittedEvent struct {
+	Header *types.Header
 }

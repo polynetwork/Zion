@@ -2,18 +2,18 @@ package core
 
 import (
 	"bytes"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
 	"math"
 	"math/big"
 	"math/rand"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type core struct {
@@ -24,9 +24,11 @@ type core struct {
 	backend hotstuff.Backend
 	signer  hotstuff.Signer
 
-	valSet   hotstuff.ValidatorSet
-	requests *requestSet
-	backlogs *backlog
+	lastEpochValSet     hotstuff.ValidatorSet
+	curEpochStartHeight uint64
+	valSet              hotstuff.ValidatorSet
+	requests            *requestSet
+	backlogs            *backlog
 
 	events            *event.TypeMuxSubscription
 	timeoutSub        *event.TypeMuxSubscription
@@ -35,10 +37,11 @@ type core struct {
 	roundChangeTimer *time.Timer
 
 	validateFn func([]byte, []byte) (common.Address, error)
+	isRunning  bool
 }
 
 // New creates an HotStuff consensus core
-func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer, valSet hotstuff.ValidatorSet) hotstuff.CoreEngine {
+func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer) hotstuff.CoreEngine {
 	c := &core{
 		config:  config,
 		logger:  log.New("address", backend.Address()),
@@ -47,7 +50,6 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 	c.requests = newRequestSet()
 	c.backlogs = newBackLog()
 	c.validateFn = c.checkValidatorSignature
-	c.valSet = valSet
 	c.signer = signer
 
 	// todo(fuk): delete after test
@@ -106,7 +108,7 @@ func (c *core) GetHeader(hash common.Hash, number uint64) *types.Header {
 	return nil
 }
 
-func (c *core) SubscribeRequest(ch chan <- consensus.AskRequest) event.Subscription {
+func (c *core) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
 	return nil
 }
 
@@ -114,6 +116,11 @@ const maxRetry uint64 = 10
 
 func (c *core) startNewRound(round *big.Int) {
 	logger := c.logger.New()
+
+	if !c.isRunning {
+		logger.Trace("Start engine first")
+		return
+	}
 
 	changeView := false
 	catchUpRetryCnt := maxRetry
@@ -178,7 +185,7 @@ catchup:
 	if changeView && lastPendingRequest != nil {
 		c.current.SetPendingRequest(lastPendingRequest)
 	}
-	
+
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
 	// process pending request

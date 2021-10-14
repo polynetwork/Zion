@@ -44,7 +44,7 @@ func (c *core) handlePrepareVote(data *hotstuff.Message, src hotstuff.Validator)
 
 		prepareQC := proposal2QC(newProposal, c.current.Round())
 		c.acceptPrepare(prepareQC, newProposal)
-		logger.Trace("acceptPrepare", "msg", msgTyp,  "src", src.Address(), "hash", newProposal.Hash(), "msgSize", size)
+		logger.Trace("acceptPrepare", "msg", msgTyp, "src", src.Address(), "hash", newProposal.Hash(), "msgSize", size)
 
 		c.sendPreCommit()
 	}

@@ -23,41 +23,22 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
 	polycomm "github.com/polynetwork/poly/common"
 )
 
-const (
-	EventRegisterSideChain        = "registerSideChain"
-	EventApproveRegisterSideChain = "approveRegisterSideChain"
-	EventUpdateSideChain          = "updateSideChain"
-	EventApproveUpdateSideChain   = "approveUpdateSideChain"
-	EventQuitSideChain            = "quitSideChain"
-	EventApproveQuitSideChain     = "approveQuitSideChain"
-	EventRegisterRedeem           = "registerRedeem"
-	EventSetBtcTxParam            = "setBtcTxParam"
+var (
+	EventRegisterSideChain        = side_chain_manager_abi.MethodRegisterSideChain
+	EventApproveRegisterSideChain = side_chain_manager_abi.MethodApproveRegisterSideChain
+	EventUpdateSideChain          = side_chain_manager_abi.MethodUpdateSideChain
+	EventApproveUpdateSideChain   = side_chain_manager_abi.MethodApproveUpdateSideChain
+	EventQuitSideChain            = side_chain_manager_abi.MethodQuitSideChain
+	EventApproveQuitSideChain     = side_chain_manager_abi.MethodApproveQuitSideChain
+	EventRegisterRedeem           = side_chain_manager_abi.MethodRegisterRedeem
 )
 
-const abijson = `[
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + EventApproveQuitSideChain + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + EventApproveRegisterSideChain + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + EventApproveUpdateSideChain + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"}],"name":"` + EventQuitSideChain + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"rk","type":"string"},{"indexed":false,"internalType":"string","name":"ContractAddress","type":"string"}],"name":"` + EventRegisterRedeem + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"Router","type":"uint64"},{"indexed":false,"internalType":"string","name":"Name","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlocksToWait","type":"uint64"}],"name":"` + EventRegisterSideChain + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"string","name":"rk","type":"string"},{"indexed":false,"internalType":"uint64","name":"RedeemChainId","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"FeeRate","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"MinChange","type":"uint64"}],"name":"` + EventSetBtcTxParam + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ChainId","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"Router","type":"uint64"},{"indexed":false,"internalType":"string","name":"Name","type":"string"},{"indexed":false,"internalType":"uint64","name":"BlocksToWait","type":"uint64"}],"name":"` + EventUpdateSideChain + `","type":"event"},
-    {"inputs":[{"internalType":"uint64","name":"Chainid","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveQuitSideChain + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint64","name":"Chainid","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRegisterSideChain + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint64","name":"Chainid","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveUpdateSideChain + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint64","name":"Chainid","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodQuitSideChain + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint64","name":"RedeemChainID","type":"uint64"},{"internalType":"uint64","name":"ContractChainID","type":"uint64"},{"internalType":"bytes","name":"Redeem","type":"bytes"},{"internalType":"uint64","name":"CVersion","type":"uint64"},{"internalType":"bytes","name":"ContractAddress","type":"bytes"},{"internalType":"bytes[]","name":"Signs","type":"bytes[]"}],"name":"` + MethodRegisterRedeem + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"address","name":"Address","type":"address"},{"internalType":"uint64","name":"ChainId","type":"uint64"},{"internalType":"uint64","name":"Router","type":"uint64"},{"internalType":"string","name":"Name","type":"string"},{"internalType":"uint64","name":"BlocksToWait","type":"uint64"},{"internalType":"bytes","name":"CCMCAddress","type":"bytes"},{"internalType":"bytes","name":"ExtraInfo","type":"bytes"}],"name":"` + MethodRegisterSideChain + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"bytes","name":"Redeem","type":"bytes"},{"internalType":"uint64","name":"RedeemChainId","type":"uint64"},{"internalType":"bytes[]","name":"Sigs","type":"bytes[]"},{"components":[{"internalType":"uint64","name":"PVersion","type":"uint64"},{"internalType":"uint64","name":"FeeRate","type":"uint64"},{"internalType":"uint64","name":"MinChange","type":"uint64"}],"internalType":"struct side_chain_manager.BtcTxParamDetial","name":"Detial","type":"tuple"}],"name":"` + MethodSetBtcTxParam + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"address","name":"Address","type":"address"},{"internalType":"uint64","name":"ChainId","type":"uint64"},{"internalType":"uint64","name":"Router","type":"uint64"},{"internalType":"string","name":"Name","type":"string"},{"internalType":"uint64","name":"BlocksToWait","type":"uint64"},{"internalType":"bytes","name":"CCMCAddress","type":"bytes"},{"internalType":"bytes","name":"ExtraInfo","type":"bytes"}],"name":"` + MethodUpdateSideChain + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
-]`
-
 func GetABI() *abi.ABI {
-	ab, err := abi.JSON(strings.NewReader(abijson))
+	ab, err := abi.JSON(strings.NewReader(side_chain_manager_abi.SideChainManagerABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}

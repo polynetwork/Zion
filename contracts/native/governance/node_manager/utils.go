@@ -1,152 +1,148 @@
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package node_manager
 
 import (
-	"bytes"
-	"crypto/sha256"
-	"encoding/hex"
 	"fmt"
+
+	"github.com/ethereum/go-ethereum/rlp"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
-	polycomm "github.com/polynetwork/poly/common"
-	cstates "github.com/polynetwork/poly/core/states"
 )
 
-func deleteConsensusSigns(native *native.NativeContract, key polycomm.Uint256) {
-	contract := utils.NodeManagerContractAddress
-	native.GetCacheDB().Delete(utils.ConcatKey(contract, []byte(CONSENSUS_SIGNS), key.ToArray()))
+func StoreGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
+	cache := (*state.CacheDB)(s)
+	epoch := &EpochInfo{
+		ID:          StartEpochID,
+		Peers:       peers,
+		StartHeight: 0,
+	}
+
+	// store current epoch and epoch info
+	if err := setEpoch(cache, epoch); err != nil {
+		return nil, err
+	}
+
+	// store current hash
+	curKey := curEpochKey()
+	cache.Put(curKey, epoch.Hash().Bytes())
+
+	// store genesis epoch id to list
+	value, err := rlp.EncodeToBytes(&HashList{List: []common.Hash{epoch.Hash()}})
+	if err != nil {
+		return nil, err
+	}
+	proposalKey := proposalsKey(epoch.ID)
+	cache.Put(proposalKey, value)
+
+	// store genesis epoch proof
+	key := epochProofKey(EpochProofHash(epoch.ID))
+	cache.Put(key, epoch.Hash().Bytes())
+
+	return epoch, nil
 }
 
-func putConsensusSigns(native *native.NativeContract, key polycomm.Uint256, consensusSigns *ConsensusSigns) {
-	contract := utils.NodeManagerContractAddress
-	sink := polycomm.NewZeroCopySink(nil)
-	consensusSigns.Serialization(sink)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(CONSENSUS_SIGNS), key.ToArray()), cstates.GenRawStorageItem(sink.Bytes()))
-}
-
-func CheckConsensusSigns(native *native.NativeContract, method string, input []byte, address common.Address) (bool, error) {
-	message := append([]byte(method), input...)
-	key := sha256.Sum256(message)
-	consensusSigns, err := getConsensusSigns(native, key)
+func getCurrentEpoch(s *native.NativeContract) (*EpochInfo, error) {
+	// current epoch taking effective
+	curEpochHash, err := getCurrentEpochHash(s)
 	if err != nil {
-		return false, fmt.Errorf("CheckConsensusSigns, GetConsensusSigns error: %v", err)
+		return nil, err
 	}
-	consensusSigns.SignsMap[address] = true
-
-	native.AddNotify(ABI, []string{"CheckConsensusSignsEvent"}, uint64(len(consensusSigns.SignsMap)))
-
-	//check signs num
-	//get view
-	view, err := GetView(native)
+	cur, err := getEpoch(s, curEpochHash)
 	if err != nil {
-		return false, fmt.Errorf("CheckConsensusSigns, GetView error: %v", err)
+		return nil, err
+	}
+	if cur.ID == StartEpochID {
+		return cur, nil
 	}
 
-	//get consensus peer
-	peerPoolMap, err := GetPeerPoolMap(native, view)
-	if err != nil {
-		return false, fmt.Errorf("CheckConsensusSigns, GetPeerPoolMap error: %v", err)
-	}
-	num := 0
-	sum := 0
-	for key, v := range peerPoolMap.PeerPoolMap {
-		if v.Status == ConsensusStatus {
-			k, err := hex.DecodeString(key)
-			if err != nil {
-				return false, fmt.Errorf("CheckConsensusSigns, hex.DecodeString public key error: %v", err)
-			}
-			publicKey, err := crypto.UnmarshalPubkey(k)
-			if err != nil {
-				return false, fmt.Errorf("CheckConsensusSigns, keypair.DeserializePublicKey error: %v", err)
-			}
-			_, ok := consensusSigns.SignsMap[crypto.PubkeyToAddress(*publicKey)]
-			if ok {
-				num = num + 1
-			}
-			sum = sum + 1
-		}
+	height := s.ContractRef().BlockHeight().Uint64()
+	if height >= cur.StartHeight {
+		return cur, nil
 	}
 
-	if num >= (2*sum+2)/3 {
-		deleteConsensusSigns(native, key)
-		return true, nil
+	if cur.ID-1 < StartEpochID {
+		return nil, fmt.Errorf("epoch id should greater than %d", StartEpochID)
 	} else {
-		putConsensusSigns(native, key, consensusSigns)
-		return false, nil
+		return getEffectiveEpochByID(s, cur.ID-1)
 	}
 }
 
-func GetPeerPoolMap(native *native.NativeContract, view uint32) (*PeerPoolMap, error) {
-	contract := utils.NodeManagerContractAddress
-	viewBytes := utils.GetUint32Bytes(view)
-	peerPoolMap := &PeerPoolMap{
-		PeerPoolMap: make(map[string]*PeerPoolItem),
+func getEffectiveEpochByID(s *native.NativeContract, epochID uint64) (*EpochInfo, error) {
+	if epochID < StartEpochID {
+		return nil, fmt.Errorf("epoch %d not exist", epochID)
 	}
-	peerPoolMapBytes, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(PEER_POOL), viewBytes))
+	list, err := getProposals(s, epochID)
 	if err != nil {
-		return nil, fmt.Errorf("getPeerPoolMap, get all peerPoolMap error: %v", err)
+		return nil, fmt.Errorf("epoch %d has no proposal, err: %v", epochID, err)
 	}
-	if peerPoolMapBytes == nil {
-		return nil, fmt.Errorf("getPeerPoolMap, peerPoolMap is nil")
+	if list == nil || len(list) == 0 {
+		return nil, fmt.Errorf("epoch %d has no proposal", epochID)
 	}
-	item := cstates.StorageItem{}
-	err = item.Deserialize(bytes.NewBuffer(peerPoolMapBytes))
-	if err != nil {
-		return nil, fmt.Errorf("deserialize PeerPoolMap error:%v", err)
+	if len(list) > 1 {
+		return nil, fmt.Errorf("epoch %d has multi proposal", epochID)
 	}
-	peerPoolMapStore := item.Value
-	if err := peerPoolMap.Deserialization(polycomm.NewZeroCopySource(peerPoolMapStore)); err != nil {
-		return nil, fmt.Errorf("deserialize, deserialize peerPoolMap error: %v", err)
-	}
-	return peerPoolMap, nil
+	lastEpochHash := list[0]
+	return getEpoch(s, lastEpochHash)
 }
 
-func GetView(native *native.NativeContract) (uint32, error) {
-	governanceView, err := GetGovernanceView(native)
-	if err != nil {
-		return 0, fmt.Errorf("getView, getGovernanceView error: %v", err)
+func checkAuthority(origin, caller common.Address, epoch *EpochInfo) error {
+	if epoch == nil || epoch.Peers == nil || epoch.Peers.List == nil {
+		return fmt.Errorf("invalid epoch")
 	}
-	return governanceView.View, nil
+	if origin == common.EmptyAddress || caller == common.EmptyAddress {
+		return fmt.Errorf("origin/caller is empty address")
+	}
+	if origin != caller {
+		return fmt.Errorf("origin must be caller")
+	}
+	for _, v := range epoch.Peers.List {
+		if v.Address == origin {
+			return nil
+		}
+	}
+	return fmt.Errorf("tx origin %s is not valid validator", origin.Hex())
 }
 
-func GetGovernanceView(native *native.NativeContract) (*GovernanceView, error) {
-	contract := utils.NodeManagerContractAddress
-	governanceViewBytes, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(GOVERNANCE_VIEW)))
-	if err != nil {
-		return nil, fmt.Errorf("getGovernanceView, get governanceViewBytes error: %v", err)
+func checkPeer(peer *PeerInfo) error {
+	if peer == nil || peer.Address == common.EmptyAddress || peer.PubKey == "" {
+		return fmt.Errorf("invalid peer")
 	}
-	if governanceViewBytes != nil {
-		governanceView := new(GovernanceView)
-		value, err := cstates.GetValueFromRawStorageItem(governanceViewBytes)
-		if err != nil {
-			return nil, fmt.Errorf("getGovernanceView, deserialize from raw storage item err:%v", err)
-		}
-		if err := governanceView.Deserialization(polycomm.NewZeroCopySource(value)); err != nil {
-			return nil, fmt.Errorf("getGovernanceView, deserialize governanceView error: %v", err)
-		}
-		return governanceView, nil
-	}
-	return nil, fmt.Errorf("getGovernanceView, get nil governanceViewBytes")
-}
 
-func getConsensusSigns(native *native.NativeContract, key polycomm.Uint256) (*ConsensusSigns, error) {
-	contract := utils.NodeManagerContractAddress
-	consensusSignsStore, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(CONSENSUS_SIGNS), key.ToArray()))
+	dec, err := hexutil.Decode(peer.PubKey)
 	if err != nil {
-		return nil, fmt.Errorf("GetConsensusSigns, get consensusSignsStore error: %v", err)
+		return err
 	}
-	consensusSigns := &ConsensusSigns{
-		SignsMap: make(map[common.Address]bool),
+	pubkey, err := crypto.DecompressPubkey(dec)
+	if err != nil {
+		return err
 	}
-	if consensusSignsStore != nil {
-		consensusSignsBytes, err := cstates.GetValueFromRawStorageItem(consensusSignsStore)
-		if err != nil {
-			return nil, fmt.Errorf("getGovernanceView, deserialize from raw storage item err:%v", err)
-		}
-		if err := consensusSigns.Deserialization(polycomm.NewZeroCopySource(consensusSignsBytes)); err != nil {
-			return nil, fmt.Errorf("getGovernanceView, deserialize governanceView error: %v", err)
-		}
+	addr := crypto.PubkeyToAddress(*pubkey)
+	if addr == common.EmptyAddress {
+		return fmt.Errorf("invalid pubkey")
 	}
-	return consensusSigns, nil
+	if addr != peer.Address {
+		return fmt.Errorf("pubkey not match address")
+	}
+	return nil
 }

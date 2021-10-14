@@ -24,7 +24,7 @@ func (c *core) handlePreCommitVote(data *hotstuff.Message, src hotstuff.Validato
 		logger.Trace("Failed to check vote", "type", msgTyp, "err", err)
 		return err
 	}
-	if vote.Digest != c.current.Proposal().Hash() {
+	if err := c.checkProposal(vote.Digest); err != nil {
 		logger.Trace("Failed to check hash", "type", msgTyp, "expect vote", c.current.Proposal().Hash(), vote.Digest)
 		return errInvalidDigest
 	}
@@ -42,7 +42,7 @@ func (c *core) handlePreCommitVote(data *hotstuff.Message, src hotstuff.Validato
 
 	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StatePreCommitted {
 		c.lockQCAndProposal(c.current.PrepareQC())
-		logger.Trace("acceptPreCommitted", "msg", msgTyp,  "src", src.Address(), "hash", c.current.PreCommittedQC().Hash, "msgSize", size)
+		logger.Trace("acceptPreCommitted", "msg", msgTyp, "src", src.Address(), "hash", c.current.PreCommittedQC().Hash, "msgSize", size)
 		c.sendCommit()
 	}
 	return nil

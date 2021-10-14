@@ -15,18 +15,33 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
-package contract
 
-import (
-	"fmt"
+package common
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/native"
+import "math"
+
+const (
+	UINT16_SIZE  = 2
+	UINT32_SIZE  = 4
+	UINT64_SIZE  = 8
+	UINT256_SIZE = 32
+
+	MAX_UINT64 = math.MaxUint64
+	MAX_INT64  = math.MaxInt64
 )
 
-func ValidateOwner(n *native.NativeContract, address common.Address) error {
-	if n.ContractRef().TxOrigin() != address {
-		return fmt.Errorf("validateOwner, authentication failed!")
-	}
-	return nil
+func SafeSub(x, y uint64) (uint64, bool) {
+	return x - y, x < y
 }
+
+func SafeAdd(x, y uint64) (uint64, bool) {
+	return x + y, y > MAX_UINT64-x
+}
+
+func SafeMul(x, y uint64) (uint64, bool) {
+	if x == 0 || y == 0 {
+		return 0, false
+	}
+	return x * y, y > MAX_UINT64/x
+}
+

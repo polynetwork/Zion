@@ -115,3 +115,12 @@ func PackEvents(ab *abi.ABI, event string, args ...interface{}) ([]byte, error) 
 	}
 	return evt.Inputs.Pack(args...)
 }
+
+func UnpackEvent(ab abi.ABI, event string, payload []byte) ([]interface{}, error) {
+	evt, ok := ab.Events[event]
+	if !ok {
+		return nil, fmt.Errorf("event [%s] not exist", event)
+	}
+
+	return evt.Inputs.Unpack(payload)
+}

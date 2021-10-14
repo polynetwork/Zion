@@ -15,18 +15,14 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
-package contract
 
-import (
-	"fmt"
+package types
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/native"
-)
+import "github.com/ethereum/go-ethereum/common"
 
-func ValidateOwner(n *native.NativeContract, address common.Address) error {
-	if n.ContractRef().TxOrigin() != address {
-		return fmt.Errorf("validateOwner, authentication failed!")
-	}
-	return nil
+type EpochChangeEvent struct {
+	EpochID     uint64
+	StartHeight uint64
+	Validators  []common.Address
+	Hash        common.Hash
 }

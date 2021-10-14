@@ -73,6 +73,16 @@ func (c *core) checkVote(vote *Vote) error {
 	return nil
 }
 
+func (c *core) checkProposal(hash common.Hash) error {
+	if c.current == nil || c.current.Proposal() == nil {
+		return fmt.Errorf("current proposal is nil")
+	}
+	if expect := c.current.Proposal().Hash(); hash != expect {
+		return fmt.Errorf("hash expect %s got %s", expect.Hex(), hash.Hex())
+	}
+	return nil
+}
+
 func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
 	isLocked, proposal := c.current.LastLockedProposal()
 	if !isLocked {
@@ -85,6 +95,22 @@ func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
 	//if !reflect.DeepEqual(proposal, msg) {
 	if proposal.Hash() != msg.Hash() {
 		return fmt.Errorf("expect %s, got %s", proposal.Hash().Hex(), msg.Hash().Hex())
+	}
+	return nil
+}
+
+// verifyCrossEpochQC verify quorum certificate with current validator set or
+// last epoch's val set if current height equals to epoch start height
+func (c *core) verifyCrossEpochQC(qc *hotstuff.QuorumCert) error {
+	valset := c.valSet
+	if c.current.Height().Uint64() == c.curEpochStartHeight {
+		if c.lastEpochValSet == nil {
+			return errBadEpochValidators
+		}
+		valset = c.lastEpochValSet
+	}
+	if err := c.signer.VerifyQC(qc, valset); err != nil {
+		return err
 	}
 	return nil
 }
