@@ -39,12 +39,13 @@ func SubscribeEpochChange(ch chan<- types.EpochChangeEvent) event.Subscription {
 
 var (
 	gasTable = map[string]uint64{
-		MethodName:         0,
-		MethodPropose:      30000,
-		MethodVote:         30000,
-		MethodEpoch:        0,
-		MethodGetEpochByID: 0,
-		MethodProof:        0,
+		MethodName:             0,
+		MethodPropose:          30000,
+		MethodVote:             30000,
+		MethodEpoch:            0,
+		MethodGetEpochByID:     0,
+		MethodProof:            0,
+		MethodGetChangingEpoch: 0,
 	}
 )
 
@@ -79,6 +80,7 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Register(MethodEpoch, GetCurrentEpoch)
 	s.Register(MethodGetEpochByID, GetEpochByID)
 	s.Register(MethodProof, GetEpochProof)
+	s.Register(MethodGetChangingEpoch, GetChangingEpoch)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -363,6 +365,24 @@ func GetCurrentEpoch(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		log.Trace("epoch", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
+	}
+	output := &MethodEpochOutput{Epoch: epoch}
+	return output.Encode()
+}
+
+func GetChangingEpoch(s *native.NativeContract) ([]byte, error) {
+	curEpochHash, err := getCurrentEpochHash(s)
+	if err != nil {
+		return utils.ByteFailed, err
+	}
+	epoch, err := getEpoch(s, curEpochHash)
+	if err != nil {
+		return utils.ByteFailed, err
+	}
+
+	height := s.ContractRef().BlockHeight().Uint64()
+	if height > epoch.StartHeight {
+		return utils.ByteFailed, fmt.Errorf("epoch invalid")
 	}
 	output := &MethodEpochOutput{Epoch: epoch}
 	return output.Encode()

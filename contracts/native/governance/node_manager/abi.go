@@ -161,6 +161,14 @@ func (m *MethodEpochOutput) Decode(payload []byte) error {
 	return rlp.DecodeBytes(data.Epoch, &m.Epoch)
 }
 
+// useless input
+type MethodGetChangingEpochInput struct{}
+
+func (m *MethodGetChangingEpochInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetChangingEpoch)
+}
+func (m *MethodGetChangingEpochInput) Decode(payload []byte) error { return nil }
+
 type MethodGetEpochByIDInput struct {
 	EpochID uint64
 }

@@ -6,6 +6,7 @@ interface INodeManager {
     function propose(uint64 startHeight, bytes memory peers) external returns (bool);
     function vote(uint64 epochID, bytes memory epochHash) external returns (bool);
     function epoch() external view returns (bytes memory);
+    function getChangingEpoch() external view returns (bytes memory);
     function getEpochByID(uint64 epochID) external view returns (bytes memory);
     function proof(uint64 epochID) external view returns (bytes memory);
     

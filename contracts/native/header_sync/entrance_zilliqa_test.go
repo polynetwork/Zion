@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"math/big"
 
-
-
 	"github.com/polynetwork/poly/common"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -31,16 +29,14 @@ import (
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zilliqa"
 
-	
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 
-	
-
 	"github.com/Zilliqa/gozilliqa-sdk/core"
 	ziutil "github.com/Zilliqa/gozilliqa-sdk/util"
 )
+
 const ZILChainID = 9
 
 func getLatestHeight(native *native.NativeContract) uint64 {
@@ -184,7 +180,7 @@ func TestSyncGenesisHeaderNoOperator(t *testing.T) {
 	param.Serialization(sink)
 
 	n, _ := NewNative(scom.MethodSyncGenesisHeader, param)
-	
+
 	zilHeader := zilliqa.NewHandler()
 	err2 := zilHeader.SyncGenesisHeader(n)
 	assert.Equal(t, 0, typeOfError(err2), err2)
@@ -381,4 +377,3 @@ func TestSyncBlockHeaderZilliqa(t *testing.T) {
 	}
 
 }
-

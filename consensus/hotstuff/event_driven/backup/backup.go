@@ -18,7 +18,6 @@
 
 package backup
 
-
 //// todo: 如果节点此时宕机怎么办？还是说允许所有的节点一起提交区块
 //if existProposal := c.backend.GetProposal(committedBlock.Hash()); existProposal == nil {
 //	//if c.isSelf(committedBlock.Coinbase()) {
@@ -28,7 +27,6 @@ package backup
 //} else {
 //	c.logger.Trace("block already synced to chain reader", "")
 //}
-
 
 //func (c *core) forwardProposal() error {
 //	logger := c.newSenderLogger("MSG_FORWARD_PROPOSAL")
