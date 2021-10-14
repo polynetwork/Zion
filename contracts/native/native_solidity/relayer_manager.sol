@@ -1,28 +1,28 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 contract relayer_manager {
-    event EventApproveRegisterRelayer(uint64 ID);
-    event EventApproveRemoveRelayer(uint64 ID);
-    event EventRegisterRelayer(uint64 applyID);
-    event EventRemoveRelayer(uint64 removeID);
+    event evtApproveRegisterRelayer(uint64 ID);
+    event evtApproveRemoveRelayer(uint64 ID);
+    event evtRegisterRelayer(uint64 applyID);
+    event evtRemoveRelayer(uint64 removeID);
 
-    function MethodContractName() public returns(string memory Name) {
+    function name() public returns(string memory Name) {
         return Name;
     }
     
-    function MethodRegisterRelayer(address[] memory AddressList, address Address) public returns(bool success) {
+    function registerRelayer(address[] memory AddressList, address Address) public returns(bool success) {
         return success;
     }
     
-    function MethodApproveRegisterRelayer(uint64 ID, address Address) public returns(bool success) {
+    function approveRegisterRelayer(uint64 ID, address Address) public returns(bool success) {
         return success;
     }
 
-    function MethodRemoveRelayer(address[] memory AddressList, address Address) public returns(bool success) {
+    function removeRelayer(address[] memory AddressList, address Address) public returns(bool success) {
         return success;
     }
     
-    function MethodApproveRemoveRelayer(uint64 ID, address Address) public returns(bool success) {
+    function approveRemoveRelayer(uint64 ID, address Address) public returns(bool success) {
         return success;
     }
 }

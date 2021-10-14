@@ -9,50 +9,50 @@ contract side_chain_manager {
 	    uint64 MinChange;
     }
     
-    event EventRegisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait);
-    event EventApproveRegisterSideChain(uint64 ChainId);
-    event EventUpdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait);
-    event EventApproveUpdateSideChain(uint64 ChainId);
-    event EventQuitSideChain(uint64 ChainId);
-    event EventApproveQuitSideChain(uint64 ChainId);
-    event EventRegisterRedeem(string rk, string ContractAddress);
-    event EventSetBtcTxParam(string rk, uint64 RedeemChainId, uint64 FeeRate, uint64 MinChange);
+    event evtRegisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait);
+    event evtApproveRegisterSideChain(uint64 ChainId);
+    event evtUpdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait);
+    event evtApproveUpdateSideChain(uint64 ChainId);
+    event evtQuitSideChain(uint64 ChainId);
+    event evtApproveQuitSideChain(uint64 ChainId);
+    event evtRegisterRedeem(string rk, string ContractAddress);
+    event evtSetBtcTxParam(string rk, uint64 RedeemChainId, uint64 FeeRate, uint64 MinChange);
     
-    function MethodContractName() public returns(string memory Name) {
+    function name() public returns(string memory Name) {
         return Name;
     }
 
-    function MethodRegisterSideChain(address Address, uint64 ChainId, uint64 Router, string memory Name, uint64 BlocksToWait, bytes memory CCMCAddress, bytes memory ExtraInfo)
+    function registerSideChain(address Address, uint64 ChainId, uint64 Router, string memory Name, uint64 BlocksToWait, bytes memory CCMCAddress, bytes memory ExtraInfo)
        public returns (bool success){
 	    return success;
     }
     
-    function MethodApproveRegisterSideChain(uint64 Chainid, address Address) public returns (bool success) {
+    function approveRegisterSideChain(uint64 Chainid, address Address) public returns (bool success) {
 	    return success;
     }
     
-    function MethodUpdateSideChain(address Address, uint64 ChainId, uint64 Router, string memory Name, uint64 BlocksToWait, bytes memory CCMCAddress, bytes memory ExtraInfo)
+    function updateSideChain(address Address, uint64 ChainId, uint64 Router, string memory Name, uint64 BlocksToWait, bytes memory CCMCAddress, bytes memory ExtraInfo)
        public returns (bool success){
 	    return success;
     }
     
-    function MethodApproveUpdateSideChain(uint64 Chainid, address Address) public returns (bool success) {
+    function approveUpdateSideChain(uint64 Chainid, address Address) public returns (bool success) {
 	    return success;
     }
     
-    function MethodQuitSideChain(uint64 Chainid, address Address) public returns (bool success) {
+    function quitSideChain(uint64 Chainid, address Address) public returns (bool success) {
 	    return success;
     }
     
-    function MethodApproveQuitSideChain(uint64 Chainid, address Address) public returns (bool success) {
+    function approveQuitSideChain(uint64 Chainid, address Address) public returns (bool success) {
 	    return success;
     }
     
-    function MethodRegisterRedeem(uint64 RedeemChainID, uint64 ContractChainID, bytes memory Redeem, uint64 CVersion, bytes memory ContractAddress, bytes[] memory Signs) public returns (bool success) {
+    function registerRedeem(uint64 RedeemChainID, uint64 ContractChainID, bytes memory Redeem, uint64 CVersion, bytes memory ContractAddress, bytes[] memory Signs) public returns (bool success) {
 	    return success;
     }
     
-    function MethodSetBtcTxParam(bytes memory Redeem, uint64 RedeemChainId, bytes[] memory Sigs, BtcTxParamDetial memory Detial) public returns (bool success) {
+    function setBtcTxParam(bytes memory Redeem, uint64 RedeemChainId, bytes[] memory Sigs, BtcTxParamDetial memory Detial) public returns (bool success) {
 	    return success;
     }
 }

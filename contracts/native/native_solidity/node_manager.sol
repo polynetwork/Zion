@@ -16,53 +16,53 @@ contract node_manager {
         uint32 MaxBlockChangeView;
     }
     
-    event EventRegisterCandidate(string Pubkey);
-    event EventUnRegisterCandidate(string Pubkey);
-    event EventApproveCandidate(string Pubkey);
-    event EventBlackNode(string[] PubkeyList);
-    event EventWhiteNode(string Pubkey);
-    event EventQuitNode(string Pubkey);
-    event EventCommitDpos();
-    event EventUpdateConfig(Configuration Config);
+    event evtRegisterCandidate(string Pubkey);
+    event evtUnRegisterCandidate(string Pubkey);
+    event evtApproveCandidate(string Pubkey);
+    event evtBlackNode(string[] PubkeyList);
+    event evtWhiteNode(string Pubkey);
+    event evtQuitNode(string Pubkey);
+    event evtCommitDpos();
+    event evtUpdateConfig(Configuration Config);
     event CheckConsensusSignsEvent(uint64 signs);
     
-    function MethodContractName() public returns(string memory Name) {
+    function name() public returns(string memory Name) {
         return Name;
     }
     
-    function MethodInitConfig(uint32 BlockMsgDelay, uint32 HashMsgDelay, uint32 PeerHandshakeTimeout, uint32 MaxBlockChangeView, string memory VrfValue, string memory VrfProof, VBFTPeerInfo memory Peers) public returns(bool success) {
+    function initConfig(uint32 BlockMsgDelay, uint32 HashMsgDelay, uint32 PeerHandshakeTimeout, uint32 MaxBlockChangeView, string memory VrfValue, string memory VrfProof, VBFTPeerInfo memory Peers) public returns(bool success) {
         return success;
     }
     
-    function MethodRegisterCandidate(string memory PeerPubkey, address Address) public returns(bool success) {
+    function registerCandidate(string memory PeerPubkey, address Address) public returns(bool success) {
         return success;
     }
 
-    function MethodUnRegisterCandidate(string memory PeerPubkey, address Address) public returns(bool success) {
+    function unRegisterCandidate(string memory PeerPubkey, address Address) public returns(bool success) {
         return success;
     }
     
-    function MethodQuitNode(string memory PeerPubkey, address Address) public returns(bool success) {
+    function quitNode(string memory PeerPubkey, address Address) public returns(bool success) {
         return success;
     }
 
-    function MethodApproveCandidate(string memory PeerPubkey, address Address) public returns(bool success) {
+    function approveCandidate(string memory PeerPubkey, address Address) public returns(bool success) {
         return success;
     }
     
-    function MethodBlackNode(string[] memory PeerPubkeyList, address Address) public returns(bool success) {
+    function blackNode(string[] memory PeerPubkeyList, address Address) public returns(bool success) {
         return success;
     }
 
-    function MethodWhiteNode(string memory PeerPubkey, address Address) public returns(bool success) {
+    function whiteNode(string memory PeerPubkey, address Address) public returns(bool success) {
         return success;
     }
     
-    function MethodUpdateConfig(UpdateConfigParam memory ConfigParam) public returns(bool success) {
+    function updateConfig(UpdateConfigParam memory ConfigParam) public returns(bool success) {
         return success;
     }
 
-    function MethodCommitDpos() public returns(bool success) {
+    function commitDpos() public returns(bool success) {
         return success;
     }
 }

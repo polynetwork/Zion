@@ -1,30 +1,30 @@
 pragma solidity >=0.7.0 <0.9.0;
 
 contract neo3_state_manager {
-    event EventApproveRegisterStateValidator(uint64 ID);
-    event EventApproveRemoveStateValidator(uint64 ID);
+    event evtApproveRegisterStateValidator(uint64 ID);
+    event evtApproveRemoveStateValidator(uint64 ID);
 
-    function MethodContractName() public returns(string memory Name) {
+    function name() public returns(string memory Name) {
         return Name;
     }
     
-    function MethodGetCurrentStateValidator() public returns(bytes memory Validator) {
+    function getCurrentStateValidator() public returns(bytes memory Validator) {
         return Validator;
     }
     
-    function MethodRegisterStateValidator(string[] memory StateValidators, address Address) public returns(bool success) {
+    function registerStateValidator(string[] memory StateValidators, address Address) public returns(bool success) {
         return success;
     }
 
-    function MethodApproveRegisterStateValidator(uint64 ID, address Address) public returns(bool success) {
+    function approveRegisterStateValidator(uint64 ID, address Address) public returns(bool success) {
         return success;
     }
     
-    function MethodRemoveStateValidator(string[] memory StateValidators, address Address) public returns(bool success) {
+    function removeStateValidator(string[] memory StateValidators, address Address) public returns(bool success) {
         return success;
     }
     
-    function MethodApproveRemoveStateValidator(uint64 ID, address Address) public returns(bool success) {
+    function approveRemoveStateValidator(uint64 ID, address Address) public returns(bool success) {
         return success;
     }
 }
