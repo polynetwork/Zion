@@ -21,6 +21,8 @@ package node_manager
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/rlp"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -45,6 +47,14 @@ func StoreGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
 	curKey := curEpochKey()
 	cache.Put(curKey, epoch.Hash().Bytes())
 
+	// store genesis epoch id to list
+	value, err := rlp.EncodeToBytes(&HashList{List: []common.Hash{epoch.Hash()}})
+	if err != nil {
+		return nil, err
+	}
+	proposalKey := proposalsKey(epoch.ID)
+	cache.Put(proposalKey, value)
+
 	// store genesis epoch proof
 	key := epochProofKey(EpochProofHash(epoch.ID))
 	cache.Put(key, epoch.Hash().Bytes())
@@ -53,7 +63,6 @@ func StoreGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
 }
 
 func getCurrentEpoch(s *native.NativeContract) (*EpochInfo, error) {
-
 	// current epoch taking effective
 	curEpochHash, err := getCurrentEpochHash(s)
 	if err != nil {
@@ -63,7 +72,6 @@ func getCurrentEpoch(s *native.NativeContract) (*EpochInfo, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	if cur.ID == StartEpochID {
 		return cur, nil
 	}
@@ -73,11 +81,28 @@ func getCurrentEpoch(s *native.NativeContract) (*EpochInfo, error) {
 		return cur, nil
 	}
 
-	// current epoch not taking effective, return last epoch
-	lastEpochHash, err := getLastEpochHash(s)
-	if err != nil {
-		return nil, err
+	if cur.ID-1 < StartEpochID {
+		return nil, fmt.Errorf("epoch id should greater than %d", StartEpochID)
+	} else {
+		return getEffectiveEpochByID(s, cur.ID-1)
 	}
+}
+
+func getEffectiveEpochByID(s *native.NativeContract, epochID uint64) (*EpochInfo, error) {
+	if epochID < StartEpochID {
+		return nil, fmt.Errorf("epoch %d not exist", epochID)
+	}
+	list, err := getProposals(s, epochID)
+	if err != nil {
+		return nil, fmt.Errorf("epoch %d has no proposal, err: %v", epochID, err)
+	}
+	if list == nil || len(list) == 0 {
+		return nil, fmt.Errorf("epoch %d has no proposal", epochID)
+	}
+	if len(list) > 1 {
+		return nil, fmt.Errorf("epoch %d has multi proposal", epochID)
+	}
+	lastEpochHash := list[0]
 	return getEpoch(s, lastEpochHash)
 }
 

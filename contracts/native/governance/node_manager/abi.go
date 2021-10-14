@@ -36,8 +36,8 @@ const (
 	MethodPropose      = "propose"
 	MethodVote         = "vote"
 	MethodEpoch        = "epoch"
+	MethodGetEpochByID = "getEpochByID"
 	MethodProof        = "proof"
-	MethodNextEpoch    = "nextEpoch"
 
 	EventPropose         = "proposed"
 	EventVote            = "voted"
@@ -50,8 +50,8 @@ const abijson = `[
 	{"type":"function","name":"` + MethodPropose + `","inputs":[{"internalType":"uint64","name":"StartHeight","type":"uint64"},{"internalType":"bytes","name":"Peers","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
     {"type":"function","name":"` + MethodVote + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"},{"internalType":"bytes","name":"Hash","type":"bytes"}],"outputs":[{"internalType":"bool","name":"Success","type":"bool"}],"stateMutability":"nonpayable"},
 	{"type":"function","name":"` + MethodEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodNextEpoch + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}],"stateMutability":"nonpayable"},
-	{"type":"function","name":"` + MethodProof + `","inputs":[],"outputs":[{"internalType":"bytes","name":"Hash","type":"bytes"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodGetEpochByID + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"}],"outputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}],"stateMutability":"nonpayable"},
+	{"type":"function","name":"` + MethodProof + `","inputs":[{"internalType":"uint64","name":"EpochID","type":"uint64"}],"outputs":[{"internalType":"bytes","name":"Hash","type":"bytes"}],"stateMutability":"nonpayable"},
     {"type":"event","name":"` + EventPropose + `","anonymous":false,"inputs":[{"internalType":"bytes","name":"Epoch","type":"bytes"}]},
 	{"type":"event","name":"` + EventVote + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"EpochID","type":"uint64"},{"indexed":false,"internalType":"bytes","name":"Hash","type":"bytes"},{"indexed":false,"internalType":"uint64","name":"VotedNumber","type":"uint64"},{"indexed":false,"internalType":"uint64","name":"GroupSize","type":"uint64"}]},
 	{"type":"event","name":"` + EventEpochChange + `","anonymous":false,"inputs":[{"indexed":false,"internalType":"bytes","name":"Epoch","type":"bytes"},{"indexed":false,"internalType":"bytes","name":"NextEpoch","type":"bytes"}]},
@@ -187,27 +187,40 @@ func (m *MethodEpochOutput) Decode(payload []byte) error {
 	return rlp.DecodeBytes(data.Epoch, &m.Epoch)
 }
 
-// useless input
-//type MethodNextEpochInput struct{}
-type MethodNextEpochOutput struct {
-	Epoch *EpochInfo
+type MethodGetEpochByIDInput struct {
+	EpochID uint64
 }
 
-func (m *MethodNextEpochOutput) Encode() ([]byte, error) {
-	enc, err := rlp.EncodeToBytes(m.Epoch)
-	if err != nil {
-		return nil, err
-	}
-	return utils.PackOutputs(ABI, MethodNextEpoch, enc)
+func (m *MethodGetEpochByIDInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetEpochByID, m.EpochID)
 }
-func (m *MethodNextEpochOutput) Decode(payload []byte) error {
+func (m *MethodGetEpochByIDInput) Decode(payload []byte) error {
 	var data struct {
-		Epoch []byte
+		EpochID uint64
 	}
-	if err := utils.UnpackOutputs(ABI, MethodNextEpoch, &data, payload); err != nil {
+	if err := utils.UnpackMethod(ABI, MethodGetEpochByID, &data, payload); err != nil {
 		return err
 	}
-	return rlp.DecodeBytes(data.Epoch, &m.Epoch)
+	m.EpochID = data.EpochID
+	return nil
+}
+
+type MethodProofInput struct {
+	EpochID uint64
+}
+
+func (m *MethodProofInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodProof, m.EpochID)
+}
+func (m *MethodProofInput) Decode(payload []byte) error {
+	var data struct {
+		EpochID uint64
+	}
+	if err := utils.UnpackMethod(ABI, MethodProof, &data, payload); err != nil {
+		return err
+	}
+	m.EpochID = data.EpochID
+	return nil
 }
 
 type MethodProofOutput struct {
