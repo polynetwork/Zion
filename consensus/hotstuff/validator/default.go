@@ -228,6 +228,6 @@ func (valSet *defaultSet) Copy() hotstuff.ValidatorSet {
 
 func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
 
-func (valSet *defaultSet) Q() int { return valSet.F()*2 + 1 }
+func (valSet *defaultSet) Q() int { return int(math.Ceil(float64(2 * valSet.Size())/3)) }
 
 func (valSet *defaultSet) Policy() hotstuff.SelectProposerPolicy { return valSet.policy }
