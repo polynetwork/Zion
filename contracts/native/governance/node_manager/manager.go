@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -38,12 +39,13 @@ func SubscribeEpochChange(ch chan<- types.EpochChangeEvent) event.Subscription {
 
 var (
 	gasTable = map[string]uint64{
-		MethodContractName: 0,
-		MethodPropose:      30000,
-		MethodVote:         30000,
-		MethodEpoch:        0,
-		MethodGetEpochByID: 0,
-		MethodProof:        0,
+		MethodName:             0,
+		MethodPropose:          30000,
+		MethodVote:             30000,
+		MethodEpoch:            0,
+		MethodGetEpochByID:     0,
+		MethodProof:            0,
+		MethodGetChangingEpoch: 0,
 	}
 )
 
@@ -72,12 +74,13 @@ func InitNodeManager() {
 func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
-	s.Register(MethodContractName, Name)
+	s.Register(MethodName, Name)
 	s.Register(MethodPropose, Propose)
 	s.Register(MethodVote, Vote)
 	s.Register(MethodEpoch, GetCurrentEpoch)
 	s.Register(MethodGetEpochByID, GetEpochByID)
 	s.Register(MethodProof, GetEpochProof)
+	s.Register(MethodGetChangingEpoch, GetChangingEpoch)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -206,7 +209,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 	// check authority
 	curEpoch, err := getCurrentEpoch(s)
 	if err != nil {
-		log.Trace("checkConsensusSign", "get current epoch failed", err)
+		log.Trace("vote", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
 	if err := checkAuthority(voter, caller, curEpoch); err != nil {
@@ -221,7 +224,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, ErrInvalidInput
 	}
 	epochID := input.EpochID
-	proposal := input.Hash
+	proposal := input.EpochHash
 
 	if expectEpochID := curEpoch.ID + 1; epochID != expectEpochID {
 		log.Trace("vote", "check epoch ID failed, expect", expectEpochID, "got", curEpoch.ID)
@@ -362,6 +365,25 @@ func GetCurrentEpoch(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		log.Trace("epoch", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
+	}
+	output := &MethodEpochOutput{Epoch: epoch}
+	return output.Encode()
+}
+
+func GetChangingEpoch(s *native.NativeContract) ([]byte, error) {
+	curEpochHash, err := getCurrentEpochHash(s)
+	if err != nil {
+		return utils.ByteFailed, err
+	}
+	epoch, err := getEpoch(s, curEpochHash)
+	if err != nil {
+		return utils.ByteFailed, err
+	}
+
+	height := s.ContractRef().BlockHeight().Uint64()
+	if height > epoch.StartHeight {
+		log.Warn("getChangingEpoch", "epoch changing invalidation, start height", epoch.StartHeight, "current height", height)
+		return utils.ByteFailed, fmt.Errorf("epoch invalid")
 	}
 	output := &MethodEpochOutput{Epoch: epoch}
 	return output.Encode()

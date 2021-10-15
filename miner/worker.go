@@ -239,6 +239,8 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		recommit = minRecommitInterval
 	}
 
+	worker.initChangingEpoch()
+
 	go worker.mainLoop()
 	go worker.newWorkLoop(recommit)
 	go worker.resultLoop()
@@ -1087,6 +1089,51 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
 }
 
+func (w *worker) initChangingEpoch() {
+	caller := w.coinbase
+	parent := w.chain.CurrentBlock()
+	statedb, err := w.chain.StateAt(parent.Root())
+	if err != nil {
+		log.Errorf("[miner worker]", "initChangingEpoch failed", err)
+		return
+	}
+	// wont changing epoch at the first block
+	if parent.NumberU64() < 1 {
+		return
+	}
+
+	log.Debug("init changing epoch...")
+	ref := native.NewContractRef(statedb, caller, caller, parent.Number(), common.EmptyHash, 0, nil)
+	payload, err := new(nm.MethodGetChangingEpochInput).Encode()
+	if err != nil {
+		log.Error("[miner worker]", "pack `getChangingEpoch` input failed", err)
+		return
+	}
+	enc, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
+	if err != nil {
+		return
+	}
+	output := new(nm.MethodEpochOutput)
+	if err := output.Decode(enc); err != nil {
+		log.Error("[miner worker]", "unpack `getChangingEpoch` output failed", err)
+		return
+	}
+	if output.Epoch == nil {
+		log.Error("[miner worker]", "`getChangingEpoch` check epoch failed", "epoch is nil")
+		return
+	}
+
+	epoch := output.Epoch
+	w.nextEpoch = &types.EpochChangeEvent{
+		EpochID:     epoch.ID,
+		StartHeight: epoch.StartHeight,
+		Validators:  epoch.MemberList(),
+		Hash:        epoch.Hash(),
+	}
+	w.changeEpochFlag = true
+	log.Info("[miner worker]", "miner will changing epoch", epoch.String())
+}
+
 func (w *worker) processEpochChange(event *types.EpochChangeEvent) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
@@ -1127,7 +1174,7 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
 	}
 
 	if output.Epoch == nil || w.nextEpoch == nil || output.Epoch.Hash() != w.nextEpoch.Hash {
-		log.Errorf("[miner worker]", "check epoch failed", "epoch may be nil or hash not match")
+		log.Error("[miner worker]", "check epoch failed", "epoch may be nil or hash not match")
 		return
 	}
 

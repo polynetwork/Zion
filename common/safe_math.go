@@ -44,4 +44,3 @@ func SafeMul(x, y uint64) (uint64, bool) {
 	}
 	return x * y, y > MAX_UINT64/x
 }
-

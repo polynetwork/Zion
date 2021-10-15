@@ -22,10 +22,10 @@ import (
 	"encoding/hex"
 	"fmt"
 	"github.com/polynetwork/poly/common"
-	
-	cstates "github.com/polynetwork/poly/core/states"
+
 	"github.com/ethereum/go-ethereum/contracts/native"
-	
+	cstates "github.com/polynetwork/poly/core/states"
+
 	hscommon "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/tendermint/tendermint/types"

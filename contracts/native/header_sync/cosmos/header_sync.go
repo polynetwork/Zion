@@ -22,11 +22,11 @@ import (
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/codec"
 
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/multisig"
@@ -92,12 +92,11 @@ func (this *CosmosHandler) SyncGenesisHeader(native *native.NativeContract) erro
 
 func (this *CosmosHandler) SyncBlockHeader(native *native.NativeContract) error {
 	params := &scom.SyncBlockHeaderParam{}
-	
+
 	ctx := native.ContractRef().CurrentContext()
 	if err := utils.UnpackMethod(scom.ABI, scom.MethodSyncBlockHeader, params, ctx.Payload); err != nil {
 		return err
 	}
-	
 
 	cdc := newCDC()
 	cnt := 0

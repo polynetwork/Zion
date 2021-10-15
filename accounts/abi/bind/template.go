@@ -134,6 +134,20 @@ var (
 		)
 	{{end}}
 
+	{{if not $.Zion}}
+		var (
+			{{range .Transacts}}
+				Method{{.Normalized.Name}} = "{{.Original.Name}}"
+			{{end}}
+			{{range .Calls}}
+				Method{{.Normalized.Name}} = "{{.Original.Name}}"
+			{{end}}
+			{{range .Events}}
+				Event{{.Normalized.Name}} = "{{.Original.Name}}"
+			{{end}}
+		)
+	{{end}}
+
 	// {{.Type}}ABI is the input ABI used to generate the binding from.
 	const {{.Type}}ABI = "{{.InputABI}}"
 

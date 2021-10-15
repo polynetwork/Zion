@@ -23,22 +23,23 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestABIShowJonString(t *testing.T) {
-	t.Log(abijson)
+	t.Log(INodeManagerABI)
 	for name, v := range ABI.Methods {
 		t.Logf("method %s, id %s", name, hexutil.Encode(v.ID))
 	}
 }
 
 func TestABIMethodContractName(t *testing.T) {
-	enc, err := utils.PackOutputs(ABI, MethodContractName, contractName)
+	enc, err := utils.PackOutputs(ABI, MethodName, contractName)
 	assert.NoError(t, err)
 	params := new(MethodContractNameOutput)
-	assert.NoError(t, utils.UnpackOutputs(ABI, MethodContractName, params, enc))
+	assert.NoError(t, utils.UnpackOutputs(ABI, MethodName, params, enc))
 	assert.Equal(t, contractName, params.Name)
 }
 
@@ -82,21 +83,21 @@ func TestABIMethodProposeOutput(t *testing.T) {
 
 func TestABIMethodVoteInput(t *testing.T) {
 	var cases = []struct {
-		EpochID uint64
-		Hash    common.Hash
+		EpochID   uint64
+		EpochHash common.Hash
 	}{
+		//{
+		//	EpochID:   0,
+		//	EpochHash: generateTestHash(1),
+		//},
 		{
-			EpochID: 0,
-			Hash:    generateTestHash(1),
-		},
-		{
-			EpochID: 1,
-			Hash:    generateTestHash(11),
+			EpochID:   1,
+			EpochHash: generateTestHash(11),
 		},
 	}
 
 	for _, testdata := range cases {
-		expect := &MethodVoteInput{EpochID: testdata.EpochID, Hash: testdata.Hash}
+		expect := &MethodVoteInput{EpochID: testdata.EpochID, EpochHash: testdata.EpochHash}
 		enc, err := expect.Encode()
 		assert.NoError(t, err)
 

@@ -493,6 +493,7 @@ func testCallContract(t *testing.T, client *rpc.Client) {
 		t.Fatalf("unexpected error: %v", err)
 	}
 }
+
 //
 //func TestCallNativeContract(t *testing.T) {
 //	backend, _ := newTestBackend(t)
@@ -621,7 +622,6 @@ func sendTransaction(ec *Client) error {
 	// Send transaction
 	return ec.SendTransaction(context.Background(), signedTx)
 }
-
 
 //func SigHash(header *types.Header) (hash common.Hash) {
 //	hasher := sha3.NewLegacyKeccak256()

@@ -21,16 +21,16 @@ import (
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
-	"github.com/polynetwork/poly/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/cosmos"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/polynetwork/poly/common"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/merkle"
 	"github.com/tendermint/tendermint/crypto/multisig"
 	"github.com/tendermint/tendermint/crypto/secp256k1"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
 type CosmosHandler struct{}

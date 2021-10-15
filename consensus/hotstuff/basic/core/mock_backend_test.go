@@ -46,9 +46,9 @@ type mockBackend struct {
 	peers  hotstuff.ValidatorSet
 	events *event.TypeMux
 
-	committedMsgs []testCommittedMsgs
+	committedMsgs   []testCommittedMsgs
 	committedMsgMap map[common.Hash]testCommittedMsgs
-	sentMsgs      [][]byte // store the messages when Send is called by core
+	sentMsgs        [][]byte // store the messages when Send is called by core
 
 	address common.Address
 	db      ethdb.Database

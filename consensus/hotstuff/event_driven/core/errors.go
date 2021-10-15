@@ -31,21 +31,21 @@ var (
 	// than current view.
 	errOldMessage = errors.New("old Message")
 
-	errNoRequest 			= errors.New("failed to fetch request")
+	errNoRequest      = errors.New("failed to fetch request")
 	errInvalidMessage = errors.New("invalid Message")
 
 	errFailedDecodeNewView = errors.New("failed to decode NEWVIEW")
 	errFailedDecodePrepare = errors.New("failed to decode PREPARE")
 
-	errProposalConvert     = errors.New("failed to convert proposal to types.block")
-	errExtraHeader         = errors.New("failed to extract header")
-	errInvalidEpoch        = errors.New("invalid epoch")
-	errInvalidProposal 	   = errors.New("invalid proposal")
-	errInvalidVote         = errors.New("invalid vote")
-	errNeedCatchUp 		   = errors.New("need catchup")
-	errInvalidQC           = errors.New("invalid qc")
-	errInvalidTC 		   = errors.New("invalid tc")
-	errInvalidHighQC       = errors.New("invalid highQC")
+	errProposalConvert = errors.New("failed to convert proposal to types.block")
+	errExtraHeader     = errors.New("failed to extract header")
+	errInvalidEpoch    = errors.New("invalid epoch")
+	errInvalidProposal = errors.New("invalid proposal")
+	errInvalidVote     = errors.New("invalid vote")
+	errNeedCatchUp     = errors.New("need catchup")
+	errInvalidQC       = errors.New("invalid qc")
+	errInvalidTC       = errors.New("invalid tc")
+	errInvalidHighQC   = errors.New("invalid highQC")
 
 	// errInvalidSigner is returned when the Message is signed by a validator different than Message sender
 	errInvalidSigner = errors.New("Message not signed by the sender")
