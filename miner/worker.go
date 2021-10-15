@@ -1097,15 +1097,16 @@ func (w *worker) initChangingEpoch() {
 		log.Errorf("[miner worker]", "initChangingEpoch failed", err)
 		return
 	}
-	// it wont changing epoch at the first block
+	// wont changing epoch at the first block
 	if parent.NumberU64() < 1 {
 		return
 	}
 
+	log.Debug("init changing epoch...")
 	ref := native.NewContractRef(statedb, caller, caller, parent.Number(), common.EmptyHash, 0, nil)
 	payload, err := new(nm.MethodGetChangingEpochInput).Encode()
 	if err != nil {
-		log.Error("[miner worker]", "pack `epoch` input failed", err)
+		log.Error("[miner worker]", "pack `getChangingEpoch` input failed", err)
 		return
 	}
 	enc, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
@@ -1114,12 +1115,11 @@ func (w *worker) initChangingEpoch() {
 	}
 	output := new(nm.MethodEpochOutput)
 	if err := output.Decode(enc); err != nil {
-		log.Error("[miner worker]", "unpack `epoch` output failed", err)
+		log.Error("[miner worker]", "unpack `getChangingEpoch` output failed", err)
 		return
 	}
-
-	if output.Epoch == nil || w.nextEpoch == nil || output.Epoch.Hash() != w.nextEpoch.Hash {
-		log.Errorf("[miner worker]", "check epoch failed", "epoch may be nil or hash not match")
+	if output.Epoch == nil {
+		log.Error("[miner worker]", "`getChangingEpoch` check epoch failed", "epoch is nil")
 		return
 	}
 
@@ -1131,7 +1131,7 @@ func (w *worker) initChangingEpoch() {
 		Hash:        epoch.Hash(),
 	}
 	w.changeEpochFlag = true
-	log.Infof("[miner worker]", "miner will changing epoch", epoch.String())
+	log.Info("[miner worker]", "miner will changing epoch", epoch.String())
 }
 
 func (w *worker) processEpochChange(event *types.EpochChangeEvent) {
@@ -1174,7 +1174,7 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
 	}
 
 	if output.Epoch == nil || w.nextEpoch == nil || output.Epoch.Hash() != w.nextEpoch.Hash {
-		log.Errorf("[miner worker]", "check epoch failed", "epoch may be nil or hash not match")
+		log.Error("[miner worker]", "check epoch failed", "epoch may be nil or hash not match")
 		return
 	}
 

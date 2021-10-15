@@ -209,7 +209,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 	// check authority
 	curEpoch, err := getCurrentEpoch(s)
 	if err != nil {
-		log.Trace("checkConsensusSign", "get current epoch failed", err)
+		log.Trace("vote", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
 	if err := checkAuthority(voter, caller, curEpoch); err != nil {
@@ -382,6 +382,7 @@ func GetChangingEpoch(s *native.NativeContract) ([]byte, error) {
 
 	height := s.ContractRef().BlockHeight().Uint64()
 	if height > epoch.StartHeight {
+		log.Warn("getChangingEpoch", "epoch changing invalidation, start height", epoch.StartHeight, "current height", height)
 		return utils.ByteFailed, fmt.Errorf("epoch invalid")
 	}
 	output := &MethodEpochOutput{Epoch: epoch}
