@@ -748,7 +748,7 @@ func (db *Database) Commit(node common.Hash, report bool, callback func(common.H
 	if !report {
 		logger = log.Debug
 	}
-	logger("Persisted trie from memory database", "nodes", nodes-len(db.dirties)+int(db.flushnodes), "size", storage-db.dirtiesSize+db.flushsize, "time", time.Since(start)+db.flushtime,
+	logger("Persisted trie from memory database", "node(header root)", node.Hex(), "nodes", nodes-len(db.dirties)+int(db.flushnodes), "size", storage-db.dirtiesSize+db.flushsize, "time", time.Since(start)+db.flushtime,
 		"gcnodes", db.gcnodes, "gcsize", db.gcsize, "gctime", db.gctime, "livenodes", len(db.dirties), "livesize", db.dirtiesSize)
 
 	// Reset the garbage collection statistics
