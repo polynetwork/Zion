@@ -366,9 +366,9 @@ func (ec *Client) StorageAt(ctx context.Context, account common.Address, key com
 	return result, err
 }
 
-func (ec *Client) ProofAt(ctx context.Context, address common.Address, storageKeys, blockNumber *big.Int) (*ethapi.AccountResult, error) {
+func (ec *Client) ProofAt(ctx context.Context, address common.Address, storageKeys []string, blockNumber *big.Int) (*ethapi.AccountResult, error) {
 	var result *ethapi.AccountResult
-	err := ec.c.CallContext(ctx, &result, "eth_getProof", address, storageKeys, blockNumber)
+	err := ec.c.CallContext(ctx, &result, "eth_getProof", address, storageKeys, toBlockNumArg(blockNumber))
 	return result, err
 }
 
