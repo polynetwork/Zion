@@ -130,13 +130,12 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		return err
 	}
 	block = block.WithSeal(header)
-	s.logger.Trace("WorkerSealNewBlock", "height", block.Number())
 
 	go func() {
 		// get the proposed block hash and clear it if the seal() is completed.
 		s.sealMu.Lock()
 		s.proposedBlockHashes[block.Hash()] = struct{}{}
-		s.logger.Trace("Add proposed block", "hash", block.Hash(), "number", block.Number())
+		s.logger.Trace("WorkerSealNewBlock", "hash", block.Hash(), "number", block.Number())
 
 		defer func() {
 			s.sealMu.Unlock()

@@ -308,6 +308,9 @@ func (w *worker) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) Start() {
 	if engine, ok := w.engine.(consensus.HotStuff); ok {
+		//w.testBADBlock()
+		//time.Sleep(10 * time.Second)
+		//return
 		if err := engine.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
 			log.Warn("Failed to start hotstuff basic engine", "err", err)
 			return
@@ -315,6 +318,49 @@ func (w *worker) Start() {
 	}
 	atomic.StoreInt32(&w.running, 1)
 	w.startCh <- struct{}{}
+}
+
+// todo:
+// find latest block as bad block, and use n - 1 as current state, and execute block.
+func (w *worker) testBADBlock() {
+	block := w.chain.GetBlockByNumber(93443)
+	if block == nil {
+		log.Error("testBADBlock", "get block failed", "block not exist")
+		return
+	}
+
+	if got := block.Header().Coinbase; got != w.coinbase {
+		log.Error("testBADBlock", "coinbase, expect", w.coinbase.Hex(), "got", got.Hex())
+		return
+	}
+	log.Debug("testBADBlock", "block header root", block.Header().Root.Hex(), "hash", block.Hash().Hex(), "number", block.NumberU64(), "proposer", block.Coinbase().Hex())
+
+	parent := w.chain.GetBlockByHash(block.ParentHash())
+	statedb, err := w.chain.StateAt(parent.Root())
+	if err != nil {
+		log.Error("testBADBlock", "get state with root failed", parent.Root().Hex())
+		return
+	}
+
+	if statedb != nil {
+		w.checkEpoch(statedb, parent.Number())
+		w.handleEpochChange(statedb, block.NumberU64())
+	}
+
+	processor := w.chain.Processor()
+	vmconfig := w.chain.GetVMConfig()
+	receipts, _, usedGas, err := processor.Process(block, statedb, *vmconfig)
+	if err != nil {
+		log.Error("testBADBlock", "process block failed", err)
+		return
+	}
+	validator := w.chain.Validator()
+	if err := validator.ValidateState(block, statedb, receipts, usedGas); err != nil {
+		log.Error("testBADBlock", "validate state failed", err)
+		return
+	}
+
+	return
 }
 
 // stop sets the running status as 0.

@@ -283,6 +283,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	//	st.refundGas(params.RefundQuotientEIP3529)
 	//}
 	st.refundGas(params.RefundQuotientEIP3529)
+	fmt.Println("--------------coinbase add gas", "gas price", st.gasPrice.String(), "gas used", st.gasUsed())
 	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
 	return &ExecutionResult{
