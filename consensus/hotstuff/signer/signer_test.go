@@ -21,6 +21,7 @@ package signer
 import (
 	"bytes"
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	"sort"
 	"strings"
 	"testing"
@@ -28,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"

@@ -132,16 +132,12 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 }
 
 func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
-	snap := s.snap()
-	if _, v := snap.GetByAddress(s.Address()); v == nil {
-		return errUnauthorized
-	}
-
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
-	if _, err := s.getPendingParentHeader(chain, header); err != nil {
-		return err
-	}
+	// todo(fuk): 不再需要，miner自己组织区块头，无需再在共识中验区块头
+	//if _, err := s.getPendingParentHeader(chain, header); err != nil {
+	//	return err
+	//}
 
 	// sign the sig hash and fill extra seal
 	if err = s.signer.SealBeforeCommit(header); err != nil {
@@ -296,10 +292,10 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	}
 
 	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
-	snap := s.snap().Copy()
-	if height := header.Number.Uint64(); s.lastEpochValSet != nil && s.curEpochStartHeight > height && s.curEpochStartHeight == height+1 {
-		snap = s.lastEpochValSet.Copy()
-	}
+	//snap := s.snap().Copy()
+	//if height := header.Number.Uint64(); s.lastEpochValSet != nil && s.curEpochStartHeight > height && s.curEpochStartHeight == height+1 {
+	//	snap = s.lastEpochValSet.Copy()
+	//}
 	return s.signer.VerifyHeader(header, snap, seal)
 }
 

@@ -20,6 +20,7 @@ package message_set
 
 import (
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	"math/big"
 	"sort"
 	"strings"
@@ -27,7 +28,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/crypto"
 )

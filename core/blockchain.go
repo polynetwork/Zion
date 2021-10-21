@@ -339,6 +339,7 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 		}
 	}
 
+	// todo(fuk): delete after test
 	if engine, ok := bc.engine.(consensus.HotStuff); ok {
 		vals, err := bc.getValidators()
 		if err != nil {

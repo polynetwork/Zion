@@ -20,6 +20,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	"math/big"
 	"sync"
 	"time"
@@ -29,8 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	hsb "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
-	hse "github.com/ethereum/go-ethereum/consensus/hotstuff/event_driven/core"
 	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -108,28 +107,22 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 
 	switch protocol {
 	case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
-		backend.core = hsb.New(backend, config, signer)
-	case hotstuff.HOTSTUFF_PROTOCOL_EVENT_DRIVEN:
-		backend.core = hse.New(backend, config, db, signer)
+		backend.core = core.New(backend, config, signer)
 	default:
 		panic("unknown hotstuff protocol")
 	}
 	return backend
 }
 
-func (s *backend) InitValidators(list []common.Address) {
-	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
-	s.core.InitValidators(s.valset)
-}
+// todo(fuk): delete after test
+//func (s *backend) InitValidators(list []common.Address) {
+//	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
+//	s.core.InitValidators(s.valset)
+//}
 
 // Address implements hotstuff.Backend.Address
 func (s *backend) Address() common.Address {
 	return s.signer.Address()
-}
-
-// Validators implements hotstuff.Backend.Validators
-func (s *backend) Validators() hotstuff.ValidatorSet {
-	return s.snap()
 }
 
 // EventMux implements hotstuff.Backend.EventMux
@@ -392,12 +385,6 @@ func (s *backend) GetProposer(number uint64) common.Address {
 		return a
 	}
 	return common.Address{}
-}
-
-// todo:
-// ParentValidators implements hotstuff.Backend.GetParentValidators
-func (s *backend) ParentValidators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
-	return s.snap()
 }
 
 func (s *backend) HasBadProposal(hash common.Hash) bool {
