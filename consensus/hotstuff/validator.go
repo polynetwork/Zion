@@ -75,6 +75,10 @@ type ValidatorSet interface {
 	RemoveValidator(address common.Address) bool
 	// Copy validator set
 	Copy() ValidatorSet
+	// ParticipantsNumber calculate invalid validator size
+	ParticipantsNumber(list []common.Address) int
+	// CheckQuorum check committers
+	CheckQuorum(committers []common.Address) error
 	// Get the maximum number of faulty nodes
 	F() int
 	// Get the minimum number of quorum nodes

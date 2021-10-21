@@ -26,7 +26,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -112,6 +111,7 @@ func (c *core) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) 
 		Validators:    vals,
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
+		Salt:          []byte{},
 	}
 
 	payload, err := rlp.EncodeToBytes(&ist)
@@ -120,14 +120,6 @@ func (c *core) PrepareExtra(header *types.Header, valSet hotstuff.ValidatorSet) 
 	}
 
 	return append(buf.Bytes(), payload...), nil
-}
-
-func (c *core) GetHeader(hash common.Hash, number uint64) *types.Header {
-	return nil
-}
-
-func (c *core) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
-	return nil
 }
 
 const maxRetry uint64 = 10
@@ -191,6 +183,8 @@ catchup:
 		lastProposalLocked, lastLockedProposal = c.current.LastLockedProposal()
 		lastPendingRequest = c.current.PendingRequest()
 	}
+
+	c.valSet = c.backend.Validators()
 
 	// calculate new proposal and init round state
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())

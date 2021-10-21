@@ -32,6 +32,9 @@ type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
 
+	// Validators returns current epoch participants
+	Validators() ValidatorSet
+
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux
 
@@ -90,11 +93,12 @@ type CoreEngine interface {
 	// PrepareExtra generate header extra field with validator set
 	PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
 
-	// GetHeader get block header with hash and correct block height
-	GetHeader(hash common.Hash, number uint64) *types.Header
-
-	// SubscribeRequest notify to miner worker that event-driven engine need an new proposal
-	SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription
+	// todo(fuk): delete after test
+	//// GetHeader get block header with hash and correct block height
+	//GetHeader(hash common.Hash, number uint64) *types.Header
+	//
+	//// SubscribeRequest notify to miner worker that event-driven engine need an new proposal
+	//SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription
 
 	// todo(fuk): delete after test
 	//InitValidators(valset ValidatorSet)

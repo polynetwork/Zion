@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -144,8 +143,9 @@ type Peer interface {
 type HotStuff interface {
 	Engine
 
+	// todo(fuk): delete after test
 	// SubscribeRequest notify to miner worker that consensus need new request with parent header
-	SubscribeRequest(ch chan<- AskRequest) event.Subscription
+	// SubscribeRequest(ch chan<- AskRequest) event.Subscription
 
 	// Authorize(signer common.Address, signFn func(accounts.Account, string, []byte) ([]byte, error))
 	// Start starts the engine

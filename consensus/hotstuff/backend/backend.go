@@ -20,12 +20,9 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	"math/big"
 	"sync"
 	"time"
-
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -57,13 +54,15 @@ type backend struct {
 	hasBadBlock    func(hash common.Hash) bool
 	logger         log.Logger
 
-	valset         hotstuff.ValidatorSet
+	//valset         hotstuff.ValidatorSet
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
 	lastEpochValSet     hotstuff.ValidatorSet
 	curEpochStartHeight uint64
+	// todo: epochs
+	epoch, nxtEpoch *epoch
 
 	proposedBlockHashes map[common.Hash]struct{}
 
@@ -292,7 +291,7 @@ func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 
 	// check bad block
 	if s.HasBadProposal(block.Hash()) {
-		return 0, core.ErrBlacklistedHash
+		return 0, errBADProposal
 	}
 
 	// check block body
@@ -326,7 +325,7 @@ func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Durat
 
 	// check bad block
 	if s.HasBadProposal(block.Hash()) {
-		return 0, core.ErrBlacklistedHash
+		return 0, errBADProposal
 	}
 
 	// check block body

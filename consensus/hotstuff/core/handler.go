@@ -24,11 +24,10 @@ import (
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/log"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 var once sync.Once
@@ -62,6 +61,7 @@ func (c *core) Stop() error {
 	return nil
 }
 
+// todo(fuk): useless code
 func (c *core) ChangeEpoch(epochStartHeight uint64, valset hotstuff.ValidatorSet) error {
 	if c.isRunning {
 		return fmt.Errorf("consensus engine need stop first")

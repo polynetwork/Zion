@@ -25,10 +25,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -97,14 +95,6 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 
 	// use the same difficulty for all blocks
 	header.Difficulty = defaultDifficulty
-
-	// add validators in snapshot to extraData's validators section
-	valset := s.snap()
-	extra, err := s.core.PrepareExtra(header, valset)
-	if err != nil {
-		return err
-	}
-	header.Extra = extra
 
 	// set header's timestamp
 	header.Time = parent.Time + s.config.BlockPeriod
@@ -291,31 +281,19 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidTimestamp
 	}
 
-	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
-	//snap := s.snap().Copy()
-	//if height := header.Number.Uint64(); s.lastEpochValSet != nil && s.curEpochStartHeight > height && s.curEpochStartHeight == height+1 {
-	//	snap = s.lastEpochValSet.Copy()
-	//}
-	return s.signer.VerifyHeader(header, snap, seal)
+	s.UpdateEpoch(header)
+	vals := s.Validators()
+	return s.signer.VerifyHeader(header, vals, seal)
 }
 
-func (s *backend) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
-	return s.core.SubscribeRequest(ch)
-}
-
-func (s *backend) ChangeEpoch(epochStartHeight uint64, list []common.Address) error {
-	s.lastEpochValSet = s.valset.Copy()
-	s.curEpochStartHeight = epochStartHeight
-	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
-	return s.core.ChangeEpoch(epochStartHeight, s.valset)
-}
+// todo(fuk): delete after test
+//func (s *backend) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
+//	return s.core.SubscribeRequest(ch)
+//}
 
 func (s *backend) getPendingParentHeader(chain consensus.ChainHeaderReader, header *types.Header) (*types.Header, error) {
 	number := header.Number.Uint64()
 	parent := chain.GetHeader(header.ParentHash, number-1)
-	if parent == nil {
-		parent = s.core.GetHeader(header.ParentHash, number-1)
-	}
 	if parent == nil {
 		return nil, consensus.ErrUnknownAncestor
 	}

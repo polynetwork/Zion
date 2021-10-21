@@ -19,6 +19,7 @@
 package validator
 
 import (
+	"errors"
 	"math"
 	"reflect"
 	"sort"
@@ -27,6 +28,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
+
+var ErrInvalidParticipant = errors.New("invalid participants")
 
 type defaultValidator struct {
 	address common.Address
@@ -134,8 +137,6 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 }
 
 func (valSet *defaultSet) CalcProposerByIndex(index uint64) {
-	valSet.validatorMu.RLock()
-	defer valSet.validatorMu.RUnlock()
 	if index > 1 {
 		index = (index - 1) % uint64(len(valSet.validators))
 	} else {
@@ -228,8 +229,41 @@ func (valSet *defaultSet) Copy() hotstuff.ValidatorSet {
 	return NewSet(addresses, valSet.policy)
 }
 
+func (valSet *defaultSet) ParticipantsNumber(list []common.Address) int {
+	if list == nil || len(list) == 0 {
+		return 0
+	}
+	size := 0
+	for _, v := range list {
+		if index, _ := valSet.GetByAddress(v); index < 0 {
+			continue
+		} else {
+			size += 1
+		}
+	}
+	return size
+}
+
+func (valSet *defaultSet) CheckQuorum(committers []common.Address) error {
+	validators := valSet.Copy()
+	validSeal := 0
+	for _, addr := range committers {
+		if validators.RemoveValidator(addr) {
+			validSeal++
+			continue
+		}
+		return ErrInvalidParticipant
+	}
+
+	// The length of validSeal should be larger than number of faulty node + 1
+	if validSeal <= validators.Q() {
+		return ErrInvalidParticipant
+	}
+	return nil
+}
+
 func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
 
-func (valSet *defaultSet) Q() int { return int(math.Ceil(float64(2 * valSet.Size())/3)) }
+func (valSet *defaultSet) Q() int { return int(math.Ceil(float64(2*valSet.Size()) / 3)) }
 
 func (valSet *defaultSet) Policy() hotstuff.SelectProposerPolicy { return valSet.policy }

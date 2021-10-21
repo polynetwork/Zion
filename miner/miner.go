@@ -19,9 +19,10 @@ package miner
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"math/big"
 	"time"
+
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -77,12 +78,13 @@ func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *even
 		stopCh:  make(chan struct{}),
 	}
 
+	// todo(fuk): refactor after test
 	// hotstuff: disable pre-sealing, and waiting for p2p server connections
 	protocol := hotstuff.HotstuffProtocol(chainConfig.HotStuff.Protocol)
 	switch protocol {
-	case hotstuff.HOTSTUFF_PROTOCOL_EVENT_DRIVEN:
-		miner.worker = newEventDrivenWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true)
-		miner.EnablePreseal()
+	//case hotstuff.HOTSTUFF_PROTOCOL_EVENT_DRIVEN:
+	//	miner.worker = newEventDrivenWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true)
+	//	miner.EnablePreseal()
 	case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
 		miner.worker = newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true)
 		miner.EnablePreseal()

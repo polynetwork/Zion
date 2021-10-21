@@ -51,4 +51,6 @@ var (
 	errMismatchTxhashes = errors.New("mismatch transactions hashes")
 	// errDecodeFailed is returned if the message can't be decode
 	errDecodeFailed = errors.New("decode p2p message failed")
+	// errBadProposal
+	errBADProposal = errors.New("bad proposal")
 )

@@ -17,6 +17,7 @@
 package types
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
@@ -112,4 +113,28 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	newHeader.Extra = append(newHeader.Extra[:HotstuffExtraVanity], payload...)
 
 	return newHeader
+}
+
+func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address) error {
+	var buf bytes.Buffer
+
+	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
+	if len(header.Extra) < HotstuffExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, HotstuffExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:HotstuffExtraVanity])
+
+	ist := &HotstuffExtra{
+		Validators:    vals,
+		Seal:          []byte{},
+		CommittedSeal: [][]byte{},
+		Salt:          []byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return err
+	}
+	header.Extra = append(buf.Bytes(), payload...)
+	return nil
 }

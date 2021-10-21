@@ -964,7 +964,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent, w.config.GasFloor, w.config.GasCeil),
-		Extra:      w.extra,
+		//Extra:      w.extra,
 		Time:       uint64(timestamp),
 	}
 
@@ -972,6 +972,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	if w.current != nil && w.current.state != nil {
 		rs := w.current.state.Copy()
 		w.checkEpoch(rs, num)
+		w.beforeEpochChange(header)
 		w.handleEpochChange(rs, header.Number.Uint64())
 	}
 
@@ -1227,6 +1228,16 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
 	w.epochCheckFlag = true
 	log.Debug("[miner worker]", "check epoch", "success")
 	return
+}
+
+func (w *worker) beforeEpochChange(h *types.Header) {
+	height := h.Number.Uint64()
+
+	if !w.epochCheckFlag || w.nextEpoch == nil || height != w.nextEpoch.StartHeight-1 {
+		return
+	}
+
+	types.HotstuffHeaderFillWithValidators(h, w.nextEpoch.Validators)
 }
 
 func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {

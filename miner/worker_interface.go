@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 )
 
+// todo(fuk): delete after test
 type MinerWorker interface {
 	Start()
 	Stop()
