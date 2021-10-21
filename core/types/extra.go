@@ -37,10 +37,10 @@ var (
 )
 
 type HotstuffExtra struct {
-	Validators    []common.Address // consensus participants address
+	Validators    []common.Address // consensus participants address for next epoch, and in the first block, it contains all genesis validators. keep empty if no epoch change.
 	Seal          []byte           // proposer signature
-	CommittedSeal [][]byte         // consensus participants signatures
-	Salt          []byte           // epoch id and consensus round
+	CommittedSeal [][]byte         // consensus participants signatures and it's size should be greater than 2/3 of validators
+	Salt          []byte           // omit empty
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.

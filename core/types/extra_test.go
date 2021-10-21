@@ -16,34 +16,32 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package validator
+package types
 
 import (
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
-func New(addr common.Address) hotstuff.Validator {
-	return &defaultValidator{
-		address: addr,
-	}
-}
-
-func NewSet(addrs []common.Address, policy hotstuff.SelectProposerPolicy) hotstuff.ValidatorSet {
-	return newDefaultSet(addrs, policy)
-}
-
-func ExtractValidators(extraData []byte) []common.Address {
-	// get the validator addresses
-	addrs := make([]common.Address, (len(extraData) / common.AddressLength))
-	for i := 0; i < len(addrs); i++ {
-		copy(addrs[i][:], extraData[i*common.AddressLength:])
+func TestExtraMissingField(t *testing.T) {
+	var expect = &HotstuffExtra{
+		Validators: []common.Address{},
+		Seal:       []byte("111"),
+		CommittedSeal: [][]byte{
+			[]byte(""),
+			[]byte("12"),
+			[]byte("13"),
+		},
+		Salt: []byte{},
 	}
 
-	return addrs
-}
+	enc, err := rlp.EncodeToBytes(expect)
+	assert.NoError(t, err)
 
-// Check whether the extraData is presented in prescribed form
-func ValidExtraData(extraData []byte) bool {
-	return len(extraData)%common.AddressLength == 0
+	var got *HotstuffExtra
+	assert.NoError(t, rlp.DecodeBytes(enc, &got))
+	assert.Equal(t, expect, got)
 }
