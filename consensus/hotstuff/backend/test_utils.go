@@ -141,8 +141,8 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
-	b, _ := New(config, nodeKeys[0], memDB, hotstuff.HOTSTUFF_PROTOCOL_BASIC).(*backend)
-	b.InitValidators(valset.AddressList())
+	b, _ := New(config, nodeKeys[0]).(*backend)
+	b.epoch = &epoch{startHeight: 0, valset: valset}
 	genesis.MustCommit(memDB)
 
 	txLookUpLimit := uint64(100)
@@ -269,5 +269,5 @@ func makeValSet(validators []common.Address) hotstuff.ValidatorSet {
 
 func newTestSigner() hotstuff.Signer {
 	key, _ := generatePrivateKey()
-	return snr.NewSigner(key, 3)
+	return snr.NewSigner(key)
 }

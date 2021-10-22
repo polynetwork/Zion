@@ -20,12 +20,10 @@ package node_manager
 
 import (
 	"fmt"
-	"math/big"
 	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -53,26 +51,6 @@ func init() {
 		} else {
 			return nil
 		}
-	}
-
-	// get validators
-	core.RegBlockChain = func(statedb *state.StateDB, blockNum *big.Int) ([]common.Address, error) {
-		caller := common.EmptyAddress
-		ref := native.NewContractRef(statedb, caller, caller, blockNum, common.EmptyHash, 0, nil)
-		ctx := native.NewNativeContract(statedb, ref)
-		epoch, err := getCurrentEpoch(ctx)
-		if err != nil {
-			return nil, err
-		}
-
-		if epoch == nil || epoch.Peers == nil || epoch.Peers.List == nil {
-			return nil, fmt.Errorf("empty peers")
-		}
-		list := make([]common.Address, 0)
-		for _, v := range epoch.Peers.List {
-			list = append(list, v.Address)
-		}
-		return list, nil
 	}
 }
 

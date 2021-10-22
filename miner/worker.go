@@ -964,9 +964,9 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent, w.config.GasFloor, w.config.GasCeil),
-		//Extra:      w.extra,
 		Time:       uint64(timestamp),
 	}
+	types.HotstuffHeaderFillWithValidators(header, nil)
 
 	// check epoch and prepare to restart consensus engine
 	if w.current != nil && w.current.state != nil {

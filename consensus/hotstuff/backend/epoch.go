@@ -43,33 +43,16 @@ func (s *backend) Validators() hotstuff.ValidatorSet {
 	return s.epoch.valset.Copy()
 }
 
-func (s *backend) UpdateEpoch(header *types.Header) error {
+func (s *backend) SetGenesisEpoch(header *types.Header) error {
+	if s.epoch != nil && s.epoch.startHeight == 0 {
+		panic("genesis epoch already exist")
+	}
+
 	extra, err := types.ExtractHotstuffExtra(header)
 	if err != nil {
 		return err
 	}
-
-	height := header.Number.Uint64()
-	if height == 0 {
-		s.SetGenesisEpoch(extra.Validators)
-		return nil
-	}
-
-	if extra.Validators != nil && len(extra.Validators) != 0 {
-		return s.PrepareChangeEpoch(extra.Validators, height)
-	}
-
-	if height == s.nxtEpoch.startHeight+1 {
-		s.ChangeEpoch(height, extra.Validators)
-	}
-	return nil
-}
-
-func (s *backend) SetGenesisEpoch(list []common.Address) {
-	if s.epoch != nil && s.epoch.startHeight == 0 {
-		return
-	}
-
+	list := extra.Validators
 	if list == nil || len(list) == 0 {
 		panic("invalid validator set")
 	}
@@ -78,9 +61,31 @@ func (s *backend) SetGenesisEpoch(list []common.Address) {
 		startHeight: 0,
 		valset:      s.newValSet(list),
 	}
+	return nil
+}
+
+func (s *backend) UpdateEpoch(header *types.Header) error {
+	extra, err := types.ExtractHotstuffExtra(header)
+	if err != nil {
+		return err
+	}
+
+	height := header.Number.Uint64()
+	if extra.Validators != nil && len(extra.Validators) != 0 {
+		return s.PrepareChangeEpoch(extra.Validators, height)
+	}
+
+	if s.nxtEpoch != nil && height == s.nxtEpoch.startHeight+1 {
+		return s.ChangeEpoch(height, extra.Validators)
+	}
+	return nil
 }
 
 func (s *backend) PrepareChangeEpoch(list []common.Address, startHeight uint64) error {
+	if s.epoch == nil || s.epoch.valset == nil {
+		return fmt.Errorf("current epoch is invalid")
+	}
+
 	// duplicate change
 	if s.nxtEpoch != nil && s.nxtEpoch.startHeight == startHeight {
 		return nil
@@ -90,7 +95,7 @@ func (s *backend) PrepareChangeEpoch(list []common.Address, startHeight uint64) 
 		return nil
 	}
 	// after change or invalid start height
-	if startHeight <= s.epoch.startHeight {
+	if s.epoch.startHeight > startHeight {
 		return nil
 	}
 
@@ -107,9 +112,13 @@ func (s *backend) PrepareChangeEpoch(list []common.Address, startHeight uint64) 
 	return nil
 }
 
-func (s *backend) ChangeEpoch(epochStartHeight uint64, list []common.Address) {
+func (s *backend) ChangeEpoch(epochStartHeight uint64, list []common.Address) error {
+	if s.nxtEpoch == nil || s.epoch == nil {
+		return fmt.Errorf("current epoch or next epoch is nil")
+	}
 	s.epoch = s.nxtEpoch.Copy()
 	s.nxtEpoch = nil
+	return nil
 }
 
 func (s *backend) newValSet(list []common.Address) hotstuff.ValidatorSet {

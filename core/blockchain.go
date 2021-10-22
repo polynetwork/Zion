@@ -339,21 +339,12 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 		}
 	}
 
-	// todo(fuk): delete after test
-	if engine, ok := bc.engine.(consensus.HotStuff); ok {
-		vals, err := bc.getValidators()
-		if err != nil {
-			return nil, err
-		} else {
-			engine.InitValidators(vals)
-			log.Infof("init block chain engine", "epoch validators", vals)
-		}
-	}
-
 	// The first thing the node will do is reconstruct the verification data for
 	// the head block (ethash cache or clique voting snapshot). Might as well do
 	// it in advance.
-	bc.engine.VerifyHeader(bc, bc.CurrentHeader(), true)
+	if err := bc.engine.VerifyHeader(bc, bc.CurrentHeader(), true); err != nil {
+		return nil, err
+	}
 
 	// Check the current state of the block hashes and make sure that we do not have any of the bad blocks in our chain
 	for hash := range BadHashes {
@@ -407,18 +398,6 @@ func NewBlockChain(db ethdb.Database, cacheConfig *CacheConfig, chainConfig *par
 		}()
 	}
 	return bc, nil
-}
-
-var RegBlockChain func(statedb *state.StateDB, blockNum *big.Int) ([]common.Address, error)
-
-func (bc *BlockChain) getValidators() ([]common.Address, error) {
-	block := bc.CurrentBlock()
-	st, err := bc.StateAt(block.Root())
-	if err != nil {
-		return nil, err
-	}
-
-	return RegBlockChain(st, block.Number())
 }
 
 // GetVMConfig returns the block chain VM config.

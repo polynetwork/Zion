@@ -124,6 +124,9 @@ func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address) err
 	}
 	buf.Write(header.Extra[:HotstuffExtraVanity])
 
+	if vals == nil {
+		vals = []common.Address{}
+	}
 	ist := &HotstuffExtra{
 		Validators:    vals,
 		Seal:          []byte{},

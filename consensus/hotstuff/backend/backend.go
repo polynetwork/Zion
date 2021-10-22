@@ -27,10 +27,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/trie"
@@ -59,9 +58,6 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	lastEpochValSet     hotstuff.ValidatorSet
-	curEpochStartHeight uint64
-	// todo: epochs
 	epoch, nxtEpoch *epoch
 
 	proposedBlockHashes map[common.Hash]struct{}
@@ -83,7 +79,7 @@ type backend struct {
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, protocol hotstuff.HotstuffProtocol) consensus.HotStuff {
+func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
@@ -104,20 +100,9 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		proposedBlockHashes: make(map[common.Hash]struct{}),
 	}
 
-	switch protocol {
-	case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
-		backend.core = core.New(backend, config, signer)
-	default:
-		panic("unknown hotstuff protocol")
-	}
+	backend.core = core.New(backend, config, signer)
 	return backend
 }
-
-// todo(fuk): delete after test
-//func (s *backend) InitValidators(list []common.Address) {
-//	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
-//	s.core.InitValidators(s.valset)
-//}
 
 // Address implements hotstuff.Backend.Address
 func (s *backend) Address() common.Address {

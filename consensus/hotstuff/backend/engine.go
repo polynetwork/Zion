@@ -264,7 +264,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
-		return nil
+		return s.SetGenesisEpoch(header)
 	}
 
 	// Ensure that the block's timestamp isn't too close to it's parent
@@ -281,15 +281,12 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidTimestamp
 	}
 
-	s.UpdateEpoch(header)
+	if err := s.UpdateEpoch(header); err != nil {
+		return err
+	}
 	vals := s.Validators()
 	return s.signer.VerifyHeader(header, vals, seal)
 }
-
-// todo(fuk): delete after test
-//func (s *backend) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
-//	return s.core.SubscribeRequest(ch)
-//}
 
 func (s *backend) getPendingParentHeader(chain consensus.ChainHeaderReader, header *types.Header) (*types.Header, error) {
 	number := header.Number.Uint64()
