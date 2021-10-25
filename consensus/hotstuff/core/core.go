@@ -41,9 +41,11 @@ type core struct {
 	backend hotstuff.Backend
 	signer  hotstuff.Signer
 
+	// todo(fuk): modify this
 	lastEpochValSet     hotstuff.ValidatorSet
 	curEpochStartHeight uint64
 	valSet              hotstuff.ValidatorSet
+
 	requests            *requestSet
 	backlogs            *backlog
 
@@ -64,8 +66,6 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 		logger:  log.New("address", backend.Address()),
 		backend: backend,
 	}
-	c.requests = newRequestSet()
-	c.backlogs = newBackLog()
 	c.validateFn = c.checkValidatorSignature
 	c.signer = signer
 
@@ -184,9 +184,8 @@ catchup:
 		lastPendingRequest = c.current.PendingRequest()
 	}
 
-	c.valSet = c.backend.Validators()
-
 	// calculate new proposal and init round state
+	c.valSet = c.backend.Validators(newView.Height.Uint64())
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	prepareQC := proposal2QC(lastProposal, common.Big0)
 	c.current = newRoundState(newView, c.valSet, prepareQC)

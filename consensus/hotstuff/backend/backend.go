@@ -59,7 +59,8 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	epoch, nxtEpoch *Epoch
+	epochs              map[uint64]*Epoch // map epoch start height to epochs
+	maxEpochStartHeight uint64
 
 	proposedBlockHashes map[common.Hash]struct{}
 
@@ -103,7 +104,6 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 
 	backend.core = core.New(backend, config, signer)
 	if err := backend.LoadEpoch(); err != nil {
-		//return fmt.Errorf("load epoch failed, err: %v", err)
 		panic(fmt.Sprintf("load epoch failed, err: %v", err))
 	}
 	return backend

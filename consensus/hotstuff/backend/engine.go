@@ -281,10 +281,10 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidTimestamp
 	}
 
-	if err := s.UpdateEpoch(header); err != nil {
+	if err := s.UpdateEpoch(parent, header); err != nil {
 		return err
 	}
-	vals := s.Validators()
+	vals := s.Validators(number)
 	return s.signer.VerifyHeader(header, vals, seal)
 }
 

@@ -1233,11 +1233,9 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
 func (w *worker) beforeEpochChange(h *types.Header) {
 	height := h.Number.Uint64()
 
-	if !w.epochCheckFlag || w.nextEpoch == nil || height != w.nextEpoch.StartHeight-1 {
-		return
+	if w.nextEpoch != nil && w.nextEpoch.Validators != nil && height == w.nextEpoch.StartHeight-1 {
+		types.HotstuffHeaderFillWithValidators(h, w.nextEpoch.Validators)
 	}
-
-	types.HotstuffHeaderFillWithValidators(h, w.nextEpoch.Validators)
 }
 
 func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
@@ -1266,11 +1264,12 @@ func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
 		return
 	}
 
-	log.Debug("Restart consensus engine")
+	log.Debug("Restart consensus engine", "next epoch validators", w.nextEpoch.Validators)
 	w.Stop()
 	if err := engine.ChangeEpoch(w.nextEpoch.StartHeight, w.nextEpoch.Validators); err != nil {
 		log.Error("Change Epoch", "change failed", err)
 		return
 	}
+	time.Sleep(30 * time.Second)
 	w.Start()
 }

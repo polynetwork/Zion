@@ -81,7 +81,7 @@ func (s *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		})
 		return true, nil
 	}
-	if msg.Code == NewBlockMsg && s.core.IsProposer() { // eth.NewBlockMsg: import cycle
+	if msg.Code == NewBlockMsg && s.coreStarted && s.core.IsProposer() { // eth.NewBlockMsg: import cycle
 		// this case is to safeguard the race of similar block which gets propagated from other node while this node is proposing
 		// as p2p.Msg can only be decoded once (get EOF for any subsequence read), we need to make sure the payload is restored after we decode it
 		s.logger.Debug("proposer received NewBlockMsg", "size", msg.Size, "payload.type", reflect.TypeOf(msg.Payload), "sender", addr)

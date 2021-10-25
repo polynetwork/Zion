@@ -19,33 +19,55 @@
 package rawdb
 
 import (
-	"github.com/ethereum/go-ethereum/common"
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/ethdb"
 )
 
 var (
-	keyCurEpoch    = []byte("ht-cur-ep")
-	keyEpochPrefix = []byte("ht-ep")
+	keyCurEpoch    = []byte("hs-cur-ep-ht")
+	keyEpochPrefix = []byte("hs-ep")
 )
 
-func WriteCurrentEpochHash(db ethdb.KeyValueWriter, hash common.Hash) error {
-	return db.Put(keyCurEpoch, hash.Bytes())
+func WriteCurrentEpochHeight(db ethdb.KeyValueWriter, height uint64) error {
+	return db.Put(keyCurEpoch, uint64Bytes(height))
 }
 
-func ReadCurrentEpochHash(db ethdb.Reader) (common.Hash, error) {
+func ReadCurrentEpochHeight(db ethdb.Reader) (uint64, error) {
 	blob, err := db.Get(keyCurEpoch)
 	if err != nil {
-		return common.EmptyHash, err
+		return 0, err
 	}
-	return common.BytesToHash(blob), nil
+	return bytes2uint64(blob), nil
 }
 
-func WriteEpoch(db ethdb.KeyValueWriter, hash common.Hash, blob []byte) error {
-	key := append(keyEpochPrefix, hash[:]...)
+func WriteEpoch(db ethdb.KeyValueWriter, height uint64, blob []byte) error {
+	key := keyHeight(height)
 	return db.Put(key, blob)
 }
 
-func ReadEpoch(db ethdb.Reader, hash common.Hash) ([]byte, error) {
-	key := append(keyEpochPrefix, hash[:]...)
+func ReadEpoch(db ethdb.Reader, height uint64) ([]byte, error) {
+	key := keyHeight(height)
 	return db.Get(key)
+}
+
+func keyHeight(height uint64) []byte {
+	dat := uint64Bytes(height)
+	return append(keyEpochPrefix, dat...)
+}
+
+func uint64Bytes(dat uint64) []byte {
+	if dat == 0 {
+		dat = math.MaxUint64
+	}
+	return new(big.Int).SetUint64(dat).Bytes()
+}
+
+func bytes2uint64(blob []byte) uint64 {
+	dat := new(big.Int).SetBytes(blob).Uint64()
+	if dat == math.MaxUint64 {
+		dat = 0
+	}
+	return dat
 }

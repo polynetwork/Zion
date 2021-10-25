@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 func init() {
@@ -38,83 +39,103 @@ func init() {
 			return err
 		}
 		epoch := &Epoch{
-			BlockHash:   header.Hash(),
-			StartHeight: 0,
-			ValSet:      newValSet(extra.Validators),
+			StartHeight:          0,
+			ValSet:               newValSet(extra.Validators),
+			LastEpochStartHeight: 0,
 		}
 		return storeCurEpoch(db, epoch)
 	}
 }
 
-func (s *backend) Validators() hotstuff.ValidatorSet {
-	return s.epoch.ValSet.Copy()
+func (s *backend) Validators(height uint64) hotstuff.ValidatorSet {
+	startHeight := s.maxEpochStartHeight
+	for height < startHeight {
+		epoch := s.epochs[startHeight]
+		if height >= epoch.StartHeight {
+			return s.epochs[epoch.StartHeight].ValSet.Copy()
+		} else {
+			startHeight = epoch.LastEpochStartHeight
+		}
+	}
+	return s.epochs[startHeight].ValSet.Copy()
 }
 
 func (s *backend) LoadEpoch() error {
+	if s.epochs == nil {
+		s.epochs = make(map[uint64]*Epoch)
+	}
 	epoch, err := getCurEpoch(s.db)
 	if err != nil {
 		return err
 	}
-	s.epoch = epoch
+	s.maxEpochStartHeight = epoch.StartHeight
+	s.epochs[s.maxEpochStartHeight] = epoch
+
+	startHeight := epoch.LastEpochStartHeight
+	for startHeight > 0 {
+		ep, err := getEpochByHeight(s.db, startHeight)
+		if err != nil {
+			log.Warn("[epoch]", "load epoch failed", err)
+		}
+		s.epochs[ep.StartHeight] = ep
+		if ep.StartHeight > s.maxEpochStartHeight {
+			s.maxEpochStartHeight = ep.StartHeight
+		}
+		startHeight = ep.LastEpochStartHeight
+		fmt.Println("-----xxx----start height", startHeight, ep.String())
+	}
+
+	log.Info("[epoch]", "load all epochs", s.DumpEpochs())
 	return nil
 }
 
-func (s *backend) UpdateEpoch(header *types.Header) error {
-	extra, err := types.ExtractHotstuffExtra(header)
+func (s *backend) UpdateEpoch(parent, header *types.Header) error {
+	height := header.Number.Uint64()
+	if height <= s.maxEpochStartHeight || height == 1 {
+		return nil
+	}
+
+	parentExt, err := types.ExtractHotstuffExtra(parent)
 	if err != nil {
 		return err
 	}
 
-	height := header.Number.Uint64()
-	if extra.Validators != nil && len(extra.Validators) != 0 {
-		return s.PrepareChangeEpoch(extra.Validators, height)
+	if parentExt.Validators == nil || len(parentExt.Validators) == 0 {
+		return nil
+	}
+	if _, ok := s.epochs[height]; ok {
+		return nil
 	}
 
-	if s.nxtEpoch != nil && height == s.nxtEpoch.StartHeight+1 {
-		return s.ChangeEpoch(height, extra.Validators)
-	}
-	return nil
+	return s.saveEpoch(height, parentExt.Validators)
 }
 
-func (s *backend) PrepareChangeEpoch(list []common.Address, startHeight uint64) error {
-	if s.epoch == nil {
-		return fmt.Errorf("current epoch is invalid")
-	}
-
-	// duplicate change
-	if s.nxtEpoch != nil && s.nxtEpoch.StartHeight == startHeight {
-		return nil
-	}
-	// already changed
-	if s.epoch.StartHeight == startHeight {
-		return nil
-	}
-	// after change or invalid start height
-	if s.epoch.StartHeight > startHeight {
-		return nil
-	}
-
-	cur := s.Validators()
-	if s.epoch.ValSet.ParticipantsNumber(list) < cur.Q() {
-		return fmt.Errorf("next val set not unreach current epoch's quorum size, (cur, next) (%v, %v)", cur, list)
-	}
-
-	ep := &Epoch{
-		StartHeight: startHeight,
-		ValSet:      newValSet(list),
-	}
-	s.nxtEpoch = ep
-	return nil
+func (s *backend) ChangeEpoch(height uint64, list []common.Address) error {
+	return s.saveEpoch(height, list)
 }
 
-func (s *backend) ChangeEpoch(epochStartHeight uint64, list []common.Address) error {
-	if s.nxtEpoch == nil || s.epoch == nil {
-		return fmt.Errorf("current epoch or next epoch is nil")
+func (s *backend) DumpEpochs() string {
+	str := ""
+	for _, v := range s.epochs {
+		str += v.String() + "\r\n"
 	}
-	s.epoch = s.nxtEpoch.Copy()
-	s.nxtEpoch = nil
+	return str
+}
 
-	return storeCurEpoch(s.db, s.epoch)
+func (s *backend) saveEpoch(height uint64, list []common.Address) error {
+	epoch := &Epoch{
+		StartHeight:          height,
+		ValSet:               newValSet(list),
+		LastEpochStartHeight: s.maxEpochStartHeight,
+	}
+	if err := storeCurEpoch(s.db, epoch); err != nil {
+		return err
+	}
+	s.epochs[height] = epoch
+	s.maxEpochStartHeight = height
+
+	log.Info("[epoch]", "update epoch", epoch.String())
+	return nil
 }
 
 func storeCurEpoch(db ethdb.Database, epoch *Epoch) error {
@@ -122,18 +143,22 @@ func storeCurEpoch(db ethdb.Database, epoch *Epoch) error {
 	if err != nil {
 		return err
 	}
-	if err := rawdb.WriteEpoch(db, epoch.BlockHash, blob); err != nil {
+	if err := rawdb.WriteEpoch(db, epoch.StartHeight, blob); err != nil {
 		return err
 	}
-	return rawdb.WriteCurrentEpochHash(db, epoch.BlockHash)
+	return rawdb.WriteCurrentEpochHeight(db, epoch.StartHeight)
 }
 
 func getCurEpoch(db ethdb.Database) (*Epoch, error) {
-	hash, err := rawdb.ReadCurrentEpochHash(db)
+	height, err := rawdb.ReadCurrentEpochHeight(db)
 	if err != nil {
 		return nil, err
 	}
-	blob, err := rawdb.ReadEpoch(db, hash)
+	return getEpochByHeight(db, height)
+}
+
+func getEpochByHeight(db ethdb.Database, height uint64) (*Epoch, error) {
+	blob, err := rawdb.ReadEpoch(db, height)
 	if err != nil {
 		return nil, err
 	}
@@ -145,30 +170,35 @@ func getCurEpoch(db ethdb.Database) (*Epoch, error) {
 }
 
 type Epoch struct {
-	BlockHash   common.Hash
-	StartHeight uint64
-	ValSet      hotstuff.ValidatorSet
+	StartHeight          uint64
+	ValSet               hotstuff.ValidatorSet
+	LastEpochStartHeight uint64
 }
 
 func (e *Epoch) Copy() *Epoch {
 	return &Epoch{
-		BlockHash:   e.BlockHash,
-		StartHeight: e.StartHeight,
-		ValSet:      e.ValSet.Copy(),
+		StartHeight:          e.StartHeight,
+		ValSet:               e.ValSet.Copy(),
+		LastEpochStartHeight: e.LastEpochStartHeight,
 	}
 }
 
+func (e *Epoch) String() string {
+	return fmt.Sprintf("{StartHeight: %d, LastStartHeight: %d, Valset: %v, Size: %d}",
+		e.StartHeight, e.LastEpochStartHeight, e.ValSet.AddressList(), e.ValSet.Size())
+}
+
 type epochJSON struct {
-	BlockHash   common.Hash      `json:"block_hash"`
-	StartHeight uint64           `json:"start_height"`
-	Validators  []common.Address `json:"validators"`
+	StartHeight          uint64           `json:"start_height"`
+	Validators           []common.Address `json:"validators"`
+	LastEpochStartHeight uint64           `json:"last_epoch_start_height"`
 }
 
 func (e *Epoch) toJSONStruct() *epochJSON {
 	return &epochJSON{
-		BlockHash:   e.BlockHash,
-		StartHeight: e.StartHeight,
-		Validators:  e.ValSet.AddressList(),
+		StartHeight:          e.StartHeight,
+		Validators:           e.ValSet.AddressList(),
+		LastEpochStartHeight: e.LastEpochStartHeight,
 	}
 }
 
@@ -179,9 +209,9 @@ func (e *Epoch) UnmarshalJSON(b []byte) error {
 		return err
 	}
 
-	e.BlockHash = j.BlockHash
 	e.StartHeight = j.StartHeight
 	e.ValSet = newValSet(j.Validators)
+	e.LastEpochStartHeight = j.LastEpochStartHeight
 	return nil
 }
 

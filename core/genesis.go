@@ -285,9 +285,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	for _, v := range native.NativeContractAddrMap {
 		g.createNativeContract(statedb, v)
 	}
-	if err := RegGenesis(statedb, g.Alloc); err != nil {
-		panic(err)
-	}
+	RegGenesis(statedb, g.Alloc)
 
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
@@ -314,11 +312,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true, nil)
-	if g.Config.HotStuff != nil {
-		if err := StoreGenesis(db, head); err != nil {
-			panic(err)
-		}
-	}
+	StoreGenesis(db, head)
 	return types.NewBlock(head, nil, nil, nil, trie.NewStackTrie(nil))
 }
 

@@ -33,7 +33,7 @@ type Backend interface {
 	Address() common.Address
 
 	// Validators returns current epoch participants
-	Validators() ValidatorSet
+	Validators(height uint64) ValidatorSet
 
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux
@@ -103,7 +103,8 @@ type CoreEngine interface {
 	// todo(fuk): delete after test
 	//InitValidators(valset ValidatorSet)
 
-	ChangeEpoch(epochStartHeight uint64, valset ValidatorSet) error
+	// todo(fuk): delete after test
+	//ChangeEpoch(epochStartHeight uint64, valset ValidatorSet) error
 }
 
 type HotstuffProtocol string
