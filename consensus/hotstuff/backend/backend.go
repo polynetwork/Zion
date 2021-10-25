@@ -20,6 +20,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -30,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/trie"
@@ -43,8 +45,8 @@ const (
 
 // HotStuff is the scalable hotstuff consensus engine
 type backend struct {
-	config *hotstuff.Config
-	//db           ethdb.Database // Database to store and retrieve necessary information
+	config         *hotstuff.Config
+	db             ethdb.Database // Database to store and retrieve necessary information
 	core           hotstuff.CoreEngine
 	signer         hotstuff.Signer
 	chain          consensus.ChainReader
@@ -53,12 +55,11 @@ type backend struct {
 	hasBadBlock    func(hash common.Hash) bool
 	logger         log.Logger
 
-	//valset         hotstuff.ValidatorSet
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	epoch, nxtEpoch *epoch
+	epoch, nxtEpoch *Epoch
 
 	proposedBlockHashes map[common.Hash]struct{}
 
@@ -79,15 +80,15 @@ type backend struct {
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey) consensus.HotStuff {
+func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
 	signer := snr.NewSigner(privateKey)
 	backend := &backend{
-		config: config,
-		//db:             db,
+		config:              config,
+		db:                  db,
 		logger:              log.New(),
 		commitCh:            make(chan *types.Block, 1),
 		coreStarted:         false,
@@ -101,6 +102,10 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey) consensus.HotStu
 	}
 
 	backend.core = core.New(backend, config, signer)
+	if err := backend.LoadEpoch(); err != nil {
+		//return fmt.Errorf("load epoch failed, err: %v", err)
+		panic(fmt.Sprintf("load epoch failed, err: %v", err))
+	}
 	return backend
 }
 

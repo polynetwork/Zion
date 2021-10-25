@@ -85,6 +85,8 @@ type ValidatorSet interface {
 	Q() int
 	// Get speaker policy
 	Policy() SelectProposerPolicy
+	// Cmp compare with another validator set, return false if not the same
+	Cmp(src ValidatorSet) bool
 }
 
 // ----------------------------------------------------------------------------

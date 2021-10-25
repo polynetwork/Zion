@@ -264,7 +264,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
-		return s.SetGenesisEpoch(header)
+		return nil
 	}
 
 	// Ensure that the block's timestamp isn't too close to it's parent

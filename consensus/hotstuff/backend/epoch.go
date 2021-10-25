@@ -19,48 +19,43 @@
 package backend
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
-type epoch struct {
-	startHeight uint64
-	valset      hotstuff.ValidatorSet
-}
-
-func (e *epoch) Copy() *epoch {
-	return &epoch{
-		startHeight: e.startHeight,
-		valset:      e.valset.Copy(),
+func init() {
+	core.StoreGenesis = func(db ethdb.Database, header *types.Header) error {
+		extra, err := types.ExtractHotstuffExtra(header)
+		if err != nil {
+			return err
+		}
+		epoch := &Epoch{
+			BlockHash:   header.Hash(),
+			StartHeight: 0,
+			ValSet:      newValSet(extra.Validators),
+		}
+		return storeCurEpoch(db, epoch)
 	}
 }
 
 func (s *backend) Validators() hotstuff.ValidatorSet {
-	return s.epoch.valset.Copy()
+	return s.epoch.ValSet.Copy()
 }
 
-func (s *backend) SetGenesisEpoch(header *types.Header) error {
-	if s.epoch != nil && s.epoch.startHeight == 0 {
-		panic("genesis epoch already exist")
-	}
-
-	extra, err := types.ExtractHotstuffExtra(header)
+func (s *backend) LoadEpoch() error {
+	epoch, err := getCurEpoch(s.db)
 	if err != nil {
 		return err
 	}
-	list := extra.Validators
-	if list == nil || len(list) == 0 {
-		panic("invalid validator set")
-	}
-
-	s.epoch = &epoch{
-		startHeight: 0,
-		valset:      s.newValSet(list),
-	}
+	s.epoch = epoch
 	return nil
 }
 
@@ -75,38 +70,38 @@ func (s *backend) UpdateEpoch(header *types.Header) error {
 		return s.PrepareChangeEpoch(extra.Validators, height)
 	}
 
-	if s.nxtEpoch != nil && height == s.nxtEpoch.startHeight+1 {
+	if s.nxtEpoch != nil && height == s.nxtEpoch.StartHeight+1 {
 		return s.ChangeEpoch(height, extra.Validators)
 	}
 	return nil
 }
 
 func (s *backend) PrepareChangeEpoch(list []common.Address, startHeight uint64) error {
-	if s.epoch == nil || s.epoch.valset == nil {
+	if s.epoch == nil {
 		return fmt.Errorf("current epoch is invalid")
 	}
 
 	// duplicate change
-	if s.nxtEpoch != nil && s.nxtEpoch.startHeight == startHeight {
+	if s.nxtEpoch != nil && s.nxtEpoch.StartHeight == startHeight {
 		return nil
 	}
 	// already changed
-	if s.epoch.startHeight == startHeight {
+	if s.epoch.StartHeight == startHeight {
 		return nil
 	}
 	// after change or invalid start height
-	if s.epoch.startHeight > startHeight {
+	if s.epoch.StartHeight > startHeight {
 		return nil
 	}
 
 	cur := s.Validators()
-	if s.epoch.valset.ParticipantsNumber(list) < cur.Q() {
+	if s.epoch.ValSet.ParticipantsNumber(list) < cur.Q() {
 		return fmt.Errorf("next val set not unreach current epoch's quorum size, (cur, next) (%v, %v)", cur, list)
 	}
 
-	ep := &epoch{
-		startHeight: startHeight,
-		valset:      s.newValSet(list),
+	ep := &Epoch{
+		StartHeight: startHeight,
+		ValSet:      newValSet(list),
 	}
 	s.nxtEpoch = ep
 	return nil
@@ -118,9 +113,84 @@ func (s *backend) ChangeEpoch(epochStartHeight uint64, list []common.Address) er
 	}
 	s.epoch = s.nxtEpoch.Copy()
 	s.nxtEpoch = nil
+
+	return storeCurEpoch(s.db, s.epoch)
+}
+
+func storeCurEpoch(db ethdb.Database, epoch *Epoch) error {
+	blob, err := epoch.MarshalJSON()
+	if err != nil {
+		return err
+	}
+	if err := rawdb.WriteEpoch(db, epoch.BlockHash, blob); err != nil {
+		return err
+	}
+	return rawdb.WriteCurrentEpochHash(db, epoch.BlockHash)
+}
+
+func getCurEpoch(db ethdb.Database) (*Epoch, error) {
+	hash, err := rawdb.ReadCurrentEpochHash(db)
+	if err != nil {
+		return nil, err
+	}
+	blob, err := rawdb.ReadEpoch(db, hash)
+	if err != nil {
+		return nil, err
+	}
+	epoch := new(Epoch)
+	if err := epoch.UnmarshalJSON(blob); err != nil {
+		return nil, err
+	}
+	return epoch, nil
+}
+
+type Epoch struct {
+	BlockHash   common.Hash
+	StartHeight uint64
+	ValSet      hotstuff.ValidatorSet
+}
+
+func (e *Epoch) Copy() *Epoch {
+	return &Epoch{
+		BlockHash:   e.BlockHash,
+		StartHeight: e.StartHeight,
+		ValSet:      e.ValSet.Copy(),
+	}
+}
+
+type epochJSON struct {
+	BlockHash   common.Hash      `json:"block_hash"`
+	StartHeight uint64           `json:"start_height"`
+	Validators  []common.Address `json:"validators"`
+}
+
+func (e *Epoch) toJSONStruct() *epochJSON {
+	return &epochJSON{
+		BlockHash:   e.BlockHash,
+		StartHeight: e.StartHeight,
+		Validators:  e.ValSet.AddressList(),
+	}
+}
+
+// Unmarshal from a json byte array
+func (e *Epoch) UnmarshalJSON(b []byte) error {
+	var j epochJSON
+	if err := json.Unmarshal(b, &j); err != nil {
+		return err
+	}
+
+	e.BlockHash = j.BlockHash
+	e.StartHeight = j.StartHeight
+	e.ValSet = newValSet(j.Validators)
 	return nil
 }
 
-func (s *backend) newValSet(list []common.Address) hotstuff.ValidatorSet {
+// Marshal to a json byte array
+func (e *Epoch) MarshalJSON() ([]byte, error) {
+	j := e.toJSONStruct()
+	return json.Marshal(j)
+}
+
+func newValSet(list []common.Address) hotstuff.ValidatorSet {
 	return validator.NewSet(list, hotstuff.RoundRobin)
 }

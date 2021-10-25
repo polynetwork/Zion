@@ -267,3 +267,11 @@ func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/
 func (valSet *defaultSet) Q() int { return int(math.Ceil(float64(2*valSet.Size()) / 3)) }
 
 func (valSet *defaultSet) Policy() hotstuff.SelectProposerPolicy { return valSet.policy }
+
+func (valSet *defaultSet) Cmp(src hotstuff.ValidatorSet) bool {
+	n := valSet.ParticipantsNumber(src.AddressList())
+	if n != valSet.Size() || n != src.Size() {
+		return false
+	}
+	return true
+}

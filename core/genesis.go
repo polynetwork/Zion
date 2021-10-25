@@ -255,7 +255,13 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	}
 }
 
-var RegGenesis func(db *state.StateDB, data GenesisAlloc) error
+var (
+	// RegGenesis store genesis validators and public keys in governance contract
+	RegGenesis func(db *state.StateDB, data GenesisAlloc) error
+
+	// StoreGenesis store genesis validators in consensus snapshot
+	StoreGenesis func(db ethdb.Database, header *types.Header) error
+)
 
 // ToBlock creates the genesis block and writes state of a genesis specification
 // to the given database (or discards it if nil).
@@ -308,7 +314,11 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true, nil)
-
+	if g.Config.HotStuff != nil {
+		if err := StoreGenesis(db, head); err != nil {
+			panic(err)
+		}
+	}
 	return types.NewBlock(head, nil, nil, nil, trie.NewStackTrie(nil))
 }
 
