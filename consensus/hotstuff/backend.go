@@ -23,7 +23,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 )
 
@@ -89,22 +88,6 @@ type CoreEngine interface {
 	// pending request is populated right at the request stage so this would give us the earliest verification
 	// to avoid any race condition of coming propagated blocks
 	IsCurrentProposal(blockHash common.Hash) bool
-
-	// PrepareExtra generate header extra field with validator set
-	PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
-
-	// todo(fuk): delete after test
-	//// GetHeader get block header with hash and correct block height
-	//GetHeader(hash common.Hash, number uint64) *types.Header
-	//
-	//// SubscribeRequest notify to miner worker that event-driven engine need an new proposal
-	//SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription
-
-	// todo(fuk): delete after test
-	//InitValidators(valset ValidatorSet)
-
-	// todo(fuk): delete after test
-	//ChangeEpoch(epochStartHeight uint64, valset ValidatorSet) error
 }
 
 type HotstuffProtocol string

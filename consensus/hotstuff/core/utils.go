@@ -109,8 +109,6 @@ func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
 	if proposal == nil {
 		return fmt.Errorf("current locked proposal is nil")
 	}
-	// todo(fuk): should compare entire proposal or hash
-	//if !reflect.DeepEqual(proposal, msg) {
 	if proposal.Hash() != msg.Hash() {
 		return fmt.Errorf("expect %s, got %s", proposal.Hash().Hex(), msg.Hash().Hex())
 	}

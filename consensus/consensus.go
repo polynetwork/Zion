@@ -143,21 +143,15 @@ type Peer interface {
 type HotStuff interface {
 	Engine
 
-	// todo(fuk): delete after test
-	// SubscribeRequest notify to miner worker that consensus need new request with parent header
-	// SubscribeRequest(ch chan<- AskRequest) event.Subscription
-
 	// Authorize(signer common.Address, signFn func(accounts.Account, string, []byte) ([]byte, error))
 	// Start starts the engine
 	Start(chain ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
 
-	// todo(fuk): delete after test
-	// InitValidators(list []common.Address)
-
-	ChangeEpoch(epochStartHeight uint64, list []common.Address) error
-
 	// Stop stops the engine
 	Stop() error
+
+	// ChangeEpoch save validators and start height for next epoch
+	ChangeEpoch(epochStartHeight uint64, list []common.Address) error
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message
