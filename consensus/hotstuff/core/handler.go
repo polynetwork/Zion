@@ -61,41 +61,6 @@ func (c *core) Stop() error {
 	return nil
 }
 
-//
-//// todo(fuk): useless code
-//func (c *core) ChangeEpoch(epochStartHeight uint64, valset hotstuff.ValidatorSet) error {
-//	if c.isRunning {
-//		return fmt.Errorf("consensus engine need stop first")
-//	}
-//
-//	if index, _ := valset.GetByAddress(c.Address()); index < 0 {
-//		return fmt.Errorf("signer is not consensus participant now")
-//	}
-//
-//	// waiting for network prepare and catch up last epoch end
-//	time.Sleep(30 * time.Second)
-//	for {
-//		lastProposal, _ := c.backend.LastProposal()
-//		if lastProposal == nil {
-//			time.Sleep(1 * time.Second)
-//			continue
-//		}
-//		if lastProposal.Number().Uint64() == epochStartHeight-1 {
-//			break
-//		}
-//	}
-//
-//	c.lastEpochValSet = c.valSet.Copy()
-//	c.curEpochStartHeight = epochStartHeight
-//	c.valSet = valset
-//	c.requests = newRequestSet()
-//	c.backlogs = newBackLog()
-//	c.current = nil
-//	log.Debug("Change Epoch", "new validator set", c.valSet)
-//
-//	return nil
-//}
-
 // ----------------------------------------------------------------------------
 
 // Subscribe both internal and external events

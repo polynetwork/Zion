@@ -22,7 +22,6 @@ import (
 	"bytes"
 	"math"
 	"math/big"
-	"math/rand"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -37,17 +36,12 @@ type core struct {
 	config *hotstuff.Config
 	logger log.Logger
 
-	current *roundState
-	backend hotstuff.Backend
-	signer  hotstuff.Signer
-
-	// todo(fuk): modify this
-	lastEpochValSet     hotstuff.ValidatorSet
-	curEpochStartHeight uint64
-	valSet              hotstuff.ValidatorSet
-
-	requests            *requestSet
-	backlogs            *backlog
+	current  *roundState
+	backend  hotstuff.Backend
+	signer   hotstuff.Signer
+	valSet   hotstuff.ValidatorSet
+	requests *requestSet
+	backlogs *backlog
 
 	events            *event.TypeMuxSubscription
 	timeoutSub        *event.TypeMuxSubscription
@@ -69,8 +63,6 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 	c.validateFn = c.checkValidatorSignature
 	c.signer = signer
 
-	// todo(fuk): delete after test
-	rand.Seed(time.Now().UnixNano())
 	return c
 }
 

@@ -71,21 +71,20 @@ func (s *backend) LoadEpoch() error {
 	s.maxEpochStartHeight = epoch.StartHeight
 	s.epochs[s.maxEpochStartHeight] = epoch
 
+	log.Info("[epoch]", "load current epoch", epoch.String())
 	startHeight := epoch.LastEpochStartHeight
 	for startHeight > 0 {
-		ep, err := getEpochByHeight(s.db, startHeight)
+		ep, err := s.readEpoch(startHeight)
 		if err != nil {
-			log.Warn("[epoch]", "load epoch failed", err)
-		}
-		s.epochs[ep.StartHeight] = ep
-		if ep.StartHeight > s.maxEpochStartHeight {
-			s.maxEpochStartHeight = ep.StartHeight
+			return err
 		}
 		startHeight = ep.LastEpochStartHeight
-		fmt.Println("-----xxx----start height", startHeight, ep.String())
 	}
-
-	log.Info("[epoch]", "load all epochs", s.DumpEpochs())
+	if startHeight == 0 {
+		if _, err := s.readEpoch(0); err != nil {
+			return err
+		}
+	}
 	return nil
 }
 
@@ -103,10 +102,6 @@ func (s *backend) UpdateEpoch(parent, header *types.Header) error {
 	if parentExt.Validators == nil || len(parentExt.Validators) == 0 {
 		return nil
 	}
-	if _, ok := s.epochs[height]; ok {
-		return nil
-	}
-
 	return s.saveEpoch(height, parentExt.Validators)
 }
 
@@ -123,6 +118,14 @@ func (s *backend) DumpEpochs() string {
 }
 
 func (s *backend) saveEpoch(height uint64, list []common.Address) error {
+	if _, ok := s.epochs[height]; ok {
+		return nil
+	}
+	if s.maxEpochStartHeight == height {
+		log.Warn("[epoch]", "dump epoch", "epoch should be persisted before", "max epoch height", s.maxEpochStartHeight)
+		return nil
+	}
+
 	epoch := &Epoch{
 		StartHeight:          height,
 		ValSet:               newValSet(list),
@@ -134,8 +137,22 @@ func (s *backend) saveEpoch(height uint64, list []common.Address) error {
 	s.epochs[height] = epoch
 	s.maxEpochStartHeight = height
 
-	log.Info("[epoch]", "update epoch", epoch.String())
+	log.Info("[epoch]", "save epoch", epoch.String())
 	return nil
+}
+
+func (s *backend) readEpoch(height uint64) (*Epoch, error) {
+	epoch, err := getEpochByHeight(s.db, height)
+	if err != nil {
+		log.Warn("[epoch]", "read epoch failed", err)
+		return nil, err
+	}
+	s.epochs[epoch.StartHeight] = epoch
+	if epoch.StartHeight > s.maxEpochStartHeight {
+		s.maxEpochStartHeight = epoch.StartHeight
+	}
+	log.Info("[epoch]", "read epoch", epoch.String())
+	return epoch, nil
 }
 
 func storeCurEpoch(db ethdb.Database, epoch *Epoch) error {
