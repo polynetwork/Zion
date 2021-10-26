@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
@@ -110,4 +111,11 @@ func checkPeer(peer *PeerInfo) error {
 		return fmt.Errorf("pubkey not match address")
 	}
 	return nil
+}
+
+func generateEmptyContext(db *state.StateDB) *native.NativeContract {
+	caller := common.EmptyAddress
+	ref := native.NewContractRef(db, caller, caller, common.Big0, common.EmptyHash, 0, nil)
+	ctx := native.NewNativeContract(db, ref)
+	return ctx
 }

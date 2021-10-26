@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/ethereum/go-ethereum/core/state"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
@@ -370,6 +372,11 @@ func GetCurrentEpoch(s *native.NativeContract) ([]byte, error) {
 	return output.Encode()
 }
 
+func GetEpochWithStateDB(db *state.StateDB) (*EpochInfo, error) {
+	ctx := generateEmptyContext(db)
+	return getCurrentEpoch(ctx)
+}
+
 func GetChangingEpoch(s *native.NativeContract) ([]byte, error) {
 	curEpochHash, err := getCurrentEpochHash(s)
 	if err != nil {
@@ -486,4 +493,11 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	}
 
 	return sizeAfterSign >= epoch.QuorumSize(), nil
+}
+
+func EpochChangeAtNextBlock(curHeight, epochStartHeight uint64) bool {
+	if curHeight+1 == epochStartHeight {
+		return true
+	}
+	return false
 }

@@ -149,10 +149,8 @@ type worker struct {
 	epochChangeCh  chan types.EpochChangeEvent
 	epochChangeSub event.Subscription
 
-	changeEpochFlag bool
-	epochCheckFlag  bool
-	nextEpoch       *types.EpochChangeEvent
-	epochMu         sync.Mutex
+	nextEpoch *types.EpochChangeEvent
+	epochMu   sync.Mutex
 
 	// Channels
 	newWorkCh          chan *newWorkReq
@@ -925,7 +923,7 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	// check epoch and prepare to restart consensus engine
 	if w.current != nil && w.current.state != nil {
 		rs := w.current.state.Copy()
-		w.checkEpoch(rs, num)
+		w.checkEpoch(rs, num.Uint64())
 		w.beforeEpochChange(header)
 		w.handleEpochChange(rs, header.Number.Uint64())
 	}
@@ -1131,7 +1129,6 @@ func (w *worker) initChangingEpoch() {
 		Validators:  epoch.MemberList(),
 		Hash:        epoch.Hash(),
 	}
-	w.changeEpochFlag = true
 	log.Info("[miner worker]", "miner will changing epoch", epoch.String())
 }
 
@@ -1139,47 +1136,28 @@ func (w *worker) processEpochChange(event *types.EpochChangeEvent) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
 
-	if w.changeEpochFlag {
-		return
-	}
-	w.changeEpochFlag = true
 	w.nextEpoch = event
 }
 
-func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
+func (w *worker) checkEpoch(st *state.StateDB, blockNum uint64) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
 
-	if !w.changeEpochFlag || w.epochCheckFlag {
+	if w.nextEpoch == nil || !nm.EpochChangeAtNextBlock(blockNum, w.nextEpoch.StartHeight) {
 		return
 	}
 
-	log.Debug("[miner worker], start check epoch")
-
-	caller := w.coinbase
-	ref := native.NewContractRef(st, caller, caller, blockNum, common.EmptyHash, 0, nil)
-	payload, err := new(nm.MethodEpochInput).Encode()
+	log.Debug("[miner worker]", "start check epoch", blockNum)
+	epoch, err := nm.GetEpochWithStateDB(st)
 	if err != nil {
-		log.Error("[miner worker]", "pack `epoch` input failed", err)
+		log.Error("[miner worker]", "get epoch with statedb failed", err)
 		return
 	}
-	enc, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
-	if err != nil {
-		log.Error("[miner worker]", "native call `epoch` failed", err)
-		return
-	}
-	output := new(nm.MethodEpochOutput)
-	if err := output.Decode(enc); err != nil {
-		log.Error("[miner worker]", "unpack `epoch` output failed", err)
-		return
-	}
-
-	if output.Epoch == nil || w.nextEpoch == nil || output.Epoch.Hash() != w.nextEpoch.Hash {
+	if epoch == nil || epoch.Hash() != w.nextEpoch.Hash {
 		log.Error("[miner worker]", "check epoch failed", "epoch may be nil or hash not match")
 		return
 	}
 
-	w.epochCheckFlag = true
 	log.Debug("[miner worker]", "check epoch", "success")
 	return
 }
@@ -1187,7 +1165,7 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
 func (w *worker) beforeEpochChange(h *types.Header) {
 	height := h.Number.Uint64()
 
-	if w.nextEpoch != nil && w.nextEpoch.Validators != nil && height == w.nextEpoch.StartHeight-1 {
+	if w.nextEpoch != nil && w.nextEpoch.Validators != nil && nm.EpochChangeAtNextBlock(height, w.nextEpoch.StartHeight) {
 		types.HotstuffHeaderFillWithValidators(h, w.nextEpoch.Validators)
 	}
 }
@@ -1196,15 +1174,11 @@ func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
 
-	if !w.epochCheckFlag || w.nextEpoch == nil || height != w.nextEpoch.StartHeight {
+	if w.nextEpoch == nil || height != w.nextEpoch.StartHeight {
 		return
 	}
 
-	defer func() {
-		w.nextEpoch = nil
-		w.changeEpochFlag = false
-		w.epochCheckFlag = false
-	}()
+	defer w.clearEpoch()
 
 	log.Debug("[miner worker]", "handle epoch change, height", height)
 	if w.nextEpoch == nil || w.nextEpoch.Validators == nil || len(w.nextEpoch.Validators) == 0 {
@@ -1226,4 +1200,8 @@ func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
 	}
 	time.Sleep(30 * time.Second)
 	w.Start()
+}
+
+func (w *worker) clearEpoch() {
+	w.nextEpoch = nil
 }
