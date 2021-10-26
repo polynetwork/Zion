@@ -1,18 +1,20 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 package hotstuff
 
@@ -30,8 +32,8 @@ type Backend interface {
 	// Address returns the owner's address
 	Address() common.Address
 
-	// Validators returns the validator set
-	Validators() ValidatorSet
+	// Validators returns current epoch participants
+	Validators(height uint64) ValidatorSet
 
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux
@@ -66,19 +68,11 @@ type Backend interface {
 	// LastProposal retrieves latest committed proposal and the address of proposer
 	LastProposal() (Proposal, common.Address)
 
-	GetProposal(hash common.Hash) Proposal
-
-	// HasProposal checks if the combination of the given hash and height matches any existing blocks
-	//HasProposal(hash common.Hash, number *big.Int) bool
-
-	// GetProposer returns the proposer of the given block height
-	//GetProposer(number uint64) common.Address
-
-	// ParentValidators returns the validator set of the given proposal's parent block
-	ParentValidators(proposal Proposal) ValidatorSet
-
 	// HasBadBlock returns whether the block with the hash is a bad block
 	HasBadProposal(hash common.Hash) bool
+
+	// ValidateBlock execute block which contained in prepare message, and validate block state
+	ValidateBlock(block *types.Block) error
 
 	Close() error
 }
@@ -98,19 +92,6 @@ type CoreEngine interface {
 	// pending request is populated right at the request stage so this would give us the earliest verification
 	// to avoid any race condition of coming propagated blocks
 	IsCurrentProposal(blockHash common.Hash) bool
-
-	// PrepareExtra generate header extra field with validator set
-	PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
-
-	// GetHeader get block header with hash and correct block height
-	GetHeader(hash common.Hash, number uint64) *types.Header
-
-	// SubscribeRequest notify to miner worker that event-driven engine need an new proposal
-	SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription
-
-	InitValidators(valset ValidatorSet)
-
-	ChangeEpoch(epochStartHeight uint64, valset ValidatorSet) error
 }
 
 type HotstuffProtocol string

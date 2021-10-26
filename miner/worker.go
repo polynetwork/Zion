@@ -308,9 +308,6 @@ func (w *worker) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) Start() {
 	if engine, ok := w.engine.(consensus.HotStuff); ok {
-		//w.testBADBlock()
-		//time.Sleep(10 * time.Second)
-		//return
 		if err := engine.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
 			log.Warn("Failed to start hotstuff basic engine", "err", err)
 			return
@@ -318,49 +315,6 @@ func (w *worker) Start() {
 	}
 	atomic.StoreInt32(&w.running, 1)
 	w.startCh <- struct{}{}
-}
-
-// todo:
-// find latest block as bad block, and use n - 1 as current state, and execute block.
-func (w *worker) testBADBlock() {
-	block := w.chain.GetBlockByNumber(93443)
-	if block == nil {
-		log.Error("testBADBlock", "get block failed", "block not exist")
-		return
-	}
-
-	if got := block.Header().Coinbase; got != w.coinbase {
-		log.Error("testBADBlock", "coinbase, expect", w.coinbase.Hex(), "got", got.Hex())
-		return
-	}
-	log.Debug("testBADBlock", "block header root", block.Header().Root.Hex(), "hash", block.Hash().Hex(), "number", block.NumberU64(), "proposer", block.Coinbase().Hex())
-
-	parent := w.chain.GetBlockByHash(block.ParentHash())
-	statedb, err := w.chain.StateAt(parent.Root())
-	if err != nil {
-		log.Error("testBADBlock", "get state with root failed", parent.Root().Hex())
-		return
-	}
-
-	if statedb != nil {
-		w.checkEpoch(statedb, parent.Number())
-		w.handleEpochChange(statedb, block.NumberU64())
-	}
-
-	processor := w.chain.Processor()
-	vmconfig := w.chain.GetVMConfig()
-	receipts, _, usedGas, err := processor.Process(block, statedb, *vmconfig)
-	if err != nil {
-		log.Error("testBADBlock", "process block failed", err)
-		return
-	}
-	validator := w.chain.Validator()
-	if err := validator.ValidateState(block, statedb, receipts, usedGas); err != nil {
-		log.Error("testBADBlock", "validate state failed", err)
-		return
-	}
-
-	return
 }
 
 // stop sets the running status as 0.
@@ -964,14 +918,15 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent, w.config.GasFloor, w.config.GasCeil),
-		Extra:      w.extra,
 		Time:       uint64(timestamp),
 	}
+	types.HotstuffHeaderFillWithValidators(header, nil)
 
 	// check epoch and prepare to restart consensus engine
 	if w.current != nil && w.current.state != nil {
 		rs := w.current.state.Copy()
 		w.checkEpoch(rs, num)
+		w.beforeEpochChange(header)
 		w.handleEpochChange(rs, header.Number.Uint64())
 	}
 
@@ -1229,6 +1184,14 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
 	return
 }
 
+func (w *worker) beforeEpochChange(h *types.Header) {
+	height := h.Number.Uint64()
+
+	if w.nextEpoch != nil && w.nextEpoch.Validators != nil && height == w.nextEpoch.StartHeight-1 {
+		types.HotstuffHeaderFillWithValidators(h, w.nextEpoch.Validators)
+	}
+}
+
 func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
@@ -1255,11 +1218,12 @@ func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
 		return
 	}
 
-	log.Debug("Restart consensus engine")
+	log.Debug("Restart consensus engine", "next epoch validators", w.nextEpoch.Validators)
 	w.Stop()
 	if err := engine.ChangeEpoch(w.nextEpoch.StartHeight, w.nextEpoch.Validators); err != nil {
 		log.Error("Change Epoch", "change failed", err)
 		return
 	}
+	time.Sleep(30 * time.Second)
 	w.Start()
 }

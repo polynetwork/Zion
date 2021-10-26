@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package backend
 
 import (
@@ -7,10 +25,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/rpc"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -80,14 +96,6 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 	// use the same difficulty for all blocks
 	header.Difficulty = defaultDifficulty
 
-	// add validators in snapshot to extraData's validators section
-	valset := s.snap()
-	extra, err := s.core.PrepareExtra(header, valset)
-	if err != nil {
-		return err
-	}
-	header.Extra = extra
-
 	// set header's timestamp
 	header.Time = parent.Time + s.config.BlockPeriod
 	if header.Time < uint64(time.Now().Unix()) {
@@ -114,16 +122,12 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 }
 
 func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
-	snap := s.snap()
-	if _, v := snap.GetByAddress(s.Address()); v == nil {
-		return errUnauthorized
-	}
-
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
-	if _, err := s.getPendingParentHeader(chain, header); err != nil {
-		return err
-	}
+	// todo(fuk): 不再需要，miner自己组织区块头，无需再在共识中验区块头
+	//if _, err := s.getPendingParentHeader(chain, header); err != nil {
+	//	return err
+	//}
 
 	// sign the sig hash and fill extra seal
 	if err = s.signer.SealBeforeCommit(header); err != nil {
@@ -169,6 +173,10 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 
 func (s *backend) SealHash(header *types.Header) common.Hash {
 	return s.signer.SigHash(header)
+}
+
+func (s *backend) ValidateBlock(block *types.Block) error {
+	return s.chain.PreExecuteBlock(block)
 }
 
 // useless
@@ -277,31 +285,16 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidTimestamp
 	}
 
-	// Verify validators in extraData. Validators in snapshot and extraData should be the same.
-	snap := s.snap().Copy()
-	if height := header.Number.Uint64(); s.lastEpochValSet != nil && s.curEpochStartHeight > height && s.curEpochStartHeight == height+1 {
-		snap = s.lastEpochValSet.Copy()
+	if err := s.UpdateEpoch(parent, header); err != nil {
+		return err
 	}
-	return s.signer.VerifyHeader(header, snap, seal)
-}
-
-func (s *backend) SubscribeRequest(ch chan<- consensus.AskRequest) event.Subscription {
-	return s.core.SubscribeRequest(ch)
-}
-
-func (s *backend) ChangeEpoch(epochStartHeight uint64, list []common.Address) error {
-	s.lastEpochValSet = s.valset.Copy()
-	s.curEpochStartHeight = epochStartHeight
-	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
-	return s.core.ChangeEpoch(epochStartHeight, s.valset)
+	vals := s.Validators(number)
+	return s.signer.VerifyHeader(header, vals, seal)
 }
 
 func (s *backend) getPendingParentHeader(chain consensus.ChainHeaderReader, header *types.Header) (*types.Header, error) {
 	number := header.Number.Uint64()
 	parent := chain.GetHeader(header.ParentHash, number-1)
-	if parent == nil {
-		parent = s.core.GetHeader(header.ParentHash, number-1)
-	}
 	if parent == nil {
 		return nil, consensus.ErrUnknownAncestor
 	}

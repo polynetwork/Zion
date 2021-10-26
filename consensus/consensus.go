@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -56,7 +55,11 @@ type ChainReader interface {
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
+	// GetBlockByHash retrieves a block from the database by hash
 	GetBlockByHash(hash common.Hash) *types.Block
+
+	// PreExecuteBlock pre-execute block transactions and validate states
+	PreExecuteBlock(block *types.Block) error
 }
 
 // Engine is an algorithm agnostic consensus engine.
@@ -144,19 +147,15 @@ type Peer interface {
 type HotStuff interface {
 	Engine
 
-	// SubscribeRequest notify to miner worker that consensus need new request with parent header
-	SubscribeRequest(ch chan<- AskRequest) event.Subscription
-
 	// Authorize(signer common.Address, signFn func(accounts.Account, string, []byte) ([]byte, error))
 	// Start starts the engine
 	Start(chain ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
 
-	InitValidators(list []common.Address)
-
-	ChangeEpoch(epochStartHeight uint64, list []common.Address) error
-
 	// Stop stops the engine
 	Stop() error
+
+	// ChangeEpoch save validators and start height for next epoch
+	ChangeEpoch(epochStartHeight uint64, list []common.Address) error
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message

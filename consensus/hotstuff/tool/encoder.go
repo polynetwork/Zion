@@ -1,3 +1,21 @@
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package tool
 
 import (
@@ -5,13 +23,11 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
-	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/event_driven/core"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -29,33 +45,6 @@ func Encode(validators []common.Address) (string, error) {
 		CommittedSeal: [][]byte{},
 	}
 
-	payload, err := rlp.EncodeToBytes(&ist)
-	if err != nil {
-		return "", err
-	}
-
-	return "0x" + common.Bytes2Hex(append(vanity, payload...)), nil
-}
-
-func EncodeSalt(validators []common.Address, epoch, round uint64) (string, error) {
-	var vanity []byte
-	vanity = append(vanity, bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity)...)
-
-	salt := &core.ExtraSalt{
-		Epoch: epoch,
-		Round: new(big.Int).SetUint64(round),
-	}
-	enc, err := core.Encode(salt)
-	if err != nil {
-		return "", err
-	}
-
-	ist := &types.HotstuffExtra{
-		Validators:    validators,
-		Seal:          make([]byte, types.HotstuffExtraSeal),
-		CommittedSeal: [][]byte{},
-		Salt:          enc,
-	}
 	payload, err := rlp.EncodeToBytes(&ist)
 	if err != nil {
 		return "", err
