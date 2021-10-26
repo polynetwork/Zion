@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -283,6 +284,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	//	st.refundGas(params.RefundQuotientEIP3529)
 	//}
 	st.refundGas(params.RefundQuotientEIP3529)
+	log.Trace("Refund Gas", "gas price", st.gasPrice.String(), "gas used", st.gasUsed())
 	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
 
 	return &ExecutionResult{

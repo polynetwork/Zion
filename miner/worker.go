@@ -918,14 +918,15 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
 		GasLimit:   core.CalcGasLimit(parent, w.config.GasFloor, w.config.GasCeil),
-		Extra:      w.extra,
 		Time:       uint64(timestamp),
 	}
+	types.HotstuffHeaderFillWithValidators(header, nil)
 
 	// check epoch and prepare to restart consensus engine
 	if w.current != nil && w.current.state != nil {
 		rs := w.current.state.Copy()
 		w.checkEpoch(rs, num)
+		w.beforeEpochChange(header)
 		w.handleEpochChange(rs, header.Number.Uint64())
 	}
 
@@ -1183,6 +1184,14 @@ func (w *worker) checkEpoch(st *state.StateDB, blockNum *big.Int) {
 	return
 }
 
+func (w *worker) beforeEpochChange(h *types.Header) {
+	height := h.Number.Uint64()
+
+	if w.nextEpoch != nil && w.nextEpoch.Validators != nil && height == w.nextEpoch.StartHeight-1 {
+		types.HotstuffHeaderFillWithValidators(h, w.nextEpoch.Validators)
+	}
+}
+
 func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
@@ -1209,11 +1218,12 @@ func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
 		return
 	}
 
-	log.Debug("Restart consensus engine")
+	log.Debug("Restart consensus engine", "next epoch validators", w.nextEpoch.Validators)
 	w.Stop()
 	if err := engine.ChangeEpoch(w.nextEpoch.StartHeight, w.nextEpoch.Validators); err != nil {
 		log.Error("Change Epoch", "change failed", err)
 		return
 	}
+	time.Sleep(30 * time.Second)
 	w.Start()
 }

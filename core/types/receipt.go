@@ -212,6 +212,19 @@ func (r *Receipt) Size() common.StorageSize {
 	return size
 }
 
+func (r *Receipt) LogString() string {
+	str := ""
+	for _, v := range r.Logs {
+		topicstr := ""
+		for i, v := range v.Topics {
+			topicstr += fmt.Sprintf("topic index: %d, hash: %s", i, v.Hex())
+		}
+		str += fmt.Sprintf("blockHash:%s, blockNumber: %d, address:%s,  data:%s, topic: %s, logIndex: %d, txHash: %s, txIndex: %d, removed: %v",
+			v.BlockHash.Hex(), v.BlockNumber, v.Address.Hex(), hexutil.Encode(v.Data), topicstr, v.Index, v.TxHash.Hex(), v.TxIndex, v.Removed)
+	}
+	return str
+}
+
 // ReceiptForStorage is a wrapper around a Receipt that flattens and parses the
 // entire content of a receipt, as opposed to only the consensus fields originally.
 type ReceiptForStorage Receipt

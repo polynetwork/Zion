@@ -1,22 +1,25 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 package validator
 
 import (
+	"errors"
 	"math"
 	"reflect"
 	"sort"
@@ -25,6 +28,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
+
+var ErrInvalidParticipant = errors.New("invalid participants")
 
 type defaultValidator struct {
 	address common.Address
@@ -132,8 +137,6 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 }
 
 func (valSet *defaultSet) CalcProposerByIndex(index uint64) {
-	valSet.validatorMu.RLock()
-	defer valSet.validatorMu.RUnlock()
 	if index > 1 {
 		index = (index - 1) % uint64(len(valSet.validators))
 	} else {
@@ -226,8 +229,49 @@ func (valSet *defaultSet) Copy() hotstuff.ValidatorSet {
 	return NewSet(addresses, valSet.policy)
 }
 
+func (valSet *defaultSet) ParticipantsNumber(list []common.Address) int {
+	if list == nil || len(list) == 0 {
+		return 0
+	}
+	size := 0
+	for _, v := range list {
+		if index, _ := valSet.GetByAddress(v); index < 0 {
+			continue
+		} else {
+			size += 1
+		}
+	}
+	return size
+}
+
+func (valSet *defaultSet) CheckQuorum(committers []common.Address) error {
+	validators := valSet.Copy()
+	validSeal := 0
+	for _, addr := range committers {
+		if validators.RemoveValidator(addr) {
+			validSeal++
+			continue
+		}
+		return ErrInvalidParticipant
+	}
+
+	// The length of validSeal should be larger than number of faulty node + 1
+	if validSeal <= validators.Q() {
+		return ErrInvalidParticipant
+	}
+	return nil
+}
+
 func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
 
-func (valSet *defaultSet) Q() int { return int(math.Ceil(float64(2 * valSet.Size())/3)) }
+func (valSet *defaultSet) Q() int { return int(math.Ceil(float64(2*valSet.Size()) / 3)) }
 
 func (valSet *defaultSet) Policy() hotstuff.SelectProposerPolicy { return valSet.policy }
+
+func (valSet *defaultSet) Cmp(src hotstuff.ValidatorSet) bool {
+	n := valSet.ParticipantsNumber(src.AddressList())
+	if n != valSet.Size() || n != src.Size() {
+		return false
+	}
+	return true
+}

@@ -17,6 +17,7 @@
 package types
 
 import (
+	"bytes"
 	"errors"
 	"io"
 
@@ -37,10 +38,10 @@ var (
 )
 
 type HotstuffExtra struct {
-	Validators    []common.Address // consensus participants address
+	Validators    []common.Address // consensus participants address for next epoch, and in the first block, it contains all genesis validators. keep empty if no epoch change.
 	Seal          []byte           // proposer signature
-	CommittedSeal [][]byte         // consensus participants signatures
-	Salt          []byte           // epoch id and consensus round
+	CommittedSeal [][]byte         // consensus participants signatures and it's size should be greater than 2/3 of validators
+	Salt          []byte           // omit empty
 }
 
 // EncodeRLP serializes ist into the Ethereum RLP format.
@@ -112,4 +113,31 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	newHeader.Extra = append(newHeader.Extra[:HotstuffExtraVanity], payload...)
 
 	return newHeader
+}
+
+func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address) error {
+	var buf bytes.Buffer
+
+	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
+	if len(header.Extra) < HotstuffExtraVanity {
+		header.Extra = append(header.Extra, bytes.Repeat([]byte{0x00}, HotstuffExtraVanity-len(header.Extra))...)
+	}
+	buf.Write(header.Extra[:HotstuffExtraVanity])
+
+	if vals == nil {
+		vals = []common.Address{}
+	}
+	ist := &HotstuffExtra{
+		Validators:    vals,
+		Seal:          []byte{},
+		CommittedSeal: [][]byte{},
+		Salt:          []byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return err
+	}
+	header.Extra = append(buf.Bytes(), payload...)
+	return nil
 }

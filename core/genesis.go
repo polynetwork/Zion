@@ -255,7 +255,13 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 	}
 }
 
-var RegGenesis func(db *state.StateDB, data GenesisAlloc) error
+var (
+	// RegGenesis store genesis validators and public keys in governance contract
+	RegGenesis func(db *state.StateDB, data GenesisAlloc) error
+
+	// StoreGenesis store genesis validators in consensus snapshot
+	StoreGenesis func(db ethdb.Database, header *types.Header) error
+)
 
 // ToBlock creates the genesis block and writes state of a genesis specification
 // to the given database (or discards it if nil).
@@ -279,9 +285,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	for _, v := range native.NativeContractAddrMap {
 		g.createNativeContract(statedb, v)
 	}
-	if err := RegGenesis(statedb, g.Alloc); err != nil {
-		panic(err)
-	}
+	RegGenesis(statedb, g.Alloc)
 
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
@@ -297,6 +301,9 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		Coinbase:   g.Coinbase,
 		Root:       root,
 	}
+	if g.Config.HotStuff != nil {
+		head.MixDigest = types.HotstuffDigest
+	}
 	if g.GasLimit == 0 {
 		head.GasLimit = params.GenesisGasLimit
 	}
@@ -305,7 +312,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true, nil)
-
+	StoreGenesis(db, head)
 	return types.NewBlock(head, nil, nil, nil, trie.NewStackTrie(nil))
 }
 

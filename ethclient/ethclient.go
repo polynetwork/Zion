@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -362,6 +363,12 @@ func (ec *Client) BalanceAt(ctx context.Context, account common.Address, blockNu
 func (ec *Client) StorageAt(ctx context.Context, account common.Address, key common.Hash, blockNumber *big.Int) ([]byte, error) {
 	var result hexutil.Bytes
 	err := ec.c.CallContext(ctx, &result, "eth_getStorageAt", account, key, toBlockNumArg(blockNumber))
+	return result, err
+}
+
+func (ec *Client) ProofAt(ctx context.Context, address common.Address, storageKeys []string, blockNumber *big.Int) (*ethapi.AccountResult, error) {
+	var result *ethapi.AccountResult
+	err := ec.c.CallContext(ctx, &result, "eth_getProof", address, storageKeys, toBlockNumArg(blockNumber))
 	return result, err
 }
 

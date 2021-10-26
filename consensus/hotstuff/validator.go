@@ -1,18 +1,20 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 package hotstuff
 
@@ -73,12 +75,18 @@ type ValidatorSet interface {
 	RemoveValidator(address common.Address) bool
 	// Copy validator set
 	Copy() ValidatorSet
+	// ParticipantsNumber calculate invalid validator size
+	ParticipantsNumber(list []common.Address) int
+	// CheckQuorum check committers
+	CheckQuorum(committers []common.Address) error
 	// Get the maximum number of faulty nodes
 	F() int
 	// Get the minimum number of quorum nodes
 	Q() int
 	// Get speaker policy
 	Policy() SelectProposerPolicy
+	// Cmp compare with another validator set, return false if not the same
+	Cmp(src ValidatorSet) bool
 }
 
 // ----------------------------------------------------------------------------

@@ -1,38 +1,35 @@
-// Copyright 2017 The go-ethereum Authors
-// This file is part of the go-ethereum library.
-//
-// The go-ethereum library is free software: you can redistribute it and/or modify
-// it under the terms of the GNU Lesser General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// The go-ethereum library is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
-// GNU Lesser General Public License for more details.
-//
-// You should have received a copy of the GNU Lesser General Public License
-// along with the go-ethereum library. If not, see <http://www.gnu.org/licenses/>.
-
-// Package hotstuff implements the scalable hotstuff consensus algorithm.
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
 
 package backend
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
 
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	hsb "github.com/ethereum/go-ethereum/consensus/hotstuff/basic/core"
-	hse "github.com/ethereum/go-ethereum/consensus/hotstuff/event_driven/core"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -48,8 +45,8 @@ const (
 
 // HotStuff is the scalable hotstuff consensus engine
 type backend struct {
-	config *hotstuff.Config
-	//db           ethdb.Database // Database to store and retrieve necessary information
+	config         *hotstuff.Config
+	db             ethdb.Database // Database to store and retrieve necessary information
 	core           hotstuff.CoreEngine
 	signer         hotstuff.Signer
 	chain          consensus.ChainReader
@@ -58,13 +55,12 @@ type backend struct {
 	hasBadBlock    func(hash common.Hash) bool
 	logger         log.Logger
 
-	valset         hotstuff.ValidatorSet
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	lastEpochValSet     hotstuff.ValidatorSet
-	curEpochStartHeight uint64
+	epochs              map[uint64]*Epoch // map epoch start height to epochs
+	maxEpochStartHeight uint64
 
 	proposedBlockHashes map[common.Hash]struct{}
 
@@ -85,15 +81,15 @@ type backend struct {
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, protocol hotstuff.HotstuffProtocol) consensus.HotStuff {
+func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) consensus.HotStuff {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
 
-	signer := snr.NewSigner(privateKey, byte(hsb.MsgTypePrepareVote))
+	signer := snr.NewSigner(privateKey)
 	backend := &backend{
-		config: config,
-		//db:             db,
+		config:              config,
+		db:                  db,
 		logger:              log.New(),
 		commitCh:            make(chan *types.Block, 1),
 		coreStarted:         false,
@@ -106,30 +102,16 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		proposedBlockHashes: make(map[common.Hash]struct{}),
 	}
 
-	switch protocol {
-	case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
-		backend.core = hsb.New(backend, config, signer)
-	case hotstuff.HOTSTUFF_PROTOCOL_EVENT_DRIVEN:
-		backend.core = hse.New(backend, config, db, signer)
-	default:
-		panic("unknown hotstuff protocol")
+	backend.core = core.New(backend, config, signer)
+	if err := backend.LoadEpoch(); err != nil {
+		panic(fmt.Sprintf("load epoch failed, err: %v", err))
 	}
 	return backend
-}
-
-func (s *backend) InitValidators(list []common.Address) {
-	s.valset = validator.NewSet(list, hotstuff.RoundRobin)
-	s.core.InitValidators(s.valset)
 }
 
 // Address implements hotstuff.Backend.Address
 func (s *backend) Address() common.Address {
 	return s.signer.Address()
-}
-
-// Validators implements hotstuff.Backend.Validators
-func (s *backend) Validators() hotstuff.ValidatorSet {
-	return s.snap()
 }
 
 // EventMux implements hotstuff.Backend.EventMux
@@ -299,7 +281,7 @@ func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 
 	// check bad block
 	if s.HasBadProposal(block.Hash()) {
-		return 0, core.ErrBlacklistedHash
+		return 0, errBADProposal
 	}
 
 	// check block body
@@ -333,7 +315,7 @@ func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Durat
 
 	// check bad block
 	if s.HasBadProposal(block.Hash()) {
-		return 0, core.ErrBlacklistedHash
+		return 0, errBADProposal
 	}
 
 	// check block body
@@ -392,12 +374,6 @@ func (s *backend) GetProposer(number uint64) common.Address {
 		return a
 	}
 	return common.Address{}
-}
-
-// todo:
-// ParentValidators implements hotstuff.Backend.GetParentValidators
-func (s *backend) ParentValidators(proposal hotstuff.Proposal) hotstuff.ValidatorSet {
-	return s.snap()
 }
 
 func (s *backend) HasBadProposal(hash common.Hash) bool {
