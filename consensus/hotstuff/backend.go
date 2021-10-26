@@ -23,6 +23,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 )
 
@@ -69,6 +70,9 @@ type Backend interface {
 
 	// HasBadBlock returns whether the block with the hash is a bad block
 	HasBadProposal(hash common.Hash) bool
+
+	// ValidateBlock execute block which contained in prepare message, and validate block state
+	ValidateBlock(block *types.Block) error
 
 	Close() error
 }

@@ -112,6 +112,10 @@ func (c *core) handlePrepare(data *hotstuff.Message, src hotstuff.Validator) err
 		logger.Trace("Failed to check locked proposal", "msg", msgTyp, "err", err)
 		return err
 	}
+	if err := c.preExecuteBlock(msg.Proposal); err != nil {
+		logger.Trace("Failed to pre-execute block", "msg", msgTyp, "err", err)
+		return err
+	}
 
 	logger.Trace("handlePrepare", "msg", msgTyp, "src", src.Address(), "hash", msg.Proposal.Hash())
 

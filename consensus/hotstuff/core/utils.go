@@ -230,6 +230,14 @@ func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address,
 	return c.signer.CheckSignature(c.valSet, data, sig)
 }
 
+func (c *core) preExecuteBlock(proposal hotstuff.Proposal) error {
+	block, ok := proposal.(*types.Block)
+	if !ok {
+		return errInvalidProposal
+	}
+	return c.backend.ValidateBlock(block)
+}
+
 func (c *core) newLogger() log.Logger {
 	logger := c.logger.New("state", c.currentState(), "view", c.currentView())
 	return logger

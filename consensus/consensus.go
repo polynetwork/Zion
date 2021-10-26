@@ -55,7 +55,11 @@ type ChainReader interface {
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
+	// GetBlockByHash retrieves a block from the database by hash
 	GetBlockByHash(hash common.Hash) *types.Block
+
+	// PreExecuteBlock pre-execute block transactions and validate states
+	PreExecuteBlock(block *types.Block) error
 }
 
 // Engine is an algorithm agnostic consensus engine.
