@@ -124,10 +124,6 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
 	// update the block header timestamp and signature and propose the block to core engine
 	header := block.Header()
-	// todo(fuk): 不再需要，miner自己组织区块头，无需再在共识中验区块头
-	//if _, err := s.getPendingParentHeader(chain, header); err != nil {
-	//	return err
-	//}
 
 	// sign the sig hash and fill extra seal
 	if err = s.signer.SealBeforeCommit(header); err != nil {
@@ -138,12 +134,14 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	go func() {
 		// get the proposed block hash and clear it if the seal() is completed.
 		s.sealMu.Lock()
-		s.proposedBlockHashes[block.Hash()] = struct{}{}
+		s.proposedBlockHash = block.Hash()
 		s.logger.Trace("WorkerSealNewBlock", "hash", block.Hash(), "number", block.Number())
 
 		defer func() {
+			s.proposedBlockHash = common.EmptyHash
 			s.sealMu.Unlock()
 		}()
+
 		// post block into Istanbul engine
 		go s.EventMux().Post(hotstuff.RequestEvent{
 			Proposal: block,
@@ -153,13 +151,9 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 			case result := <-s.commitCh:
 				// if the block hash and the hash from channel are the same,
 				// return the result. Otherwise, keep waiting the next hash.
-				if result != nil {
-					if _, ok := s.proposedBlockHashes[result.Hash()]; ok {
-						results <- result
-						delete(s.proposedBlockHashes, block.Hash())
-						s.logger.Trace("Delete proposed block", "hash", block.Hash(), "number", block.Number())
-						return
-					}
+				if result != nil && block.Hash() == result.Hash() {
+					results <- result
+					return
 				}
 			case <-stop:
 				s.logger.Trace("Stop seal, check miner status!")

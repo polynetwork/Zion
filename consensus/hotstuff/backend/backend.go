@@ -62,16 +62,14 @@ type backend struct {
 	epochs              map[uint64]*Epoch // map epoch start height to epochs
 	maxEpochStartHeight uint64
 
-	proposedBlockHashes map[common.Hash]struct{}
-
 	// The channels for hotstuff engine notifications
-	sealMu   sync.Mutex
-	commitCh chan *types.Block
-	//proposedBlockHash common.Hash
-	coreStarted bool
-	sigMu       sync.RWMutex // Protects the address fields
-	consenMu    sync.Mutex   // Ensure a round can only start after the last one has finished
-	coreMu      sync.RWMutex
+	sealMu            sync.Mutex
+	commitCh          chan *types.Block
+	proposedBlockHash common.Hash
+	coreStarted       bool
+	sigMu             sync.RWMutex // Protects the address fields
+	consenMu          sync.Mutex   // Ensure a round can only start after the last one has finished
+	coreMu            sync.RWMutex
 
 	// event subscription for ChainHeadEvent event
 	broadcaster consensus.Broadcaster
@@ -88,18 +86,17 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 
 	signer := snr.NewSigner(privateKey)
 	backend := &backend{
-		config:              config,
-		db:                  db,
-		logger:              log.New(),
-		commitCh:            make(chan *types.Block, 1),
-		coreStarted:         false,
-		eventMux:            new(event.TypeMux),
-		signer:              signer,
-		recentMessages:      recentMessages,
-		knownMessages:       knownMessages,
-		recents:             recents,
-		proposals:           make(map[common.Address]bool),
-		proposedBlockHashes: make(map[common.Hash]struct{}),
+		config:         config,
+		db:             db,
+		logger:         log.New(),
+		commitCh:       make(chan *types.Block, 1),
+		coreStarted:    false,
+		eventMux:       new(event.TypeMux),
+		signer:         signer,
+		recentMessages: recentMessages,
+		knownMessages:  knownMessages,
+		recents:        recents,
+		proposals:      make(map[common.Address]bool),
 	}
 
 	backend.core = core.New(backend, config, signer)
@@ -248,23 +245,22 @@ func (s *backend) Commit(proposal hotstuff.Proposal) error {
 		s.logger.Error("Committed to miner worker", "proposal", "not block")
 		return errInvalidProposal
 	}
-
+	
 	s.logger.Info("Committed", "address", s.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
 	// - if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.
 	// - otherwise, we try to insert the block.
 	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
-	//    the next block and the previous Seal() will be stopped (need to check this --- saber).
-	// -- otherwise, an error will be returned and a round change event will be fired.
-	if _, ok := s.proposedBlockHashes[block.Hash()]; ok {
+	//    the next block and the previous Seal() will be stopped.
+	// -- otherwise, a error will be returned and a round change event will be fired.
+	if s.proposedBlockHash == block.Hash() {
 		// feed block hash to Seal() and wait the Seal() result
 		s.commitCh <- block
 		return nil
-	} else {
-		s.logger.Trace("Proposed block not match, broadcast it", "expect", block.Hash(), "got", nil)
-		if s.broadcaster != nil {
-			s.broadcaster.Enqueue(fetcherID, block)
-		}
+	}
+
+	if s.broadcaster != nil {
+		s.broadcaster.Enqueue(fetcherID, block)
 	}
 	return nil
 }
