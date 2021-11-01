@@ -313,6 +313,12 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 }
 
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
+	chainID := g.Config.ChainID.Uint64()
+	if !params.IsRelayChain(chainID) {
+		return
+	}
+
+	// only relay chain need native contracts
 	db.CreateAccount(addr)
 	db.SetCode(addr, addr[:])
 	initBlockNumber := big.NewInt(0)
@@ -322,21 +328,8 @@ func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 }
 
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
-	needMintForRelayChain := func(cid uint64) bool {
-		if cid == params.MainnetRelayChainID {
-			return true
-		}
-		if cid == params.TestnetRelayChainID {
-			return true
-		}
-		if cid == params.DevnetRelayChainID {
-			return true
-		}
-		return false
-	}
-
 	addBalance := func(chainID uint64, addr common.Address, account GenesisAccount) {
-		if needMintForRelayChain(chainID) {
+		if params.IsRelayChain(chainID) {
 			statedb.AddBalance(addr, account.Balance)
 		} else {
 			balance := params.SideChainInitAlloc

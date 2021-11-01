@@ -64,6 +64,15 @@ var (
 	SideChainInitAlloc = new(big.Int).Mul(OneEth, big.NewInt(100))
 )
 
+func IsRelayChain(chainID uint64) bool {
+	switch chainID {
+	case MainnetRelayChainID, TestnetRelayChainID, DevnetRelayChainID:
+		return true
+	default:
+		return false
+	}
+}
+
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{
