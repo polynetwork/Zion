@@ -52,6 +52,18 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 	GoerliGenesisHash:  GoerliCheckpointOracle,
 }
 
+// cross chain related params
+var (
+	MainnetRelayChainID uint64 = 1
+	TestnetRelayChainID uint64 = 3
+	DevnetRelayChainID  uint64 = 10897
+
+	OneEth, _ = new(big.Int).SetString("1000000000000000000", 10)
+	// mint some native token for side chain genesis validators, because genesis validators will spent
+	// gas which deploy cross chain contracts, and the default value is 100 eth
+	SideChainInitAlloc = new(big.Int).Mul(OneEth, big.NewInt(100))
+)
+
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
 	MainnetChainConfig = &ChainConfig{

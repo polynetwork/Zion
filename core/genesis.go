@@ -273,14 +273,10 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	if err != nil {
 		panic(err)
 	}
-	for addr, account := range g.Alloc {
-		statedb.AddBalance(addr, account.Balance)
-		statedb.SetCode(addr, account.Code)
-		statedb.SetNonce(addr, account.Nonce)
-		for key, value := range account.Storage {
-			statedb.SetState(addr, key, value)
-		}
-	}
+
+	// mint native token for genesis validators
+	g.mintNativeToken(statedb)
+
 	// create native contracts
 	for _, v := range native.NativeContractAddrMap {
 		g.createNativeContract(statedb, v)
@@ -322,6 +318,40 @@ func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 	initBlockNumber := big.NewInt(0)
 	if g.Config.IsEIP158(initBlockNumber) {
 		db.SetNonce(addr, 1)
+	}
+}
+
+func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
+	needMintForRelayChain := func(cid uint64) bool {
+		if cid == params.MainnetRelayChainID {
+			return true
+		}
+		if cid == params.TestnetRelayChainID {
+			return true
+		}
+		if cid == params.DevnetRelayChainID {
+			return true
+		}
+		return false
+	}
+
+	addBalance := func(chainID uint64, addr common.Address, account GenesisAccount) {
+		if needMintForRelayChain(chainID) {
+			statedb.AddBalance(addr, account.Balance)
+		} else {
+			balance := params.SideChainInitAlloc
+			statedb.AddBalance(addr, balance)
+		}
+	}
+
+	chainID := g.Config.ChainID.Uint64()
+	for addr, account := range g.Alloc {
+		addBalance(chainID, addr, account)
+		statedb.SetCode(addr, account.Code)
+		statedb.SetNonce(addr, account.Nonce)
+		for key, value := range account.Storage {
+			statedb.SetState(addr, key, value)
+		}
 	}
 }
 
