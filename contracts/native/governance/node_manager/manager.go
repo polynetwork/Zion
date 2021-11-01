@@ -483,7 +483,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	sizeBeforeSign := getSignerSize(s, sign.Hash())
 	log.Trace("checkConsensusSign", "sign hash", sign.Hash().Hex(), "size before sign", sizeBeforeSign)
 	if sizeBeforeSign >= epoch.QuorumSize() {
-		return true, nil
+		return false, nil
 	}
 
 	// store signer address and emit event log
