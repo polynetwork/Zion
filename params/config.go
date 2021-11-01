@@ -60,7 +60,7 @@ var (
 
 	OneEth, _ = new(big.Int).SetString("1000000000000000000", 10)
 	// mint some native token for side chain genesis validators, because genesis validators will spent
-	// gas which deploy cross chain contracts, and the default value is 100 eth
+	// gas while deploy cross chain contracts, and the default value is 100 eth
 	SideChainInitAlloc = new(big.Int).Mul(OneEth, big.NewInt(100))
 )
 
