@@ -19,8 +19,15 @@
 package zion
 
 import (
+	"encoding/json"
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 type ZionHandler struct {
@@ -30,160 +37,102 @@ func NewZionHandler() *ZionHandler {
 	return &ZionHandler{}
 }
 
-func (this *ZionHandler) SyncGenesisHeader(native *native.NativeContract) error {
-	//ctx := native.ContractRef().CurrentContext()
-	//params := &scom.SyncGenesisHeaderParam{}
-	//if err := utils.UnpackMethod(scom.ABI, scom.MethodSyncGenesisHeader, params, ctx.Payload); err != nil {
-	//	return fmt.Errorf("SyncGenesisHeader, contract params deserialize error: %v", err)
-	//}
-	//
-	//// Get current epoch operator
-	//ok, err := node_manager.CheckConsensusSigns(native, scom.MethodSyncGenesisHeader, ctx.Payload, native.ContractRef().MsgSender())
-	//if err != nil {
-	//	return fmt.Errorf("SyncGenesisHeader, CheckConsensusSigns error: %v", err)
-	//}
-	//if !ok {
-	//	return nil
-	//}
-	//
-	//var header Header
-	//err = json.Unmarshal(params.GenesisHeader, &header)
-	//if err != nil {
-	//	return fmt.Errorf("SyncGenesisHeader, json.Unmarshal header err: %v", err)
-	//}
-	//
-	//headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.GENESIS_HEADER), utils.GetUint64Bytes(params.ChainID)))
-	//if err != nil {
-	//	return fmt.Errorf("ETHHandler GetHeaderByHeight, get blockHashStore error: %v", err)
-	//}
-	//if headerStore != nil {
-	//	return fmt.Errorf("ETHHandler GetHeaderByHeight, genesis header had been initialized")
-	//}
-	//
-	////block header storage
-	//err = putGenesisBlockHeader(native, header, params.ChainID)
-	//if err != nil {
-	//	return fmt.Errorf("ETHHandler SyncGenesisHeader, put blockHeader error: %v", err)
-	//}
+func (h *ZionHandler) SyncGenesisHeader(s *native.NativeContract) error {
+	ctx := s.ContractRef().CurrentContext()
+	msgSender := s.ContractRef().MsgSender()
+
+	// main chain DONT need sync genesis header
+	params := &scom.SyncGenesisHeaderParam{}
+	if err := utils.UnpackMethod(scom.ABI, scom.MethodSyncGenesisHeader, params, ctx.Payload); err != nil {
+		return fmt.Errorf("ZionHandler SyncGenesisHeader, contract params deserialize err: %v", err)
+	}
+	chainID := params.ChainID
+
+	// Get current epoch operator
+	ok, err := node_manager.CheckConsensusSigns(s, scom.MethodSyncGenesisHeader, ctx.Payload, msgSender)
+	if err != nil {
+		return fmt.Errorf("ZionHandler SyncGenesisHeader, CheckConsensusSigns err: %v", err)
+	}
+	if !ok {
+		return nil
+	}
+
+	var header *types.Header
+	if err := json.Unmarshal(params.GenesisHeader, &header); err != nil {
+		return fmt.Errorf("ZionHandler SyncGenesisHeader, json.Unmarshal header err: %v", err)
+	}
+	height := header.Number.Uint64()
+	if height != 0 {
+		return fmt.Errorf("ZionHandler SyncGenesisHeader, header height invalid")
+	}
+
+	if isGenesisStored(s, chainID) {
+		return fmt.Errorf("ZionHandler SyncGenesisHeader, genesis header had been initialized")
+	}
+
+	//block header storage
+	if err = storeGenesis(s, chainID, header); err != nil {
+		return fmt.Errorf("ZionHandler SyncGenesisHeader, put blockHeader err: %v", err)
+	}
+
+	validators, err := getValidatorsFromHeader(header)
+	if err != nil {
+		return fmt.Errorf("ZionHandler SyncGenesisHeader, get validators from header err: %v", err)
+	}
+
+	if err := storeEpoch(s, chainID, height, validators); err != nil {
+		return fmt.Errorf("ZionHandler SyncGenesisHeader, store epoch err: %v", err)
+	}
+
+	emitEpochChangeEvent(s, chainID, height, header.Hash())
+
+	log.Debug("ZionHandler SyncGenesisHeader", "chainID", chainID, "height", height, "hash", header.Hash())
+	return nil
+}
+
+func (h *ZionHandler) SyncBlockHeader(s *native.NativeContract) error {
+	ctx := s.ContractRef().CurrentContext()
+	params := &scom.SyncBlockHeaderParam{}
+	if err := utils.UnpackMethod(scom.ABI, scom.MethodSyncBlockHeader, params, ctx.Payload); err != nil {
+		return err
+	}
+
+	chainID := params.ChainID
+	curEpochStartHeight, curEpochValidators, err := getEpoch(s, chainID)
+	if err != nil {
+		return fmt.Errorf("ZionHandler SynnBlockHeader, failed to get current epoch info, err: %v", err)
+	}
+
+	for i, v := range params.Headers {
+		header := new(types.Header)
+		if err := header.UnmarshalJSON(v); err != nil {
+			return fmt.Errorf("ZionHandler SyncBlockHeader, deserialize No.%d header err: %v", i, err)
+		}
+
+		nextEpochStartHeight, nextEpochValidators, err := VerifyHeader(header, curEpochValidators, true)
+		if err != nil {
+			return fmt.Errorf("ZionHandler SyncBlockHeader, failed to verify No.%d quorum header %s: %v", i, header.Hash().Hex(), err)
+		}
+
+		if nextEpochStartHeight > 0 && nextEpochStartHeight > curEpochStartHeight {
+			emitEpochChangeEvent(s, chainID, header.Number.Uint64(), header.Hash())
+			if err := storeEpoch(s, chainID, nextEpochStartHeight, nextEpochValidators); err != nil {
+				return fmt.Errorf("ZionHandler SyncBlockHeader, failed to store next epoch info, err: %v", err)
+			}
+
+			log.Debug("ZionHandler SyncBlockHeader", "chainID", chainID, "height", header.Number, "hash", header.Hash(),
+				"current epoch start height", curEpochStartHeight, "current epoch validators", curEpochValidators,
+				"next epoch start height", nextEpochStartHeight, "next epoch validators", nextEpochValidators)
+
+			curEpochStartHeight = nextEpochStartHeight
+			curEpochValidators = nextEpochValidators
+		}
+	}
 
 	return nil
 }
 
-func (this *ZionHandler) SyncBlockHeader(native *native.NativeContract) error {
-	//headerParams := &scom.SyncBlockHeaderParam{}
-	//{
-	//	ctx := native.ContractRef().CurrentContext()
-	//	if err := utils.UnpackMethod(scom.ABI, scom.MethodSyncBlockHeader, headerParams, ctx.Payload); err != nil {
-	//		return err
-	//	}
-	//}
-	//caches := NewCaches(3, native)
-	//for _, v := range headerParams.Headers {
-	//	var header Header
-	//	err := json.Unmarshal(v, &header)
-	//	if err != nil {
-	//		return fmt.Errorf("SyncBlockHeader, deserialize header err: %v", err)
-	//	}
-	//	headerHash := header.Hash()
-	//	exist, err := IsHeaderExist(native, headerHash.Bytes(), headerParams.ChainID)
-	//	if err != nil {
-	//		return fmt.Errorf("SyncBlockHeader, check header exist err: %v", err)
-	//	}
-	//	if exist == true {
-	//		log.Warnf("SyncBlockHeader, header has exist. Header: %s", string(v))
-	//		continue
-	//	}
-	//	// get pre header
-	//	parentHeader, parentDifficultySum, err := GetHeaderByHash(native, header.ParentHash.Bytes(), headerParams.ChainID)
-	//	if err != nil {
-	//		return fmt.Errorf("SyncBlockHeader, get the parent block failed. Error:%s, header: %s", err, string(v))
-	//	}
-	//	parentHeaderHash := parentHeader.Hash()
-	//	/**
-	//	this code source refer to https://github.com/ethereum/go-ethereum/blob/master/consensus/ethash/consensus.go
-	//	verify header need to verify:
-	//	1. parent hash
-	//	2. extra size
-	//	3. current time
-	//	*/
-	//	//verify whether parent hash validity
-	//	if !bytes.Equal(parentHeaderHash.Bytes(), header.ParentHash.Bytes()) {
-	//		return fmt.Errorf("SyncBlockHeader, parent header is not right. Header: %s", string(v))
-	//	}
-	//	//verify whether extra size validity
-	//	if uint64(len(header.Extra)) > params.MaximumExtraDataSize {
-	//		return fmt.Errorf("SyncBlockHeader, SyncBlockHeader extra-data too long: %d > %d, header: %s", len(header.Extra), params.MaximumExtraDataSize, string(v))
-	//	}
-	//	//verify current time validity
-	//	if header.Time > uint64(time.Now().Add(allowedFutureBlockTime).Unix()) {
-	//		return fmt.Errorf("SyncBlockHeader,  verify header time error:%s, checktime: %d, header: %s", consensus.ErrFutureBlock, time.Now().Add(allowedFutureBlockTime).Unix(), string(v))
-	//	}
-	//	//verify whether current header time and prevent header time validity
-	//	if header.Time <= parentHeader.Time {
-	//		return fmt.Errorf("SyncBlockHeader, verify header time fail. Header: %s", string(v))
-	//	}
-	//	// Verify that the gas limit is <= 2^63-1
-	//	cap := uint64(0x7fffffffffffffff)
-	//	if header.GasLimit > cap {
-	//		return fmt.Errorf("SyncBlockHeader, invalid gasLimit: have %v, max %v, header: %s", header.GasLimit, cap, string(v))
-	//	}
-	//	// Verify that the gasUsed is <= gasLimit
-	//	if header.GasUsed > header.GasLimit {
-	//		return fmt.Errorf("SyncBlockHeader, invalid gasUsed: have %d, gasLimit %d, header: %s", header.GasUsed, header.GasLimit, string(v))
-	//	}
-	//	if isLondon(&header) {
-	//		err = VerifyEip1559Header(parentHeader, &header)
-	//	} else {
-	//		err = VerifyGaslimit(parentHeader.GasLimit, header.GasLimit)
-	//	}
-	//	if err != nil {
-	//		return fmt.Errorf("SyncBlockHeader, err:%v", err)
-	//	}
-	//
-	//	//verify difficulty
-	//	var expected *big.Int
-	//	if isLondon(&header) {
-	//		expected = makeDifficultyCalculator(big.NewInt(9700000))(header.Time, parentHeader)
-	//	} else {
-	//		return fmt.Errorf("SyncBlockHeader, header before london fork is no longer supported")
-	//	}
-	//	if expected.Cmp(header.Difficulty) != 0 {
-	//		return fmt.Errorf("SyncBlockHeader, invalid difficulty: have %v, want %v, header: %s", header.Difficulty, expected, string(v))
-	//	}
-	//	// verfify header
-	//	err = this.verifyHeader(&header, caches)
-	//	if err != nil {
-	//		return fmt.Errorf("SyncBlockHeader, verify header error: %v, header: %s", err, string(v))
-	//	}
-	//	//block header storage
-	//	hederDifficultySum := new(big.Int).Add(header.Difficulty, parentDifficultySum)
-	//	err = putBlockHeader(native, header, hederDifficultySum, headerParams.ChainID)
-	//	if err != nil {
-	//		return fmt.Errorf("SyncGenesisHeader, put blockHeader error: %v, header: %s", err, string(v))
-	//	}
-	//	// get current header of main
-	//	currentHeader, currentDifficultySum, err := GetCurrentHeader(native, headerParams.ChainID)
-	//	if err != nil {
-	//		return fmt.Errorf("SyncBlockHeader, get the current block failed. error:%s", err)
-	//	}
-	//	if bytes.Equal(currentHeader.Hash().Bytes(), header.ParentHash.Bytes()) {
-	//		appendHeader2Main(native, header.Number.Uint64(), headerHash, headerParams.ChainID)
-	//	} else {
-	//		//
-	//		if hederDifficultySum.Cmp(currentDifficultySum) > 0 {
-	//			RestructChain(native, currentHeader, &header, headerParams.ChainID)
-	//		}
-	//	}
-	//}
-	//caches.deleteCaches()
-	return nil
-}
-
-func (this *ZionHandler) SyncCrossChainMsg(native *native.NativeContract) error {
-	return nil
-}
-
-func (this *ZionHandler) verifyHeader(header *types.Header) error {
-	// todo
+// todo(fuk): useless interface
+func (h *ZionHandler) SyncCrossChainMsg(native *native.NativeContract) error {
 	return nil
 }
