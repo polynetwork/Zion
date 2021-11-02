@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	xparams "github.com/ethereum/go-ethereum/params"
 )
 
 const contractName = "header sync"
@@ -66,6 +67,11 @@ func SyncGenesisHeader(native *native.NativeContract) ([]byte, error) {
 	}
 	chainID := params.ChainID
 
+	// main chain DONT need sync genesis header
+	if xparams.IsRelayChain(chainID) {
+		return nil, nil
+	}
+
 	//check if chainid exist
 	sideChain, err := side_chain_manager.GetSideChain(native, chainID)
 	if err != nil {
@@ -96,6 +102,12 @@ func SyncBlockHeader(native *native.NativeContract) ([]byte, error) {
 	}
 
 	chainID := params.ChainID
+
+	// main chain DONT need to sync block header
+	if xparams.IsRelayChain(chainID) {
+		return nil, nil
+	}
+
 	//check if chainid exist
 	sideChain, err := side_chain_manager.GetSideChain(native, chainID)
 	if err != nil {
@@ -126,6 +138,13 @@ func SyncCrossChainMsg(native *native.NativeContract) ([]byte, error) {
 	}
 
 	chainID := params.ChainID
+
+	// main chain DONT need to sync cross chain message
+	// todo: useless interface?
+	if xparams.IsRelayChain(chainID) {
+		return nil, nil
+	}
+
 	//check if chainid exist
 	sideChain, err := side_chain_manager.GetSideChain(native, chainID)
 	if err != nil {
