@@ -25,6 +25,13 @@ import (
 // FailedTxGasUsage tx's gas usage should not be greater than an minimum fixed value if it execute failed.
 const FailedTxGasUsage = uint64(100)
 
+// ZionRelayChainID fix value for zion relay chain
+const ZionRelayChainID = uint64(1)
+
+func IsRelayChain(chainID uint64) bool {
+	return chainID == ZionRelayChainID
+}
+
 const (
 	NativeGovernance       = "governance"
 	NativeSyncHeader       = "sync_header"
@@ -33,8 +40,9 @@ const (
 	NativeNodeManager      = "node_manager"
 	NativeRelayerManager   = "relayer_manager"
 	NativeSideChainManager = "side_chain_manager"
+	NativeRelayChainECCD   = "relay_chain_eccd"
+
 	// native backup contracts
-	NativeExtra4  = "extra4"
 	NativeExtra5  = "extra5"
 	NativeExtra6  = "extra6"
 	NativeExtra7  = "extra7"
@@ -60,7 +68,7 @@ var NativeContractAddrMap = map[string]common.Address{
 	NativeNodeManager:      utils.NodeManagerContractAddress,
 	NativeRelayerManager:   utils.RelayerManagerContractAddress,
 	NativeSideChainManager: utils.SideChainManagerContractAddress,
-	NativeExtra4:           common.HexToAddress("0x7d79D936DA7833c7fe056eB450064f34A327DcA8"),
+	NativeRelayChainECCD:   utils.RelayChainECCDContractAddress,
 	NativeExtra5:           common.HexToAddress("0xD37F626c9E007DdD244E5Cbee0C223fec6D11289"),
 	NativeExtra6:           common.HexToAddress("0x33463b771Da32D450723C7C23a2240dE223b53bd"),
 	NativeExtra7:           common.HexToAddress("0x0F257CD338Fa8F1Af3D31b16C1fBddae2Dc96D41"),

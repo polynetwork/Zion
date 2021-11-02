@@ -33,7 +33,7 @@ import (
 type ZionHandler struct {
 }
 
-func NewZionHandler() *ZionHandler {
+func NewHandler() *ZionHandler {
 	return &ZionHandler{}
 }
 
