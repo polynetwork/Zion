@@ -45,7 +45,7 @@ type Signer interface {
 	SealAfterCommit(h *types.Header, committedSeals [][]byte) error
 
 	// VerifyHeader verify proposer signature and committed seals
-	VerifyHeader(header *types.Header, valSet ValidatorSet, seal bool) error
+	VerifyHeader(header *types.Header, valSet ValidatorSet, seal bool) (*types.HotstuffExtra, error)
 
 	// VerifyQC verify quorum cert
 	VerifyQC(qc *QuorumCert, valSet ValidatorSet) error
