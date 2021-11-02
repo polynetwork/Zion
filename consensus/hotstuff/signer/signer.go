@@ -35,6 +35,11 @@ const (
 	inmemorySignatures = 4096 // Number of recent block signatures to keep in memory
 )
 
+type SignatureCache struct {
+	Address common.Address
+	Extra   *types.HotstuffExtra
+}
+
 type SignerImpl struct {
 	address    common.Address
 	privateKey *ecdsa.PrivateKey
@@ -56,13 +61,16 @@ func (s *SignerImpl) Address() common.Address {
 }
 
 func (s *SignerImpl) Sign(data []byte) ([]byte, error) {
+	if s.privateKey == nil {
+		return nil, errInvalidSigner
+	}
 	hashData := crypto.Keccak256(data)
 	return crypto.Sign(hashData, s.privateKey)
 }
 
 func (s *SignerImpl) SignHash(hash common.Hash) ([]byte, error) {
-	voteHash := s.wrapCommittedSeal(hash)
-	return s.Sign(voteHash)
+	wrapHash := s.wrapCommittedSeal(hash)
+	return s.Sign(wrapHash)
 }
 
 // SigHash returns the hash which is used as input for the Hotstuff
@@ -82,30 +90,34 @@ func (s *SignerImpl) SigHash(header *types.Header) (hash common.Hash) {
 }
 
 // Recover extracts the proposer address from a signed header.
-func (s *SignerImpl) Recover(header *types.Header) (common.Address, error) {
+func (s *SignerImpl) Recover(header *types.Header) (common.Address, *types.HotstuffExtra, error) {
 	hash := header.Hash()
 	if s.signatures != nil {
-		if addr, ok := s.signatures.Get(hash); ok {
-			return addr.(common.Address), nil
+		if data, ok := s.signatures.Get(hash); ok {
+			cache := data.(*SignatureCache)
+			return cache.Address, cache.Extra, nil
 		}
 	}
 
 	// Retrieve the signature from the header extra-data
 	extra, err := types.ExtractHotstuffExtra(header)
 	if err != nil {
-		return common.Address{}, errInvalidExtraDataFormat
+		return common.EmptyAddress, nil, errInvalidExtraDataFormat
 	}
 
 	payload := s.SigHash(header).Bytes()
 	addr, err := getSignatureAddress(payload, extra.Seal)
 	if err != nil {
-		return addr, err
+		return common.EmptyAddress, nil, err
 	}
 
 	if s.signatures != nil {
-		s.signatures.Add(hash, addr)
+		s.signatures.Add(hash, &SignatureCache{
+			Address: addr,
+			Extra:   extra,
+		})
 	}
-	return addr, nil
+	return addr, extra, nil
 }
 
 // SignerSeal proposer sign the header hash and fill extra seal with signature.
@@ -170,7 +182,7 @@ func (s *SignerImpl) VerifyHeader(header *types.Header, valSet hotstuff.Validato
 	}
 
 	// resolve the authorization key and check against signers
-	signer, err := s.Recover(header)
+	signer, extra, err := s.Recover(header)
 	if err != nil {
 		return err
 	}
@@ -184,11 +196,6 @@ func (s *SignerImpl) VerifyHeader(header *types.Header, valSet hotstuff.Validato
 	}
 
 	if seal {
-		extra, err := types.ExtractHotstuffExtra(header)
-		if err != nil {
-			return errInvalidExtraDataFormat
-		}
-
 		// The length of Committed seals should be larger than 0
 		if len(extra.CommittedSeal) == 0 {
 			return errEmptyCommittedSeals
