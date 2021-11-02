@@ -258,7 +258,7 @@ func ApproveUpdateSideChain(native *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, CheckConsensusSigns error: %v", err)
 	}
 	if !ok {
-		utils.PackOutputs(ABI, MethodApproveUpdateSideChain, true)
+		return utils.PackOutputs(ABI, MethodApproveUpdateSideChain, true)
 	}
 
 	err = PutSideChain(native, sideChain)
