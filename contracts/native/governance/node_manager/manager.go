@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"sort"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	"github.com/ethereum/go-ethereum/core/state"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -439,6 +441,8 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	ctx := s.ContractRef().CurrentContext()
 	caller := ctx.Caller
 
+	log.Trace("checkConsensusSign", "method", method, "input", hexutil.Encode(input), "signer", signer.Hex())
+
 	// get epoch info
 	epoch, err := getCurrentEpoch(s)
 	if err != nil {
@@ -459,6 +463,8 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 			if err := storeSign(s, sign); err != nil {
 				log.Trace("checkConsensusSign", "store sign failed", err, "hash", sign.Hash().Hex())
 				return false, ErrStorage
+			} else {
+				log.Trace("checkConsensusSign", "store sign, hash", sign.Hash().Hex())
 			}
 		} else {
 			log.Trace("checkConsensusSign", "get sign failed", err, "hash", sign.Hash().Hex())
@@ -477,6 +483,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 
 	// do not store redundancy sign
 	sizeBeforeSign := getSignerSize(s, sign.Hash())
+	log.Trace("checkConsensusSign", "sign hash", sign.Hash().Hex(), "size before sign", sizeBeforeSign)
 	if sizeBeforeSign >= epoch.QuorumSize() {
 		return true, nil
 	}
@@ -491,6 +498,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 		log.Trace("checkConsensusSign", "emit consensus sign log failed", err, "hash", sign.Hash().Hex())
 		return false, ErrEmitLog
 	}
+	log.Trace("checkConsensusSign", "sign hash", sign.Hash().Hex(), "size after sign", sizeAfterSign)
 
 	return sizeAfterSign >= epoch.QuorumSize(), nil
 }
