@@ -20,6 +20,7 @@ package common
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	polycomm "github.com/polynetwork/poly/common"
 )
@@ -107,6 +108,26 @@ func (this *EntranceParam) Deserialization(source *polycomm.ZeroCopySource) erro
 	this.Extra = extra
 	this.HeaderOrCrossChainMsg = headerOrCrossChainMsg
 	return nil
+}
+
+func (this *EntranceParam) String() string {
+	str := "{"
+	str += fmt.Sprintf("source chain id: %d,", this.SourceChainID)
+	str += fmt.Sprintf("height: %d,", this.Height)
+	if this.Proof != nil && len(this.Proof) > 0 {
+		str += fmt.Sprintf("proof: %s,", hexutil.Encode(this.Proof))
+	}
+	if this.RelayerAddress != nil && len(this.RelayerAddress) > 0 {
+		str += fmt.Sprintf("relayer address: %s,", hexutil.Encode(this.RelayerAddress))
+	}
+	if this.Extra != nil && len(this.Extra) > 0 {
+		str += fmt.Sprintf("extra: %s,", hexutil.Encode(this.Extra))
+	}
+	if this.HeaderOrCrossChainMsg != nil && len(this.HeaderOrCrossChainMsg) > 0 {
+		str += fmt.Sprintf("header or cross chain msg: %s", hexutil.Encode(this.HeaderOrCrossChainMsg))
+	}
+	str += "}"
+	return str
 }
 
 type MakeTxParam struct {
