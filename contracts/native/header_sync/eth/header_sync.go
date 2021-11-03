@@ -27,6 +27,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -63,12 +64,15 @@ func (this *ETHHandler) SyncGenesisHeader(native *native.NativeContract) error {
 		return fmt.Errorf("SyncGenesisHeader, contract params deserialize error: %v", err)
 	}
 
+	log.Trace("SyncGenesisHeader", "sync genesis header, chainID", params.ChainID, "header", hexutil.Encode(params.GenesisHeader))
+
 	// Get current epoch operator
 	ok, err := node_manager.CheckConsensusSigns(native, scom.MethodSyncGenesisHeader, ctx.Payload, native.ContractRef().MsgSender())
 	if err != nil {
 		return fmt.Errorf("SyncGenesisHeader, CheckConsensusSigns error: %v", err)
 	}
 	if !ok {
+		log.Trace("SyncGenesisHeader", "check consensus failed", "false")
 		return nil
 	}
 
