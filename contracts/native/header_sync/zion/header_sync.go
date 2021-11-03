@@ -30,14 +30,14 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-type ZionHandler struct {
+type Handler struct {
 }
 
-func NewHandler() *ZionHandler {
-	return &ZionHandler{}
+func NewHandler() *Handler {
+	return &Handler{}
 }
 
-func (h *ZionHandler) SyncGenesisHeader(s *native.NativeContract) error {
+func (h *Handler) SyncGenesisHeader(s *native.NativeContract) error {
 	ctx := s.ContractRef().CurrentContext()
 	msgSender := s.ContractRef().MsgSender()
 
@@ -90,7 +90,7 @@ func (h *ZionHandler) SyncGenesisHeader(s *native.NativeContract) error {
 	return nil
 }
 
-func (h *ZionHandler) SyncBlockHeader(s *native.NativeContract) error {
+func (h *Handler) SyncBlockHeader(s *native.NativeContract) error {
 	ctx := s.ContractRef().CurrentContext()
 	params := &scom.SyncBlockHeaderParam{}
 	if err := utils.UnpackMethod(scom.ABI, scom.MethodSyncBlockHeader, params, ctx.Payload); err != nil {
@@ -133,6 +133,6 @@ func (h *ZionHandler) SyncBlockHeader(s *native.NativeContract) error {
 }
 
 // todo(fuk): useless interface
-func (h *ZionHandler) SyncCrossChainMsg(native *native.NativeContract) error {
+func (h *Handler) SyncCrossChainMsg(native *native.NativeContract) error {
 	return nil
 }

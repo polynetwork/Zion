@@ -17,31 +17,3 @@
  */
 
 package zion
-
-import (
-	"os"
-	"testing"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
-)
-
-var (
-	testStateDB  *state.StateDB
-	testEmptyCtx *native.NativeContract
-)
-
-func TestMain(m *testing.M) {
-	db := rawdb.NewMemoryDatabase()
-	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
-	os.Exit(m.Run())
-}
-
-func resetTestContext() {
-	db := rawdb.NewMemoryDatabase()
-	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
-}

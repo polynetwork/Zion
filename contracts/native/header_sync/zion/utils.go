@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
+	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -60,6 +61,10 @@ func VerifyHeader(header *types.Header, validators []common.Address, checkEpochC
 	nextEpochStartHeight = header.Number.Uint64() + 1
 	nextEpochValidators = extra.Validators
 	return
+}
+
+func GetEpoch(s *native.NativeContract, chainID uint64) (uint64, []common.Address, error) {
+	return getEpoch(s, chainID)
 }
 
 func getValidatorsFromHeader(header *types.Header) ([]common.Address, error) {
