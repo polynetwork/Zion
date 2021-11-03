@@ -19,6 +19,7 @@ package ethapi
 import (
 	"bytes"
 	"context"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"math/big"
@@ -35,6 +36,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -749,6 +751,23 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 	}
 	res := state.GetState(address, common.HexToHash(key))
 	return res[:], state.Error()
+}
+
+func (s *PublicBlockChainAPI) GetStorageAtCacheDB(ctx context.Context, address common.Address, hexKey string, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	stateDB, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if stateDB == nil || err != nil {
+		return nil, err
+	}
+
+	key, err := hex.DecodeString(hexKey)
+	if err != nil {
+		return nil, err
+	}
+	value, err := (*state.CacheDB)(stateDB).Get(utils.ConcatKey(address, key))
+	if err != nil {
+		return nil, err
+	}
+	return value, nil
 }
 
 // CallArgs represents the arguments for a call.
