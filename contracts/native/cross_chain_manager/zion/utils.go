@@ -17,3 +17,33 @@
  */
 
 package zion
+
+import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
+	internal "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
+	cmanager "github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
+)
+
+func verifyFromQuorumTx(proof, extra []byte, hdr *types.Header, sideChain *cmanager.SideChain) error {
+	ethProof := new(ethapi.AccountResult)
+	if err := json.Unmarshal(proof, ethProof); err != nil {
+		return fmt.Errorf("VerifyFromEthProof, unmarshal proof error:%s", err)
+	}
+
+	proofResult, err := internal.VerifyAccountResult(ethProof, hdr, common.BytesToAddress(sideChain.CCMCAddress))
+	if err != nil {
+		return fmt.Errorf("VerifyFromEthProof, verifyMerkleProof error:%v", err)
+	}
+	if proofResult == nil {
+		return fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed!")
+	}
+	if !internal.CheckProofResult(proofResult, extra) {
+		return fmt.Errorf("VerifyFromEthProof, verify proof value hash failed, proof result:%x, extra:%x", proofResult, extra)
+	}
+	return nil
+}

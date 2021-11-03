@@ -20,72 +20,72 @@ package zion
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/quorum"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	pcom "github.com/polynetwork/poly/common"
 )
 
-type ZionHandler struct{}
+type Handler struct{}
 
-func NewHandler() *ZionHandler {
-	return &ZionHandler{}
+func NewHandler() *Handler {
+	return &Handler{}
 }
 
-// todo
-func (this *ZionHandler) MakeDepositProposal(ns *native.NativeContract) (*common.MakeTxParam, error) {
-	ctx := ns.ContractRef().CurrentContext()
+func (h *Handler) MakeDepositProposal(s *native.NativeContract) (*common.MakeTxParam, error) {
+	ctx := s.ContractRef().CurrentContext()
 	params := &common.EntranceParam{}
 	if err := utils.UnpackMethod(common.ABI, common.MethodImportOuterTransfer, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	sideChain, err := side_chain_manager.GetSideChain(ns, params.SourceChainID)
+	log.Trace("ZionSideChainHandler", "MakeDepositProposal", params.String())
+
+	sideChain, err := side_chain_manager.GetSideChain(s, params.SourceChainID)
 	if err != nil {
-		return nil, fmt.Errorf("Zion MakeDepositProposal, side_chain_manager.GetSideChain error: %v", err)
+		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, side_chain_manager.GetSideChain err: %v", err)
 	}
 	if sideChain == nil {
-		return nil, errors.New("Zion MakeDepositProposal, side chain not found")
+		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, side chain not found")
 	}
 
 	val := &common.MakeTxParam{}
 	if err := val.Deserialization(pcom.NewZeroCopySource(params.Extra)); err != nil {
-		return nil, fmt.Errorf("Zion MakeDepositProposal, failed to deserialize MakeTxParam: %v", err)
+		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, failed to deserialize MakeTxParam: %v", err)
 	}
-	if err := common.CheckDoneTx(ns, val.CrossChainID, params.SourceChainID); err != nil {
-		return nil, fmt.Errorf("Zion MakeDepositProposal, check done transaction error: %v", err)
-	}
-	if err := common.PutDoneTx(ns, val.CrossChainID, params.SourceChainID); err != nil {
-		return nil, fmt.Errorf("Zion MakeDepositProposal, PutDoneTx error: %v", err)
+	if err := common.CheckDoneTx(s, val.CrossChainID, params.SourceChainID); err != nil {
+		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, check done transaction error: %v", err)
 	}
 
 	header := &types.Header{}
 	if err := json.Unmarshal(params.HeaderOrCrossChainMsg, header); err != nil {
-		return nil, fmt.Errorf("Zion MakeDepositProposal, deserialize header err: %v", err)
+		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, deserialize header err: %v", err)
 	}
-	valh, err := quorum.GetCurrentValHeight(ns, params.SourceChainID)
+
+	curEpochStartHeight, curEpochValidators, err := zion.GetEpoch(s, params.SourceChainID)
 	if err != nil {
-		return nil, fmt.Errorf("Zion MakeDepositProposal, failed to get current validators height: %v", err)
+		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, failed to get current validators height: %v", err)
 	}
-	if header.Number.Uint64() < valh {
-		return nil, fmt.Errorf("Zion MakeDepositProposal, height of header %d is less than epoch height %d", header.Number.Uint64(), valh)
+	if header.Number.Uint64() < curEpochStartHeight {
+		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, height of header %d is less than epoch height %d", header.Number.Uint64(), curEpochStartHeight)
 	}
-	vs, err := quorum.GetValSet(ns, params.SourceChainID)
-	if err != nil {
-		return nil, fmt.Errorf("Zion MakeDepositProposal, failed to get quorum validators: %v", err)
-	}
-	if _, err := quorum.VerifyQuorumHeader(vs, header, false); err != nil {
-		return nil, fmt.Errorf("Zion MakeDepositProposal, failed to verify quorum header %s: %v", header.Hash().String(), err)
+
+	if _, _, err := zion.VerifyHeader(header, curEpochValidators, false); err != nil {
+		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, failed to verify quorum header %s: %v", header.Hash().String(), err)
 	}
 
 	if err := verifyFromQuorumTx(params.Proof, params.Extra, header, sideChain); err != nil {
-		return nil, fmt.Errorf("Zion MakeDepositProposal, verifyFromEthTx error: %s", err)
+		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, verifyFromEthTx err: %v", err)
+	}
+
+	if err := common.PutDoneTx(s, val.CrossChainID, params.SourceChainID); err != nil {
+		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, PutDoneTx error: %v", err)
 	}
 
 	return val, nil
