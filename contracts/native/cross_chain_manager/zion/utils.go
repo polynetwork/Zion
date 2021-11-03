@@ -24,18 +24,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	internal "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
-	cmanager "github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 )
 
-func verifyFromQuorumTx(proof, extra []byte, hdr *types.Header, sideChain *cmanager.SideChain) error {
+func verifyTx(proof, extra []byte, hdr *types.Header, contract common.Address) error {
 	ethProof := new(ethapi.AccountResult)
 	if err := json.Unmarshal(proof, ethProof); err != nil {
 		return fmt.Errorf("VerifyFromEthProof, unmarshal proof error:%s", err)
 	}
 
-	proofResult, err := internal.VerifyAccountResult(ethProof, hdr, common.BytesToAddress(sideChain.CCMCAddress))
+	proofResult, err := internal.VerifyAccountResult(ethProof, hdr, contract)
 	if err != nil {
 		return fmt.Errorf("VerifyFromEthProof, verifyMerkleProof error:%v", err)
 	}
