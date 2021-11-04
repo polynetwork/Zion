@@ -19,13 +19,11 @@ package eth
 import (
 	"encoding/binary"
 	"reflect"
+	"sync"
 	"unsafe"
 
 	"github.com/ethereum/go-ethereum/common/bitutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/polynetwork/poly/core/states"
-	"github.com/polynetwork/poly/native/service/header_sync/common"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -33,6 +31,7 @@ type Caches struct {
 	native *native.NativeContract
 	cap    int
 	items  map[uint64][]uint32
+	mu     *sync.RWMutex
 }
 
 func NewCaches(size int, native *native.NativeContract) *Caches {
@@ -40,11 +39,15 @@ func NewCaches(size int, native *native.NativeContract) *Caches {
 		cap:    size,
 		native: native,
 		items:  make(map[uint64][]uint32),
+		mu:     new(sync.RWMutex),
 	}
 	return caches
 }
 
 func (self *Caches) deleteCaches() {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
 	for key, _ := range self.items {
 		delete(self.items, key)
 	}
@@ -68,33 +71,18 @@ func (self *Caches) deserialize(buf []byte) []uint32 {
 }
 
 func (self *Caches) tryCache(epoch uint64) []uint32 {
-	contract := utils.HeaderSyncContractAddress
 	current := self.items[epoch]
-	if current == nil {
-		currentStorge, err := self.native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(common.ETH_CACHE), utils.GetUint64Bytes(epoch)))
-		if currentStorge == nil || err != nil {
-			current = nil
-		} else {
-			current1, err := states.GetValueFromRawStorageItem(currentStorge)
-			if err != nil {
-				current = nil
-			} else {
-				current = self.deserialize(current1)
-				self.items[epoch] = current
-			}
-		}
-	}
 	return current
 }
 
 func (self *Caches) addCache(epoch uint64, cache []uint32) {
-	contract := utils.HeaderSyncContractAddress
-	self.native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(common.ETH_CACHE), utils.GetUint64Bytes(epoch)), states.GenRawStorageItem(self.serialize(cache)))
-	self.native.GetCacheDB().Delete(utils.ConcatKey(contract, []byte(common.ETH_CACHE), utils.GetUint64Bytes(epoch-3)))
 	self.items[epoch] = cache
 }
 
 func (self *Caches) getCache(block uint64) []uint32 {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
 	epoch := block / epochLength
 	current := self.tryCache(epoch)
 	if current != nil {
