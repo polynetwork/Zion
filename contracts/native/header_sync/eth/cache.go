@@ -73,32 +73,10 @@ func (self *Caches) deserialize(buf []byte) []uint32 {
 func (self *Caches) tryCache(epoch uint64) []uint32 {
 	current := self.items[epoch]
 	return current
-	// DONT try to fetch cache from database
-	//contract := utils.HeaderSyncContractAddress
-	//current := self.items[epoch]
-	//if current == nil {
-	//	currentStorge, err := self.native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(common.ETH_CACHE), utils.GetUint64Bytes(epoch)))
-	//	if currentStorge == nil || err != nil {
-	//		current = nil
-	//	} else {
-	//		current1, err := states.GetValueFromRawStorageItem(currentStorge)
-	//		if err != nil {
-	//			current = nil
-	//		} else {
-	//			current = self.deserialize(current1)
-	//			self.items[epoch] = current
-	//		}
-	//	}
-	//}
-	//return current
 }
 
 func (self *Caches) addCache(epoch uint64, cache []uint32) {
 	self.items[epoch] = cache
-	// DONT persist cache in database
-	//contract := utils.HeaderSyncContractAddress
-	//self.native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(common.ETH_CACHE), utils.GetUint64Bytes(epoch)), states.GenRawStorageItem(self.serialize(cache)))
-	//self.native.GetCacheDB().Delete(utils.ConcatKey(contract, []byte(common.ETH_CACHE), utils.GetUint64Bytes(epoch-3)))
 }
 
 func (self *Caches) getCache(block uint64) []uint32 {
