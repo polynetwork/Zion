@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package zion
+package utils
 
 import (
 	"encoding/json"
@@ -28,7 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 )
 
-func verifyTx(proof, extra []byte, hdr *types.Header, contract common.Address) error {
+func VerifyTx(proof, extra []byte, hdr *types.Header, contract common.Address) error {
 	ethProof := new(ethapi.AccountResult)
 	if err := json.Unmarshal(proof, ethProof); err != nil {
 		return fmt.Errorf("VerifyFromEthProof, unmarshal proof error:%s", err)

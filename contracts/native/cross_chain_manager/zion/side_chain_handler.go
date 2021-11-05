@@ -25,6 +25,7 @@ import (
 	ecom "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
+	xutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -81,7 +82,7 @@ func (h *Handler) MakeDepositProposal(s *native.NativeContract) (*common.MakeTxP
 		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, failed to verify quorum header %s: %v", header.Hash().String(), err)
 	}
 
-	if err := verifyTx(params.Proof, params.Extra, header, ecom.BytesToAddress(sideChain.CCMCAddress)); err != nil {
+	if err := xutils.VerifyTx(params.Proof, params.Extra, header, ecom.BytesToAddress(sideChain.CCMCAddress)); err != nil {
 		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, verifyFromEthTx err: %v", err)
 	}
 

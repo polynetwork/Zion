@@ -21,6 +21,7 @@ package zion
 import (
 	"encoding/json"
 	"fmt"
+	utils2 "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 
 	ecom "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -76,7 +77,7 @@ func MakeDepositProposal(s *native.NativeContract) (*common.MakeTxParam, error) 
 		return nil, fmt.Errorf("ZionRelayChainHandler MakeDepositProposal, failed to verify quorum header %s: %v", header.Hash().String(), err)
 	}
 
-	if err := verifyTx(params.Proof, params.Extra, header, ecom.BytesToAddress(sideChain.CCMCAddress)); err != nil {
+	if err := utils2.verifyTx(params.Proof, params.Extra, header, ecom.BytesToAddress(sideChain.CCMCAddress)); err != nil {
 		return nil, fmt.Errorf("ZionRelayChainHandler MakeDepositProposal, verifyFromEthTx err: %v", err)
 	}
 

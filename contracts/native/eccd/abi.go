@@ -46,7 +46,7 @@ func InitABI() {
 
 var (
 	ABI  *abi.ABI
-	this = utils.RelayChainECCDContractAddress
+	this = utils.MainChainLockProxyContractAddress
 )
 
 type MethodPutCurEpochStartHeightInput struct {
