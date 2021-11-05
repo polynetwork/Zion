@@ -56,7 +56,7 @@ var NativeContractAddrMap = map[string]common.Address{
 	NativeGovernance:       common.HexToAddress("0x4600691499997fCc224425ba5C93EebC57f3615b"),
 	NativeSyncHeader:       utils.HeaderSyncContractAddress,
 	NativeCrossChain:       utils.CrossChainManagerContractAddress,
-	NativeNeo3StateManager: utils.CrossChainManagerContractAddress,
+	NativeNeo3StateManager: utils.Neo3StateManagerContractAddress,
 	NativeNodeManager:      utils.NodeManagerContractAddress,
 	NativeRelayerManager:   utils.RelayerManagerContractAddress,
 	NativeSideChainManager: utils.SideChainManagerContractAddress,
