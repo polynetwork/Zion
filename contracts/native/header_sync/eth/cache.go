@@ -28,24 +28,18 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
+const cachesCapacity = 3
+
 type Caches struct {
+	cap   int
 	items map[uint64][]uint32
 	mu    *sync.RWMutex
 }
 
 var caches = &Caches{
+	cap:   cachesCapacity,
 	items: make(map[uint64][]uint32),
 	mu:    new(sync.RWMutex),
-}
-
-func (self *Caches) deleteCaches() {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	for key, _ := range self.items {
-		delete(self.items, key)
-	}
-	self.items = nil
 }
 
 func (self *Caches) serialize(values []uint32) []byte {
@@ -71,6 +65,25 @@ func (self *Caches) tryCache(epoch uint64) []uint32 {
 
 func (self *Caches) addCache(epoch uint64, cache []uint32) {
 	self.items[epoch] = cache
+}
+
+func (self *Caches) deleteCaches() {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if len(self.items) <= self.cap {
+		return
+	}
+
+	minEpoch := uint64(0)
+	for epoch, _ := range self.items {
+		if minEpoch == 0 || epoch < minEpoch {
+			minEpoch = epoch
+		}
+	}
+	if minEpoch > 0 {
+		delete(self.items, minEpoch)
+	}
 }
 
 func (self *Caches) getCache(block uint64) []uint32 {
