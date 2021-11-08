@@ -67,7 +67,7 @@ func SyncGenesisHeader(s *native.NativeContract) ([]byte, error) {
 	}
 	chainID := params.ChainID
 
-	if native.IsRelayChain(chainID) {
+	if native.IsMainChain(chainID) {
 		return nil, fmt.Errorf("SyncGenesisHeader, sync relay chain's genesis header is NOT allowed!")
 	}
 
@@ -101,7 +101,7 @@ func SyncBlockHeader(s *native.NativeContract) ([]byte, error) {
 	}
 
 	chainID := params.ChainID
-	if native.IsRelayChain(chainID) {
+	if native.IsMainChain(chainID) {
 		return nil, fmt.Errorf("SyncBlockHeader, sync relay chain's header is NOT allowed!")
 	}
 
@@ -135,7 +135,7 @@ func SyncCrossChainMsg(s *native.NativeContract) ([]byte, error) {
 	}
 
 	chainID := params.ChainID
-	if native.IsRelayChain(chainID) {
+	if native.IsMainChain(chainID) {
 		return nil, fmt.Errorf("SyncCrossChainMsg, sync relay chain's cross chain message is NOT allowed")
 	}
 

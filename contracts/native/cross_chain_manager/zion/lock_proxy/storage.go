@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package eccm
+package lock_proxy
 
 import (
 	"github.com/ethereum/go-ethereum/common"
@@ -27,6 +27,7 @@ import (
 const (
 	SKP_TX_HASH  = "st_tx_hash"
 	SKP_TX_INDEX = "st_tx_index"
+	SKP_TX_PARAMS = "st_tx_params"
 )
 
 func getTxIndex(s *native.NativeContract) (uint64, []byte) {
@@ -55,6 +56,12 @@ func storeTxProof(s *native.NativeContract, txIndex uint64, txHash common.Hash) 
 	s.GetCacheDB().Put(txHashKey(txIndex), txHash[:])
 }
 
+// storeTxParams store tx params and generate tx proof
+func storeTxParams(s *native.NativeContract, hash common.Hash, params []byte) {
+	key := txParamsKey(hash)
+	s.GetCacheDB().Put(key, params)
+}
+
 // ====================================================================
 //
 // storage keys
@@ -67,4 +74,8 @@ func txHashKey(txIndex uint64) []byte {
 
 func txIndexKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_TX_INDEX))
+}
+
+func txParamsKey(hash common.Hash) []byte {
+	return utils.ConcatKey(this, []byte(SKP_TX_PARAMS), hash[:])
 }

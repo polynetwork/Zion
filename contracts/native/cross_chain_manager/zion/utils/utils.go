@@ -28,21 +28,21 @@ import (
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 )
 
-func VerifyTx(proof, extra []byte, hdr *types.Header, contract common.Address) error {
+func VerifyTx(proof []byte, hdr *types.Header, contract common.Address, extra []byte, checkResult bool) ([]byte, error) {
 	ethProof := new(ethapi.AccountResult)
 	if err := json.Unmarshal(proof, ethProof); err != nil {
-		return fmt.Errorf("VerifyFromEthProof, unmarshal proof error:%s", err)
+		return nil, fmt.Errorf("VerifyFromEthProof, unmarshal proof error:%s", err)
 	}
 
 	proofResult, err := internal.VerifyAccountResult(ethProof, hdr, contract)
 	if err != nil {
-		return fmt.Errorf("VerifyFromEthProof, verifyMerkleProof error:%v", err)
+		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof error:%v", err)
 	}
 	if proofResult == nil {
-		return fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed!")
+		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed!")
 	}
-	if !internal.CheckProofResult(proofResult, extra) {
-		return fmt.Errorf("VerifyFromEthProof, verify proof value hash failed, proof result:%x, extra:%x", proofResult, extra)
+	if checkResult && !internal.CheckProofResult(proofResult, extra) {
+		return nil, fmt.Errorf("VerifyFromEthProof, verify proof value hash failed, proof result:%x, extra:%x", proofResult, extra)
 	}
-	return nil
+	return proofResult, nil
 }

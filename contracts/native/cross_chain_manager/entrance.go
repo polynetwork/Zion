@@ -19,7 +19,6 @@
 package cross_chain_manager
 
 import (
-	"encoding/hex"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -31,13 +30,12 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
+	cutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/utils"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/crypto"
-	polycomm "github.com/polynetwork/poly/common"
 )
 
 const contractName = "cross chain manager"
@@ -100,102 +98,71 @@ func Name(s *native.NativeContract) ([]byte, error) {
 }
 
 func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
-	var err error
-
 	ctx := s.ContractRef().CurrentContext()
 	params := &scom.EntranceParam{}
-	if err = utils.UnpackMethod(scom.ABI, scom.MethodImportOuterTransfer, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(scom.ABI, scom.MethodImportOuterTransfer, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	var (
-		srcChainID         = params.SourceChainID
-		dstChainID         uint64
-		srcChain, dstChain *side_chain_manager.SideChain
-		handler            scom.ChainHandler
-		txParam            *scom.MakeTxParam
-		blacked            bool
-	)
-	if native.IsRelayChain(srcChainID) {
-		if txParam, err = zion.MakeDepositProposal(s); err != nil {
-			return nil, err
-		}
-	} else {
-		if blacked, err = CheckIfChainBlacked(s, srcChainID); err != nil {
-			return nil, fmt.Errorf("ImportExTransfer, CheckIfChainBlacked err: %v", err)
-		} else if blacked {
-			return nil, fmt.Errorf("ImportExTransfer, source chain is blacked")
-		}
+	srcChainID := params.SourceChainID
+	if native.IsMainChain(srcChainID) {
+		return nil, nil
+	}
 
-		if srcChain, err = side_chain_manager.GetSideChain(s, srcChainID); err != nil {
-			return nil, fmt.Errorf("ImportExTransfer, side_chain_manager.GetSideChain err: %v", err)
-		} else if srcChain == nil {
-			return nil, fmt.Errorf("ImportExTransfer, side chain %d is not registered", srcChainID)
-		}
+	blacked, err := CheckIfChainBlacked(s, srcChainID)
+	if err != nil {
+		return nil, fmt.Errorf("ImportExTransfer, CheckIfChainBlacked err: %v", err)
+	}
+	if blacked {
+		return nil, fmt.Errorf("ImportExTransfer, source chain is blacked")
+	}
 
-		if handler, err = GetChainHandler(srcChain.Router); err != nil {
-			return nil, err
-		} else if handler == nil {
-			return nil, fmt.Errorf("ImportExTransfer, handler for side chain %d is not exist", srcChainID)
-		}
-		if txParam, err = handler.MakeDepositProposal(s); err != nil {
-			return nil, err
-		}
+	srcChain, err := side_chain_manager.GetSideChain(s, srcChainID)
+	if err != nil {
+		return nil, fmt.Errorf("ImportExTransfer, side_chain_manager.GetSideChain err: %v", err)
+	} else if srcChain == nil {
+		return nil, fmt.Errorf("ImportExTransfer, side chain %d is not registered", srcChainID)
+	}
+
+	handler, err := GetChainHandler(srcChain.Router)
+	if err != nil {
+		return nil, err
+	}
+	if handler == nil {
+		return nil, fmt.Errorf("ImportExTransfer, handler for side chain %d is not exist", srcChainID)
+	}
+
+	txParam, err := handler.MakeDepositProposal(s)
+	if err != nil {
+		return nil, err
 	}
 
 	//check target chain
-	dstChainID = txParam.ToChainID
-	if !native.IsRelayChain(dstChainID) {
-		if blacked, err = CheckIfChainBlacked(s, dstChainID); err != nil {
-			return nil, fmt.Errorf("ImportExTransfer, CheckIfChainBlacked error: %v", err)
-		} else if blacked {
-			return nil, fmt.Errorf("ImportExTransfer, target chain is blacked")
-		}
+	dstChainID := txParam.ToChainID
+	if blacked, err = CheckIfChainBlacked(s, dstChainID); err != nil {
+		return nil, fmt.Errorf("ImportExTransfer, CheckIfChainBlacked error: %v", err)
+	}
+	if blacked {
+		return nil, fmt.Errorf("ImportExTransfer, target chain is blacked")
+	}
 
-		if dstChain, err = side_chain_manager.GetSideChain(s, dstChainID); err != nil {
-			return nil, fmt.Errorf("ImportExTransfer, side_chain_manager.GetSideChain error: %v", err)
-		} else if dstChain == nil {
-			return nil, fmt.Errorf("ImportExTransfer, side chain %d is not registered", dstChainID)
-		} else if dstChain.Router == utils.BTC_ROUTER {
-			return nil, fmt.Errorf("btc is not supported")
-		}
+	dstChain, err := side_chain_manager.GetSideChain(s, dstChainID)
+	if err != nil {
+		return nil, fmt.Errorf("ImportExTransfer, side_chain_manager.GetSideChain error: %v", err)
+	}
+	if dstChain == nil {
+		return nil, fmt.Errorf("ImportExTransfer, side chain %d is not registered", dstChainID)
+	}
+	if dstChain.Router == utils.BTC_ROUTER {
+		return nil, fmt.Errorf("btc is not supported")
 	}
 
 	//NOTE, you need to store the tx in this
-	if err = MakeTransaction(s, txParam, srcChainID); err != nil {
+	if err := cutils.MakeTransaction(s, txParam, srcChainID); err != nil {
 		return nil, err
 	}
 
 	return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
-}
-
-func MakeTransaction(service *native.NativeContract, params *scom.MakeTxParam, fromChainID uint64) error {
-
-	txHash := service.ContractRef().TxHash()
-	merkleValue := &scom.ToMerkleValue{
-		TxHash:      txHash[:],
-		FromChainID: fromChainID,
-		MakeTxParam: params,
-	}
-
-	sink := polycomm.NewZeroCopySink(nil)
-	merkleValue.Serialization(sink)
-	err := PutRequest(service, merkleValue.TxHash, params.ToChainID, sink.Bytes())
-	if err != nil {
-		return fmt.Errorf("MakeTransaction, putRequest error:%s", err)
-	}
-	chainIDBytes := utils.GetUint64Bytes(params.ToChainID)
-	key := hex.EncodeToString(utils.ConcatKey(utils.CrossChainManagerContractAddress, []byte(scom.REQUEST), chainIDBytes, merkleValue.TxHash))
-	scom.NotifyMakeProof(service, hex.EncodeToString(sink.Bytes()), key)
-	return nil
-}
-
-func PutRequest(native *native.NativeContract, txHash []byte, chainID uint64, request []byte) error {
-	hash := crypto.Keccak256(request)
-	contract := utils.CrossChainManagerContractAddress
-	chainIDBytes := utils.GetUint64Bytes(chainID)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.REQUEST), chainIDBytes, txHash), hash)
-	return nil
 }
 
 func BlackChain(s *native.NativeContract) ([]byte, error) {
@@ -205,7 +172,7 @@ func BlackChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsRelayChain(params.ChainID) {
+	if native.IsMainChain(params.ChainID) {
 		return nil, fmt.Errorf("BlackChain, zion relay chain not supported")
 	}
 
@@ -229,7 +196,7 @@ func WhiteChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsRelayChain(params.ChainID) {
+	if native.IsMainChain(params.ChainID) {
 		return nil, fmt.Errorf("WhiteChain, zion relay chain not supported")
 	}
 

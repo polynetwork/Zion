@@ -103,7 +103,7 @@ func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsRelayChain(params.ChainId) {
+	if native.IsMainChain(params.ChainId) {
 		return nil, fmt.Errorf("RegisterSideChain, relay chain `register` is forbidden")
 	}
 
@@ -155,7 +155,7 @@ func ApproveRegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsRelayChain(params.Chainid) {
+	if native.IsMainChain(params.Chainid) {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, relay chain `register approve` is forbidden")
 	}
 
@@ -202,7 +202,7 @@ func UpdateSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsRelayChain(params.ChainId) {
+	if native.IsMainChain(params.ChainId) {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, relay chain `update` is forbidden")
 	}
 
@@ -250,7 +250,7 @@ func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsRelayChain(params.Chainid) {
+	if native.IsMainChain(params.Chainid) {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, relay chain `update approve` is forbidden")
 	}
 
@@ -300,7 +300,7 @@ func QuitSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsRelayChain(params.Chainid) {
+	if native.IsMainChain(params.Chainid) {
 		return nil, fmt.Errorf("QuitSideChain, relay chain `quit` is forbidden")
 	}
 
@@ -339,7 +339,7 @@ func ApproveQuitSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsRelayChain(params.Chainid) {
+	if native.IsMainChain(params.Chainid) {
 		return nil, fmt.Errorf("ApproveQuitSideChain, relay chain `quit approve` is forbidden")
 	}
 

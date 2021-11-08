@@ -25,11 +25,11 @@ import (
 // FailedTxGasUsage tx's gas usage should not be greater than an minimum fixed value if it execute failed.
 const FailedTxGasUsage = uint64(100)
 
-// ZionRelayChainID fix value for zion relay chain
-const ZionRelayChainID = uint64(1)
+// ZionMainChainID fix value for zion relay chain
+const ZionMainChainID = uint64(1)
 
-func IsRelayChain(chainID uint64) bool {
-	return chainID == ZionRelayChainID
+func IsMainChain(chainID uint64) bool {
+	return chainID == ZionMainChainID
 }
 
 const (

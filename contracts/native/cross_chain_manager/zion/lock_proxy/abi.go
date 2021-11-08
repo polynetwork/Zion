@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package eccm
+package lock_proxy
 
 import (
 	"fmt"
@@ -25,14 +25,14 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/eccm"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/lock_proxy"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
 const contractName = "zion main chain cross chain manager"
 
 func InitABI() {
-	ab, err := abi.JSON(strings.NewReader(IEthCrossChainManagerABI))
+	ab, err := abi.JSON(strings.NewReader(ILockProxyABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
@@ -64,7 +64,7 @@ func (m *MethodContractNameOutput) Decode(payload []byte) error {
 }
 
 type MethodCrossChainInput struct {
-	ToChainID    uint64
+	ToChainID  uint64
 	ToContract []byte
 	Method     []byte
 	TxData     []byte
@@ -78,15 +78,12 @@ func (i *MethodCrossChainInput) Decode(payload []byte) error {
 }
 
 type MethodVerifyHeaderAndExecuteTxInput struct {
-	Proof        []byte
-	RawHeader    []byte
-	HeaderProof  []byte
-	CurRawHeader []byte
-	HeaderSig    []byte
+	Header []byte
+	Proof  []byte
 }
 
 func (i *MethodVerifyHeaderAndExecuteTxInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodVerifyHeaderAndExecuteTx, i.Proof, i.RawHeader, i.HeaderProof, i.CurRawHeader, i.HeaderSig)
+	return utils.PackMethod(ABI, MethodVerifyHeaderAndExecuteTx, i.Header, i.Proof)
 }
 func (i *MethodVerifyHeaderAndExecuteTxInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodVerifyHeaderAndExecuteTx, i, payload)
@@ -98,9 +95,10 @@ func emitCrossChainEvent(s *native.NativeContract,
 	proxyOrAssetContract common.Address,
 	toChainID uint64,
 	toContract []byte,
+	method string,
 	rawData []byte,
 ) error {
-	return s.AddNotify(ABI, []string{EventCrossChainEvent, sender.Hex()}, txID, proxyOrAssetContract, toChainID, toContract, rawData)
+	return s.AddNotify(ABI, []string{EventCrossChainEvent, sender.Hex()}, txID, proxyOrAssetContract, toChainID, toContract, method, rawData)
 }
 
 func emitVerifyHeaderAndExecuteTxEvent(s *native.NativeContract,

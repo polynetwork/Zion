@@ -82,7 +82,7 @@ func (h *Handler) MakeDepositProposal(s *native.NativeContract) (*common.MakeTxP
 		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, failed to verify quorum header %s: %v", header.Hash().String(), err)
 	}
 
-	if err := xutils.VerifyTx(params.Proof, params.Extra, header, ecom.BytesToAddress(sideChain.CCMCAddress)); err != nil {
+	if _, err := xutils.VerifyTx(params.Proof, header, ecom.BytesToAddress(sideChain.CCMCAddress), params.Extra, true); err != nil {
 		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, verifyFromEthTx err: %v", err)
 	}
 
