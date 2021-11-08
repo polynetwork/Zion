@@ -36,6 +36,13 @@ func getBalanceFor(s *native.NativeContract, fromAsset common.Address) (*big.Int
 	}
 }
 
+func onlySupportNativeToken(fromAsset common.Address) bool {
+	if fromAsset == common.EmptyAddress {
+		return true
+	}
+	return false
+}
+
 // todo: get erc20 balance
 func erc20Balance(s *native.NativeContract, asset, user common.Address) (*big.Int, error) {
 	return nil, ErrUnSupported

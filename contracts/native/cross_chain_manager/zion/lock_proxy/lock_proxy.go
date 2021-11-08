@@ -112,6 +112,9 @@ func BindAsset(s *native.NativeContract) ([]byte, error) {
 	if input.ToAssetHash == nil || len(input.ToAssetHash) == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, target asset is invalid")
 	}
+	if onlySupportNativeToken(input.FromAssetHash) {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, only support native token")
+	}
 	// allow the same address of `fromAsset` and `targetAsset`, different asset may have the same address in different chain
 
 	sender := s.ContractRef().TxOrigin()
