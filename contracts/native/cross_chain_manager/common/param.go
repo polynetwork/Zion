@@ -64,7 +64,7 @@ type EntranceParam struct {
 	SourceChainID         uint64 `json:"sourceChainId"`
 	Height                uint32 `json:"height"`
 	Proof                 []byte `json:"proof"`
-	RelayerAddress        []byte `json:"relayerAddress"`
+	RelayerAddress        []byte `json:"relayerAddress"` //in zion can be empty because caller can get through ctx
 	Extra                 []byte `json:"extra"`
 	HeaderOrCrossChainMsg []byte `json:"headerOrCrossChainMsg"`
 }

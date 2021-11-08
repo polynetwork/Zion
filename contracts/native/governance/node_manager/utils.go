@@ -72,7 +72,7 @@ func getEffectiveEpochByID(s *native.NativeContract, epochID uint64) (*EpochInfo
 	return getEpoch(s, lastEpochHash)
 }
 
-func checkAuthority(origin, caller common.Address, epoch *EpochInfo) error {
+func CheckAuthority(origin, caller common.Address, epoch *EpochInfo) error {
 	if epoch == nil || epoch.Peers == nil || epoch.Peers.List == nil {
 		return fmt.Errorf("invalid epoch")
 	}
