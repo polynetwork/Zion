@@ -19,8 +19,11 @@
 package lock_proxy
 
 import (
+	"bytes"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	xutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/lock_proxy"
@@ -33,21 +36,24 @@ import (
 var (
 	gasTable = map[string]uint64{
 		MethodName:                     0,
-		MethodCrossChain:               30000,
+		MethodBindProxyHash:            30000,
+		MethodBindAssetHash:            30000,
+		MethodLock:                     30000,
 		MethodVerifyHeaderAndExecuteTx: 30000,
 	}
 )
 
 func InitECCM() {
 	InitABI()
-	native.Contracts[this] = RegisterECCMContract
+	native.Contracts[this] = RegisterLockProxyContract
 }
 
-func RegisterECCMContract(s *native.NativeContract) {
+func RegisterLockProxyContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
 	s.Register(MethodName, Name)
-	//s.Register(MethodCrossChain, CrossChain)
+	s.Register(MethodBindProxyHash, BindProxy)
+	s.Register(MethodBindAssetHash, BindAsset)
 	s.Register(MethodLock, Lock)
 	s.Register(MethodVerifyHeaderAndExecuteTx, VerifyHeaderAndExecuteTx)
 }
@@ -56,7 +62,54 @@ func Name(s *native.NativeContract) ([]byte, error) {
 	return new(MethodContractNameOutput).Encode()
 }
 
+func BindProxy(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	input := new(MethodBindProxyInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, failed to decode params, err: %v", err)
+	}
+	if input.ToChainId == native.ZionMainChainID {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, bind self is illegal")
+	}
+	if input.TargetProxyHash == nil || len(input.TargetProxyHash) == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, target proxy address is invalid")
+	}
+
+	sender := s.ContractRef().TxOrigin()
+	ok, err := nm.CheckConsensusSigns(s, MethodBindProxyHash, ctx.Payload, sender)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, failed to checkConsensusSigns, err: %v", err)
+	}
+	if !ok {
+		return utils.ByteFailed, nil
+	}
+
+	gotTargetAssetHash, err := getProxy(s, input.ToChainId)
+	if gotTargetAssetHash != nil && bytes.Equal(gotTargetAssetHash, input.TargetProxyHash) {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, duplicate bindship, asset %s, chainID %d", hexutil.Encode(input.TargetProxyHash), input.ToChainId)
+	}
+
+	storeProxy(s, input.ToChainId, input.TargetProxyHash)
+	if err := emitBindProxyEvent(s, input.ToChainId, input.TargetProxyHash); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, failed to emit event log, err: %v", err)
+	}
+	return utils.ByteSuccess, nil
+}
+
+func BindAsset(s *native.NativeContract) ([]byte, error) {
+	return nil, nil
+}
+
 func Lock(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	input := new(MethodLockInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		return utils.ByteFailed, fmt.Errorf("ZionMainChain Lock proxy, failed to decode params, err: %v", err)
+	}
+	if input.Amount.Cmp(common.Big0) <= 0 {
+		return utils.ByteFailed, fmt.Errorf("ZionMainChain lock proxy, amount should be greater than zero")
+	}
 	return nil, nil
 }
 
