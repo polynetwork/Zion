@@ -153,6 +153,8 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if input.Amount.Cmp(common.Big0) <= 0 {
 		return utils.ByteFailed, fmt.Errorf("ZionMainChain lock proxy, amount should be greater than zero")
 	}
+
+
 	return nil, nil
 }
 
