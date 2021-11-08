@@ -20,28 +20,22 @@ import (
 	"encoding/binary"
 	"reflect"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/ethereum/go-ethereum/common/bitutil"
-	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/log"
 	"golang.org/x/crypto/sha3"
 )
 
 type Caches struct {
-	native *native.NativeContract
-	cap    int
-	items  map[uint64][]uint32
-	mu     *sync.RWMutex
+	items map[uint64][]uint32
+	mu    *sync.RWMutex
 }
 
-func NewCaches(size int, native *native.NativeContract) *Caches {
-	caches := &Caches{
-		cap:    size,
-		native: native,
-		items:  make(map[uint64][]uint32),
-		mu:     new(sync.RWMutex),
-	}
-	return caches
+var caches = &Caches{
+	items: make(map[uint64][]uint32),
+	mu:    new(sync.RWMutex),
 }
 
 func (self *Caches) deleteCaches() {
@@ -98,6 +92,12 @@ func (self *Caches) getCache(block uint64) []uint32 {
 }
 
 func (self *Caches) generateCache(dest []uint32, seed []byte) {
+	startTime := time.Now().Unix()
+	defer func() {
+		endTime := time.Now().Unix()
+		log.Trace("generateCache", "spent time(second)", endTime-startTime)
+	}()
+
 	// Convert our destination slice to a byte buffer
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&dest))
 	header.Len *= 4
