@@ -168,7 +168,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if blob != nil {
 		toAsset = blob
 	}
-	txData := encodeTxArgs(toAsset, input.ToAddress, input.Amount)
+	txData := EncodeTxArgs(toAsset, input.ToAddress, input.Amount)
 
 	// get and set tx index
 	lastTxIndex, _ := getTxIndex(s)
@@ -178,7 +178,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	// assemble tx, generate and store cross chain transaction proof
 	txHash := s.ContractRef().TxHash()
 	method := "unlock"
-	txParams, txParamsEnc, proof := encodeMakeTxParams(txHash, txIndex, sender, input.ToChainId, toAsset, method, txData)
+	txParams, txParamsEnc, proof := EncodeMakeTxParams(txHash, txIndex, sender, input.ToChainId, toAsset, method, txData)
 
 	storeTxProof(s, txIndex, proof)
 	storeTxParams(s, proof, txParamsEnc)
@@ -226,7 +226,7 @@ func VerifyHeaderAndExecuteTx(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// todo
-	txParams, err := decodeMakeTxParams(proofResult)
+	txParams, err := DecodeMakeTxParams(proofResult)
 	if err != nil {
 		return nil, err
 	}

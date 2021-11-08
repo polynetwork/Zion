@@ -28,7 +28,7 @@ import (
 	polycomm "github.com/polynetwork/poly/common"
 )
 
-func encodeTxArgs(toAssetHash, toAddress []byte, amount *big.Int) []byte {
+func EncodeTxArgs(toAssetHash, toAddress []byte, amount *big.Int) []byte {
 	sink := polycomm.NewZeroCopySink(nil)
 	args := &scom.TxArgs{
 		ToAssetHash: toAssetHash,
@@ -39,19 +39,16 @@ func encodeTxArgs(toAssetHash, toAddress []byte, amount *big.Int) []byte {
 	return sink.Bytes()
 }
 
-func decodeTxArgs(payload []byte) (toAssetHash, toAddress []byte, amount *big.Int, err error) {
+func DecodeTxArgs(payload []byte) (*scom.TxArgs, error) {
 	source := polycomm.NewZeroCopySource(payload)
 	args := new(scom.TxArgs)
-	if err = args.Deserialization(source); err != nil {
-		return
+	if err := args.Deserialization(source); err != nil {
+		return nil, err
 	}
-	toAssetHash = args.ToAssetHash
-	toAddress = args.ToAddress
-	amount = args.Amount
-	return
+	return args, nil
 }
 
-func encodeMakeTxParams(tx common.Hash, txIndexID uint64, caller common.Address,
+func EncodeMakeTxParams(tx common.Hash, txIndexID uint64, caller common.Address,
 	toChainID uint64, toContract []byte, method string, args []byte) (
 	*scom.MakeTxParam, []byte, common.Hash) {
 
@@ -71,7 +68,7 @@ func encodeMakeTxParams(tx common.Hash, txIndexID uint64, caller common.Address,
 	return txParams, sink.Bytes(), txProof
 }
 
-func decodeMakeTxParams(blob []byte) (*scom.MakeTxParam, error) {
+func DecodeMakeTxParams(blob []byte) (*scom.MakeTxParam, error) {
 	source := polycomm.NewZeroCopySource(blob)
 	txParams := new(scom.MakeTxParam)
 	if err := txParams.Deserialization(source); err != nil {
