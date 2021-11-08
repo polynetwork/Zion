@@ -85,9 +85,10 @@ func BindProxy(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, nil
 	}
 
-	gotTargetAssetHash, err := getProxy(s, input.ToChainId)
-	if gotTargetAssetHash != nil && bytes.Equal(gotTargetAssetHash, input.TargetProxyHash) {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, duplicate bindship, asset %s, chainID %d", hexutil.Encode(input.TargetProxyHash), input.ToChainId)
+	gotTargetProxyHash, _ := getProxy(s, input.ToChainId)
+	if gotTargetProxyHash != nil && bytes.Equal(gotTargetProxyHash, input.TargetProxyHash) {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, duplicate bindship, asset %s, chainID %d",
+			hexutil.Encode(input.TargetProxyHash), input.ToChainId)
 	}
 
 	storeProxy(s, input.ToChainId, input.TargetProxyHash)
@@ -98,7 +99,46 @@ func BindProxy(s *native.NativeContract) ([]byte, error) {
 }
 
 func BindAsset(s *native.NativeContract) ([]byte, error) {
-	return nil, nil
+	ctx := s.ContractRef().CurrentContext()
+
+	input := new(MethodBindAssetHashInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, failed to decode params, err: %v", err)
+	}
+
+	if input.ToChainId == native.ZionMainChainID {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, bind self is illegal")
+	}
+	if input.ToAssetHash == nil || len(input.ToAssetHash) == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, target asset is invalid")
+	}
+	// allow the same address of `fromAsset` and `targetAsset`, different asset may have the same address in different chain
+
+	sender := s.ContractRef().TxOrigin()
+	ok, err := nm.CheckConsensusSigns(s, MethodBindAssetHash, ctx.Payload, sender)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, failed to checkConsensusSigns, err: %v", err)
+	}
+	if !ok {
+		return utils.ByteFailed, nil
+	}
+
+	gotTargetAssetHash, err := getAsset(s, input.FromAssetHash, input.ToChainId)
+	if gotTargetAssetHash != nil && bytes.Equal(gotTargetAssetHash, input.ToAssetHash) {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, duplicate bindship, from asset %s, target asset %s, target chain id %d",
+			input.FromAssetHash.Hex(), hexutil.Encode(input.ToAssetHash), input.ToChainId)
+	}
+
+	currentBalance, err := getBalanceFor(s, input.FromAssetHash)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset")
+	}
+
+	storeAsset(s, input.FromAssetHash, input.ToChainId, input.ToAssetHash)
+	if err := emitBindAssetEvent(s, input.FromAssetHash, input.ToChainId, input.ToAssetHash, currentBalance); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, failed to emit event log, err: %v", err)
+	}
+	return utils.ByteSuccess, nil
 }
 
 func Lock(s *native.NativeContract) ([]byte, error) {
