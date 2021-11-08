@@ -44,7 +44,7 @@ var (
 	}
 )
 
-func InitECCM() {
+func InitLockProxy() {
 	InitABI()
 	native.Contracts[this] = RegisterLockProxyContract
 }

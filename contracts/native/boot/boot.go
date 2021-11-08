@@ -34,5 +34,5 @@ func InitialNativeContracts() {
 	node_manager.InitNodeManager()
 	relayer_manager.InitRelayerManager()
 	side_chain_manager.InitSideChainManager()
-	lock_proxy.InitECCM()
+	lock_proxy.InitLockProxy()
 }
