@@ -42,7 +42,7 @@ func InitABI() {
 
 var (
 	ABI  *abi.ABI
-	this = utils.MainChainECCMContractAddress
+	this = utils.MainChainLockProxyContractAddress
 )
 
 // function name

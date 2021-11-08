@@ -246,7 +246,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 
 	if native.IsNativeContract(addr) {
-		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas)
+		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, value)
 	} else {
 		if isPrecompile {
 			ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -308,7 +308,7 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	var snapshot = evm.StateDB.Snapshot()
 
 	if native.IsNativeContract(addr) {
-		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas)
+		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, value)
 	} else {
 		// It is allowed to call precompiles, even via delegatecall
 		if p, isPrecompile := evm.precompile(addr); isPrecompile {
@@ -349,7 +349,7 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	var snapshot = evm.StateDB.Snapshot()
 
 	if native.IsNativeContract(addr) {
-		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas)
+		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, nil)
 	} else {
 		// It is allowed to call precompiles, even via delegatecall
 		if p, isPrecompile := evm.precompile(addr); isPrecompile {
@@ -399,7 +399,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	evm.StateDB.AddBalance(addr, big0)
 
 	if native.IsNativeContract(addr) {
-		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas)
+		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, nil)
 	} else {
 		if p, isPrecompile := evm.precompile(addr); isPrecompile {
 			ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -436,7 +436,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 // In addition, the gas of native call temporarily uses a fixed value
 //
 // todo(fuk): try to test precompile and ensure that `nativeCall` is safe enough
-func (evm *EVM) nativeCall(caller, addr common.Address, input []byte, suppliedGas uint64) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) nativeCall(caller, addr common.Address, input []byte, suppliedGas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	sdb := evm.StateDB.(*state.StateDB)
 	blockNumber := evm.Context.BlockNumber
 
@@ -445,8 +445,11 @@ func (evm *EVM) nativeCall(caller, addr common.Address, input []byte, suppliedGa
 	if evm.TxContext.Origin != common.EmptyAddress && len(evm.TxContext.Origin[:]) == common.AddressLength {
 		msgSender = evm.TxContext.Origin
 	}
+	if value == nil {
+		value = common.Big0
+	}
 	contractRef := native.NewContractRef(sdb, msgSender, caller, blockNumber, txHash, suppliedGas, evm.Callback)
-
+	contractRef.SetValue(value)
 	ret, leftOverGas, err = contractRef.NativeCall(caller, addr, input)
 	return
 }

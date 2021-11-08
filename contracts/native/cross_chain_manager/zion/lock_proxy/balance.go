@@ -20,10 +20,12 @@ package lock_proxy
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/core"
 )
 
 var ErrUnSupported = errors.New("erc20 asset cross chain unsupported yet")
@@ -35,40 +37,37 @@ func getBalanceFor(s *native.NativeContract, fromAsset common.Address) (*big.Int
 		return erc20Balance(s, fromAsset, this)
 	}
 }
-/*
-function _transferToContract(address fromAssetHash, uint256 amount) internal returns (bool) {
-	if (fromAssetHash == address(0)) {
-		// fromAssetHash === address(0) denotes user choose to lock ether
-		// passively check if the received msg.value equals amount
-		require(msg.value != 0, "transferred ether cannot be zero!");
-		require(msg.value == amount, "transferred ether is not equal to amount!");
+
+func transfer2Contract(s *native.NativeContract, fromAsset, txOrigin common.Address, amount *big.Int) error {
+	if fromAsset == common.EmptyAddress {
+		if amount.Cmp(common.Big0) == 0 {
+			return fmt.Errorf("transferred native token cannot be zero!")
+		}
+		if s.ContractRef().Value().Cmp(amount) != 0 {
+			return fmt.Errorf("transferred native token is not equal to amount!")
+		}
 	} else {
-		// make sure lockproxy contract will decline any received ether
-		require(msg.value == 0, "there should be no ether transfer!");
-		// actively transfer amount of asset from msg.sender to lock_proxy contract
-		require(_transferERC20ToContract(fromAssetHash, _msgSender(), address(this), amount), "transfer erc20 asset to lock_proxy contract failed!");
+		if s.ContractRef().Value().Cmp(common.Big0) != 0 {
+			return fmt.Errorf("there should be no native token transfer!")
+		}
+		return erc20Transfer(s, fromAsset, txOrigin, this, amount)
 	}
-	return true;
-}
-*/
-func transfer2Contract(s *native.NativeContract, fromAsset common.Address, amount *big.Int) error {
 	return nil
 }
 
-/*
-function _transferFromContract(address toAssetHash, address toAddress, uint256 amount) internal returns (bool) {
-	if (toAssetHash == address(0x0000000000000000000000000000000000000000)) {
-		// toAssetHash === address(0) denotes contract needs to unlock ether to toAddress
-		// convert toAddress from 'address' type to 'address payable' type, then actively transfer ether
-		address(uint160(toAddress)).transfer(amount);
-	} else {
-		// actively transfer amount of asset from msg.sender to lock_proxy contract
-		require(_transferERC20FromContract(toAssetHash, toAddress, amount), "transfer erc20 asset to lock_proxy contract failed!");
-	}
-	return true;
-}
-*/
 func transferFromContract(s *native.NativeContract, toAsset, toAddress common.Address, amount *big.Int) error {
+	if toAsset == common.EmptyAddress {
+		return nativeTransfer(s, this, toAddress, amount)
+	} else {
+		return erc20TransferFrom(s, toAsset, this, toAddress, amount)
+	}
+}
+
+func nativeTransfer(s *native.NativeContract, from, to common.Address, amount *big.Int) error {
+	if !core.CanTransfer(s.StateDB(), from, amount) {
+		return fmt.Errorf("Insufficient balance")
+	}
+	core.Transfer(s.StateDB(), from, to, amount)
 	return nil
 }
 
@@ -79,7 +78,15 @@ func onlySupportNativeToken(fromAsset common.Address) bool {
 	return false
 }
 
-// todo: get erc20 balance
-func erc20Balance(s *native.NativeContract, asset, user common.Address) (*big.Int, error) {
+// todo: implement erc20 interfaces
+func erc20Balance(s *native.NativeContract, asset, owner common.Address) (*big.Int, error) {
 	return nil, ErrUnSupported
+}
+
+func erc20Transfer(s *native.NativeContract, asset, from, to common.Address, amount *big.Int) error {
+	return ErrUnSupported
+}
+
+func erc20TransferFrom(s *native.NativeContract, asset, from, to common.Address, amount *big.Int) error {
+	return ErrUnSupported
 }

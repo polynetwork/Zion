@@ -37,6 +37,7 @@ type ContractRef struct {
 	caller      common.Address
 	evmHandler  EVMHandler
 	gasLeft     uint64
+	value       *big.Int
 }
 
 func NewContractRef(
@@ -84,6 +85,14 @@ func (s *ContractRef) EVMCall(caller, contractAddr common.Address, input []byte)
 		return nil, 0, nil
 	}
 	return s.evmHandler(caller, contractAddr, input)
+}
+
+func (s *ContractRef) SetValue(value *big.Int) {
+	s.value = value
+}
+
+func (s *ContractRef) Value() *big.Int {
+	return s.value
 }
 
 func (s *ContractRef) StateDB() *state.StateDB {
