@@ -22,8 +22,10 @@ import (
 	"bytes"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	cutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/utils"
 	xutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/lock_proxy"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -145,56 +147,54 @@ func BindAsset(s *native.NativeContract) ([]byte, error) {
 
 func Lock(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	s.ContractRef().TxOrigin()
+	sender := s.ContractRef().TxOrigin()
+
 	input := new(MethodLockInput)
 	if err := input.Decode(ctx.Payload); err != nil {
-		return utils.ByteFailed, fmt.Errorf("ZionMainChain Lock proxy, failed to decode params, err: %v", err)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to decode params, err: %v", err)
+	}
+	if input.Amount.Cmp(common.Big0) == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, amount should be greater than zero")
 	}
 
+	// transfer asset
+	if err := transfer2Contract(s, input.FromAssetHash, sender, input.Amount); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, transfer to contract failed, err: %v", err)
+	}
 
+	// assemble tx data
+	toAsset := common.EmptyAddress.Bytes()
+	blob, _ := getAsset(s, input.FromAssetHash, input.ToChainId)
+	if blob != nil {
+		toAsset = blob
+	}
+	txData := encodeTxArgs(toAsset, input.ToAddress, input.Amount)
 
-	return nil, nil
-}
+	// get and set tx index
+	lastTxIndex, _ := getTxIndex(s)
+	storeTxIndex(s, lastTxIndex+1)
+	txIndex, txIndexID := getTxIndex(s)
 
-func Unlock(s *native.NativeContract) ([]byte, error) {
-	return nil, nil
-}
+	// assemble tx, generate and store cross chain transaction proof
+	txHash := s.ContractRef().TxHash()
+	method := "unlock"
+	txParams, txParamsEnc, proof := encodeMakeTxParams(txHash, txIndex, sender, input.ToChainId, toAsset, method, txData)
 
-func CrossChain(s *native.NativeContract) ([]byte, error) {
-	return nil, nil
-	//ctx := s.ContractRef().CurrentContext()
-	//caller := s.ContractRef().MsgSender()
-	//
-	//// check authority
-	//if caller != utils.MainChainLockProxyContractAddress {
-	//	return utils.ByteFailed, fmt.Errorf("ZionMainChainECCM crossChain, caller MUST be `lock proxy`")
-	//}
-	//
-	//input := new(MethodCrossChainInput)
-	//if err := input.Decode(ctx.Payload); err != nil {
-	//	return utils.ByteFailed, fmt.Errorf("ZionMainChainECCM crossChain, failed to decode params, err: %v", err)
-	//}
-	//
-	//// get and set tx index
-	//lastTxIndex, _ := getTxIndex(s)
-	//storeTxIndex(s, lastTxIndex+1)
-	//txIndex, txIndexID := getTxIndex(s)
-	//
-	//// assemble tx, generate and store cross chain transaction proof
-	//sender := s.ContractRef().TxOrigin()
-	//txHash := s.ContractRef().TxHash()
-	//method := string(input.Method)
-	//args := input.TxData
-	//blob, proof := encodeMakeTxParams(txHash, txIndex, caller, input.ToChainID, input.ToContract, method, args)
-	//
-	//storeTxProof(s, txIndex, proof)
-	//storeTxParams(s, proof, blob)
-	//
-	//// emit event log
-	//if err := emitCrossChainEvent(s, sender, txIndexID, caller, input.ToChainID, input.ToContract, method, args); err != nil {
-	//	return utils.ByteFailed, fmt.Errorf("ZionMainChainECCM crossChain, failed to emit event log, err: %v", err)
-	//}
-	//return utils.ByteSuccess, nil
+	storeTxProof(s, txIndex, proof)
+	storeTxParams(s, proof, txParamsEnc)
+
+	// emit event log
+	if err := emitCrossChainEvent(s, sender, txIndexID, sender, input.ToChainId, toAsset, method, txData); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit crossChainEvent log, err: %v", err)
+	}
+	if err := emitLockEvent(s, input.FromAssetHash, sender, input.ToChainId, toAsset, input.ToAddress, input.Amount); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit lockEvent log, err: %v", err)
+	}
+
+	if err := cutils.MakeTransaction(s, txParams, native.ZionMainChainID); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to makeTransaction, err: %v", err)
+	}
+	return utils.ByteSuccess, nil
 }
 
 func VerifyHeaderAndExecuteTx(s *native.NativeContract) ([]byte, error) {
@@ -231,7 +231,6 @@ func VerifyHeaderAndExecuteTx(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 	return txParams.Args, nil
-	return nil, nil
 }
 
 func executeCrossChainTx(s *native.NativeContract) ([]byte, error) {

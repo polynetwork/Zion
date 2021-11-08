@@ -19,6 +19,7 @@ package common
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -278,5 +279,37 @@ func (this *MultiSignParam) Deserialization(source *polycomm.ZeroCopySource) err
 	this.TxHash = txHash
 	this.Address = address
 	this.Signs = signs
+	return nil
+}
+
+type TxArgs struct {
+	ToAssetHash []byte
+	ToAddress   []byte
+	Amount      *big.Int
+}
+
+func (this *TxArgs) Serialization(sink *polycomm.ZeroCopySink) {
+	sink.WriteVarBytes(this.ToAssetHash)
+	sink.WriteVarBytes(this.ToAddress)
+	sink.WriteVarBytes(this.Amount.Bytes())
+}
+
+func (this *TxArgs) Deserialization(source *polycomm.ZeroCopySource) error {
+	toAssetHash, eof := source.NextVarBytes()
+	if eof {
+		return fmt.Errorf("TxArgs deserialize toAssetHash error")
+	}
+	toAddress, eof := source.NextVarBytes()
+	if eof {
+		return fmt.Errorf("TxArgs deserialize toAddress error")
+	}
+	enc, eof := source.NextVarBytes()
+	if eof {
+		return fmt.Errorf("TxArgs deserialize amount error")
+	}
+
+	this.ToAssetHash = toAssetHash
+	this.ToAddress = toAddress
+	this.Amount = new(big.Int).SetBytes(enc)
 	return nil
 }

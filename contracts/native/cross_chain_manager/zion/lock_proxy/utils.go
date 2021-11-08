@@ -19,6 +19,8 @@
 package lock_proxy
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -26,9 +28,32 @@ import (
 	polycomm "github.com/polynetwork/poly/common"
 )
 
+func encodeTxArgs(toAssetHash, toAddress []byte, amount *big.Int) []byte {
+	sink := polycomm.NewZeroCopySink(nil)
+	args := &scom.TxArgs{
+		ToAssetHash: toAssetHash,
+		ToAddress:   toAddress,
+		Amount:      amount,
+	}
+	args.Serialization(sink)
+	return sink.Bytes()
+}
+
+func decodeTxArgs(payload []byte) (toAssetHash, toAddress []byte, amount *big.Int, err error) {
+	source := polycomm.NewZeroCopySource(payload)
+	args := new(scom.TxArgs)
+	if err = args.Deserialization(source); err != nil {
+		return
+	}
+	toAssetHash = args.ToAssetHash
+	toAddress = args.ToAddress
+	amount = args.Amount
+	return
+}
+
 func encodeMakeTxParams(tx common.Hash, txIndexID uint64, caller common.Address,
 	toChainID uint64, toContract []byte, method string, args []byte) (
-	[]byte, common.Hash) {
+	*scom.MakeTxParam, []byte, common.Hash) {
 
 	txParams := &scom.MakeTxParam{
 		TxHash:              tx[:],
@@ -43,7 +68,7 @@ func encodeMakeTxParams(tx common.Hash, txIndexID uint64, caller common.Address,
 	sink := polycomm.NewZeroCopySink(nil)
 	txParams.Serialization(sink)
 	txProof := crypto.Keccak256Hash(sink.Bytes())
-	return sink.Bytes(), txProof
+	return txParams, sink.Bytes(), txProof
 }
 
 func decodeMakeTxParams(blob []byte) (*scom.MakeTxParam, error) {
