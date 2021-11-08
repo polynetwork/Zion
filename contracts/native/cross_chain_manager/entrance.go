@@ -20,6 +20,7 @@ package cross_chain_manager
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
@@ -78,6 +79,8 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return heco.NewHecoHandler(), nil
 	case utils.MSC_ROUTER:
 		return msc.NewHandler(), nil
+	case utils.OKEX_ROUTER:
+		return okex.NewHandler(), nil
 	case utils.QUORUM_ROUTER:
 		return quorum.NewQuorumHandler(), nil
 	case utils.POLYGON_BOR_ROUTER:

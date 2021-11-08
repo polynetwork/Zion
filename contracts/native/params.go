@@ -40,8 +40,7 @@ const (
 	NativeNodeManager        = "node_manager"
 	NativeRelayerManager     = "relayer_manager"
 	NativeSideChainManager   = "side_chain_manager"
-	NativeMainChainLockProxy = "relay_chain_lock_proxy"
-	NativeMainChainECCM      = "relay_chain_eccm"
+	NativeMainChainLockProxy = "main_chain_lock_proxy"
 
 	// native backup contracts
 	NativeExtra5  = "extra5"
@@ -65,12 +64,12 @@ var NativeContractAddrMap = map[string]common.Address{
 	NativeGovernance:         utils.GovernanceContractAddress,
 	NativeSyncHeader:         utils.HeaderSyncContractAddress,
 	NativeCrossChain:         utils.CrossChainManagerContractAddress,
-	NativeNeo3StateManager:   utils.CrossChainManagerContractAddress,
+	NativeNeo3StateManager:   utils.Neo3StateManagerContractAddress,
 	NativeNodeManager:        utils.NodeManagerContractAddress,
 	NativeRelayerManager:     utils.RelayerManagerContractAddress,
 	NativeSideChainManager:   utils.SideChainManagerContractAddress,
 	NativeMainChainLockProxy: utils.MainChainLockProxyContractAddress,
-	NativeMainChainECCM:      utils.MainChainECCMContractAddress,
+	NativeExtra5:             common.HexToAddress("0xD37F626c9E007DdD244E5Cbee0C223fec6D11289"),
 	NativeExtra6:             common.HexToAddress("0x33463b771Da32D450723C7C23a2240dE223b53bd"),
 	NativeExtra7:             common.HexToAddress("0x0F257CD338Fa8F1Af3D31b16C1fBddae2Dc96D41"),
 	NativeExtra8:             common.HexToAddress("0x4479AcbCeA458Badf21dbEC7Db6fC236Bf08fbb9"),
