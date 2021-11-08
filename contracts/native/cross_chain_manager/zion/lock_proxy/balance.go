@@ -43,11 +43,11 @@ func transfer2Contract(s *native.NativeContract, fromAsset, txOrigin common.Addr
 		if amount.Cmp(common.Big0) == 0 {
 			return fmt.Errorf("transferred native token cannot be zero!")
 		}
-		if s.ContractRef().Value().Cmp(amount) != 0 {
+		if s.ContractRef().Value() == nil || s.ContractRef().Value().Cmp(amount) != 0 {
 			return fmt.Errorf("transferred native token is not equal to amount!")
 		}
 	} else {
-		if s.ContractRef().Value().Cmp(common.Big0) != 0 {
+		if s.ContractRef().Value() != nil && s.ContractRef().Value().Cmp(common.Big0) != 0 {
 			return fmt.Errorf("there should be no native token transfer!")
 		}
 		return erc20Transfer(s, fromAsset, txOrigin, this, amount)
