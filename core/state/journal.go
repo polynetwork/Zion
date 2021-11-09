@@ -109,8 +109,9 @@ type (
 		prev    uint64
 	}
 	storageChange struct {
-		account       *common.Address
-		key, prevalue common.Hash
+		account  *common.Address
+		key      common.Hash
+		prevalue []byte
 	}
 	codeChange struct {
 		account            *common.Address

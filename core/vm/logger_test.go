@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"bytes"
 	"math/big"
 	"testing"
 
@@ -69,7 +70,7 @@ func TestStoreCapture(t *testing.T) {
 			len(logger.storage[contract.Address()]))
 	}
 	exp := common.BigToHash(big.NewInt(1))
-	if logger.storage[contract.Address()][index] != exp {
+	if !bytes.Equal(logger.storage[contract.Address()][index], exp.Bytes()) {
 		t.Errorf("expected %x, got %x", exp, logger.storage[contract.Address()][index])
 	}
 }
