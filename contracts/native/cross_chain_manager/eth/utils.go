@@ -35,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
-	"github.com/polynetwork/poly/common"
 )
 
 func verifyFromEthTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32, sideChain *side_chain_manager.SideChain) (*scom.MakeTxParam, error) {
@@ -77,9 +76,8 @@ func verifyFromEthTx(native *native.NativeContract, proof, extra []byte, fromCha
 		return nil, fmt.Errorf("VerifyFromEthProof, verify proof value hash failed, proof result:%x, extra:%x", proofResult, extra)
 	}
 
-	data := common.NewZeroCopySource(extra)
-	txParam := new(scom.MakeTxParam)
-	if err := txParam.Deserialization(data); err != nil {
+	txParam, err := scom.DecodeTxParam(extra)
+	if err != nil {
 		return nil, fmt.Errorf("VerifyFromEthProof, deserialize merkleValue error:%s", err)
 	}
 	return txParam, nil

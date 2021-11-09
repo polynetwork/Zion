@@ -23,11 +23,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
+	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	pcom "github.com/polynetwork/poly/common"
 )
 
 type QuorumHandler struct{}
@@ -51,8 +51,8 @@ func (this *QuorumHandler) MakeDepositProposal(ns *native.NativeContract) (*comm
 		return nil, errors.New("Quorum MakeDepositProposal, side chain not found")
 	}
 
-	val := &common.MakeTxParam{}
-	if err := val.Deserialization(pcom.NewZeroCopySource(params.Extra)); err != nil {
+	val, err := scom.DecodeTxParam(params.Extra)
+	if err != nil {
 		return nil, fmt.Errorf("Quorum MakeDepositProposal, failed to deserialize MakeTxParam: %v", err)
 	}
 	if err := common.CheckDoneTx(ns, val.CrossChainID, params.SourceChainID); err != nil {

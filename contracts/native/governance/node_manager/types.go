@@ -26,8 +26,8 @@ import (
 	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
-	"golang.org/x/crypto/sha3"
 )
 
 type PeerInfo struct {
@@ -176,7 +176,7 @@ func (m *EpochInfo) Hash() common.Hash {
 		Peers:       m.Peers,
 		StartHeight: m.StartHeight,
 	}
-	v := RLPHash(inf)
+	v := utils.RLPHash(inf)
 	m.hash.Store(v)
 	return v
 }
@@ -309,14 +309,7 @@ func (m *ConsensusSign) Hash() common.Hash {
 		Method: m.Method,
 		Input:  m.Input,
 	}
-	v := RLPHash(inf)
+	v := utils.RLPHash(inf)
 	m.hash.Store(v)
 	return v
-}
-
-func RLPHash(v interface{}) (h common.Hash) {
-	hw := sha3.NewLegacyKeccak256()
-	rlp.Encode(hw, v)
-	hw.Sum(h[:0])
-	return h
 }

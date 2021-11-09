@@ -19,8 +19,12 @@ package common
 
 import (
 	"fmt"
+	"io"
+	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/rlp"
 	polycomm "github.com/polynetwork/poly/common"
 )
 
@@ -119,54 +123,74 @@ type MakeTxParam struct {
 	Args                []byte
 }
 
-func (this *MakeTxParam) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteVarBytes(this.TxHash)
-	sink.WriteVarBytes(this.CrossChainID)
-	sink.WriteVarBytes(this.FromContractAddress)
-	sink.WriteUint64(this.ToChainID)
-	sink.WriteVarBytes(this.ToContractAddress)
-	sink.WriteVarBytes([]byte(this.Method))
-	sink.WriteVarBytes(this.Args)
+func (m *MakeTxParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.TxHash, m.CrossChainID, m.FromContractAddress, m.ToChainID,
+		m.ToContractAddress, m.Method, m.Args})
+}
+func (m *MakeTxParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		TxHash              []byte
+		CrossChainID        []byte
+		FromContractAddress []byte
+		ToChainID           uint64
+		ToContractAddress   []byte
+		Method              string
+		Args                []byte
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.TxHash, m.CrossChainID, m.FromContractAddress, m.ToChainID, m.ToContractAddress, m.Method, m.Args =
+		data.TxHash, data.CrossChainID, data.FromContractAddress, data.ToChainID, data.ToContractAddress, data.Method, data.Args
+	return nil
 }
 
-func (this *MakeTxParam) Deserialization(source *polycomm.ZeroCopySource) error {
-	txHash, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("MakeTxParam deserialize txHash error")
-	}
-	crossChainID, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("MakeTxParam deserialize crossChainID error")
-	}
-	fromContractAddress, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("MakeTxParam deserialize fromContractAddress error")
-	}
-	toChainID, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("MakeTxParam deserialize toChainID error")
-	}
-	toContractAddress, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("MakeTxParam deserialize toContractAddress error")
-	}
-	method, eof := source.NextString()
-	if eof {
-		return fmt.Errorf("MakeTxParam deserialize method error")
-	}
-	args, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("MakeTxParam deserialize args error")
+type MakeTxParamShim struct {
+	TxHash              []byte
+	CrossChainID        []byte
+	FromContractAddress []byte
+	ToChainID           *big.Int
+	ToContractAddress   []byte
+	Method              []byte
+	Args                []byte
+}
+
+func DecodeTxParam(data []byte) (param *MakeTxParam, err error) {
+	BytesTy, _ := abi.NewType("bytes", "", nil)
+	IntTy, _ := abi.NewType("int", "", nil)
+	// StringTy, _ := abi.NewType("string", "", nil)
+
+	TxParam := abi.Arguments{
+		{Type: BytesTy, Name: "txHash"},
+		{Type: BytesTy, Name: "crossChainID"},
+		{Type: BytesTy, Name: "fromContractAddress"},
+		{Type: IntTy, Name: "toChainID"},
+		{Type: BytesTy, Name: "toContractAddress"},
+		{Type: BytesTy, Name: "method"},
+		{Type: BytesTy, Name: "args"},
 	}
 
-	this.TxHash = txHash
-	this.CrossChainID = crossChainID
-	this.FromContractAddress = fromContractAddress
-	this.ToChainID = toChainID
-	this.ToContractAddress = toContractAddress
-	this.Method = method
-	this.Args = args
-	return nil
+	args, err := TxParam.Unpack(data)
+	if err != nil {
+		return
+	}
+
+	shim := new(MakeTxParamShim)
+	err = TxParam.Copy(shim, args)
+	if err != nil {
+		return nil, err
+	}
+	param = &MakeTxParam{
+		TxHash:              shim.TxHash,
+		CrossChainID:        shim.CrossChainID,
+		ToChainID:           shim.ToChainID.Uint64(),
+		FromContractAddress: shim.FromContractAddress,
+		ToContractAddress:   shim.ToContractAddress,
+		Method:              string(shim.Method),
+		Args:                shim.Args,
+	}
+	return
 }
 
 type ToMerkleValue struct {
@@ -175,31 +199,21 @@ type ToMerkleValue struct {
 	MakeTxParam *MakeTxParam
 }
 
-func (this *ToMerkleValue) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteVarBytes(this.TxHash)
-	sink.WriteUint64(this.FromChainID)
-	this.MakeTxParam.Serialization(sink)
+func (m *ToMerkleValue) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.TxHash, m.FromChainID, m.MakeTxParam})
 }
 
-func (this *ToMerkleValue) Deserialization(source *polycomm.ZeroCopySource) error {
-	txHash, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("MerkleValue deserialize txHash error")
-	}
-	fromChainID, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("MerkleValue deserialize fromChainID error")
+func (m *ToMerkleValue) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		TxHash      []byte
+		FromChainID uint64
+		MakeTxParam *MakeTxParam
 	}
 
-	makeTxParam := new(MakeTxParam)
-	err := makeTxParam.Deserialization(source)
-	if err != nil {
-		return fmt.Errorf("MerkleValue deserialize makeTxParam error:%s", err)
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-
-	this.TxHash = txHash
-	this.FromChainID = fromChainID
-	this.MakeTxParam = makeTxParam
+	m.TxHash, m.FromChainID, m.MakeTxParam = data.TxHash, data.FromChainID, data.MakeTxParam
 	return nil
 }
 
