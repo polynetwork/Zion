@@ -20,7 +20,6 @@ package cross_chain_manager
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
@@ -29,11 +28,13 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	cutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/utils"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/lock_proxy"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -140,8 +141,17 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	//check target chain
+	// transfer outcome for main chain
 	dstChainID := txParam.ToChainID
+	if native.IsMainChain(dstChainID) {
+		if err := lock_proxy.Unlock(s, txParam); err != nil {
+			return nil, err
+		} else {
+			return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
+		}
+	}
+
+	//check target chain
 	if blacked, err = CheckIfChainBlacked(s, dstChainID); err != nil {
 		return nil, fmt.Errorf("ImportExTransfer, CheckIfChainBlacked error: %v", err)
 	}

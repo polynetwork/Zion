@@ -25,22 +25,19 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	cutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/utils"
-	xutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/lock_proxy"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
 var (
 	gasTable = map[string]uint64{
-		MethodName:                     0,
-		MethodBindProxyHash:            30000,
-		MethodBindAssetHash:            30000,
-		MethodLock:                     30000,
-		MethodVerifyHeaderAndExecuteTx: 30000,
+		MethodName:          0,
+		MethodBindProxyHash: 10000,
+		MethodBindAssetHash: 10000,
+		MethodLock:          10000,
 	}
 )
 
@@ -56,7 +53,6 @@ func RegisterLockProxyContract(s *native.NativeContract) {
 	s.Register(MethodBindProxyHash, BindProxy)
 	s.Register(MethodBindAssetHash, BindAsset)
 	s.Register(MethodLock, Lock)
-	s.Register(MethodVerifyHeaderAndExecuteTx, VerifyHeaderAndExecuteTx)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -197,42 +193,16 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	return utils.ByteSuccess, nil
 }
 
-func VerifyHeaderAndExecuteTx(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
-	input := new(MethodVerifyHeaderAndExecuteTxInput)
-
-	if err := input.Decode(ctx.Payload); err != nil {
-		return utils.ByteFailed, fmt.Errorf("ZionMainChainECCM verifyHeaderAndExecuteTx, failed to decode params, err: %v", err)
-	}
-
-	header := new(types.Header)
-	if err := header.UnmarshalJSON(input.Header); err != nil {
-		return utils.ByteFailed, fmt.Errorf("ZionMainChainECCM verifyHeaderAndExecuteTx, failed to umarshal header, err: %v", err)
-	}
-	height := header.Number.Uint64()
-
-	epoch, err := nm.GetEpochByHeight(s.StateDB(), height)
+func Unlock(s *native.NativeContract, txParams *scom.MakeTxParam) error {
+	args, err := DecodeTxArgs(txParams.Args)
 	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("ZionMainChainECCM verifyHeaderAndExecuteTx, failed to get epoch by height, err: %v", err)
+		return fmt.Errorf("LockProxy.Unlock, failed to decode txArgs, err: %v", err)
 	}
 
-	if _, _, err := zion.VerifyHeader(header, epoch.MemberList(), false); err != nil {
-		return utils.ByteFailed, fmt.Errorf("ZionMainChainECCM verifyHeaderAndExecuteTx, failed to verify header, err: %v", err)
+	asset := common.BytesToAddress(args.ToAssetHash)
+	toAddress := common.BytesToAddress(args.ToAddress)
+	if err := transferFromContract(s, asset, toAddress, args.Amount); err != nil {
+		return err
 	}
-
-	proofResult, err := xutils.VerifyTx(input.Proof, header, this, nil, false)
-	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("ZionMainChainECCM verifyHeaderAndExecuteTx, failed to verify tx, err: %v", err)
-	}
-
-	// todo
-	txParams, err := DecodeMakeTxParams(proofResult)
-	if err != nil {
-		return nil, err
-	}
-	return txParams.Args, nil
-}
-
-func executeCrossChainTx(s *native.NativeContract) ([]byte, error) {
-	return nil, nil
+	return emitUnlockEvent(s, asset, toAddress, args.Amount)
 }

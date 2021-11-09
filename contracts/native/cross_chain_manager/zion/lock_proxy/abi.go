@@ -107,33 +107,6 @@ func (i *MethodLockInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodLock, i, payload)
 }
 
-// function verifyHeaderAndExecuteTx
-type MethodVerifyHeaderAndExecuteTxInput struct {
-	Header []byte
-	Proof  []byte
-}
-
-func (i *MethodVerifyHeaderAndExecuteTxInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodVerifyHeaderAndExecuteTx, i.Header, i.Proof)
-}
-func (i *MethodVerifyHeaderAndExecuteTxInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodVerifyHeaderAndExecuteTx, i, payload)
-}
-
-//type MethodCrossChainInput struct {
-//	ToChainID  uint64
-//	ToContract []byte
-//	Method     []byte
-//	TxData     []byte
-//}
-//
-//func (i *MethodCrossChainInput) Encode() ([]byte, error) {
-//	return utils.PackMethod(ABI, MethodCrossChain, i.ToChainID, i.ToContract, i.Method, i.TxData)
-//}
-//func (i *MethodCrossChainInput) Decode(payload []byte) error {
-//	return utils.UnpackMethod(ABI, MethodCrossChain, &i, payload)
-//}
-
 //event BindProxyEvent(uint64 toChainId, bytes targetProxyHash);
 func emitBindProxyEvent(s *native.NativeContract, toChainID uint64, targetProxyHash []byte) error {
 	return s.AddNotify(ABI, []string{EventBindProxyEvent}, toChainID, targetProxyHash)
@@ -173,14 +146,4 @@ func emitCrossChainEvent(s *native.NativeContract,
 	rawData []byte,
 ) error {
 	return s.AddNotify(ABI, []string{EventCrossChainEvent, sender.Hex()}, txID, proxyOrAssetContract, toChainID, toContract, method, rawData)
-}
-
-//event VerifyHeaderAndExecuteTxEvent(uint64 fromChainID, bytes toContract, bytes crossChainTxHash, bytes fromChainTxHash);
-func emitVerifyHeaderAndExecuteTxEvent(s *native.NativeContract,
-	fromChainID uint64,
-	toContract []byte,
-	crossChainTxHash []byte,
-	fromChainTxHash []byte,
-) error {
-	return s.AddNotify(ABI, []string{EventVerifyHeaderAndExecuteTxEvent}, fromChainID, toContract, crossChainTxHash, fromChainTxHash)
 }
