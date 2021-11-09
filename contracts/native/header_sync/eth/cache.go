@@ -20,38 +20,26 @@ import (
 	"encoding/binary"
 	"reflect"
 	"sync"
+	"time"
 	"unsafe"
 
 	"github.com/ethereum/go-ethereum/common/bitutil"
-	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/log"
 	"golang.org/x/crypto/sha3"
 )
 
+const cachesCapacity = 3
+
 type Caches struct {
-	native *native.NativeContract
-	cap    int
-	items  map[uint64][]uint32
-	mu     *sync.RWMutex
+	cap   int
+	items map[uint64][]uint32
+	mu    *sync.RWMutex
 }
 
-func NewCaches(size int, native *native.NativeContract) *Caches {
-	caches := &Caches{
-		cap:    size,
-		native: native,
-		items:  make(map[uint64][]uint32),
-		mu:     new(sync.RWMutex),
-	}
-	return caches
-}
-
-func (self *Caches) deleteCaches() {
-	self.mu.Lock()
-	defer self.mu.Unlock()
-
-	for key, _ := range self.items {
-		delete(self.items, key)
-	}
-	self.items = nil
+var caches = &Caches{
+	cap:   cachesCapacity,
+	items: make(map[uint64][]uint32),
+	mu:    new(sync.RWMutex),
 }
 
 func (self *Caches) serialize(values []uint32) []byte {
@@ -79,6 +67,25 @@ func (self *Caches) addCache(epoch uint64, cache []uint32) {
 	self.items[epoch] = cache
 }
 
+func (self *Caches) deleteCaches() {
+	self.mu.Lock()
+	defer self.mu.Unlock()
+
+	if len(self.items) <= self.cap {
+		return
+	}
+
+	minEpoch := uint64(0)
+	for epoch, _ := range self.items {
+		if minEpoch == 0 || epoch < minEpoch {
+			minEpoch = epoch
+		}
+	}
+	if minEpoch > 0 {
+		delete(self.items, minEpoch)
+	}
+}
+
 func (self *Caches) getCache(block uint64) []uint32 {
 	self.mu.Lock()
 	defer self.mu.Unlock()
@@ -98,6 +105,12 @@ func (self *Caches) getCache(block uint64) []uint32 {
 }
 
 func (self *Caches) generateCache(dest []uint32, seed []byte) {
+	startTime := time.Now().Unix()
+	defer func() {
+		endTime := time.Now().Unix()
+		log.Trace("generateCache", "spent time(second)", endTime-startTime)
+	}()
+
 	// Convert our destination slice to a byte buffer
 	header := *(*reflect.SliceHeader)(unsafe.Pointer(&dest))
 	header.Len *= 4

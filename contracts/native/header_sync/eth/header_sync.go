@@ -107,7 +107,7 @@ func (this *ETHHandler) SyncBlockHeader(native *native.NativeContract) error {
 			return err
 		}
 	}
-	caches := NewCaches(3, native)
+
 	for _, v := range headerParams.Headers {
 		var header Header
 		err := json.Unmarshal(v, &header)
