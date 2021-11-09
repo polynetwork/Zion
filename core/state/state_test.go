@@ -95,15 +95,15 @@ func TestNull(t *testing.T) {
 	address := common.HexToAddress("0x823140710bf13990e4500136726d8b55")
 	s.state.CreateAccount(address)
 	//value := common.FromHex("0x823140710bf13990e4500136726d8b55")
-	var value common.Hash
+	var value []byte
 
 	s.state.SetState(address, common.Hash{}, value)
 	s.state.Commit(false)
 
-	if value := s.state.GetState(address, common.Hash{}); value != (common.Hash{}) {
+	if value := s.state.GetState(address, common.Hash{}); !bytes.Equal(value, nil) {
 		t.Errorf("expected empty current value, got %x", value)
 	}
-	if value := s.state.GetCommittedState(address, common.Hash{}); value != (common.Hash{}) {
+	if value := s.state.GetCommittedState(address, common.Hash{}); !bytes.Equal(value, nil) {
 		t.Errorf("expected empty committed value, got %x", value)
 	}
 }
@@ -119,26 +119,26 @@ func TestSnapshot(t *testing.T) {
 	genesis := s.state.Snapshot()
 
 	// set initial state object value
-	s.state.SetState(stateobjaddr, storageaddr, data1)
+	s.state.SetState(stateobjaddr, storageaddr, data1[:])
 	snapshot := s.state.Snapshot()
 
 	// set a new state object value, revert it and ensure correct content
-	s.state.SetState(stateobjaddr, storageaddr, data2)
+	s.state.SetState(stateobjaddr, storageaddr, data2[:])
 	s.state.RevertToSnapshot(snapshot)
 
-	if v := s.state.GetState(stateobjaddr, storageaddr); v != data1 {
+	if v := s.state.GetState(stateobjaddr, storageaddr); !bytes.Equal(v, data1[:]) {
 		t.Errorf("wrong storage value %v, want %v", v, data1)
 	}
-	if v := s.state.GetCommittedState(stateobjaddr, storageaddr); v != (common.Hash{}) {
+	if v := s.state.GetCommittedState(stateobjaddr, storageaddr); !bytes.Equal(v, nil) {
 		t.Errorf("wrong committed storage value %v, want %v", v, common.Hash{})
 	}
 
 	// revert up to the genesis state and ensure correct content
 	s.state.RevertToSnapshot(genesis)
-	if v := s.state.GetState(stateobjaddr, storageaddr); v != (common.Hash{}) {
+	if v := s.state.GetState(stateobjaddr, storageaddr); !bytes.Equal(v, nil) {
 		t.Errorf("wrong storage value %v, want %v", v, common.Hash{})
 	}
-	if v := s.state.GetCommittedState(stateobjaddr, storageaddr); v != (common.Hash{}) {
+	if v := s.state.GetCommittedState(stateobjaddr, storageaddr); !bytes.Equal(v, nil) {
 		t.Errorf("wrong committed storage value %v, want %v", v, common.Hash{})
 	}
 }
@@ -158,8 +158,8 @@ func TestSnapshot2(t *testing.T) {
 	data0 := common.BytesToHash([]byte{17})
 	data1 := common.BytesToHash([]byte{18})
 
-	state.SetState(stateobjaddr0, storageaddr, data0)
-	state.SetState(stateobjaddr1, storageaddr, data1)
+	state.SetState(stateobjaddr0, storageaddr, data0[:])
+	state.SetState(stateobjaddr1, storageaddr, data1[:])
 
 	// db, trie are already non-empty values
 	so0 := state.getStateObject(stateobjaddr0)
@@ -195,6 +195,18 @@ func TestSnapshot2(t *testing.T) {
 	so0Restored.GetState(state.db, storageaddr)
 	so0Restored.Code(state.db)
 	// non-deleted is equal (restored)
+	{
+		value := so0.GetState(state.db, storageaddr)
+		if !bytes.Equal(value, data0[:]) {
+			t.Fatalf("value got not equal value set")
+		}
+	}
+	{
+		value := so0Restored.GetState(state.db, storageaddr)
+		if !bytes.Equal(value, data0[:]) {
+			t.Fatalf("value got not equal value set len %d", len(value))
+		}
+	}
 	compareStateObjects(so0Restored, so0, t)
 
 	// deleted should be nil, both before and after restore of state copy
@@ -228,12 +240,12 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 		t.Errorf("Dirty storage size mismatch: have %d, want %d", len(so1.dirtyStorage), len(so0.dirtyStorage))
 	}
 	for k, v := range so1.dirtyStorage {
-		if so0.dirtyStorage[k] != v {
+		if !bytes.Equal(so0.dirtyStorage[k], v) {
 			t.Errorf("Dirty storage key %x mismatch: have %v, want %v", k, so0.dirtyStorage[k], v)
 		}
 	}
 	for k, v := range so0.dirtyStorage {
-		if so1.dirtyStorage[k] != v {
+		if !bytes.Equal(so1.dirtyStorage[k], v) {
 			t.Errorf("Dirty storage key %x mismatch: have %v, want none.", k, v)
 		}
 	}
@@ -241,12 +253,12 @@ func compareStateObjects(so0, so1 *stateObject, t *testing.T) {
 		t.Errorf("Origin storage size mismatch: have %d, want %d", len(so1.originStorage), len(so0.originStorage))
 	}
 	for k, v := range so1.originStorage {
-		if so0.originStorage[k] != v {
+		if !bytes.Equal(so0.originStorage[k], v) {
 			t.Errorf("Origin storage key %x mismatch: have %v, want %v", k, so0.originStorage[k], v)
 		}
 	}
 	for k, v := range so0.originStorage {
-		if so1.originStorage[k] != v {
+		if !bytes.Equal(so1.originStorage[k], v) {
 			t.Errorf("Origin storage key %x mismatch: have %v, want none.", k, v)
 		}
 	}

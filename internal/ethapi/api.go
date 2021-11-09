@@ -601,7 +601,7 @@ func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Addre
 			if storageError != nil {
 				return nil, storageError
 			}
-			storageProof[i] = StorageResult{key, (*hexutil.Big)(state.GetState(address, common.HexToHash(key)).Big()), toHexSlice(proof)}
+			storageProof[i] = StorageResult{key, (*hexutil.Big)(common.BytesToHash(state.GetState(address, common.HexToHash(key))).Big()), toHexSlice(proof)}
 		} else {
 			storageProof[i] = StorageResult{key, &hexutil.Big{}, []string{}}
 		}
@@ -829,11 +829,11 @@ func (args *CallArgs) ToMessage(globalGasCap uint64) types.Message {
 // if statDiff is set, all diff will be applied first and then execute the call
 // message.
 type OverrideAccount struct {
-	Nonce     *hexutil.Uint64              `json:"nonce"`
-	Code      *hexutil.Bytes               `json:"code"`
-	Balance   **hexutil.Big                `json:"balance"`
-	State     *map[common.Hash]common.Hash `json:"state"`
-	StateDiff *map[common.Hash]common.Hash `json:"stateDiff"`
+	Nonce     *hexutil.Uint64         `json:"nonce"`
+	Code      *hexutil.Bytes          `json:"code"`
+	Balance   **hexutil.Big           `json:"balance"`
+	State     *map[common.Hash][]byte `json:"state"`
+	StateDiff *map[common.Hash][]byte `json:"stateDiff"`
 }
 
 // StateOverride is the collection of overridden accounts.
