@@ -20,24 +20,23 @@ package cross_chain_manager
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
 
+	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/crypto"
-
-	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	polycomm "github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const contractName = "cross chain manager"
@@ -174,15 +173,17 @@ func MakeTransaction(service *native.NativeContract, params *scom.MakeTxParam, f
 		MakeTxParam: params,
 	}
 
-	sink := polycomm.NewZeroCopySink(nil)
-	merkleValue.Serialization(sink)
-	err := PutRequest(service, merkleValue.TxHash, params.ToChainID, sink.Bytes())
+	value, err := rlp.EncodeToBytes(merkleValue)
+	if err != nil {
+		return fmt.Errorf("MakeTransaction, rlp.EncodeToBytes merkle value error:%s", err)
+	}
+	err = PutRequest(service, merkleValue.TxHash, params.ToChainID, value)
 	if err != nil {
 		return fmt.Errorf("MakeTransaction, putRequest error:%s", err)
 	}
 	chainIDBytes := utils.GetUint64Bytes(params.ToChainID)
 	key := hex.EncodeToString(utils.ConcatKey(utils.CrossChainManagerContractAddress, []byte(scom.REQUEST), chainIDBytes, merkleValue.TxHash))
-	scom.NotifyMakeProof(service, hex.EncodeToString(sink.Bytes()), key)
+	scom.NotifyMakeProof(service, hex.EncodeToString(value), key)
 	return nil
 }
 

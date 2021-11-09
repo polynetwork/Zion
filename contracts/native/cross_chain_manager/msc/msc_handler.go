@@ -35,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
-	polycomm "github.com/polynetwork/poly/common"
 )
 
 // Handler ...
@@ -114,9 +113,8 @@ func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainI
 		return nil, fmt.Errorf("verifyFromTx, verify proof value hash failed, proof result:%x, extra:%x", proofResult, extra)
 	}
 
-	data := polycomm.NewZeroCopySource(extra)
-	txParam := new(scom.MakeTxParam)
-	if err := txParam.Deserialization(data); err != nil {
+	txParam, err := scom.DecodeTxParam(extra)
+	if err != nil {
 		return nil, fmt.Errorf("verifyFromTx, deserialize merkleValue error:%s", err)
 	}
 	return txParam, nil

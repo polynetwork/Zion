@@ -25,7 +25,6 @@ import (
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/polynetwork/poly/common"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/merkle"
@@ -120,9 +119,8 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 			return nil, fmt.Errorf("Cosmos MakeDepositProposal, proof error: %s", err)
 		}
 	}
-	data := common.NewZeroCopySource(proofValue.Value)
-	txParam := new(scom.MakeTxParam)
-	if err := txParam.Deserialization(data); err != nil {
+	txParam, err := scom.DecodeTxParam(proofValue.Value)
+	if err != nil {
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, deserialize merkleValue error:%s", err)
 	}
 	if err := scom.CheckDoneTx(service, txParam.CrossChainID, params.SourceChainID); err != nil {
