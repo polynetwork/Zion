@@ -35,7 +35,7 @@ var (
 var GasTable = map[string]uint64{
 	MethodContractName:      0,
 	MethodSyncGenesisHeader: 0,
-	MethodSyncBlockHeader:   100000,
+	MethodSyncBlockHeader:   10000,
 	MethodSyncCrossChainMsg: 0,
 }
 
