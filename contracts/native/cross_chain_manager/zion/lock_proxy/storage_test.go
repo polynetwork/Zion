@@ -44,6 +44,9 @@ func TestMain(m *testing.M) {
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
 
+	InitABI()
+	InitLockProxy()
+
 	os.Exit(m.Run())
 }
 
@@ -128,25 +131,30 @@ func TestStoreTxIndex(t *testing.T) {
 	s := testEmptyCtx
 
 	var testcases = []struct {
-		Index *big.Int
+		Index  *big.Int
+		Expect *big.Int
 	}{
 		{
-			Index: big.NewInt(0),
+			Index:  big.NewInt(0),
+			Expect: common.Big0,
 		},
-		//{
-		//	Index: nil,
-		//},
-		//{
-		//	Index: common.Big0,
-		//},
-		//{
-		//	Index: big.NewInt(12),
-		//},
+		{
+			Index:  nil,
+			Expect: common.Big0,
+		},
+		{
+			Index:  common.Big0,
+			Expect: common.Big0,
+		},
+		{
+			Index:  big.NewInt(1),
+			Expect: common.Big1,
+		},
 	}
 
 	for _, v := range testcases {
 		storeTxIndex(s, v.Index)
 		got := getTxIndex(s)
-		assert.Equal(t, v.Index, got)
+		assert.Equal(t, v.Expect.Uint64(), got.Uint64())
 	}
 }

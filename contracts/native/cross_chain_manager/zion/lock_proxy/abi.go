@@ -51,7 +51,6 @@ type MethodContractNameInput struct{}
 func (m *MethodContractNameInput) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodName)
 }
-func (m *MethodContractNameInput) Decode(payload []byte) error { return nil }
 
 type MethodContractNameOutput struct {
 	Name string
