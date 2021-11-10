@@ -19,6 +19,8 @@
 package lock_proxy
 
 import (
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -50,30 +52,29 @@ func storeAsset(s *native.NativeContract, fromAsset common.Address, targetChainI
 	s.GetCacheDB().Put(key, toAssetHash)
 }
 
-func getTxIndex(s *native.NativeContract) (uint64, []byte) {
+func getTxIndex(s *native.NativeContract) *big.Int {
 	key := txIndexKey()
 	blob, _ := s.GetCacheDB().Get(key)
 	if blob == nil {
-		return 0, nil
+		return common.Big0
 	}
-	return utils.GetBytesUint64(blob), blob
+	return new(big.Int).SetBytes(blob)
 }
 
-func storeTxIndex(s *native.NativeContract, txIndex uint64) {
-	blob := utils.Uint64Bytes(txIndex)
-	s.GetCacheDB().Put(txIndexKey(), blob)
+func storeTxIndex(s *native.NativeContract, txIndex *big.Int) {
+	s.GetCacheDB().Put(txIndexKey(), txIndex.Bytes())
 }
 
-func getTxProof(s *native.NativeContract, txIndex uint64) common.Hash {
-	blob, _ := s.GetCacheDB().Get(txHashKey(txIndex))
+func getTxProof(s *native.NativeContract, paramTxHash []byte) common.Hash {
+	blob, _ := s.GetCacheDB().Get(txHashKey(paramTxHash))
 	if blob == nil {
 		return common.EmptyHash
 	}
 	return common.BytesToHash(blob)
 }
 
-func storeTxProof(s *native.NativeContract, txIndex uint64, txHash common.Hash) {
-	s.GetCacheDB().Put(txHashKey(txIndex), txHash[:])
+func storeTxProof(s *native.NativeContract, paramTxHash []byte, proof common.Hash) {
+	s.GetCacheDB().Put(txHashKey(paramTxHash), proof[:])
 }
 
 // storeTxParams store tx params and generate tx proof
@@ -96,8 +97,8 @@ func assetKey(fromAsset common.Address, chainID uint64) []byte {
 	return utils.ConcatKey(this, []byte(SKP_ASSET), fromAsset[:], utils.GetUint64Bytes(chainID))
 }
 
-func txHashKey(txIndex uint64) []byte {
-	return utils.ConcatKey(this, []byte(SKP_TX_HASH), utils.Uint64Bytes(txIndex))
+func txHashKey(paramTxHash []byte) []byte {
+	return utils.ConcatKey(this, []byte(SKP_TX_HASH), paramTxHash)
 }
 
 func txIndexKey() []byte {

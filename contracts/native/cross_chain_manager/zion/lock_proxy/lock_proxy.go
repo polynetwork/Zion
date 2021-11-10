@@ -21,6 +21,7 @@ package lock_proxy
 import (
 	"bytes"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -90,7 +91,7 @@ func BindProxy(s *native.NativeContract) ([]byte, error) {
 
 	storeProxy(s, input.ToChainId, input.TargetProxyHash)
 	if err := emitBindProxyEvent(s, input.ToChainId, input.TargetProxyHash); err != nil {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, failed to emit event log, err: %v", err)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, failed to emit `BindProxyEvent`, err: %v", err)
 	}
 	return utils.ByteSuccess, nil
 }
@@ -129,14 +130,14 @@ func BindAsset(s *native.NativeContract) ([]byte, error) {
 			input.FromAssetHash.Hex(), hexutil.Encode(input.ToAssetHash), input.ToChainId)
 	}
 
-	currentBalance, err := getBalanceFor(s, input.FromAssetHash)
+	currentBalance, err := getBalanceFor(s, input.FromAssetHash, this)
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset")
 	}
 
 	storeAsset(s, input.FromAssetHash, input.ToChainId, input.ToAssetHash)
 	if err := emitBindAssetEvent(s, input.FromAssetHash, input.ToChainId, input.ToAssetHash, currentBalance); err != nil {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, failed to emit event log, err: %v", err)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, failed to emit `BindAssetEvent`, err: %v", err)
 	}
 	return utils.ByteSuccess, nil
 }
@@ -167,24 +168,28 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	txData := EncodeTxArgs(toAsset, input.ToAddress, input.Amount)
 
 	// get and set tx index
-	lastTxIndex, _ := getTxIndex(s)
-	storeTxIndex(s, lastTxIndex+1)
-	txIndex, txIndexID := getTxIndex(s)
+	lastTxIndex := getTxIndex(s)
+	storeTxIndex(s, new(big.Int).Add(lastTxIndex, common.Big1))
+	txIndex := getTxIndex(s)
+	if txIndex.Cmp(common.Big0) <= 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, tx index can not be zero")
+	}
 
 	// assemble tx, generate and store cross chain transaction proof
-	txHash := s.ContractRef().TxHash()
 	method := "unlock"
-	txParams, txParamsEnc, proof := EncodeMakeTxParams(txHash, txIndex, sender, input.ToChainId, toAsset, method, txData)
+	paramTxHash := Uint256ToBytes(txIndex)
+	crossChainID := GenerateCrossChainID(this, paramTxHash)
+	txParams, txParamsEnc, proof := EncodeMakeTxParams(paramTxHash, crossChainID, sender[:], input.ToChainId, toAsset, method, txData)
 
-	storeTxProof(s, txIndex, proof)
+	storeTxProof(s, paramTxHash, proof)
 	storeTxParams(s, proof, txParamsEnc)
 
 	// emit event log
-	if err := emitCrossChainEvent(s, sender, txIndexID, sender, input.ToChainId, toAsset, method, txData); err != nil {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit crossChainEvent log, err: %v", err)
+	if err := emitCrossChainEvent(s, sender, paramTxHash, sender, input.ToChainId, toAsset, method, txData); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit `CrossChainEvent` log, err: %v", err)
 	}
 	if err := emitLockEvent(s, input.FromAssetHash, sender, input.ToChainId, toAsset, input.ToAddress, input.Amount); err != nil {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit lockEvent log, err: %v", err)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit `LockEvent` log, err: %v", err)
 	}
 
 	if err := cutils.MakeTransaction(s, txParams, native.ZionMainChainID); err != nil {
@@ -193,16 +198,43 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	return utils.ByteSuccess, nil
 }
 
-func Unlock(s *native.NativeContract, txParams *scom.MakeTxParam) error {
+func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txParams *scom.MakeTxParam) error {
 	args, err := DecodeTxArgs(txParams.Args)
 	if err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to decode txArgs, err: %v", err)
 	}
 
-	asset := common.BytesToAddress(args.ToAssetHash)
-	toAddress := common.BytesToAddress(args.ToAddress)
-	if err := transferFromContract(s, asset, toAddress, args.Amount); err != nil {
-		return err
+	// filter duplicate tx
+	if err := scom.CheckDoneTx(s, txParams.CrossChainID, entranceParams.SourceChainID); err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to check done transaction, err:%s", err)
 	}
-	return emitUnlockEvent(s, asset, toAddress, args.Amount)
+
+	// transfer asset
+	toAsset := common.BytesToAddress(args.ToAssetHash)
+	toAddress := common.BytesToAddress(args.ToAddress)
+	if err := transferFromContract(s, toAsset, toAddress, args.Amount); err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to transfer asset, err: %v", err)
+	}
+
+	// store done tx
+	if err := scom.PutDoneTx(s, txParams.CrossChainID, entranceParams.SourceChainID); err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to put done tx, err:%s", err)
+	}
+
+	// emit event logs
+	if err := emitUnlockEvent(s, toAsset, toAddress, args.Amount); err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to emit `UnlockEvent`, err: %v", err)
+	}
+
+	crossChainTxHash := s.ContractRef().TxHash().Bytes()
+	if err := emitVerifyHeaderAndExecuteTxEvent(s,
+		entranceParams.SourceChainID,
+		args.ToAssetHash,
+		crossChainTxHash,
+		txParams.TxHash,
+	); err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to emit `VerifyHeaderAndExecuteTxEvent`, err: %v", err)
+	}
+
+	return nil
 }

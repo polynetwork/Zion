@@ -30,11 +30,11 @@ import (
 
 var ErrUnSupported = errors.New("erc20 asset cross chain unsupported yet")
 
-func getBalanceFor(s *native.NativeContract, fromAsset common.Address) (*big.Int, error) {
+func getBalanceFor(s *native.NativeContract, fromAsset, owner common.Address) (*big.Int, error) {
 	if fromAsset == common.EmptyAddress {
-		return s.StateDB().GetBalance(this), nil
+		return s.StateDB().GetBalance(owner), nil
 	} else {
-		return erc20Balance(s, fromAsset, this)
+		return erc20Balance(s, fromAsset, owner)
 	}
 }
 

@@ -19,6 +19,7 @@
 package lock_proxy
 
 import (
+	"crypto/sha256"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -48,14 +49,14 @@ func DecodeTxArgs(payload []byte) (*scom.TxArgs, error) {
 	return args, nil
 }
 
-func EncodeMakeTxParams(tx common.Hash, txIndexID uint64, caller common.Address,
+func EncodeMakeTxParams(paramTxHash []byte, crossChainId []byte, caller []byte,
 	toChainID uint64, toContract []byte, method string, args []byte) (
 	*scom.MakeTxParam, []byte, common.Hash) {
 
 	txParams := &scom.MakeTxParam{
-		TxHash:              tx[:],
-		CrossChainID:        utils.Uint64Bytes(txIndexID),
-		FromContractAddress: caller[:],
+		TxHash:              paramTxHash,
+		CrossChainID:        crossChainId,
+		FromContractAddress: caller,
 		ToChainID:           toChainID,
 		ToContractAddress:   toContract,
 		Method:              method,
@@ -75,4 +76,14 @@ func DecodeMakeTxParams(blob []byte) (*scom.MakeTxParam, error) {
 		return nil, err
 	}
 	return txParams, nil
+}
+
+func GenerateCrossChainID(addr common.Address, paramTxHash []byte) []byte {
+	blob := utils.EncodePacked(addr[:], paramTxHash[:])
+	sum := sha256.Sum256(blob)
+	return sum[:]
+}
+
+func Uint256ToBytes(num *big.Int) []byte {
+	return common.LeftPadBytes(num.Bytes(), 32)
 }

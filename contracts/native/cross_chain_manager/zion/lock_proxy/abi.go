@@ -147,3 +147,12 @@ func emitCrossChainEvent(s *native.NativeContract,
 ) error {
 	return s.AddNotify(ABI, []string{EventCrossChainEvent, sender.Hex()}, txID, proxyOrAssetContract, toChainID, toContract, method, rawData)
 }
+
+func emitVerifyHeaderAndExecuteTxEvent(s *native.NativeContract,
+	fromChainID uint64,
+	toContract []byte,
+	crossChainTxHash []byte,
+	fromChainTxHash []byte,
+) error {
+	return s.AddNotify(ABI, []string{EventVerifyHeaderAndExecuteTxEvent}, fromChainID, toContract, crossChainTxHash, fromChainTxHash)
+}
