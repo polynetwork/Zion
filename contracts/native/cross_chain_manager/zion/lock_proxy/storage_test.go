@@ -34,15 +34,17 @@ var (
 	testStateDB  *state.StateDB
 	testEmptyCtx *native.NativeContract
 
-	testSupplyGas  uint64 = 100000000000000000
-	testGenesisNum int    = 4
-	testCaller     common.Address
+	testSupplyGas uint64 = 100000000000000000
+	testBlockNum         = int64(12)
+	testTxHash           = common.EmptyHash
+	testCaller           = common.EmptyAddress
 )
 
 func TestMain(m *testing.M) {
 	db := rawdb.NewMemoryDatabase()
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
+	ref := generateContractRef()
+	testEmptyCtx = native.NewNativeContract(testStateDB, ref)
 
 	InitABI()
 	InitLockProxy()
@@ -50,10 +52,14 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func generateContractRef() *native.ContractRef {
+	return native.NewContractRef(testStateDB, testCaller, testCaller, big.NewInt(testBlockNum), testTxHash, testSupplyGas, nil)
+}
 func resetTestContext() {
 	db := rawdb.NewMemoryDatabase()
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
+	ref := generateContractRef()
+	testEmptyCtx = native.NewNativeContract(testStateDB, ref)
 }
 
 func TestStoreProxy(t *testing.T) {
