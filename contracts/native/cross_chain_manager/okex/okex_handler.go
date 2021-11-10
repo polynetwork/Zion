@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/polynetwork/poly/common"
 	"github.com/tendermint/tendermint/crypto/merkle"
 )
 
@@ -121,9 +120,8 @@ func (this *OKHandler) MakeDepositProposal(service *native.NativeContract) (*sco
 	if err != nil {
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, proof error: %s", err)
 	}
-	data := common.NewZeroCopySource(proofValue.Value)
-	txParam := new(scom.MakeTxParam)
-	if err := txParam.Deserialization(data); err != nil {
+	txParam, err := scom.DecodeTxParam(proofValue.Value)
+	if err != nil {
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, deserialize merkleValue error:%s", err)
 	}
 	if err := scom.CheckDoneTx(service, txParam.CrossChainID, params.SourceChainID); err != nil {

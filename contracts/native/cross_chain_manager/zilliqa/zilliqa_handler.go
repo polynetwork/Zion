@@ -20,18 +20,17 @@ package zilliqa
 import (
 	"encoding/json"
 	"fmt"
+	"strings"
+
 	"github.com/Zilliqa/gozilliqa-sdk/core"
 	"github.com/Zilliqa/gozilliqa-sdk/mpt"
 	"github.com/Zilliqa/gozilliqa-sdk/util"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zilliqa"
-	"github.com/ethereum/go-ethereum/crypto"
-	"strings"
-
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 // Handler ...
@@ -151,9 +150,8 @@ func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainI
 		return nil, fmt.Errorf("verifyMerkleProof, check state proof result failed proof result: %s, extra: %s", util.EncodeHex(proofResult), util.EncodeHex(extra))
 	}
 
-	data := common.NewZeroCopySource(extra)
-	txParam := new(scom.MakeTxParam)
-	if err := txParam.Deserialization(data); err != nil {
+	txParam, err := scom.DecodeTxParam(extra)
+	if err != nil {
 		return nil, fmt.Errorf("VerifyFromZilProof, deserialize merkleValue error:%s", err)
 	}
 	return txParam, nil
