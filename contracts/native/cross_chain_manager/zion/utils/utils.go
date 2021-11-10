@@ -19,13 +19,20 @@
 package utils
 
 import (
+	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	internal "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
+	"github.com/ethereum/go-ethereum/rlp"
+	polycomm "github.com/polynetwork/poly/common"
 )
 
 func VerifyTx(proof []byte, hdr *types.Header, contract common.Address, extra []byte, checkResult bool) ([]byte, error) {
@@ -45,4 +52,64 @@ func VerifyTx(proof []byte, hdr *types.Header, contract common.Address, extra []
 		return nil, fmt.Errorf("VerifyFromEthProof, verify proof value hash failed, proof result:%x, extra:%x", proofResult, extra)
 	}
 	return proofResult, nil
+}
+
+func EncodeTxArgs(toAssetHash, toAddress []byte, amount *big.Int) []byte {
+	sink := polycomm.NewZeroCopySink(nil)
+	args := &scom.TxArgs{
+		ToAssetHash: toAssetHash,
+		ToAddress:   toAddress,
+		Amount:      amount,
+	}
+	args.Serialization(sink)
+	return sink.Bytes()
+}
+
+func DecodeTxArgs(payload []byte) (*scom.TxArgs, error) {
+	source := polycomm.NewZeroCopySource(payload)
+	args := new(scom.TxArgs)
+	if err := args.Deserialization(source); err != nil {
+		return nil, err
+	}
+	return args, nil
+}
+
+func EncodeMakeTxParams(paramTxHash []byte, crossChainId []byte, caller []byte,
+	toChainID uint64, toContract []byte, method string, args []byte) (
+	*scom.MakeTxParam, []byte, common.Hash) {
+
+	txParams := &scom.MakeTxParam{
+		TxHash:              paramTxHash,
+		CrossChainID:        crossChainId,
+		FromContractAddress: caller,
+		ToChainID:           toChainID,
+		ToContractAddress:   toContract,
+		Method:              method,
+		Args:                args,
+	}
+
+	blob, err := rlp.EncodeToBytes(txParams)
+	if err != nil {
+		return nil, nil, common.EmptyHash
+	}
+	txProof := crypto.Keccak256Hash(blob)
+	return txParams, blob, txProof
+}
+
+func DecodeMakeTxParams(payload []byte) (*scom.MakeTxParam, error) {
+	txParams := new(scom.MakeTxParam)
+	if err := rlp.DecodeBytes(payload, txParams); err != nil {
+		return nil, err
+	}
+	return txParams, nil
+}
+
+func GenerateCrossChainID(addr common.Address, paramTxHash []byte) []byte {
+	blob := utils.EncodePacked(addr[:], paramTxHash[:])
+	sum := sha256.Sum256(blob)
+	return sum[:]
+}
+
+func Uint256ToBytes(num *big.Int) []byte {
+	return common.LeftPadBytes(num.Bytes(), 32)
 }

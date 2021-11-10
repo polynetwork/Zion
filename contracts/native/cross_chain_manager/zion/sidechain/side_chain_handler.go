@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package zion
+package sidechain
 
 import (
 	"encoding/json"
@@ -31,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	pcom "github.com/polynetwork/poly/common"
 )
 
 type Handler struct{}
@@ -57,8 +56,8 @@ func (h *Handler) MakeDepositProposal(s *native.NativeContract) (*common.MakeTxP
 		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, side chain not found")
 	}
 
-	val := &common.MakeTxParam{}
-	if err := val.Deserialization(pcom.NewZeroCopySource(params.Extra)); err != nil {
+	val, err := common.DecodeTxParam(params.Extra)
+	if err != nil {
 		return nil, fmt.Errorf("ZionSideChainHandler MakeDepositProposal, failed to deserialize MakeTxParam: %v", err)
 	}
 	if err := common.CheckDoneTx(s, val.CrossChainID, params.SourceChainID); err != nil {

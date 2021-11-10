@@ -16,37 +16,38 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package utils
+package common
 
 import (
 	"encoding/hex"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
-	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
-	polycomm "github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
-func MakeTransaction(service *native.NativeContract, params *scom.MakeTxParam, fromChainID uint64) error {
+func MakeTransaction(service *native.NativeContract, params *MakeTxParam, fromChainID uint64) error {
 
 	txHash := service.ContractRef().TxHash()
-	merkleValue := &scom.ToMerkleValue{
+	merkleValue := &ToMerkleValue{
 		TxHash:      txHash[:],
 		FromChainID: fromChainID,
 		MakeTxParam: params,
 	}
 
-	sink := polycomm.NewZeroCopySink(nil)
-	merkleValue.Serialization(sink)
-	err := PutRequest(service, merkleValue.TxHash, params.ToChainID, sink.Bytes())
+	value, err := rlp.EncodeToBytes(merkleValue)
+	if err != nil {
+		return fmt.Errorf("MakeTransaction, rlp.EncodeToBytes merkle value error:%s", err)
+	}
+	err = PutRequest(service, merkleValue.TxHash, params.ToChainID, value)
 	if err != nil {
 		return fmt.Errorf("MakeTransaction, putRequest error:%s", err)
 	}
 	chainIDBytes := utils.GetUint64Bytes(params.ToChainID)
-	key := hex.EncodeToString(utils.ConcatKey(utils.CrossChainManagerContractAddress, []byte(scom.REQUEST), chainIDBytes, merkleValue.TxHash))
-	scom.NotifyMakeProof(service, hex.EncodeToString(sink.Bytes()), key)
+	key := hex.EncodeToString(utils.ConcatKey(utils.CrossChainManagerContractAddress, []byte(REQUEST), chainIDBytes, merkleValue.TxHash))
+	NotifyMakeProof(service, hex.EncodeToString(value), key)
 	return nil
 }
 
@@ -54,6 +55,6 @@ func PutRequest(native *native.NativeContract, txHash []byte, chainID uint64, re
 	hash := crypto.Keccak256(request)
 	contract := utils.CrossChainManagerContractAddress
 	chainIDBytes := utils.GetUint64Bytes(chainID)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.REQUEST), chainIDBytes, txHash), hash)
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(REQUEST), chainIDBytes, txHash), hash)
 	return nil
 }

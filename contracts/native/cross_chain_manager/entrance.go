@@ -31,10 +31,9 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
-	cutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/utils"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/lock_proxy"
+	zionsidechain "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/sidechain"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -91,7 +90,7 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 	case utils.ZILLIQA_ROUTER:
 		return zilliqa.NewHandler(), nil
 	case utils.ZION_ROUTER:
-		return zion.NewHandler(), nil
+		return zionsidechain.NewHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}
@@ -171,7 +170,7 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	}
 
 	//NOTE, you need to store the tx in this
-	if err := cutils.MakeTransaction(s, txParam, srcChainID); err != nil {
+	if err := scom.MakeTransaction(s, txParam, srcChainID); err != nil {
 		return nil, err
 	}
 

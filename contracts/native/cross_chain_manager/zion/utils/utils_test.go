@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package lock_proxy
+package utils
 
 import (
 	"math/big"
@@ -29,7 +29,6 @@ import (
 
 func TestUint256ToBytes(t *testing.T) {
 	expect := "0x0000000000000000000000000000000000000000000000000000000000000003"
-
 	blob := Uint256ToBytes(big.NewInt(3))
 
 	got := hexutil.Encode(blob)
@@ -39,9 +38,6 @@ func TestUint256ToBytes(t *testing.T) {
 func TestGenerateCrossChainID(t *testing.T) {
 	paramTxHash := Uint256ToBytes(big.NewInt(3))
 	address := common.HexToAddress("0xcbc84f846c4afabd5a8adcef92b40c1c4448f31a")
-	//expect := "0xcbc84f846c4afabd5a8adcef92b40c1c4448f31a0000000000000000000000000000000000000000000000000000000000000003"
-
-	//abi.encodePacked(this, paramTxHash)
 	expect := "0x75c015c7cc2df8003a206a18f71db0cc2670515f0bf701132d38a8b4deb2ea39"
 
 	blob := GenerateCrossChainID(address, paramTxHash)

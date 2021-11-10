@@ -27,7 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
-	cutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/utils"
+	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/lock_proxy"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -165,7 +165,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if blob != nil {
 		toAsset = blob
 	}
-	txData := EncodeTxArgs(toAsset, input.ToAddress, input.Amount)
+	txData := zutils.EncodeTxArgs(toAsset, input.ToAddress, input.Amount)
 
 	// get and set tx index
 	lastTxIndex := getTxIndex(s)
@@ -177,9 +177,9 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 
 	// assemble tx, generate and store cross chain transaction proof
 	method := "unlock"
-	paramTxHash := Uint256ToBytes(txIndex)
-	crossChainID := GenerateCrossChainID(this, paramTxHash)
-	txParams, txParamsEnc, proof := EncodeMakeTxParams(paramTxHash, crossChainID, sender[:], input.ToChainId, toAsset, method, txData)
+	paramTxHash := zutils.Uint256ToBytes(txIndex)
+	crossChainID := zutils.GenerateCrossChainID(this, paramTxHash)
+	txParams, txParamsEnc, proof := zutils.EncodeMakeTxParams(paramTxHash, crossChainID, sender[:], input.ToChainId, toAsset, method, txData)
 
 	storeTxProof(s, paramTxHash, proof)
 	storeTxParams(s, proof, txParamsEnc)
@@ -192,14 +192,14 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit `LockEvent` log, err: %v", err)
 	}
 
-	if err := cutils.MakeTransaction(s, txParams, native.ZionMainChainID); err != nil {
+	if err := scom.MakeTransaction(s, txParams, native.ZionMainChainID); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to makeTransaction, err: %v", err)
 	}
 	return utils.ByteSuccess, nil
 }
 
 func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txParams *scom.MakeTxParam) error {
-	args, err := DecodeTxArgs(txParams.Args)
+	args, err := zutils.DecodeTxArgs(txParams.Args)
 	if err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to decode txArgs, err: %v", err)
 	}
