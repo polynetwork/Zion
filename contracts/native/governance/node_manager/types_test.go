@@ -26,7 +26,7 @@ import (
 )
 
 func TestPeerInfoType(t *testing.T) {
-	expect := generateTestPeer()
+	expect := GenerateTestPeer()
 
 	enc, err := rlp.EncodeToBytes(expect)
 	assert.NoError(t, err)
@@ -39,7 +39,7 @@ func TestPeerInfoType(t *testing.T) {
 }
 
 func TestPeersType(t *testing.T) {
-	expect := generateTestPeers(10)
+	expect := GenerateTestPeers(10)
 
 	enc, err := rlp.EncodeToBytes(&expect)
 	assert.NoError(t, err)
@@ -61,7 +61,7 @@ func TestPeersType(t *testing.T) {
 //}
 
 func TestEpochInfoType(t *testing.T) {
-	expect := generateTestEpochInfo(1, 32, 10)
+	expect := GenerateTestEpochInfo(1, 32, 10)
 	expect.Status = ProposalStatusPassed
 
 	enc, err := rlp.EncodeToBytes(expect)
@@ -81,7 +81,7 @@ func TestEpochInfoType(t *testing.T) {
 }
 
 func TestHashListType(t *testing.T) {
-	expect := generateTestHashList(12)
+	expect := GenerateTestHashList(12)
 
 	enc, err := rlp.EncodeToBytes(expect)
 	assert.NoError(t, err)
@@ -93,7 +93,7 @@ func TestHashListType(t *testing.T) {
 }
 
 func TestAddressListType(t *testing.T) {
-	expect := generateTestAddressList(13)
+	expect := GenerateTestAddressList(13)
 
 	enc, err := rlp.EncodeToBytes(expect)
 	assert.NoError(t, err)

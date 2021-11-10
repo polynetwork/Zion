@@ -74,6 +74,14 @@ func BindProxy(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, target proxy address is invalid")
 	}
 
+	// filter duplicate proxy
+	gotTargetProxyHash, _ := getProxy(s, input.ToChainId)
+	if gotTargetProxyHash != nil && bytes.Equal(gotTargetProxyHash, input.TargetProxyHash) {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, duplicate bindship, asset %s, chainID %d",
+			hexutil.Encode(input.TargetProxyHash), input.ToChainId)
+	}
+
+	// vote and check quorum size
 	sender := s.ContractRef().TxOrigin()
 	ok, err := nm.CheckConsensusSigns(s, MethodBindProxyHash, ctx.Payload, sender)
 	if err != nil {
@@ -83,12 +91,7 @@ func BindProxy(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, nil
 	}
 
-	gotTargetProxyHash, _ := getProxy(s, input.ToChainId)
-	if gotTargetProxyHash != nil && bytes.Equal(gotTargetProxyHash, input.TargetProxyHash) {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, duplicate bindship, asset %s, chainID %d",
-			hexutil.Encode(input.TargetProxyHash), input.ToChainId)
-	}
-
+	// bind success
 	storeProxy(s, input.ToChainId, input.TargetProxyHash)
 	if err := emitBindProxyEvent(s, input.ToChainId, input.TargetProxyHash); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, failed to emit `BindProxyEvent`, err: %v", err)

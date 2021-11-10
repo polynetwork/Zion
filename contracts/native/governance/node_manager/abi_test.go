@@ -45,7 +45,7 @@ func TestABIMethodContractName(t *testing.T) {
 
 func TestABIMethodProposeInput(t *testing.T) {
 	expectEpochID := uint64(0)
-	expectPeers := generateTestPeers(10)
+	expectPeers := GenerateTestPeers(10)
 	expect := &MethodProposeInput{StartHeight: expectEpochID, Peers: expectPeers}
 
 	enc, err := expect.Encode()
@@ -92,7 +92,7 @@ func TestABIMethodVoteInput(t *testing.T) {
 		//},
 		{
 			EpochID:   1,
-			EpochHash: generateTestHash(11),
+			EpochHash: GenerateTestHash(11),
 		},
 	}
 
@@ -134,7 +134,7 @@ func TestABIMethodVoteOutput(t *testing.T) {
 
 func TestABIMethodEpochOutput(t *testing.T) {
 	expect := new(MethodEpochOutput)
-	expect.Epoch = generateTestEpochInfo(1, 12, 15)
+	expect.Epoch = GenerateTestEpochInfo(1, 12, 15)
 	enc, err := expect.Encode()
 	assert.NoError(t, err)
 
@@ -169,7 +169,7 @@ func TestABIMethodProofInput(t *testing.T) {
 }
 
 func TestABIMethodProofOutput(t *testing.T) {
-	proof := generateTestHash(138345729384)
+	proof := GenerateTestHash(138345729384)
 	expect := &MethodProofOutput{Hash: proof}
 
 	enc, err := expect.Encode()
