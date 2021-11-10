@@ -111,5 +111,8 @@ func GenerateCrossChainID(addr common.Address, paramTxHash []byte) []byte {
 }
 
 func Uint256ToBytes(num *big.Int) []byte {
+	if num == nil {
+		return common.EmptyHash[:]
+	}
 	return common.LeftPadBytes(num.Bytes(), 32)
 }

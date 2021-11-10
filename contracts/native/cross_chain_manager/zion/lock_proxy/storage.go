@@ -19,6 +19,7 @@
 package lock_proxy
 
 import (
+	utils2 "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -62,7 +63,7 @@ func getTxIndex(s *native.NativeContract) *big.Int {
 }
 
 func storeTxIndex(s *native.NativeContract, txIndex *big.Int) {
-	s.GetCacheDB().Put(txIndexKey(), txIndex.Bytes())
+	s.GetCacheDB().Put(txIndexKey(), utils2.Uint256ToBytes(txIndex))
 }
 
 func getTxProof(s *native.NativeContract, paramTxHash []byte) common.Hash {
@@ -77,9 +78,12 @@ func storeTxProof(s *native.NativeContract, paramTxHash []byte, proof common.Has
 	s.GetCacheDB().Put(txHashKey(paramTxHash), proof[:])
 }
 
-// storeTxParams store tx params and generate tx proof
-func storeTxParams(s *native.NativeContract, hash common.Hash, params []byte) {
-	key := txParamsKey(hash)
+func getTxParams(s *native.NativeContract, paramTxHash []byte) ([]byte, error) {
+	return s.GetCacheDB().Get(txHashKey(paramTxHash))
+}
+
+func storeTxParams(s *native.NativeContract, paramTxHash []byte, params []byte) {
+	key := txParamsKey(paramTxHash)
 	s.GetCacheDB().Put(key, params)
 }
 
@@ -105,6 +109,6 @@ func txIndexKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_TX_INDEX))
 }
 
-func txParamsKey(hash common.Hash) []byte {
-	return utils.ConcatKey(this, []byte(SKP_TX_PARAMS), hash[:])
+func txParamsKey(hash []byte) []byte {
+	return utils.ConcatKey(this, []byte(SKP_TX_PARAMS), hash)
 }

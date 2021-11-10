@@ -182,7 +182,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	txParams, txParamsEnc, proof := zutils.EncodeMakeTxParams(paramTxHash, crossChainID, sender[:], input.ToChainId, toAsset, method, txData)
 
 	storeTxProof(s, paramTxHash, proof)
-	storeTxParams(s, proof, txParamsEnc)
+	storeTxParams(s, paramTxHash, txParamsEnc)
 
 	// emit event log
 	if err := emitCrossChainEvent(s, sender, paramTxHash, sender, input.ToChainId, toAsset, method, txData); err != nil {
