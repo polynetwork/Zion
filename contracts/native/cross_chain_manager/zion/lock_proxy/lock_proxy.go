@@ -31,15 +31,22 @@ import (
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/lock_proxy"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/params"
 )
+
+const MIN_BALANCE = 1000000 // default minimum value of lock proxy balance
 
 var (
 	gasTable = map[string]uint64{
 		MethodName:          0,
 		MethodBindProxyHash: 10000,
+		MethodGetProxyHash:  0,
 		MethodBindAssetHash: 10000,
+		MethodGetAssetHash:  0,
 		MethodLock:          10000,
 	}
+
+	minBalance = new(big.Int).Mul(big.NewInt(MIN_BALANCE), params.OneEth)
 )
 
 func InitLockProxy() {
@@ -52,7 +59,9 @@ func RegisterLockProxyContract(s *native.NativeContract) {
 
 	s.Register(MethodName, Name)
 	s.Register(MethodBindProxyHash, BindProxy)
+	s.Register(MethodGetProxyHash, GetProxy)
 	s.Register(MethodBindAssetHash, BindAsset)
+	s.Register(MethodGetAssetHash, GetAsset)
 	s.Register(MethodLock, Lock)
 }
 
@@ -99,6 +108,24 @@ func BindProxy(s *native.NativeContract) ([]byte, error) {
 	return utils.ByteSuccess, nil
 }
 
+func GetProxy(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	input := new(MethodGetProxyInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetProxy, failed to decode params, err: %v", err)
+	}
+	if input.ToChainId == native.ZionMainChainID {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetProxy, dest chain id wont be 1")
+	}
+
+	proxy, err := getProxy(s, input.ToChainId)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetProxy, get binded proxy failed, err: %v", err)
+	}
+	return proxy, nil
+}
+
 func BindAsset(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
@@ -113,7 +140,7 @@ func BindAsset(s *native.NativeContract) ([]byte, error) {
 	if input.ToAssetHash == nil || len(input.ToAssetHash) == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, target asset is invalid")
 	}
-	if onlySupportNativeToken(input.FromAssetHash) {
+	if !onlySupportNativeToken(input.FromAssetHash) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, only support native token")
 	}
 	// allow the same address of `fromAsset` and `targetAsset`, different asset may have the same address in different chain
@@ -137,12 +164,37 @@ func BindAsset(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset")
 	}
+	if currentBalance == nil || currentBalance.Cmp(minBalance) < 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, contract insufficient balance")
+	}
 
 	storeAsset(s, input.FromAssetHash, input.ToChainId, input.ToAssetHash)
 	if err := emitBindAssetEvent(s, input.FromAssetHash, input.ToChainId, input.ToAssetHash, currentBalance); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, failed to emit `BindAssetEvent`, err: %v", err)
 	}
 	return utils.ByteSuccess, nil
+}
+
+func GetAsset(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	input := new(MethodGetAssetInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, failed to decode params, err: %v", err)
+	}
+	if input.ToChainId == native.ZionMainChainID {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, dest chain id wont be 1")
+	}
+	if !onlySupportNativeToken(input.FromAssetHash) {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, only support native token")
+	}
+
+	asset, err := getAsset(s, input.FromAssetHash, input.ToChainId)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, failed to get binded asset, err: %v", err)
+	}
+
+	return asset, nil
 }
 
 func Lock(s *native.NativeContract) ([]byte, error) {

@@ -8,7 +8,7 @@ interface ILockProxy {
     function bindProxyHash(uint64 toChainId, bytes calldata targetProxyHash) external returns (bool);
     function getProxyHash(uint64 toChainId) external view returns (bytes memory);
     function bindAssetHash(address fromAssetHash, uint64 toChainId, bytes calldata toAssetHash) external returns (bool);
-    // function verifyHeaderAndExecuteTx(bytes calldata rawHeader, bytes calldata rawSeals, bytes calldata accountProof, bytes calldata storageProof,bytes calldata rawCrossTx) external returns (bool);
+    function getAssetHash(address fromAssetHash, uint64 toChainId) external view returns (bytes memory);
     function lock(address fromAssetHash, uint64 toChainId, bytes calldata toAddress, uint256 amount) external payable returns (bool);
 
     event BindProxyEvent(uint64 toChainId, bytes targetProxyHash);

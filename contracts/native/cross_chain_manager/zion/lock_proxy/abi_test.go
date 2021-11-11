@@ -53,6 +53,18 @@ func TestABIMethodBindProxyInput(t *testing.T) {
 	assert.Equal(t, expect, got)
 }
 
+func TestABIMethodGetProxyInput(t *testing.T) {
+	expect := &MethodGetProxyInput{ToChainId: 33}
+
+	payload, err := expect.Encode()
+	assert.NoError(t, err)
+
+	got := new(MethodGetProxyInput)
+	assert.NoError(t, got.Decode(payload))
+
+	assert.Equal(t, expect, got)
+}
+
 func TestABIMethodBindAssetHashInput(t *testing.T) {
 	expect := &MethodBindAssetHashInput{
 		FromAssetHash: common.HexToAddress("0x12e345d"),
@@ -64,6 +76,21 @@ func TestABIMethodBindAssetHashInput(t *testing.T) {
 	assert.NoError(t, err)
 
 	got := new(MethodBindAssetHashInput)
+	assert.NoError(t, got.Decode(payload))
+
+	assert.Equal(t, expect, got)
+}
+
+func TestABIMethodGetAssetInput(t *testing.T) {
+	expect := &MethodGetAssetInput{
+		FromAssetHash: common.HexToAddress("0x234abc234"),
+		ToChainId:     79,
+	}
+
+	payload, err := expect.Encode()
+	assert.NoError(t, err)
+
+	got := new(MethodGetAssetInput)
 	assert.NoError(t, got.Decode(payload))
 
 	assert.Equal(t, expect, got)

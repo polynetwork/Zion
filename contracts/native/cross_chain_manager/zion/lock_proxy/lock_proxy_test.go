@@ -20,6 +20,7 @@ package lock_proxy
 
 import (
 	"math/big"
+	"math/rand"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -29,12 +30,7 @@ import (
 )
 
 func TestBindProxy(t *testing.T) {
-	resetTestContext()
-	s := testEmptyCtx
-	nm.InitABI()
-
-	epoch := nm.GenerateTestEpochInfo(1, uint64(testBlockNum-1), 4)
-	assert.NoError(t, nm.StoreTestEpoch(s, epoch))
+	epoch := prepare(t)
 
 	toChainID := uint64(12)
 	targetProxy := common.HexToAddress("0x123a234d3")
@@ -45,9 +41,28 @@ func TestBindProxy(t *testing.T) {
 		}
 	}
 
-	blob, err := getProxy(s, toChainID)
+	_, blob, err := testCallGetProxy(toChainID)
 	assert.NoError(t, err)
 	assert.Equal(t, targetProxy[:], blob)
+}
+
+func TestBindAsset(t *testing.T) {
+	epoch := prepare(t)
+	testStateDB.SetBalance(this, new(big.Int).Mul(minBalance, big.NewInt(2)))
+
+	fromAsset := common.EmptyAddress
+	toChainID := uint64(12)
+	toAsset := []byte{'1', 'a', '3', 'd', '9'}
+	for index, v := range epoch.Peers.List {
+		_, _, err := testCallBindAsset(v.Address, fromAsset, toChainID, toAsset)
+		if err != nil {
+			t.Logf("proposer %d bind message: %s", index, err.Error())
+		}
+	}
+
+	_, blob, err := testCallGetAsset(fromAsset, toChainID)
+	assert.NoError(t, err)
+	assert.Equal(t, toAsset, blob)
 }
 
 func testCallBindProxy(sender common.Address, toChainID uint64, targetProxy []byte) (*native.NativeContract, []byte, error) {
@@ -60,17 +75,97 @@ func testCallBindProxy(sender common.Address, toChainID uint64, targetProxy []by
 		return nil, nil, err
 	}
 
-	txHash := nm.GenerateTestHash(120)
+	ctx := generateTestSenderTx(sender, payload)
+	if ret, err := BindProxy(ctx); err != nil {
+		return nil, nil, err
+	} else {
+		return ctx, ret, nil
+	}
+}
+
+func testCallGetProxy(toChainID uint64) (*native.NativeContract, []byte, error) {
+	input := &MethodGetProxyInput{ToChainId: toChainID}
+	payload, err := input.Encode()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ctx := generateTestCallCtx(payload)
+	if ret, err := GetProxy(ctx); err != nil {
+		return nil, nil, err
+	} else {
+		return ctx, ret, nil
+	}
+}
+
+func testCallBindAsset(sender, fromAsset common.Address, toChainID uint64, toAsset []byte) (*native.NativeContract, []byte, error) {
+	input := &MethodBindAssetHashInput{
+		FromAssetHash: fromAsset,
+		ToChainId:     toChainID,
+		ToAssetHash:   toAsset,
+	}
+	payload, err := input.Encode()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ctx := generateTestSenderTx(sender, payload)
+	if ret, err := BindAsset(ctx); err != nil {
+		return nil, nil, err
+	} else {
+		return ctx, ret, nil
+	}
+}
+
+func testCallGetAsset(fromAsset common.Address, toChainID uint64) (*native.NativeContract, []byte, error) {
+	input := &MethodGetAssetInput{
+		FromAssetHash: fromAsset,
+		ToChainId:     toChainID,
+	}
+	payload, err := input.Encode()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ctx := generateTestCallCtx(payload)
+	if ret, err := GetAsset(ctx); err != nil {
+		return nil, nil, err
+	} else {
+		return ctx, ret, nil
+	}
+}
+
+func prepare(t *testing.T) *nm.EpochInfo {
+	resetTestContext()
+	s := testEmptyCtx
+	nm.InitABI()
+
+	epoch := nm.GenerateTestEpochInfo(1, uint64(testBlockNum-1), 4)
+	if err := nm.StoreTestEpoch(s, epoch); err != nil {
+		t.Fatal(err)
+	}
+	return epoch
+}
+
+func generateTestSenderTx(sender common.Address, payload []byte) *native.NativeContract {
+	txHash := nm.GenerateTestHash(rand.Int())
 	ref := native.NewContractRef(testStateDB, sender, sender, big.NewInt(testBlockNum), txHash, testSupplyGas, nil)
 	ref.PushContext(&native.Context{
 		Caller:          sender,
 		ContractAddress: this,
 		Payload:         payload,
 	})
-	ctx := native.NewNativeContract(testStateDB, ref)
-	if ret, err := BindProxy(ctx); err != nil {
-		return nil, nil, err
-	} else {
-		return ctx, ret, nil
-	}
+	return native.NewNativeContract(testStateDB, ref)
+}
+
+func generateTestCallCtx(payload []byte) *native.NativeContract {
+	caller := common.EmptyAddress
+	txHash := nm.GenerateTestHash(rand.Int())
+	ref := native.NewContractRef(testStateDB, caller, caller, big.NewInt(testBlockNum), txHash, testSupplyGas, nil)
+	ref.PushContext(&native.Context{
+		Caller:          caller,
+		ContractAddress: this,
+		Payload:         payload,
+	})
+	return native.NewNativeContract(testStateDB, ref)
 }

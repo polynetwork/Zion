@@ -77,6 +77,17 @@ func (i *MethodBindProxyInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodBindProxyHash, i, payload)
 }
 
+type MethodGetProxyInput struct {
+	ToChainId uint64
+}
+
+func (i *MethodGetProxyInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetProxyHash, i.ToChainId)
+}
+func (i *MethodGetProxyInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodGetProxyHash, i, payload)
+}
+
 // function bindAsset
 type MethodBindAssetHashInput struct {
 	FromAssetHash common.Address
@@ -89,6 +100,18 @@ func (i *MethodBindAssetHashInput) Encode() ([]byte, error) {
 }
 func (i *MethodBindAssetHashInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodBindAssetHash, i, payload)
+}
+
+type MethodGetAssetInput struct {
+	FromAssetHash common.Address
+	ToChainId     uint64
+}
+
+func (i *MethodGetAssetInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetAssetHash, i.FromAssetHash, i.ToChainId)
+}
+func (i *MethodGetAssetInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodGetAssetHash, i, payload)
 }
 
 // function lock

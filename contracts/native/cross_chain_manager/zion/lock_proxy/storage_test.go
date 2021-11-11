@@ -20,8 +20,10 @@ package lock_proxy
 
 import (
 	"math/big"
+	"math/rand"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -41,6 +43,8 @@ var (
 )
 
 func TestMain(m *testing.M) {
+	rand.Seed(time.Now().UnixNano())
+
 	db := rawdb.NewMemoryDatabase()
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	ref := generateContractRef()
