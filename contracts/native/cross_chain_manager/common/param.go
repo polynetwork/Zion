@@ -304,7 +304,7 @@ type TxArgs struct {
 func (this *TxArgs) Serialization(sink *polycomm.ZeroCopySink) {
 	sink.WriteVarBytes(this.ToAssetHash)
 	sink.WriteVarBytes(this.ToAddress)
-	sink.WriteVarBytes(this.Amount.Bytes())
+	sink.WriteVarBytes(Uint256ToBytes(this.Amount))
 }
 
 func (this *TxArgs) Deserialization(source *polycomm.ZeroCopySource) error {
@@ -323,6 +323,6 @@ func (this *TxArgs) Deserialization(source *polycomm.ZeroCopySource) error {
 
 	this.ToAssetHash = toAssetHash
 	this.ToAddress = toAddress
-	this.Amount = new(big.Int).SetBytes(enc)
+	this.Amount = BytesToUint256(enc)
 	return nil
 }

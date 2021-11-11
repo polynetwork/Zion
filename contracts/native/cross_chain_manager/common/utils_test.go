@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package utils
+package common
 
 import (
 	"math/big"
@@ -24,34 +24,36 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGenerateCrossChainID(t *testing.T) {
-	paramTxHash := scom.Uint256ToBytes(big.NewInt(3))
-	address := common.HexToAddress("0xcbc84f846c4afabd5a8adcef92b40c1c4448f31a")
-	expect := "0x75c015c7cc2df8003a206a18f71db0cc2670515f0bf701132d38a8b4deb2ea39"
-
-	blob := GenerateCrossChainID(address, paramTxHash)
-
-	got := hexutil.Encode(blob)
-	assert.Equal(t, expect, got)
-}
-
-func TestTunnelData(t *testing.T) {
-	expect := &TunnelData{
-		Caller:     common.HexToAddress("0x1232342"),
-		ToContract: []byte{'1', 'a', '3'},
-		Method:     []byte("unlock"),
-		TxData:     []byte{'a', 'c', 'd', '5'},
+func TestUint256ToBytes(t *testing.T) {
+	var testcases = []struct {
+		Num    *big.Int
+		Expect *big.Int
+	}{
+		{
+			Num:    nil,
+			Expect: common.Big0,
+		},
+		{
+			Num:    common.Big0,
+			Expect: common.Big0,
+		},
+		{
+			Num:    big.NewInt(32),
+			Expect: big.NewInt(32),
+		},
 	}
 
-	payload, err := expect.Encode()
-	assert.NoError(t, err)
+	for _, v := range testcases {
+		blob := Uint256ToBytes(v.Num)
+		expectHex := hexutil.Encode(blob)
 
-	got := new(TunnelData)
-	assert.NoError(t, got.Decode(payload))
+		gotHex := hexutil.Encode(blob)
+		assert.Equal(t, expectHex, gotHex)
 
-	assert.Equal(t, expect, got)
+		gotNum := BytesToUint256(blob)
+		assert.Equal(t, v.Expect, gotNum)
+	}
 }

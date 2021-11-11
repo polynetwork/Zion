@@ -25,6 +25,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/stretchr/testify/assert"
 )
@@ -63,6 +64,16 @@ func TestBindAsset(t *testing.T) {
 	_, blob, err := testCallGetAsset(fromAsset, toChainID)
 	assert.NoError(t, err)
 	assert.Equal(t, toAsset, blob)
+}
+
+func TestLock(t *testing.T) {
+	a := big.NewInt(3)
+	data := a.Bytes()
+	t.Log(len(data))
+}
+
+func TestUnlock(t *testing.T) {
+
 }
 
 func testCallBindProxy(sender common.Address, toChainID uint64, targetProxy []byte) (*native.NativeContract, []byte, error) {
@@ -132,6 +143,35 @@ func testCallGetAsset(fromAsset common.Address, toChainID uint64) (*native.Nativ
 		return nil, nil, err
 	} else {
 		return ctx, ret, nil
+	}
+}
+
+func testLock(sender, fromAsset common.Address, toChainID uint64, toAddress []byte, amount *big.Int) (*native.NativeContract, []byte, error) {
+	input := &MethodLockInput{
+		FromAssetHash: fromAsset,
+		ToChainId:     toChainID,
+		ToAddress:     toAddress,
+		Amount:        amount,
+	}
+	payload, err := input.Encode()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ctx := generateTestSenderTx(sender, payload)
+	if ret, err := Lock(ctx); err != nil {
+		return nil, nil, err
+	} else {
+		return ctx, ret, nil
+	}
+}
+
+func testUnlock(sender common.Address, entranParams *scom.EntranceParam, makeTxParams *scom.MakeTxParam) (*native.NativeContract, error) {
+	ctx := generateTestSenderTx(sender, nil)
+	if err := Unlock(ctx, entranParams, makeTxParams); err != nil {
+		return nil, err
+	} else {
+		return ctx, nil
 	}
 }
 

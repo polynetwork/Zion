@@ -24,6 +24,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	internal "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
@@ -62,7 +63,7 @@ func EncodeTxArgs(toAssetHash, toAddress []byte, amount *big.Int) []byte {
 		Amount:      amount,
 	}
 	args.Serialization(sink)
-	return sink.Bytes()
+	return utils.EncodePacked(sink.Bytes())
 }
 
 func DecodeTxArgs(payload []byte) (*scom.TxArgs, error) {
@@ -72,6 +73,42 @@ func DecodeTxArgs(payload []byte) (*scom.TxArgs, error) {
 		return nil, err
 	}
 	return args, nil
+}
+
+var (
+	ByteTy, _ = abi.NewType("bytes", "", nil)
+	AddrTy, _ = abi.NewType("address", "", nil)
+)
+
+type TunnelData struct {
+	Caller     common.Address
+	ToContract []byte
+	Method     []byte
+	TxData     []byte
+}
+
+func newTunnelArguments() abi.Arguments {
+	return abi.Arguments{
+		{Type: AddrTy, Name: "_caller"},
+		{Type: ByteTy, Name: "_toContract"},
+		{Type: ByteTy, Name: "_method"},
+		{Type: ByteTy, Name: "_txData"},
+	}
+}
+
+// bytes memory tunnelData = abi.encode(Utils.addressToBytes(msg.sender), _toContract, _method, _txData);
+func (d *TunnelData) Encode() ([]byte, error) {
+	args := newTunnelArguments()
+	return args.Pack(d.Caller, d.ToContract, d.Method, d.TxData)
+}
+
+func (d *TunnelData) Decode(payload []byte) error {
+	args := newTunnelArguments()
+	list, err := args.Unpack(payload)
+	if err != nil {
+		return err
+	}
+	return args.Copy(d, list)
 }
 
 func EncodeMakeTxParams(paramTxHash []byte, crossChainId []byte, caller []byte,
@@ -108,11 +145,4 @@ func GenerateCrossChainID(addr common.Address, paramTxHash []byte) []byte {
 	blob := utils.EncodePacked(addr[:], paramTxHash[:])
 	sum := sha256.Sum256(blob)
 	return sum[:]
-}
-
-func Uint256ToBytes(num *big.Int) []byte {
-	if num == nil {
-		return common.EmptyHash[:]
-	}
-	return common.LeftPadBytes(num.Bytes(), 32)
 }

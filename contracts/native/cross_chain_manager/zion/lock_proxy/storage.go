@@ -19,11 +19,11 @@
 package lock_proxy
 
 import (
-	utils2 "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
@@ -63,7 +63,7 @@ func getTxIndex(s *native.NativeContract) *big.Int {
 }
 
 func storeTxIndex(s *native.NativeContract, txIndex *big.Int) {
-	s.GetCacheDB().Put(txIndexKey(), utils2.Uint256ToBytes(txIndex))
+	s.GetCacheDB().Put(txIndexKey(), scom.Uint256ToBytes(txIndex))
 }
 
 func getTxProof(s *native.NativeContract, paramTxHash []byte) common.Hash {
