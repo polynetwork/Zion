@@ -277,6 +277,7 @@ func GetCaller(s *native.NativeContract) ([]byte, error) {
 
 func Lock(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
+	sourceChainID := native.ZionMainChainID
 
 	input := new(MethodLockInput)
 	if err := input.Decode(ctx.Payload); err != nil {
@@ -288,8 +289,8 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if input.ToChainId == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target chain id invalid")
 	}
-	if input.ToChainId == native.ZionMainChainID {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target chain id wont be 1")
+	if input.ToChainId == sourceChainID {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target chain id wont be %d", sourceChainID)
 	}
 	if input.ToAddress == nil || len(input.ToAddress) == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target address invalid")
@@ -345,7 +346,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to encode tunnel data, err: %v", err)
 	}
 
-	// get and set tx index
+	// get and set tx index, all transactions is new and it denote
 	lastTxIndex := getTxIndex(s)
 	storeTxIndex(s, new(big.Int).Add(lastTxIndex, common.Big1))
 	txIndex := getTxIndex(s)
@@ -354,6 +355,14 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	}
 	paramTxHash := scom.Uint256ToBytes(txIndex)
 	crossChainID := zutils.GenerateCrossChainID(this, paramTxHash)
+
+	// check and store `doneTx`
+	if err := scom.CheckDoneTx(s, crossChainID, sourceChainID); err != nil {
+		return nil, fmt.Errorf("LockProxy.Lock, failed to check cross transaction, err: %v", err)
+	}
+	if err := scom.PutDoneTx(s, crossChainID, sourceChainID); err != nil {
+		return nil, fmt.Errorf("LockProxy.Lock, faield to store cross transaction, err: %v", err)
+	}
 
 	// assemble tx, generate and store cross chain transaction proof
 	txParams, txParamsEnc, proof := zutils.EncodeMakeTxParams(
@@ -366,6 +375,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 		tunnelData,
 	)
 
+	// store tx params and proof
 	storeTxProof(s, paramTxHash, proof)
 	storeTxParams(s, paramTxHash, txParamsEnc)
 
