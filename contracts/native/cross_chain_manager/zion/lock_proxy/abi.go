@@ -195,7 +195,7 @@ func emitCrossChainEvent(s *native.NativeContract,
 	method string,
 	rawData []byte,
 ) error {
-	return s.AddNotify(ABI, []string{EventCrossChainEvent, sender.Hex()}, txID, proxyOrAssetContract, toChainID, toContract, method, rawData)
+	return s.AddNotify(ABI, []string{EventCrossChainEvent}, sender, txID, proxyOrAssetContract, toChainID, toContract, method, rawData)
 }
 
 func emitVerifyHeaderAndExecuteTxEvent(s *native.NativeContract,

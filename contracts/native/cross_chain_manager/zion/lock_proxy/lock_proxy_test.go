@@ -85,9 +85,46 @@ func TestBindCaller(t *testing.T) {
 }
 
 func TestLock(t *testing.T) {
-	a := big.NewInt(3)
-	data := a.Bytes()
-	t.Log(len(data))
+	epoch := prepare(t)
+
+	targetChainID := uint64(12)
+	fromAsset := common.EmptyAddress
+	targetProxy := common.HexToAddress("0x1")
+	targetCaller := common.HexToAddress("0x2").Bytes()
+	targetAsset := common.HexToAddress("0x3").Bytes()
+	sender := common.HexToAddress("0x4")
+	receiver := common.HexToAddress("0x5")
+	amount := minBalance
+
+	testStateDB.SetBalance(this, new(big.Int).Mul(minBalance, big.NewInt(1)))
+	testStateDB.SetBalance(sender, new(big.Int).Mul(minBalance, big.NewInt(2)))
+
+	// bind caller
+	for index, v := range epoch.Peers.List {
+		_, _, err := testCallBindCaller(v.Address, targetChainID, targetCaller)
+		if err != nil {
+			t.Logf("proposer %d bind message: %s", index, err.Error())
+		}
+	}
+
+	// bind proxy
+	for index, v := range epoch.Peers.List {
+		_, _, err := testCallBindProxy(v.Address, targetChainID, targetProxy[:])
+		if err != nil {
+			t.Logf("proposer %d bind message: %s", index, err.Error())
+		}
+	}
+
+	// bind asset
+	for index, v := range epoch.Peers.List {
+		_, _, err := testCallBindAsset(v.Address, fromAsset, targetChainID, targetAsset)
+		if err != nil {
+			t.Logf("proposer %d bind message: %s", index, err.Error())
+		}
+	}
+
+	_, _, err := testLock(sender, fromAsset, targetChainID, receiver.Bytes(), amount)
+	assert.NoError(t, err)
 }
 
 func TestUnlock(t *testing.T) {
@@ -212,6 +249,7 @@ func testLock(sender, fromAsset common.Address, toChainID uint64, toAddress []by
 	}
 
 	ctx := generateTestSenderTx(sender, payload)
+	ctx.ContractRef().SetValue(amount)
 	if ret, err := Lock(ctx); err != nil {
 		return nil, nil, err
 	} else {

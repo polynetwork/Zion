@@ -277,25 +277,43 @@ func GetCaller(s *native.NativeContract) ([]byte, error) {
 
 func Lock(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	sender := s.ContractRef().TxOrigin()
 
 	input := new(MethodLockInput)
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to decode params, err: %v", err)
 	}
-	if input.Amount.Cmp(common.Big0) == 0 {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, amount should be greater than zero")
-	}
 	if !onlySupportNativeToken(input.FromAssetHash) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, only support native token")
 	}
+	if input.ToChainId == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target chain id invalid")
+	}
+	if input.ToChainId == native.ZionMainChainID {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target chain id wont be 1")
+	}
+	if input.ToAddress == nil || len(input.ToAddress) == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target address invalid")
+	}
+	if input.Amount == nil || input.Amount.Cmp(common.Big0) == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, amount invalid")
+	}
 
-	proxy, err := getProxy(s, input.ToChainId)
+	// check target caller
+	targetCaller, err := getCaller(s, input.ToChainId)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to get bound caller, err: %v", err)
+	}
+	if targetCaller == nil || len(targetCaller) == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, bound caller not exist")
+	}
+
+	// check target proxy
+	targetProxy, err := getProxy(s, input.ToChainId)
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to get bound proxy, err: %v", err)
 	}
-	if proxy == nil || len(proxy) == 0 {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, bound proxy invalid")
+	if targetProxy == nil || len(targetProxy) == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, bound proxy not exist")
 	}
 
 	// all asset MUST be bind first, include native token
@@ -304,12 +322,27 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to get bound asset, err: %v", err)
 	}
 	if toAsset == nil || len(toAsset) == 0 {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, bound asset invalid")
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, bound asset not exit")
 	}
 
 	// transfer asset
-	if err := transfer2Contract(s, input.FromAssetHash, sender, input.Amount); err != nil {
+	txOrigin := s.ContractRef().TxOrigin()
+	msgSender := s.ContractRef().MsgSender()
+	if err := transfer2Contract(s, input.FromAssetHash, txOrigin, input.Amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, transfer to contract failed, err: %v", err)
+	}
+
+	// generate tunnel data
+	txData := zutils.EncodeTxArgs(toAsset, input.ToAddress, input.Amount)
+	tunnel := &zutils.TunnelData{
+		Caller:     this,
+		ToContract: targetProxy,
+		Method:     []byte("unlock"),
+		TxData:     txData,
+	}
+	tunnelData, err := tunnel.Encode()
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to encode tunnel data, err: %v", err)
 	}
 
 	// get and set tx index
@@ -319,36 +352,28 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if txIndex.Cmp(common.Big0) <= 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, tx index can not be zero")
 	}
-
-	// assemble tx data
-	txData := zutils.EncodeTxArgs(toAsset, input.ToAddress, input.Amount)
-	method := "unlock"
-
-	// todo: add bindTunnel
-	tunnel := &zutils.TunnelData{
-		Caller:     this,
-		ToContract: nil,
-		Method:     []byte(method),
-		TxData:     txData,
-	}
-	tunnelData, err := tunnel.Encode()
-	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to encode tunnel data, err: %v", err)
-	}
-
-	// assemble tx, generate and store cross chain transaction proof
 	paramTxHash := scom.Uint256ToBytes(txIndex)
 	crossChainID := zutils.GenerateCrossChainID(this, paramTxHash)
-	txParams, txParamsEnc, proof := zutils.EncodeMakeTxParams(paramTxHash, crossChainID, sender[:], input.ToChainId, toAsset, method, tunnelData)
+
+	// assemble tx, generate and store cross chain transaction proof
+	txParams, txParamsEnc, proof := zutils.EncodeMakeTxParams(
+		paramTxHash,
+		crossChainID,
+		this[:],
+		input.ToChainId,
+		targetCaller,
+		"unwrap",
+		tunnelData,
+	)
 
 	storeTxProof(s, paramTxHash, proof)
 	storeTxParams(s, paramTxHash, txParamsEnc)
 
 	// emit event log
-	if err := emitCrossChainEvent(s, sender, paramTxHash, sender, input.ToChainId, toAsset, method, txData); err != nil {
+	if err := emitCrossChainEvent(s, txOrigin, paramTxHash, this, input.ToChainId, toAsset, "unlock", txData); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit `CrossChainEvent` log, err: %v", err)
 	}
-	if err := emitLockEvent(s, input.FromAssetHash, sender, input.ToChainId, toAsset, input.ToAddress, input.Amount); err != nil {
+	if err := emitLockEvent(s, input.FromAssetHash, msgSender, input.ToChainId, toAsset, input.ToAddress, input.Amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit `LockEvent` log, err: %v", err)
 	}
 
