@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/stretchr/testify/assert"
 )
@@ -84,7 +85,7 @@ func TestBindCaller(t *testing.T) {
 	assert.Equal(t, caller, blob)
 }
 
-func TestLock(t *testing.T) {
+func TestLockAndUnlock(t *testing.T) {
 	epoch := prepare(t)
 
 	targetChainID := uint64(12)
@@ -125,10 +126,19 @@ func TestLock(t *testing.T) {
 
 	_, _, err := testLock(sender, fromAsset, targetChainID, receiver.Bytes(), amount)
 	assert.NoError(t, err)
-}
 
-func TestUnlock(t *testing.T) {
-
+	txArgs := utils.EncodeTxArgs(fromAsset.Bytes(), sender.Bytes(), amount)
+	txParams := &scom.MakeTxParam{
+		CrossChainID:        []byte{'1', 'a'},
+		FromContractAddress: targetCaller,
+		ToChainID:           native.ZionMainChainID,
+		ToContractAddress:   this.Bytes(),
+		Method:              "unlock",
+		Args:                txArgs,
+	}
+	entranParams := &scom.EntranceParam{SourceChainID: targetChainID}
+	_, err = testUnlock(receiver, entranParams, txParams, amount)
+	assert.NoError(t, err)
 }
 
 func testCallBindProxy(sender common.Address, toChainID uint64, targetProxy []byte) (*native.NativeContract, []byte, error) {
@@ -257,8 +267,9 @@ func testLock(sender, fromAsset common.Address, toChainID uint64, toAddress []by
 	}
 }
 
-func testUnlock(sender common.Address, entranParams *scom.EntranceParam, makeTxParams *scom.MakeTxParam) (*native.NativeContract, error) {
+func testUnlock(sender common.Address, entranParams *scom.EntranceParam, makeTxParams *scom.MakeTxParam, amount *big.Int) (*native.NativeContract, error) {
 	ctx := generateTestSenderTx(sender, nil)
+	ctx.ContractRef().SetValue(amount)
 	if err := Unlock(ctx, entranParams, makeTxParams); err != nil {
 		return nil, err
 	} else {

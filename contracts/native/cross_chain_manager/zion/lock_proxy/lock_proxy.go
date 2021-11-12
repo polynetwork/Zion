@@ -391,20 +391,66 @@ func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txPara
 		return fmt.Errorf("LockProxy.Unlock, failed to decode txArgs, err: %v", err)
 	}
 
+	// check params
+	sourceChainID := entranceParams.SourceChainID
+	if sourceChainID == native.ZionMainChainID || sourceChainID == 0 {
+		return fmt.Errorf("LockProxy.Unlock, source chain id invalid")
+	}
+	if txParams.ToChainID != native.ZionMainChainID {
+		return fmt.Errorf("LockProxy.Unlock, target chain id invalid")
+	}
+	if common.BytesToAddress(txParams.ToContractAddress) != this {
+		return fmt.Errorf("LockProxy.Unlock, target contract is invalid")
+	}
+	if txParams.Method != "unlock" {
+		return fmt.Errorf("LockProxy.Unlock, method is invalid")
+	}
+	toCaller := common.BytesToAddress(txParams.ToContractAddress)
+	if toCaller != this {
+		return fmt.Errorf("LockProxy.Unlock, target caller is invalid")
+	}
+
 	// filter duplicate tx
-	if err := scom.CheckDoneTx(s, txParams.CrossChainID, entranceParams.SourceChainID); err != nil {
+	if err := scom.CheckDoneTx(s, txParams.CrossChainID, sourceChainID); err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to check done transaction, err:%s", err)
 	}
 
-	// transfer asset
+	// check bound proxy
+	fromProxy, err := getProxy(s, sourceChainID)
+	if err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to get from proxy, err: %v", err)
+	}
+	if fromProxy == nil || len(fromProxy) == 0 {
+		return fmt.Errorf("LockProxy.Unlock, bound proxy not exist")
+	}
+
+	// check bound asset
 	toAsset := common.BytesToAddress(args.ToAssetHash)
+	fromAsset, err := getAsset(s, toAsset, sourceChainID)
+	if err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to get from asset, err: %v", err)
+	}
+	if fromAsset == nil || len(fromAsset) == 0 {
+		return fmt.Errorf("LockProxy.Unlock, bound asset not exist")
+	}
+
+	// check bound caller
+	fromCaller, err := getCaller(s, sourceChainID)
+	if err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to get from caller, err: %v", err)
+	}
+	if fromCaller == nil || len(fromCaller) == 0 {
+		return fmt.Errorf("LockProxy.Unlock, bound caller not exist")
+	}
+
+	// transfer asset
 	toAddress := common.BytesToAddress(args.ToAddress)
 	if err := transferFromContract(s, toAsset, toAddress, args.Amount); err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to transfer asset, err: %v", err)
 	}
 
 	// store done tx
-	if err := scom.PutDoneTx(s, txParams.CrossChainID, entranceParams.SourceChainID); err != nil {
+	if err := scom.PutDoneTx(s, txParams.CrossChainID, sourceChainID); err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to put done tx, err:%s", err)
 	}
 
@@ -415,7 +461,7 @@ func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txPara
 
 	crossChainTxHash := s.ContractRef().TxHash().Bytes()
 	if err := emitVerifyHeaderAndExecuteTxEvent(s,
-		entranceParams.SourceChainID,
+		sourceChainID,
 		args.ToAssetHash,
 		crossChainTxHash,
 		txParams.TxHash,
