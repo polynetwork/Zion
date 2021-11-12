@@ -29,17 +29,23 @@ var (
 var (
 	MethodBindAssetHash = "bindAssetHash"
 
+	MethodBindCaller = "bindCaller"
+
 	MethodBindProxyHash = "bindProxyHash"
 
 	MethodLock = "lock"
 
 	MethodGetAssetHash = "getAssetHash"
 
+	MethodGetCaller = "getCaller"
+
 	MethodGetProxyHash = "getProxyHash"
 
 	MethodName = "name"
 
 	EventBindAssetEvent = "BindAssetEvent"
+
+	EventBindCaller = "BindCaller"
 
 	EventBindProxyEvent = "BindProxyEvent"
 
@@ -53,13 +59,15 @@ var (
 )
 
 // ILockProxyABI is the input ABI used to generate the binding from.
-const ILockProxyABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"targetProxyHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"initialAmount\",\"type\":\"uint256\"}],\"name\":\"BindAssetEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"targetProxyHash\",\"type\":\"bytes\"}],\"name\":\"BindProxyEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"txId\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"proxyOrAssetContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toContract\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"method\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"rawdata\",\"type\":\"bytes\"}],\"name\":\"CrossChainEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toAssetHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toAddress\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"UnlockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"fromChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toContract\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"crossChainTxHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"fromChainTxHash\",\"type\":\"bytes\"}],\"name\":\"VerifyHeaderAndExecuteTxEvent\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"toAssetHash\",\"type\":\"bytes\"}],\"name\":\"bindAssetHash\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"targetProxyHash\",\"type\":\"bytes\"}],\"name\":\"bindProxyHash\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"}],\"name\":\"getAssetHash\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"}],\"name\":\"getProxyHash\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"toAddress\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"lock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const ILockProxyABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"targetProxyHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"initialAmount\",\"type\":\"uint256\"}],\"name\":\"BindAssetEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"caller\",\"type\":\"bytes\"}],\"name\":\"BindCaller\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"targetProxyHash\",\"type\":\"bytes\"}],\"name\":\"BindProxyEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"txId\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"proxyOrAssetContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toContract\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"method\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"rawdata\",\"type\":\"bytes\"}],\"name\":\"CrossChainEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toAssetHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toAddress\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"UnlockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"fromChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toContract\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"crossChainTxHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"fromChainTxHash\",\"type\":\"bytes\"}],\"name\":\"VerifyHeaderAndExecuteTxEvent\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"toAssetHash\",\"type\":\"bytes\"}],\"name\":\"bindAssetHash\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"caller\",\"type\":\"bytes\"}],\"name\":\"bindCaller\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"targetProxyHash\",\"type\":\"bytes\"}],\"name\":\"bindProxyHash\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"}],\"name\":\"getAssetHash\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"}],\"name\":\"getCaller\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"}],\"name\":\"getProxyHash\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"toAddress\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"lock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ILockProxyFuncSigs maps the 4-byte function signature to its string representation.
 var ILockProxyFuncSigs = map[string]string{
 	"3348f63b": "bindAssetHash(address,uint64,bytes)",
+	"e3ae7532": "bindCaller(uint64,bytes)",
 	"379b98f6": "bindProxyHash(uint64,bytes)",
 	"7546ea28": "getAssetHash(address,uint64)",
+	"bfaccb41": "getCaller(uint64)",
 	"d19da68b": "getProxyHash(uint64)",
 	"84a6d055": "lock(address,uint64,bytes,uint256)",
 	"06fdde03": "name()",
@@ -238,6 +246,37 @@ func (_ILockProxy *ILockProxyCallerSession) GetAssetHash(fromAssetHash common.Ad
 	return _ILockProxy.Contract.GetAssetHash(&_ILockProxy.CallOpts, fromAssetHash, toChainId)
 }
 
+// GetCaller is a free data retrieval call binding the contract method 0xbfaccb41.
+//
+// Solidity: function getCaller(uint64 toChainId) view returns(bytes)
+func (_ILockProxy *ILockProxyCaller) GetCaller(opts *bind.CallOpts, toChainId uint64) ([]byte, error) {
+	var out []interface{}
+	err := _ILockProxy.contract.Call(opts, &out, "getCaller", toChainId)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetCaller is a free data retrieval call binding the contract method 0xbfaccb41.
+//
+// Solidity: function getCaller(uint64 toChainId) view returns(bytes)
+func (_ILockProxy *ILockProxySession) GetCaller(toChainId uint64) ([]byte, error) {
+	return _ILockProxy.Contract.GetCaller(&_ILockProxy.CallOpts, toChainId)
+}
+
+// GetCaller is a free data retrieval call binding the contract method 0xbfaccb41.
+//
+// Solidity: function getCaller(uint64 toChainId) view returns(bytes)
+func (_ILockProxy *ILockProxyCallerSession) GetCaller(toChainId uint64) ([]byte, error) {
+	return _ILockProxy.Contract.GetCaller(&_ILockProxy.CallOpts, toChainId)
+}
+
 // GetProxyHash is a free data retrieval call binding the contract method 0xd19da68b.
 //
 // Solidity: function getProxyHash(uint64 toChainId) view returns(bytes)
@@ -319,6 +358,27 @@ func (_ILockProxy *ILockProxySession) BindAssetHash(fromAssetHash common.Address
 // Solidity: function bindAssetHash(address fromAssetHash, uint64 toChainId, bytes toAssetHash) returns(bool)
 func (_ILockProxy *ILockProxyTransactorSession) BindAssetHash(fromAssetHash common.Address, toChainId uint64, toAssetHash []byte) (*types.Transaction, error) {
 	return _ILockProxy.Contract.BindAssetHash(&_ILockProxy.TransactOpts, fromAssetHash, toChainId, toAssetHash)
+}
+
+// BindCaller is a paid mutator transaction binding the contract method 0xe3ae7532.
+//
+// Solidity: function bindCaller(uint64 toChainId, bytes caller) returns(bool)
+func (_ILockProxy *ILockProxyTransactor) BindCaller(opts *bind.TransactOpts, toChainId uint64, caller []byte) (*types.Transaction, error) {
+	return _ILockProxy.contract.Transact(opts, "bindCaller", toChainId, caller)
+}
+
+// BindCaller is a paid mutator transaction binding the contract method 0xe3ae7532.
+//
+// Solidity: function bindCaller(uint64 toChainId, bytes caller) returns(bool)
+func (_ILockProxy *ILockProxySession) BindCaller(toChainId uint64, caller []byte) (*types.Transaction, error) {
+	return _ILockProxy.Contract.BindCaller(&_ILockProxy.TransactOpts, toChainId, caller)
+}
+
+// BindCaller is a paid mutator transaction binding the contract method 0xe3ae7532.
+//
+// Solidity: function bindCaller(uint64 toChainId, bytes caller) returns(bool)
+func (_ILockProxy *ILockProxyTransactorSession) BindCaller(toChainId uint64, caller []byte) (*types.Transaction, error) {
+	return _ILockProxy.Contract.BindCaller(&_ILockProxy.TransactOpts, toChainId, caller)
 }
 
 // BindProxyHash is a paid mutator transaction binding the contract method 0x379b98f6.
@@ -494,6 +554,141 @@ func (_ILockProxy *ILockProxyFilterer) WatchBindAssetEvent(opts *bind.WatchOpts,
 func (_ILockProxy *ILockProxyFilterer) ParseBindAssetEvent(log types.Log) (*ILockProxyBindAssetEvent, error) {
 	event := new(ILockProxyBindAssetEvent)
 	if err := _ILockProxy.contract.UnpackLog(event, "BindAssetEvent", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ILockProxyBindCallerIterator is returned from FilterBindCaller and is used to iterate over the raw logs and unpacked data for BindCaller events raised by the ILockProxy contract.
+type ILockProxyBindCallerIterator struct {
+	Event *ILockProxyBindCaller // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ILockProxyBindCallerIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ILockProxyBindCaller)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ILockProxyBindCaller)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ILockProxyBindCallerIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ILockProxyBindCallerIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ILockProxyBindCaller represents a BindCaller event raised by the ILockProxy contract.
+type ILockProxyBindCaller struct {
+	ToChainId uint64
+	Caller    []byte
+	Raw       types.Log // Blockchain specific contextual infos
+}
+
+// FilterBindCaller is a free log retrieval operation binding the contract event 0x5d2b1088e6f2b4df167b32d08c2f2e5bc94e70d92a5e8f10f19baad711d4e51f.
+//
+// Solidity: event BindCaller(uint64 toChainId, bytes caller)
+func (_ILockProxy *ILockProxyFilterer) FilterBindCaller(opts *bind.FilterOpts) (*ILockProxyBindCallerIterator, error) {
+
+	logs, sub, err := _ILockProxy.contract.FilterLogs(opts, "BindCaller")
+	if err != nil {
+		return nil, err
+	}
+	return &ILockProxyBindCallerIterator{contract: _ILockProxy.contract, event: "BindCaller", logs: logs, sub: sub}, nil
+}
+
+// WatchBindCaller is a free log subscription operation binding the contract event 0x5d2b1088e6f2b4df167b32d08c2f2e5bc94e70d92a5e8f10f19baad711d4e51f.
+//
+// Solidity: event BindCaller(uint64 toChainId, bytes caller)
+func (_ILockProxy *ILockProxyFilterer) WatchBindCaller(opts *bind.WatchOpts, sink chan<- *ILockProxyBindCaller) (event.Subscription, error) {
+
+	logs, sub, err := _ILockProxy.contract.WatchLogs(opts, "BindCaller")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ILockProxyBindCaller)
+				if err := _ILockProxy.contract.UnpackLog(event, "BindCaller", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseBindCaller is a log parse operation binding the contract event 0x5d2b1088e6f2b4df167b32d08c2f2e5bc94e70d92a5e8f10f19baad711d4e51f.
+//
+// Solidity: event BindCaller(uint64 toChainId, bytes caller)
+func (_ILockProxy *ILockProxyFilterer) ParseBindCaller(log types.Log) (*ILockProxyBindCaller, error) {
+	event := new(ILockProxyBindCaller)
+	if err := _ILockProxy.contract.UnpackLog(event, "BindCaller", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

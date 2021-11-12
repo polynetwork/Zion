@@ -66,6 +66,24 @@ func TestBindAsset(t *testing.T) {
 	assert.Equal(t, toAsset, blob)
 }
 
+func TestBindCaller(t *testing.T) {
+	epoch := prepare(t)
+	testStateDB.SetBalance(this, new(big.Int).Mul(minBalance, big.NewInt(2)))
+
+	toChainID := uint64(12)
+	caller := []byte{'1', 'a', '3', 'd', '9'}
+	for index, v := range epoch.Peers.List {
+		_, _, err := testCallBindCaller(v.Address, toChainID, caller)
+		if err != nil {
+			t.Logf("proposer %d bind message: %s", index, err.Error())
+		}
+	}
+
+	_, blob, err := testCallGetCaller(toChainID)
+	assert.NoError(t, err)
+	assert.Equal(t, caller, blob)
+}
+
 func TestLock(t *testing.T) {
 	a := big.NewInt(3)
 	data := a.Bytes()
@@ -140,6 +158,41 @@ func testCallGetAsset(fromAsset common.Address, toChainID uint64) (*native.Nativ
 
 	ctx := generateTestCallCtx(payload)
 	if ret, err := GetAsset(ctx); err != nil {
+		return nil, nil, err
+	} else {
+		return ctx, ret, nil
+	}
+}
+
+func testCallBindCaller(sender common.Address, toChainID uint64, caller []byte) (*native.NativeContract, []byte, error) {
+	input := &MethodBindCallerInput{
+		ToChainId: toChainID,
+		Caller:    caller,
+	}
+	payload, err := input.Encode()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ctx := generateTestSenderTx(sender, payload)
+	if ret, err := BindCaller(ctx); err != nil {
+		return nil, nil, err
+	} else {
+		return ctx, ret, nil
+	}
+}
+
+func testCallGetCaller(toChainID uint64) (*native.NativeContract, []byte, error) {
+	input := &MethodGetCallerInput{
+		ToChainId: toChainID,
+	}
+	payload, err := input.Encode()
+	if err != nil {
+		return nil, nil, err
+	}
+
+	ctx := generateTestCallCtx(payload)
+	if ret, err := GetCaller(ctx); err != nil {
 		return nil, nil, err
 	} else {
 		return ctx, ret, nil

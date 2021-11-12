@@ -114,6 +114,29 @@ func (i *MethodGetAssetInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodGetAssetHash, i, payload)
 }
 
+type MethodBindCallerInput struct {
+	ToChainId uint64
+	Caller    []byte
+}
+
+func (i *MethodBindCallerInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodBindCaller, i.ToChainId, i.Caller)
+}
+func (i *MethodBindCallerInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodBindCaller, i, payload)
+}
+
+type MethodGetCallerInput struct {
+	ToChainId uint64
+}
+
+func (i *MethodGetCallerInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetCaller, i.ToChainId)
+}
+func (i *MethodGetCallerInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodGetCaller, i, payload)
+}
+
 // function lock
 type MethodLockInput struct {
 	FromAssetHash common.Address
@@ -141,6 +164,11 @@ func emitBindAssetEvent(s *native.NativeContract,
 	targetProxyHash []byte,
 	initialAmount *big.Int) error {
 	return s.AddNotify(ABI, []string{EventBindAssetEvent}, fromAsset, toChainID, targetProxyHash, initialAmount)
+}
+
+// event BindCaller(uint64 toChainId, bytes caller);
+func emitBindCallerEvent(s *native.NativeContract, toChainID uint64, targetCaller []byte) error {
+	return s.AddNotify(ABI, []string{EventBindCaller}, toChainID, targetCaller)
 }
 
 //event LockEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount);

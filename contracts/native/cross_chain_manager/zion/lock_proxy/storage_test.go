@@ -135,6 +135,32 @@ func TestStoreAsset(t *testing.T) {
 	}
 }
 
+func TestStoreCaller(t *testing.T) {
+	resetTestContext()
+	s := testEmptyCtx
+
+	var testcases = []struct {
+		ToChainID uint64
+		Caller    []byte
+	}{
+		{
+			ToChainID: 12,
+			Caller:    []byte{'1', 'a', '3'},
+		},
+		{
+			ToChainID: 0,
+			Caller:    nil,
+		},
+	}
+
+	for _, v := range testcases {
+		storeCaller(s, v.ToChainID, v.Caller)
+		got, err := getCaller(s, v.ToChainID)
+		assert.NoError(t, err)
+		assert.Equal(t, v.Caller, got)
+	}
+}
+
 func TestStoreTxIndex(t *testing.T) {
 	resetTestContext()
 	s := testEmptyCtx

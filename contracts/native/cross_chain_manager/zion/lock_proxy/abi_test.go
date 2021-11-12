@@ -96,6 +96,33 @@ func TestABIMethodGetAssetInput(t *testing.T) {
 	assert.Equal(t, expect, got)
 }
 
+func TestABIMethodBindCallInput(t *testing.T) {
+	expect := &MethodBindCallerInput{
+		ToChainId: 32,
+		Caller:    []byte{'1', 'a'},
+	}
+
+	payload, err := expect.Encode()
+	assert.NoError(t, err)
+
+	got := new(MethodBindCallerInput)
+	assert.NoError(t, got.Decode(payload))
+
+	assert.Equal(t, expect, got)
+}
+
+func TestABIMethodGetCallInput(t *testing.T) {
+	expect := &MethodGetCallerInput{ToChainId: 32}
+
+	payload, err := expect.Encode()
+	assert.NoError(t, err)
+
+	got := new(MethodGetCallerInput)
+	assert.NoError(t, got.Decode(payload))
+
+	assert.Equal(t, expect, got)
+}
+
 func TestABIMethodLockInput(t *testing.T) {
 	expect := &MethodLockInput{
 		FromAssetHash: common.HexToAddress("0x123456"),

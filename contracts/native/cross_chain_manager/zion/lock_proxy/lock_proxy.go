@@ -43,6 +43,8 @@ var (
 		MethodGetProxyHash:  0,
 		MethodBindAssetHash: 10000,
 		MethodGetAssetHash:  0,
+		MethodBindCaller:    10000,
+		MethodGetCaller:     0,
 		MethodLock:          10000,
 	}
 
@@ -62,6 +64,8 @@ func RegisterLockProxyContract(s *native.NativeContract) {
 	s.Register(MethodGetProxyHash, GetProxy)
 	s.Register(MethodBindAssetHash, BindAsset)
 	s.Register(MethodGetAssetHash, GetAsset)
+	s.Register(MethodBindCaller, BindCaller)
+	s.Register(MethodGetCaller, GetCaller)
 	s.Register(MethodLock, Lock)
 }
 
@@ -76,6 +80,9 @@ func BindProxy(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, failed to decode params, err: %v", err)
 	}
+	if input.ToChainId == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, target chain id invalid")
+	}
 	if input.ToChainId == native.ZionMainChainID {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, bind self is illegal")
 	}
@@ -86,7 +93,7 @@ func BindProxy(s *native.NativeContract) ([]byte, error) {
 	// filter duplicate proxy
 	gotTargetProxyHash, _ := getProxy(s, input.ToChainId)
 	if gotTargetProxyHash != nil && bytes.Equal(gotTargetProxyHash, input.TargetProxyHash) {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, duplicate bindship, asset %s, chainID %d",
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindProxy, duplicate proxy, proxy %s, chainID %d",
 			hexutil.Encode(input.TargetProxyHash), input.ToChainId)
 	}
 
@@ -115,13 +122,16 @@ func GetProxy(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.GetProxy, failed to decode params, err: %v", err)
 	}
+	if input.ToChainId == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetProxy, target chain id invalid")
+	}
 	if input.ToChainId == native.ZionMainChainID {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.GetProxy, dest chain id wont be 1")
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetProxy, target chain id wont be 1")
 	}
 
 	proxy, err := getProxy(s, input.ToChainId)
 	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.GetProxy, get binded proxy failed, err: %v", err)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetProxy, get bound proxy failed, err: %v", err)
 	}
 	return proxy, nil
 }
@@ -134,17 +144,27 @@ func BindAsset(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, failed to decode params, err: %v", err)
 	}
 
+	if input.ToChainId == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, target chain id invalid")
+	}
 	if input.ToChainId == native.ZionMainChainID {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, bind self is illegal")
 	}
 	if input.ToAssetHash == nil || len(input.ToAssetHash) == 0 {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, target asset is invalid")
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, target asset invalid")
 	}
 	if !onlySupportNativeToken(input.FromAssetHash) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, only support native token")
 	}
-	// allow the same address of `fromAsset` and `targetAsset`, different asset may have the same address in different chain
 
+	// filter duplicate asset
+	gotTargetAssetHash, err := getAsset(s, input.FromAssetHash, input.ToChainId)
+	if gotTargetAssetHash != nil && bytes.Equal(gotTargetAssetHash, input.ToAssetHash) {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, duplicate asset, from asset %s, target asset %s, target chain id %d",
+			input.FromAssetHash.Hex(), hexutil.Encode(input.ToAssetHash), input.ToChainId)
+	}
+
+	// allow the same address of `fromAsset` and `targetAsset`, different asset may have the same address in different chain
 	sender := s.ContractRef().TxOrigin()
 	ok, err := nm.CheckConsensusSigns(s, MethodBindAssetHash, ctx.Payload, sender)
 	if err != nil {
@@ -152,12 +172,6 @@ func BindAsset(s *native.NativeContract) ([]byte, error) {
 	}
 	if !ok {
 		return utils.ByteFailed, nil
-	}
-
-	gotTargetAssetHash, err := getAsset(s, input.FromAssetHash, input.ToChainId)
-	if gotTargetAssetHash != nil && bytes.Equal(gotTargetAssetHash, input.ToAssetHash) {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.BindAsset, duplicate bindship, from asset %s, target asset %s, target chain id %d",
-			input.FromAssetHash.Hex(), hexutil.Encode(input.ToAssetHash), input.ToChainId)
 	}
 
 	currentBalance, err := getBalanceFor(s, input.FromAssetHash, this)
@@ -182,8 +196,11 @@ func GetAsset(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, failed to decode params, err: %v", err)
 	}
+	if input.ToChainId == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, target chain id invalid")
+	}
 	if input.ToChainId == native.ZionMainChainID {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, dest chain id wont be 1")
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, target chain id wont be 1")
 	}
 	if !onlySupportNativeToken(input.FromAssetHash) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, only support native token")
@@ -191,10 +208,71 @@ func GetAsset(s *native.NativeContract) ([]byte, error) {
 
 	asset, err := getAsset(s, input.FromAssetHash, input.ToChainId)
 	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, failed to get binded asset, err: %v", err)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetAsset, failed to get bound asset, err: %v", err)
 	}
 
 	return asset, nil
+}
+
+func BindCaller(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	input := new(MethodBindCallerInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindCaller, failed to decode params, err: %v", err)
+	}
+	if input.ToChainId == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindCaller, target chain id invalid")
+	}
+	if input.ToChainId == native.ZionMainChainID {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindCaller, bind self is illegal")
+	}
+	if input.Caller == nil || len(input.Caller) == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindCaller, target caller invalid")
+	}
+
+	gotTargetCaller, err := getCaller(s, input.ToChainId)
+	if gotTargetCaller != nil && bytes.Equal(gotTargetCaller, input.Caller) {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindCaller, duplicate caller,target caller %s, target chain id %d",
+			hexutil.Encode(input.Caller), input.ToChainId)
+	}
+
+	sender := s.ContractRef().TxOrigin()
+	ok, err := nm.CheckConsensusSigns(s, MethodBindCaller, ctx.Payload, sender)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindCaller, failed to checkConsensusSigns, err: %v", err)
+	}
+	if !ok {
+		return utils.ByteFailed, nil
+	}
+
+	storeCaller(s, input.ToChainId, input.Caller)
+	if err := emitBindCallerEvent(s, input.ToChainId, input.Caller); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.BindCaller, failed to emit `BindCallerEvent`, err: %v", err)
+	}
+	return utils.ByteSuccess, nil
+}
+
+func GetCaller(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	input := new(MethodGetCallerInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetCaller, failed to decode params, err: %v", err)
+	}
+	if input.ToChainId == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetCaller, target chain id invalid")
+	}
+	if input.ToChainId == native.ZionMainChainID {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetCaller, target chain id wont be 1")
+	}
+
+	caller, err := getCaller(s, input.ToChainId)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.GetCaller, failed to get bound caller, err: %v", err)
+	}
+
+	return caller, nil
 }
 
 func Lock(s *native.NativeContract) ([]byte, error) {
