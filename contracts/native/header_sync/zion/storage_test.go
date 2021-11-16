@@ -35,7 +35,7 @@ func TestStoreGenesis(t *testing.T) {
 	resetTestContext()
 	s := testEmptyCtx
 
-	chainID := params.DevnetRelayChainID
+	chainID := params.DevnetMainChainID
 	expectHeader := testGenesisHeader(t)
 
 	assert.False(t, isGenesisStored(s, chainID))

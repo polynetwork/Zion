@@ -22,6 +22,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/state"
 	"math/big"
 	"reflect"
 	"testing"
@@ -645,7 +649,8 @@ func dialNode(url string) *rpc.Client {
 func TestUnmarshalHeader(t *testing.T) {
 	url := "http://101.32.99.70:22002"
 	cli := NewClient(dialNode(url))
-	var blockNum uint64 = 693051
+
+	var blockNum uint64 = 1099
 	block, err := cli.BlockByNumber(context.Background(), new(big.Int).SetUint64(blockNum))
 	if err != nil {
 		t.Fatal(err)
@@ -663,35 +668,33 @@ func TestUnmarshalHeader(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	extra, err := types.ExtractHotstuffExtraPayload(originHeader.Extra)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Logf("header extra: %s", extra.Dump())
 	t.Logf("origin header json string: %s", string(originHeaderEnc))
 
-	address := common.HexToAddress("0x7559968a6395D67d1B14A33e461a07837FC76534")
-	slot := crypto.Keccak256Hash(address.Bytes())
-	//contractAddr := utils.HeaderSyncContractAddress
-	//key := []byte{}
-	//key = append(key, []byte(scom.GENESIS_HEADER)...)
-	//key = append(key, utils.Uint64Bytes(79)...)
-	//slot := state.Key2Slot(key)
-	//
-	storageKeys := []string{slot.Hex()}
-	result, err := cli.ProofAt(context.Background(), address, storageKeys, nil)
+	// cache db slot
+	contractAddr := utils.NodeManagerContractAddress
+	proofHash := node_manager.EpochProofHash(5)
+	cacheKey := utils.ConcatKey(contractAddr, []byte("st_proof"), proofHash.Bytes())
+	slot := state.Key2Slot(cacheKey[common.AddressLength:])
+	t.Logf("slot hex before keccak: %s", slot.Hex())
+
+	// storage key
+	key := hexutil.Encode(slot[:])
+	storageKeys := []string{key}
+	t.Logf("slot hex after keccak: %s", key)
+
+	proof, err := cli.ProofAt(context.Background(), utils.NodeManagerContractAddress, storageKeys, new(big.Int).SetUint64(blockNum))
 	if err != nil {
 		t.Fatal(err)
 	}
-	blob, err := json.Marshal(result)
+	enc, err := json.Marshal(proof)
 	if err != nil {
 		t.Fatal(err)
 	}
-	t.Logf("proof json str: %s", blob)
-
-	//jsonstr := `{"parentHash":"0x9ba4f263f431924b824b315667fa55a934653b1bc59f2cff8a3f9eaacf45fd0c","sha3Uncles":"0x1dcc4de8dec75d7aab85b567b6ccd41ad312451b948a7413f0a142fd40d49347","miner":"0x258af48e28e4a6846e931ddff8e1cdf8579821e5","stateRoot":"0xbfc1711d4a46f45c2422bc0c97c3a3e69ab5429b340f4a6f92224bfe0e1fed4d","transactionsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","receiptsRoot":"0x56e81f171bcc55a6ff8345e692c0f86e5b48e01b996cadc001622fb5e363b421","logsBloom":"0x00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000","difficulty":"0x1","number":"0xd","gasLimit":"0xfcc4db9f","gasUsed":"0x0","timestamp":"0x614bf970","extraData":"0xd983010a04846765746888676f312e31362e328664617277696e000000000000f90165f85494258af48e28e4a6846e931ddff8e1cdf8579821e5948c09d936a1b408d6e0afaa537ba4e06c4504a0ae94c095448424a5ecd5ca7ccdadfaad127a9d7e88ec94d47a4e56e9262543db39d9203cf1a2e53735f834b841460f2f90d7f07fb99c0990ab38d15fc2fd3868239fa0be795db0f5b9240bdbea67ec09cff65cb125a171cb98a5c7c6f55ce0bda8086079dc23f777ebf4fbfc0e00f8c9b8410a26b41bf027a76224c30705f94234db0e264688346477af7cf7b1326f77ac415a17ddc2da69755c1aae1a5cdd2d8cf547f5721751753940e48cb4d8f5427be700b84115f2e51d5f2b551c25e4a30c697dd087d7aa611344f22ba50ded8bf5e4625b5874b03568503dd65e39213d23e68d97c27cbdc192dd01c283e00fc7e10baaf69801b841d5366e5b4270f01b30e2a6aa0a176f42b3a1394f6d3c3cc88e324fd479f832483c6d839de7110c2b2ebbb45b36d44fbbf84e56f7ba5a6174eecf61acbe0d789c0080","mixHash":"0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365","nonce":"0x0000000000000000","hash":"0xf09ceb75d0e85322f04adfb5d02a54bccc6c20fc1c0f67e6ec0fc3c8618c79e9"}`
-	//h := new(types.Header)
-	//if err := h.UnmarshalJSON([]byte(jsonstr)); err != nil {
-	//	t.Fatal(err)
-	//}
-
-	//origin := common.HexToHash("0xf09ceb75d0e85322f04adfb5d02a54bccc6c20fc1c0f67e6ec0fc3c8618c79e9")
-	//t.Logf("origin %s, sig hash %s, header hash %s", origin.Hex(), sh.Hex(), h.Hash().Hex())
-	//assert.Equal(t, origin, h.Hash())
-	//t.Logf("expect origin hash %s, got header hash %s", h.Hash())
+	t.Logf("proof result: %s", string(enc))
+	return
 }

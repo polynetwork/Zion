@@ -39,18 +39,20 @@ import (
 func VerifyTx(proof []byte, hdr *types.Header, contract common.Address, extra []byte, checkResult bool) ([]byte, error) {
 	ethProof := new(ethapi.AccountResult)
 	if err := json.Unmarshal(proof, ethProof); err != nil {
-		return nil, fmt.Errorf("VerifyFromEthProof, unmarshal proof error:%s", err)
+		return nil, fmt.Errorf("VerifyFromEthProof, unmarshal proof failed, err:%v", err)
 	}
 
 	proofResult, err := internal.VerifyAccountResult(ethProof, hdr, contract)
 	if err != nil {
-		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof error:%v", err)
+		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed, err:%v", err)
 	}
 	if proofResult == nil {
-		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed!")
+		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed, err:%s", "proof result is nil")
 	}
-	if checkResult && !internal.CheckProofResult(proofResult, extra) {
-		return nil, fmt.Errorf("VerifyFromEthProof, verify proof value hash failed, proof result:%x, extra:%x", proofResult, extra)
+	if checkResult {
+		if err := internal.CheckStorageResult(proofResult, extra); err != nil {
+			return nil, fmt.Errorf("VerifyFromEthProof, check result err: %v", err)
+		}
 	}
 	return proofResult, nil
 }

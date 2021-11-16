@@ -54,9 +54,9 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 
 // cross chain related params
 var (
-	MainnetRelayChainID uint64 = 1
-	TestnetRelayChainID uint64 = 3
-	DevnetRelayChainID  uint64 = 10897
+	MainnetMainChainID uint64 = 1
+	TestnetMainChainID uint64 = 3
+	DevnetMainChainID  uint64 = 10897
 
 	OneEth, _ = new(big.Int).SetString("1000000000000000000", 10)
 	// mint some native token for side chain genesis validators, because genesis validators will spent
@@ -64,9 +64,9 @@ var (
 	SideChainInitAlloc = new(big.Int).Mul(OneEth, big.NewInt(100))
 )
 
-func IsRelayChain(chainID uint64) bool {
+func IsMainChain(chainID uint64) bool {
 	switch chainID {
-	case MainnetRelayChainID, TestnetRelayChainID, DevnetRelayChainID:
+	case MainnetMainChainID, TestnetMainChainID, DevnetMainChainID:
 		return true
 	default:
 		return false

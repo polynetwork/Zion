@@ -346,7 +346,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to encode tunnel data, err: %v", err)
 	}
 
-	// get and set tx index, all transactions is new and it denote
+	// get and set tx index
 	lastTxIndex := getTxIndex(s)
 	storeTxIndex(s, new(big.Int).Add(lastTxIndex, common.Big1))
 	txIndex := getTxIndex(s)

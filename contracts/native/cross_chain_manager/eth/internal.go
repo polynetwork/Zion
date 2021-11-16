@@ -23,6 +23,7 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -82,10 +83,10 @@ func VerifyStorageProof(proof *ethapi.AccountResult) ([]byte, error) {
 		return nil, fmt.Errorf("verifyMerkleProof, invalid storage proof format")
 	}
 	sp := proof.StorageProof[0]
-	storageKey := common.HexToHash(sp.Key)
+	storageKey := crypto.Keccak256(common.HexToHash(scom.Replace0x(sp.Key)).Bytes())
 
 	for _, prf := range sp.Proof {
-		nodeList.Put(nil, common.FromHex(prf))
+		nodeList.Put(nil, common.Hex2Bytes(scom.Replace0x(prf)))
 	}
 	ns := nodeList.NodeSet()
 
@@ -94,4 +95,42 @@ func VerifyStorageProof(proof *ethapi.AccountResult) ([]byte, error) {
 		return nil, fmt.Errorf("verifyMerkleProof, verify storage proof error:%s\n", err)
 	}
 	return val, nil
+}
+
+func CheckStorageResult(result, value []byte) error {
+	if value == nil || result == nil {
+		return fmt.Errorf("invalid result or value")
+	}
+
+	// length of `result` and `value` should be 33 && 32
+	if len(result) != common.HashLength+1 {
+		return fmt.Errorf("proof result is an rlp string and it's length should be 33")
+	}
+	if len(value) != common.HashLength {
+		return fmt.Errorf("value is an full hash and it's length should be 32")
+	}
+
+	var s_temp []byte
+	err := rlp.DecodeBytes(result, &s_temp)
+	if err != nil {
+		return err
+	}
+	var s []byte
+	for i := len(s_temp); i < 32; i++ {
+		s = append(s, 0)
+	}
+	s = append(s, s_temp...)
+
+	value = cacheDBRecover(value)
+	valueHash := common.BytesToHash(value)
+	proofHash := common.BytesToHash(s)
+	if proofHash != valueHash {
+		return fmt.Errorf("proof result expect %s, got value %s", proofHash.Hex(), valueHash.Hex())
+	}
+	return nil
+}
+
+// todo(fuk): 1.cachedb将value的存储记录了一个标志位，后续state_object变更后需要改回来, 2. value 无需再次keccak256
+func cacheDBRecover(value []byte) []byte {
+	return append([]byte{1}, value[:common.HashLength-1]...)
 }

@@ -261,6 +261,9 @@ var (
 
 	// StoreGenesis store genesis validators in consensus snapshot
 	StoreGenesis func(db ethdb.Database, header *types.Header) error
+
+	// SetMainChain
+	SetMainChain func(isMainChain bool)
 )
 
 // ToBlock creates the genesis block and writes state of a genesis specification
@@ -314,7 +317,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 	chainID := g.Config.ChainID.Uint64()
-	if !params.IsRelayChain(chainID) {
+	if !params.IsMainChain(chainID) {
 		return
 	}
 
@@ -329,7 +332,7 @@ func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
 	addBalance := func(chainID uint64, addr common.Address, account GenesisAccount) {
-		if params.IsRelayChain(chainID) {
+		if params.IsMainChain(chainID) {
 			statedb.AddBalance(addr, account.Balance)
 		} else {
 			balance := params.SideChainInitAlloc

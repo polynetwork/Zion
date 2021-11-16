@@ -19,6 +19,7 @@ package boot
 
 import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/alloc_proxy"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/lock_proxy"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/neo3_state_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -35,4 +36,5 @@ func InitialNativeContracts() {
 	relayer_manager.InitRelayerManager()
 	side_chain_manager.InitSideChainManager()
 	lock_proxy.InitLockProxy()
+	alloc_proxy.InitAllocProxy()
 }
