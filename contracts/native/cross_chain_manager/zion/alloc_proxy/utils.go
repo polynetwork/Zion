@@ -19,32 +19,14 @@
 package alloc_proxy
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
-	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func verifyHeaderAndCheckEpoch(header *types.Header, lastEpoch, curEpoch *nm.EpochInfo) error {
-	nextEpochStartHeight, nextEpochVals, err := zion.VerifyHeader(header, lastEpoch.MemberList(), true)
-	if err != nil {
-		return err
-	}
-	if nextEpochStartHeight != curEpoch.StartHeight {
-		return fmt.Errorf("epoch start height not match, expect %d got %d", nextEpochStartHeight, curEpoch.StartHeight)
-	}
-	if curEpochVals := curEpoch.MemberList(); !isSameVals(nextEpochVals, curEpochVals) {
-		return fmt.Errorf("epoch validators not match, expect %v, got %v", nextEpochVals, curEpochVals)
-	}
-	return nil
-}
-
-func isSameVals(src, cmp []common.Address) bool {
-	exist := func(a common.Address, l []common.Address) bool {
-		for _, v := range l {
-			if a == v {
+// compareVals return true if `src` equals to `cmp`
+func compareVals(v1, v2 []common.Address) bool {
+	exist := func(addr common.Address, list []common.Address) bool {
+		for _, v := range list {
+			if addr == v {
 				return true
 			}
 		}
@@ -60,10 +42,10 @@ func isSameVals(src, cmp []common.Address) bool {
 		return true
 	}
 
-	if !contain(src, cmp) {
+	if !contain(v1, v2) {
 		return false
 	}
-	if !contain(cmp, src) {
+	if !contain(v2, v1) {
 		return false
 	}
 

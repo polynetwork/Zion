@@ -111,12 +111,13 @@ func (i *MethodBurnInput) Decode(payload []byte) error {
 //function verifyHeaderAndMint(bytes calldata header, bytes calldata rawCrossTx, bytes calldata proof) external returns (bool);
 type MethodVerifyHeaderAndMintInput struct {
 	Header     []byte
-	RowCrossTx []byte
+	RawCrossTx []byte
 	Proof      []byte
+	Extra      []byte
 }
 
 func (i *MethodVerifyHeaderAndMintInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodVerifyHeaderAndMint, i.Header, i.RowCrossTx, i.Proof)
+	return utils.PackMethod(ABI, MethodVerifyHeaderAndMint, i.Header, i.RawCrossTx, i.Proof, i.Extra)
 }
 func (i *MethodVerifyHeaderAndMintInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodVerifyHeaderAndMint, i, payload)

@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/alloc_proxy"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
@@ -36,6 +37,9 @@ import (
 //
 // main chain only use the interface of `burn`, and side chain only use the interface of `mint`.
 // the amount of `mint` and `burn` should always be the same.
+//
+// user get zion native token at main chain and only allow to burn/mint asset for it's self.
+//
 
 var (
 	gasTable = map[string]uint64{
@@ -89,8 +93,7 @@ func InitGenesisHeader(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, invalid params")
 	}
 
-	_, existEpoch, _ := getEpoch(s)
-	if existEpoch != nil {
+	if _, exist, _ := getEpoch(s); exist != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, genesis header already exist")
 	}
 
@@ -116,6 +119,11 @@ func InitGenesisHeader(s *native.NativeContract) ([]byte, error) {
 	return utils.ByteSuccess, nil
 }
 
+// ChangeEpoch update bookeepers for main chain. in hotstuff consensus, epoch changed at the height of
+// `epoch.StartHeight` - 1 denotes that if the epoch start height is 1000, the block header of 999 carry
+// bookeepers addresses and these new bookeepers will participant in consensus after block 999(current
+// block of 999 still verified by old bookeepers). so we should ensure that new epoch's `startHeight` is
+// higher than last epoch's `startHeight` and current header which carry proof of `epochChange`.
 func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
@@ -140,14 +148,21 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, failed to get last epoch, err: %v", err)
 	}
+	if lastEpoch == nil {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, last epoch is nil")
+	}
 	if lastEpoch.Hash() == epoch.Hash() {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, duplicate epoch")
 	}
-	if epoch.ID <= lastEpoch.ID {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, epoch ID should be greater than %d", lastEpoch.ID)
+	if header.Number.Uint64()+1 != epoch.StartHeight {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, header height %v + 1 should be equals to %d",
+			header.Number, epoch.StartHeight)
 	}
-	if header.Number.Uint64() <= lastEpoch.StartHeight || epoch.StartHeight <= lastEpoch.StartHeight {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, invalid header height, require greater than %d", lastEpoch.StartHeight)
+	if lstEpID := lastEpoch.ID; epoch.ID <= lstEpID {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, epoch ID should be greater than %d", lstEpID)
+	}
+	if lstEpStartNo := lastEpoch.StartHeight; header.Number.Uint64() <= lstEpStartNo || epoch.StartHeight <= lstEpStartNo {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, header number should > %d", lstEpStartNo)
 	}
 
 	nextEpochStartHeight, nextEpochVals, err := zion.VerifyHeader(header, lastEpoch.MemberList(), true)
@@ -155,10 +170,12 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("AllocProxy.ChangeEpoch, failed to verify header, err: %v", err)
 	}
 	if nextEpochStartHeight != epoch.StartHeight {
-		return nil, fmt.Errorf("AllocProxy.ChangeEpoch, failed to verify header, err: epoch start height expect %d got %d", nextEpochStartHeight, epoch.StartHeight)
+		return nil, fmt.Errorf("AllocProxy.ChangeEpoch, failed to verify header, err: epoch start height expect %d got %d",
+			nextEpochStartHeight, epoch.StartHeight)
 	}
-	if curEpochVals := epoch.MemberList(); !isSameVals(nextEpochVals, curEpochVals) {
-		return nil, fmt.Errorf("AllocProxy.ChangeEpoch, failed to verify header, err: vals expect %v got %v", nextEpochVals, curEpochVals)
+	if curEpochVals := epoch.MemberList(); !compareVals(nextEpochVals, curEpochVals) {
+		return nil, fmt.Errorf("AllocProxy.ChangeEpoch, failed to verify header, err: vals expect %v got %v",
+			nextEpochVals, curEpochVals)
 	}
 	if _, err := zutils.VerifyTx(input.Proof, header, utils.NodeManagerContractAddress, input.Extra, true); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, failed to verify proof, err: %v", err)
@@ -179,12 +196,24 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, failed to decode params, err: %v", err)
 	}
-	// todo: get side chain
-	if input.ToChainId == native.ZionMainChainID || input.ToChainId == 0 {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, dest chain id invalid")
+	if input.ToAddress == common.EmptyAddress {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, invaild to address")
+	}
+	if from != input.ToAddress {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, only allow self tx cross chain")
 	}
 	if input.Amount == nil || input.Amount.Cmp(common.Big0) <= 0 {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, invalid amount")
+	}
+	if input.ToChainId == native.ZionMainChainID || input.ToChainId == 0 {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, dest chain id invalid")
+	}
+
+	// check side chain
+	if srcChain, err := side_chain_manager.GetSideChain(s, input.ToChainId); err != nil {
+		return nil, fmt.Errorf("AllocProxy.Burn, failed to get side chain, err: %v", err)
+	} else if srcChain == nil {
+		return nil, fmt.Errorf("AllocProxy.Burn, side chain %d is not registered", input.ToChainId)
 	}
 
 	// check and sub balance
@@ -193,6 +222,7 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 	}
 	s.StateDB().SubBalance(from, input.Amount)
 
+	// store cross tx data
 	lastCrossTxIndex := getCrossTxIndex(s)
 	crossTxIndex := lastCrossTxIndex + 1
 	crossTx := &CrossTx{
@@ -202,10 +232,12 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 		Amount:      input.Amount,
 		Index:       crossTxIndex,
 	}
-
+	proof := crossTx.Proof()
+	storeCrossTxProof(s, crossTxIndex, proof)
 	if err := storeCrossTxContent(s, crossTx); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, failed to store cross tx content, err: %v", err)
 	}
+
 	if err := emitBurnEvent(s, input.ToChainId, from, input.ToAddress, input.Amount, crossTxIndex); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, emit `BurnEvent` failed, err: %v", err)
 	}
@@ -219,28 +251,70 @@ func Mint(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to decode params, err: %v", err)
 	}
-
-	if input.Header == nil || input.Proof == nil || input.RowCrossTx == nil {
+	if input.Header == nil || input.Proof == nil || input.RawCrossTx == nil || input.Extra == nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, invalid params")
 	}
 
+	// deserialize parameters
 	header, err := DecodeHeader(input.Header)
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to decode header, err: %v", err)
 	}
+	crossTx, err := DecodeCrossTx(input.RawCrossTx)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to decode cross tx, err: %v", err)
+	}
+	if crossTx.ToChainId == native.ZionMainChainID || crossTx.ToChainId == 0 {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, target chain id invalid")
+	}
+	if crossTx.Amount == nil || crossTx.Amount.Uint64() == 0 {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, amount invalid")
+	}
+	if crossTx.ToAddress == common.EmptyAddress {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, to address invalid")
+	}
+	if crossTx.Index == 0 {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, invalid cross tx index")
+	}
+	if crossTx.FromAddress == common.EmptyAddress {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, invalid cross tx from address")
+	}
+	if crossTx.FromAddress != crossTx.ToAddress {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, only allow self tx cross chain")
+	}
 
+	// check and store cross tx
+	if exist, _ := getCrossTxContent(s, crossTx.Hash()); exist != nil {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, duplicate cross tx %s", exist.Hash().Hex())
+	}
+	if err := storeCrossTxContent(s, crossTx); err != nil {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to store cross tx, err: %v", err)
+	}
+
+	// get and check epoch start height
 	_, epoch, err := getEpoch(s)
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to get epoch, err: %v", err)
 	}
+	if epoch == nil {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, current epoch is nil")
+	}
+	// allow epoch.startHeight == header.Num, there may be some cross tx happened at the first block of new epoch
 	if epoch.StartHeight < header.Number.Uint64() {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, header number should be greater than %d", epoch.StartHeight)
 	}
+
 	if _, _, err := zion.VerifyHeader(header, epoch.MemberList(), false); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to verify header, err: %v", err)
 	}
-	if _, err := zutils.VerifyTx(input.Proof, header, this, input.RowCrossTx, true); err != nil {
+	if _, err := zutils.VerifyTx(input.Proof, header, this, input.Extra, true); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to verify proof, err: %v", err)
+	}
+
+	s.StateDB().AddBalance(crossTx.ToAddress, crossTx.Amount)
+
+	if err := emitMintEvent(s, crossTx.ToChainId, crossTx.FromAddress, crossTx.ToAddress, crossTx.Amount); err != nil {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to emit `MintEvent`, err: %v", err)
 	}
 	return utils.ByteSuccess, nil
 }

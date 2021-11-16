@@ -19,7 +19,6 @@
 package alloc_proxy
 
 import (
-	"github.com/ethereum/go-ethereum/core/types"
 	"io"
 	"math/big"
 	"sync/atomic"
@@ -27,6 +26,8 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -84,6 +85,14 @@ func (tx *CrossTx) Hash() common.Hash {
 	return v
 }
 
+var CrossTxProofDigest = common.HexToHash("0x76a2d685bc92784d600e20321c4c038799baa25db9194ea3377900743154d6a2")
+
+func (tx *CrossTx) Proof() common.Hash {
+	enc := CrossTxProofDigest.Bytes()
+	enc = append(enc, tx.Hash().Bytes()...)
+	return crypto.Keccak256Hash(enc)
+}
+
 func EncodeHeader(h *types.Header) ([]byte, error) {
 	return h.MarshalJSON()
 }
@@ -106,4 +115,16 @@ func DecodeEpoch(payload []byte) (*nm.EpochInfo, error) {
 		return nil, err
 	}
 	return epoch, nil
+}
+
+func EncodeCrossTx(tx *CrossTx) ([]byte, error) {
+	return rlp.EncodeToBytes(tx)
+}
+
+func DecodeCrossTx(payload []byte) (*CrossTx, error) {
+	tx := new(CrossTx)
+	if err := rlp.DecodeBytes(payload, tx); err != nil {
+		return nil, err
+	}
+	return tx, nil
 }

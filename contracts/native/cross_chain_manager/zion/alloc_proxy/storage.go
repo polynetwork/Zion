@@ -20,8 +20,8 @@ package alloc_proxy
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -47,28 +47,36 @@ func storeCrossTxIndex(s *native.NativeContract, index uint64) {
 	s.GetCacheDB().Put(currentTxIndexKey(), utils.GetUint64Bytes(index))
 }
 
-func getCrossTxContent(s *native.NativeContract, index uint64) (*CrossTx, error) {
-	blob, err := s.GetCacheDB().Get(crossTxDataKey(index))
+func getCrossTxContent(s *native.NativeContract, hash common.Hash) (*CrossTx, error) {
+	blob, err := s.GetCacheDB().Get(crossTxDataKey(hash))
 	if err != nil {
 		return nil, err
 	}
-	tx := new(CrossTx)
+	if blob == nil {
+		return nil, nil
+	}
+
+	tx, err := DecodeCrossTx(blob)
 	if err := rlp.DecodeBytes(blob, tx); err != nil {
 		return nil, err
 	}
-	if tx.Index != index {
-		return nil, fmt.Errorf("expect crossTx index %d, got %d", index, tx.Index)
+	if tx == nil {
+		return nil, nil
+	}
+
+	if tx.Hash() != hash {
+		return nil, fmt.Errorf("expect crossTx hash %s, got %s", hash.Hex(), tx.Hash().Hex())
 	}
 	return tx, nil
 }
 
 func storeCrossTxContent(s *native.NativeContract, tx *CrossTx) error {
-	blob, err := rlp.EncodeToBytes(tx)
+	blob, err := EncodeCrossTx(tx)
 	if err != nil {
 		return err
 	}
 
-	s.GetCacheDB().Put(crossTxDataKey(tx.Index), blob)
+	s.GetCacheDB().Put(crossTxDataKey(tx.Hash()), blob)
 	return nil
 }
 
@@ -91,6 +99,9 @@ func getEpoch(s *native.NativeContract) ([]byte, *nm.EpochInfo, error) {
 	blob, err := s.GetCacheDB().Get(epochKey())
 	if err != nil {
 		return nil, nil, err
+	}
+	if blob == nil {
+		return nil, nil, nil
 	}
 	epoch, err := DecodeEpoch(blob)
 	if err != nil {
@@ -117,8 +128,8 @@ func crossTxProofKey(index uint64) []byte {
 	return utils.ConcatKey(this, []byte(SKP_TX_PROOF), utils.GetUint64Bytes(index))
 }
 
-func crossTxDataKey(index uint64) []byte {
-	return utils.ConcatKey(this, []byte(SKP_TX_CONTENT), utils.GetUint64Bytes(index))
+func crossTxDataKey(hash common.Hash) []byte {
+	return utils.ConcatKey(this, []byte(SKP_TX_CONTENT), hash[:])
 }
 
 func epochKey() []byte {
