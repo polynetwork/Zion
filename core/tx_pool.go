@@ -35,6 +35,10 @@ import (
 )
 
 const (
+	// zionTxPoolScaleRate is the size transaction pool magnification factor,
+	// used to accommodate more transactions.
+	zionTxPoolScaleRate = 8
+
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
 
@@ -42,13 +46,13 @@ const (
 	// takes up based on its size. The slots are used as DoS protection, ensuring
 	// that validating a new transaction remains a constant operation (in reality
 	// O(maxslots), where max slots are 4 currently).
-	txSlotSize = 32 * 1024
+	txSlotSize = 32 * 1024 * zionTxPoolScaleRate
 
 	// txMaxSize is the maximum size a single transaction can have. This field has
 	// non-trivial consequences: larger transactions are significantly harder and
 	// more expensive to propagate; larger transactions also take more resources
 	// to validate whether they fit into the pool or not.
-	txMaxSize = 4 * txSlotSize // 128KB
+	txMaxSize = 4 * txSlotSize * zionTxPoolScaleRate // 128KB
 )
 
 var (
@@ -164,10 +168,10 @@ var DefaultTxPoolConfig = TxPoolConfig{
 	PriceLimit: 1,
 	PriceBump:  10,
 
-	AccountSlots: 16,
-	GlobalSlots:  4096,
-	AccountQueue: 64,
-	GlobalQueue:  1024,
+	AccountSlots: 16 * zionTxPoolScaleRate,
+	GlobalSlots:  4096 * zionTxPoolScaleRate,
+	AccountQueue: 64 * zionTxPoolScaleRate,
+	GlobalQueue:  1024 * zionTxPoolScaleRate,
 
 	Lifetime: 3 * time.Hour,
 }
