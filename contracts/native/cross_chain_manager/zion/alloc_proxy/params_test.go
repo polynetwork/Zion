@@ -18,3 +18,28 @@
 
 package alloc_proxy
 
+import (
+	"math/big"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestCrossTxEncode(t *testing.T) {
+	expect := &CrossTx{
+		ToChainId:   2,
+		FromAddress: common.HexToAddress("0x12"),
+		ToAddress:   common.HexToAddress("0x33"),
+		Amount:      big.NewInt(34),
+		Index:       12,
+	}
+
+	payload, err := EncodeCrossTx(expect)
+	assert.NoError(t, err)
+
+	got, err := DecodeCrossTx(payload)
+	assert.NoError(t, err)
+
+	assert.Equal(t, expect, got)
+}

@@ -89,7 +89,8 @@ func InitGenesisHeader(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, failed to decode params, err: %v", err)
 	}
-	if input.Proof == nil || input.Header == nil || input.Epoch == nil || input.Extra == nil {
+	if input.Proof == nil || input.Header == nil || input.Epoch == nil || input.Extra == nil ||
+		len(input.Proof) == 0 || len(input.Header) == 0 || len(input.Epoch) == 0 || len(input.Extra) == 0 {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, invalid params")
 	}
 
@@ -131,7 +132,8 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, failed to decode params, err: %v", err)
 	}
-	if input.Extra == nil || input.Epoch == nil || input.Header == nil || input.Proof == nil {
+	if input.Extra == nil || input.Epoch == nil || input.Header == nil || input.Proof == nil ||
+		len(input.Proof) == 0 || len(input.Header) == 0 || len(input.Epoch) == 0 || len(input.Extra) == 0 {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, invalid params")
 	}
 
@@ -224,7 +226,13 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 
 	// store cross tx data
 	lastCrossTxIndex := getCrossTxIndex(s)
-	crossTxIndex := lastCrossTxIndex + 1
+	nextCrossTxIndex := lastCrossTxIndex + 1
+	storeCrossTxIndex(s, nextCrossTxIndex)
+	crossTxIndex := getCrossTxIndex(s)
+	if crossTxIndex != nextCrossTxIndex {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, store cross tx failed, expect tx index %d, got %d", nextCrossTxIndex, crossTxIndex)
+	}
+
 	crossTx := &CrossTx{
 		ToChainId:   input.ToChainId,
 		FromAddress: from,
@@ -234,9 +242,6 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 	}
 	proof := crossTx.Proof()
 	storeCrossTxProof(s, crossTxIndex, proof)
-	if err := storeCrossTxContent(s, crossTx); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, failed to store cross tx content, err: %v", err)
-	}
 
 	if err := emitBurnEvent(s, input.ToChainId, from, input.ToAddress, input.Amount, crossTxIndex); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, emit `BurnEvent` failed, err: %v", err)
@@ -251,7 +256,8 @@ func Mint(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to decode params, err: %v", err)
 	}
-	if input.Header == nil || input.Proof == nil || input.RawCrossTx == nil || input.Extra == nil {
+	if input.Header == nil || input.Proof == nil || input.RawCrossTx == nil || input.Extra == nil ||
+		len(input.Proof) == 0 || len(input.Header) == 0 || len(input.RawCrossTx) == 0 || len(input.Extra) == 0 {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, invalid params")
 	}
 
