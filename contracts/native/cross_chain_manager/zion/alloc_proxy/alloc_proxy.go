@@ -114,7 +114,7 @@ func InitGenesisHeader(s *native.NativeContract) ([]byte, error) {
 	}
 
 	storeEpoch(s, input.Epoch)
-	if err := emitInitGenesisBlockEvent(s, header.Number.Uint64(), input.Header, input.Epoch); err != nil {
+	if err := emitInitGenesisBlockEvent(s, header.Number, input.Header, input.Epoch); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, failed to emit `InitGenesisBlockEvent`, err: %v", err)
 	}
 	return utils.ByteSuccess, nil

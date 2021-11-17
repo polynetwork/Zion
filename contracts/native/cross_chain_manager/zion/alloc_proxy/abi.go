@@ -124,7 +124,7 @@ func (i *MethodVerifyHeaderAndMintInput) Decode(payload []byte) error {
 }
 
 //event InitGenesisBlockEvent(uint256 height, bytes header, bytes epoch);
-func emitInitGenesisBlockEvent(s *native.NativeContract, height uint64, header, epoch []byte) error {
+func emitInitGenesisBlockEvent(s *native.NativeContract, height *big.Int, header, epoch []byte) error {
 	return s.AddNotify(ABI, []string{EventInitGenesisBlockEvent}, height, header, epoch)
 }
 
