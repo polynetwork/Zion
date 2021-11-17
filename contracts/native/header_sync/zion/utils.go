@@ -50,6 +50,7 @@ func VerifyHeader(header *types.Header, validators []common.Address, checkEpochC
 
 	// epoch NOT changed
 	if len(extra.Validators) == 0 {
+		err = fmt.Errorf("header extra is empty")
 		return
 	}
 
