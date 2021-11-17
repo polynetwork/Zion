@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/alloc_proxy"
+	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -106,6 +107,9 @@ func InitGenesisHeader(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, failed to decode epoch, err: %v", err)
 	}
+	if epoch.Status != nm.ProposalStatusPassed {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, epoch status is not passed")
+	}
 	if _, _, err := zion.VerifyHeader(header, epoch.MemberList(), false); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, failed to verify header, err: %v", err)
 	}
@@ -144,6 +148,9 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	epoch, err := DecodeEpoch(input.Epoch)
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, failed to decode epoch, err: %v", err)
+	}
+	if epoch.Status != nm.ProposalStatusPassed {
+		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, epoch status is not passed")
 	}
 
 	lastEpochEnc, lastEpoch, err := getEpoch(s)
