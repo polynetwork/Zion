@@ -53,10 +53,8 @@ func CheckDoneTx(native *native.NativeContract, crossChainID []byte, chainID uin
 	return nil
 }
 
-func NotifyMakeProof(native *native.NativeContract, merkleValueHex string, key string) {
-
-	native.AddNotify(ABI, []string{NOTIFY_MAKE_PROOF_EVENT}, merkleValueHex, native.ContractRef().BlockHeight(), key)
-
+func NotifyMakeProof(native *native.NativeContract, merkleValueHex string, key string) error {
+	return native.AddNotify(ABI, []string{NOTIFY_MAKE_PROOF_EVENT}, merkleValueHex, native.ContractRef().BlockHeight().Uint64(), key)
 }
 
 func Uint256ToBytes(num *big.Int) []byte {

@@ -47,7 +47,9 @@ func MakeTransaction(service *native.NativeContract, params *MakeTxParam, fromCh
 	}
 	chainIDBytes := utils.GetUint64Bytes(params.ToChainID)
 	key := hex.EncodeToString(utils.ConcatKey(utils.CrossChainManagerContractAddress, []byte(REQUEST), chainIDBytes, merkleValue.TxHash))
-	NotifyMakeProof(service, hex.EncodeToString(value), key)
+	if err := NotifyMakeProof(service, hex.EncodeToString(value), key); err != nil {
+		return fmt.Errorf("MakeTransaction, NotifyMakeProof error:%s", err)
+	}
 	return nil
 }
 
