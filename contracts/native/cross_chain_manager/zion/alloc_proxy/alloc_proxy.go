@@ -41,6 +41,9 @@ import (
 //
 // user get zion native token at main chain and only allow to burn/mint asset for it's self.
 //
+// sequence of logic:
+// main chain alloc -> exchange -> user burn on main net -> side chain relayer `verifyHeaderAndMint` -> user add balance
+//
 
 var (
 	gasTable = map[string]uint64{
