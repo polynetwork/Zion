@@ -425,14 +425,6 @@ func (pool *TxPool) GasPrice() *big.Int {
 func (pool *TxPool) SetGasPrice(price *big.Int) {
 	// minimum `gasPrice` never change for zion.
 	return
-	pool.mu.Lock()
-	defer pool.mu.Unlock()
-
-	pool.gasPrice = price
-	for _, tx := range pool.priced.Cap(price) {
-		pool.removeTx(tx.Hash(), false)
-	}
-	log.Info("Transaction pool price threshold updated", "price", price)
 }
 
 // Nonce returns the next nonce of an account, with all transactions executable
@@ -549,10 +541,6 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// `pool.gasPrice` is a personalized attribute of `POW` miners, zion allows
 	// that txs of different nodes and prices to be spread freely, and do not to drop it.
-	//// Drop non-local transactions under our own minimal accepted gas price
-	//if !local && tx.GasPriceIntCmp(pool.gasPrice) < 0 {
-	//	return ErrUnderpriced
-	//}
 	// Ensure the transaction adheres to nonce ordering
 	if pool.currentState.GetNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow
