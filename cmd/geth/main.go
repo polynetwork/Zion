@@ -19,6 +19,7 @@ package main
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/contracts/native/boot"
 	"os"
 	"sort"
 	"strconv"
@@ -31,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/console/prompt"
-	"github.com/ethereum/go-ethereum/contracts/native/boot"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -306,8 +306,7 @@ func prepare(ctx *cli.Context) {
 	defaultRecommitTime := time.Second * time.Duration(hotstuff.DefaultBasicConfig.BlockPeriod)
 	ctx.GlobalSet(utils.MinerRecommitIntervalFlag.Name, strconv.Itoa(int(defaultRecommitTime)))
 
-	// Setup native contract ab
-	boot.InitialNativeContracts()
+	boot.InitialMainChainNativeContracts()
 
 	// Start metrics export if enabled
 	utils.SetupMetrics(ctx)

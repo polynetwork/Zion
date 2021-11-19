@@ -135,6 +135,15 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
+	if chainConfig == nil || chainConfig.ChainID == nil {
+		return nil, genesisErr
+	}
+	// init different native contracts
+	//if params.IsMainChain(chainConfig.ChainID.Uint64()) {
+	//	boot.InitialMainChainNativeContracts()
+	//} else {
+	//	boot.InitSideChainNativeContracts()
+	//}
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	if err := pruner.RecoverPruning(stack.ResolvePath(""), chainDb, stack.ResolvePath(config.TrieCleanCacheJournal)); err != nil {

@@ -317,37 +317,25 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 }
 
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
-	chainID := g.Config.ChainID.Uint64()
-	if !params.IsMainChain(chainID) && addr != utils.AllocProxyContractAddress {
-		return
-	}
-
-	// only relay chain need native contracts
-	db.CreateAccount(addr)
-	db.SetCode(addr, addr[:])
-	initBlockNumber := big.NewInt(0)
-	if g.Config.IsEIP158(initBlockNumber) {
-		db.SetNonce(addr, 1)
+	if params.IsMainChain(g.Config.ChainID.Uint64()) || addr == utils.LockProxyContractAddress {
+		db.CreateAccount(addr)
+		db.SetCode(addr, addr[:])
+		initBlockNumber := big.NewInt(0)
+		if g.Config.IsEIP158(initBlockNumber) {
+			db.SetNonce(addr, 1)
+		}
 	}
 }
 
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
-	addBalance := func(chainID uint64, addr common.Address, account GenesisAccount) {
-		if params.IsMainChain(chainID) {
+	if params.IsMainChain(g.Config.ChainID.Uint64()) {
+		for addr, account := range g.Alloc {
 			statedb.AddBalance(addr, account.Balance)
-		} else {
-			balance := params.SideChainInitAlloc
-			statedb.AddBalance(addr, balance)
-		}
-	}
-
-	chainID := g.Config.ChainID.Uint64()
-	for addr, account := range g.Alloc {
-		addBalance(chainID, addr, account)
-		statedb.SetCode(addr, account.Code)
-		statedb.SetNonce(addr, account.Nonce)
-		for key, value := range account.Storage {
-			statedb.SetState(addr, key, value)
+			statedb.SetCode(addr, account.Code)
+			statedb.SetNonce(addr, account.Nonce)
+			for key, value := range account.Storage {
+				statedb.SetState(addr, key, value)
+			}
 		}
 	}
 }
