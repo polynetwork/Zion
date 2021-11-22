@@ -31,98 +31,16 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestBindProxy(t *testing.T) {
-	epoch := prepare(t)
-
-	toChainID := uint64(12)
-	targetProxy := common.HexToAddress("0x123a234d3")
-	for index, v := range epoch.Peers.List {
-		_, _, err := testCallBindProxy(v.Address, toChainID, targetProxy[:])
-		if err != nil {
-			t.Logf("proposer %d bind message: %s", index, err.Error())
-		}
-	}
-
-	_, blob, err := testCallGetProxy(toChainID)
-	assert.NoError(t, err)
-	assert.Equal(t, targetProxy[:], blob)
-}
-
-func TestBindAsset(t *testing.T) {
-	epoch := prepare(t)
-	testStateDB.SetBalance(this, new(big.Int).Mul(minBalance, big.NewInt(2)))
-
-	fromAsset := common.EmptyAddress
-	toChainID := uint64(12)
-	toAsset := []byte{'1', 'a', '3', 'd', '9'}
-	for index, v := range epoch.Peers.List {
-		_, _, err := testCallBindAsset(v.Address, fromAsset, toChainID, toAsset)
-		if err != nil {
-			t.Logf("proposer %d bind message: %s", index, err.Error())
-		}
-	}
-
-	_, blob, err := testCallGetAsset(fromAsset, toChainID)
-	assert.NoError(t, err)
-	assert.Equal(t, toAsset, blob)
-}
-
-func TestBindCaller(t *testing.T) {
-	epoch := prepare(t)
-	testStateDB.SetBalance(this, new(big.Int).Mul(minBalance, big.NewInt(2)))
-
-	toChainID := uint64(12)
-	caller := []byte{'1', 'a', '3', 'd', '9'}
-	for index, v := range epoch.Peers.List {
-		_, _, err := testCallBindCaller(v.Address, toChainID, caller)
-		if err != nil {
-			t.Logf("proposer %d bind message: %s", index, err.Error())
-		}
-	}
-
-	_, blob, err := testCallGetCaller(toChainID)
-	assert.NoError(t, err)
-	assert.Equal(t, caller, blob)
-}
-
 func TestLockAndUnlock(t *testing.T) {
-	epoch := prepare(t)
-
 	targetChainID := uint64(12)
 	fromAsset := common.EmptyAddress
-	targetProxy := common.HexToAddress("0x1")
 	targetCaller := common.HexToAddress("0x2").Bytes()
-	targetAsset := common.HexToAddress("0x3").Bytes()
 	sender := common.HexToAddress("0x4")
 	receiver := common.HexToAddress("0x5")
 	amount := minBalance
 
 	testStateDB.SetBalance(this, new(big.Int).Mul(minBalance, big.NewInt(1)))
 	testStateDB.SetBalance(sender, new(big.Int).Mul(minBalance, big.NewInt(2)))
-
-	// bind caller
-	for index, v := range epoch.Peers.List {
-		_, _, err := testCallBindCaller(v.Address, targetChainID, targetCaller)
-		if err != nil {
-			t.Logf("proposer %d bind message: %s", index, err.Error())
-		}
-	}
-
-	// bind proxy
-	for index, v := range epoch.Peers.List {
-		_, _, err := testCallBindProxy(v.Address, targetChainID, targetProxy[:])
-		if err != nil {
-			t.Logf("proposer %d bind message: %s", index, err.Error())
-		}
-	}
-
-	// bind asset
-	for index, v := range epoch.Peers.List {
-		_, _, err := testCallBindAsset(v.Address, fromAsset, targetChainID, targetAsset)
-		if err != nil {
-			t.Logf("proposer %d bind message: %s", index, err.Error())
-		}
-	}
 
 	_, _, err := testLock(sender, fromAsset, targetChainID, receiver.Bytes(), amount)
 	assert.NoError(t, err)
@@ -139,111 +57,6 @@ func TestLockAndUnlock(t *testing.T) {
 	entranParams := &scom.EntranceParam{SourceChainID: targetChainID}
 	_, err = testUnlock(receiver, entranParams, txParams, amount)
 	assert.NoError(t, err)
-}
-
-func testCallBindProxy(sender common.Address, toChainID uint64, targetProxy []byte) (*native.NativeContract, []byte, error) {
-	input := &MethodBindProxyInput{
-		ToChainId:       toChainID,
-		TargetProxyHash: targetProxy,
-	}
-	payload, err := input.Encode()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ctx := generateTestSenderTx(sender, payload)
-	if ret, err := BindProxy(ctx); err != nil {
-		return nil, nil, err
-	} else {
-		return ctx, ret, nil
-	}
-}
-
-func testCallGetProxy(toChainID uint64) (*native.NativeContract, []byte, error) {
-	input := &MethodGetProxyInput{ToChainId: toChainID}
-	payload, err := input.Encode()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ctx := generateTestCallCtx(payload)
-	if ret, err := GetProxy(ctx); err != nil {
-		return nil, nil, err
-	} else {
-		return ctx, ret, nil
-	}
-}
-
-func testCallBindAsset(sender, fromAsset common.Address, toChainID uint64, toAsset []byte) (*native.NativeContract, []byte, error) {
-	input := &MethodBindAssetHashInput{
-		FromAssetHash: fromAsset,
-		ToChainId:     toChainID,
-		ToAssetHash:   toAsset,
-	}
-	payload, err := input.Encode()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ctx := generateTestSenderTx(sender, payload)
-	if ret, err := BindAsset(ctx); err != nil {
-		return nil, nil, err
-	} else {
-		return ctx, ret, nil
-	}
-}
-
-func testCallGetAsset(fromAsset common.Address, toChainID uint64) (*native.NativeContract, []byte, error) {
-	input := &MethodGetAssetInput{
-		FromAssetHash: fromAsset,
-		ToChainId:     toChainID,
-	}
-	payload, err := input.Encode()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ctx := generateTestCallCtx(payload)
-	if ret, err := GetAsset(ctx); err != nil {
-		return nil, nil, err
-	} else {
-		return ctx, ret, nil
-	}
-}
-
-func testCallBindCaller(sender common.Address, toChainID uint64, caller []byte) (*native.NativeContract, []byte, error) {
-	input := &MethodBindCallerInput{
-		ToChainId: toChainID,
-		Caller:    caller,
-	}
-	payload, err := input.Encode()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ctx := generateTestSenderTx(sender, payload)
-	if ret, err := BindCaller(ctx); err != nil {
-		return nil, nil, err
-	} else {
-		return ctx, ret, nil
-	}
-}
-
-func testCallGetCaller(toChainID uint64) (*native.NativeContract, []byte, error) {
-	input := &MethodGetCallerInput{
-		ToChainId: toChainID,
-	}
-	payload, err := input.Encode()
-	if err != nil {
-		return nil, nil, err
-	}
-
-	ctx := generateTestCallCtx(payload)
-	if ret, err := GetCaller(ctx); err != nil {
-		return nil, nil, err
-	} else {
-		return ctx, ret, nil
-	}
 }
 
 func testLock(sender, fromAsset common.Address, toChainID uint64, toAddress []byte, amount *big.Int) (*native.NativeContract, []byte, error) {
@@ -275,18 +88,6 @@ func testUnlock(sender common.Address, entranParams *scom.EntranceParam, makeTxP
 	} else {
 		return ctx, nil
 	}
-}
-
-func prepare(t *testing.T) *nm.EpochInfo {
-	resetTestContext()
-	s := testEmptyCtx
-	nm.InitABI()
-
-	epoch := nm.GenerateTestEpochInfo(1, uint64(testBlockNum-1), 4)
-	if err := nm.StoreTestEpoch(s, epoch); err != nil {
-		t.Fatal(err)
-	}
-	return epoch
 }
 
 func generateTestSenderTx(sender common.Address, payload []byte) *native.NativeContract {

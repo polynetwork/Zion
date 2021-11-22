@@ -50,7 +50,7 @@ func TestMain(m *testing.M) {
 	ref := generateContractRef()
 	testEmptyCtx = native.NewNativeContract(testStateDB, ref)
 
-	InitAllocProxy()
+	InitLockProxy()
 
 	os.Exit(m.Run())
 }
