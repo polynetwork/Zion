@@ -16,30 +16,38 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package alloc_proxy
+package lock_proxy
 
 import (
-	"math/big"
-	"testing"
-
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/assert"
 )
 
-func TestCrossTxEncode(t *testing.T) {
-	expect := &CrossTx{
-		ToChainId:   2,
-		FromAddress: common.HexToAddress("0x12"),
-		ToAddress:   common.HexToAddress("0x33"),
-		Amount:      big.NewInt(34),
-		Index:       12,
+// compareVals return true if `src` equals to `cmp`
+func compareVals(v1, v2 []common.Address) bool {
+	exist := func(addr common.Address, list []common.Address) bool {
+		for _, v := range list {
+			if addr == v {
+				return true
+			}
+		}
+		return false
 	}
 
-	payload, err := EncodeCrossTx(expect)
-	assert.NoError(t, err)
+	contain := func(l1, l2 []common.Address) bool {
+		for _, v := range l1 {
+			if !exist(v, l2) {
+				return false
+			}
+		}
+		return true
+	}
 
-	got, err := DecodeCrossTx(payload)
-	assert.NoError(t, err)
+	if !contain(v1, v2) {
+		return false
+	}
+	if !contain(v2, v1) {
+		return false
+	}
 
-	assert.Equal(t, expect, got)
+	return true
 }

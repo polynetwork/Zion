@@ -26,7 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/lock_proxy"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/main_chain_lock_proxy"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 

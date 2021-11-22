@@ -1,7 +1,7 @@
 // Code generated - DO NOT EDIT.
 // This file is a generated binding and any manual changes will be lost.
 
-package alloc_proxy
+package side_chain_lock_proxy
 
 import (
 	"math/big"

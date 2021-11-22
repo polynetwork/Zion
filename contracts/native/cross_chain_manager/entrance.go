@@ -20,7 +20,6 @@ package cross_chain_manager
 
 import (
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
@@ -32,8 +31,8 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/lock_proxy"
-	zion "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/sidechain"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/mainchain/lock_proxy"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/sidechain"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -90,7 +89,7 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 	case utils.ZILLIQA_ROUTER:
 		return zilliqa.NewHandler(), nil
 	case utils.ZION_ROUTER:
-		return zion.NewHandler(), nil
+		return sidechain.NewHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}

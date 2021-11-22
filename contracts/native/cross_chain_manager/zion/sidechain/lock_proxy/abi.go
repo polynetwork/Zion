@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package alloc_proxy
+package lock_proxy
 
 import (
 	"fmt"
