@@ -94,8 +94,11 @@ func (s *SignerImpl) Recover(header *types.Header) (common.Address, *types.Hotst
 	hash := header.Hash()
 	if s.signatures != nil {
 		if data, ok := s.signatures.Get(hash); ok {
-			cache := data.(*SignatureCache)
-			return cache.Address, cache.Extra, nil
+			if cache, ok := data.(*SignatureCache); ok {
+				if cache.Extra != nil && cache.Extra.CommittedSeal != nil && len(cache.Extra.CommittedSeal) > 0 {
+					return cache.Address, cache.Extra, nil
+				}
+			}
 		}
 	}
 
