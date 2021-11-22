@@ -20,7 +20,6 @@ package lock_proxy
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -29,18 +28,15 @@ import (
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/main_chain_lock_proxy"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/params"
+	"github.com/ethereum/go-ethereum/core"
 )
-
-const MIN_BALANCE = 1000000 // default minimum value of lock proxy balance
 
 var (
 	gasTable = map[string]uint64{
-		MethodName: 0,
-		MethodLock: 10000,
+		MethodName:                   0,
+		MethodLock:                   10000,
+		MethodGetSideChainLockAmount: 0,
 	}
-
-	minBalance = new(big.Int).Mul(big.NewInt(MIN_BALANCE), params.OneEth)
 )
 
 func InitLockProxy() {
@@ -53,6 +49,7 @@ func RegisterLockProxyContract(s *native.NativeContract) {
 
 	s.Register(MethodName, Name)
 	s.Register(MethodLock, Lock)
+	s.Register(MethodGetSideChainLockAmount, GetSideChainLockAmount)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -82,7 +79,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if input.Amount == nil || input.Amount.Cmp(common.Big0) == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, amount invalid")
 	}
-	if input.Amount.Cmp(s.ContractRef().Value()) != 0 {
+	if value := s.ContractRef().Value(); value == nil || input.Amount.Cmp(value) != 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, amount != tx.value")
 	}
 
@@ -103,6 +100,8 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to get side chain %d, err: %v", toChainID, err)
 	} else if sideChain == nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, side chain %d is nil", toChainID)
+	} else if sideChain.Router != utils.ZION_ROUTER {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, side chain %d router is not zion", toChainID)
 	}
 
 	// serialize tx args
@@ -123,6 +122,9 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if err := scom.PutDoneTx(s, crossChainID, sourceChainID); err != nil {
 		return nil, fmt.Errorf("LockProxy.Lock, faield to store cross transaction, err: %v", err)
 	}
+
+	// set total amount
+	addTotalAmount(s, toChainID, amount)
 
 	// assemble tx, generate and store cross chain transaction proof
 	txParams, rawTx, err := zutils.EncodeMakeTxParams(paramTxHash, crossChainID, caller[:], toChainID, toContract[:], toMethod, txData)
@@ -160,48 +162,75 @@ func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txPara
 	if txParams.ToChainID != native.ZionMainChainID {
 		return fmt.Errorf("LockProxy.Unlock, target chain id invalid")
 	}
-	if common.BytesToAddress(txParams.ToContractAddress) != this {
+
+	// check side chain registered
+	if sideChain, err := side_chain_manager.GetSideChain(s, sourceChainID); err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to get side chain %d, err: %v", sourceChainID, err)
+	} else if sideChain == nil {
+		return fmt.Errorf("LockProxy.Unlock, side chain %d is nil", sourceChainID)
+	} else if sideChain.Router != utils.ZION_ROUTER {
+		return fmt.Errorf("LockProxy.Unlock, side chain %d router is not zion", sourceChainID)
+	}
+
+	// check contracts
+	if txParams.ToContractAddress == nil || common.BytesToAddress(txParams.ToContractAddress) != this {
 		return fmt.Errorf("LockProxy.Unlock, target contract is invalid")
+	}
+	if txParams.FromContractAddress == nil || common.BytesToAddress(txParams.FromContractAddress) != this {
+		return fmt.Errorf("LockProxy.Unlock, source contract is invalid")
 	}
 	if txParams.Method != "unlock" {
 		return fmt.Errorf("LockProxy.Unlock, method is invalid")
 	}
-	toCaller := common.BytesToAddress(txParams.ToContractAddress)
-	if toCaller != this {
-		return fmt.Errorf("LockProxy.Unlock, target caller is invalid")
+
+	// check asset
+	toAsset := common.BytesToAddress(args.ToAssetHash)
+	if toAsset != common.EmptyAddress {
+		return fmt.Errorf("LockProxy.Unlock, to asset invalid, %s", toAsset.Hex())
 	}
 
-	// filter duplicate tx
-	if err := scom.CheckDoneTx(s, txParams.CrossChainID, sourceChainID); err != nil {
-		return fmt.Errorf("LockProxy.Unlock, failed to check done transaction, err:%s", err)
-	}
+	// do not need to check `request` and `DoneTx`, there were just settled at `entrance` while relayer send `commitProof`
 
 	// transfer asset
 	toAddress := common.BytesToAddress(args.ToAddress)
-	if err := transferFromContract(s, toAddress, args.Amount); err != nil {
-		return fmt.Errorf("LockProxy.Unlock, failed to transfer asset, err: %v", err)
+	if !core.CanTransfer(s.StateDB(), this, args.Amount) {
+		return fmt.Errorf("LockProxy.Unlock, failed to transfer native toekn, err: Insufficient balance")
+	} else {
+		core.Transfer(s.StateDB(), this, toAddress, args.Amount)
 	}
-
-	// store done tx
-	if err := scom.PutDoneTx(s, txParams.CrossChainID, sourceChainID); err != nil {
-		return fmt.Errorf("LockProxy.Unlock, failed to put done tx, err:%s", err)
+	if err := subTotalAmount(s, sourceChainID, args.Amount); err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to sub total amount, err: %v", err)
 	}
 
 	// emit event logs
-	toAsset := common.EmptyAddress
 	if err := emitUnlockEvent(s, toAsset, toAddress, args.Amount); err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to emit `UnlockEvent`, err: %v", err)
 	}
 
-	crossChainTxHash := s.ContractRef().TxHash().Bytes()
+	crossChainTxHash := s.ContractRef().TxHash()
 	if err := emitVerifyHeaderAndExecuteTxEvent(s,
 		sourceChainID,
-		args.ToAssetHash,
-		crossChainTxHash,
+		toAsset[:],
+		crossChainTxHash[:],
 		txParams.TxHash,
 	); err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to emit `VerifyHeaderAndExecuteTxEvent`, err: %v", err)
 	}
 
 	return nil
+}
+
+func GetSideChainLockAmount(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	failed := common.Big0.Bytes()
+
+	input := new(MethodGetSideChainLockAmountInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		return failed, fmt.Errorf("LockProxy.GetSideChainLockAmount, failed to decode params")
+	}
+
+	// ignore side chain register checking
+	amount := getTotalAmount(s, input.ChainId)
+	return amount.Bytes(), nil
 }

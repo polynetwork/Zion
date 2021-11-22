@@ -28,35 +28,49 @@ import (
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
+	nu "github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestLockAndUnlock(t *testing.T) {
 	targetChainID := uint64(12)
 	fromAsset := common.EmptyAddress
-	targetCaller := common.HexToAddress("0x2").Bytes()
 	sender := common.HexToAddress("0x4")
 	receiver := common.HexToAddress("0x5")
+	minBalance, _ := new(big.Int).SetString("1000000000000000000", 10)
 	amount := minBalance
+	cnt := 10
 
-	testStateDB.SetBalance(this, new(big.Int).Mul(minBalance, big.NewInt(1)))
-	testStateDB.SetBalance(sender, new(big.Int).Mul(minBalance, big.NewInt(2)))
+	testStateDB.SetBalance(this, new(big.Int).Mul(minBalance, big.NewInt(int64(cnt))))
+	testStateDB.SetBalance(sender, new(big.Int).Mul(minBalance, big.NewInt(int64(cnt))))
+	assert.NoError(t, testSetSideChain(targetChainID))
 
-	_, _, err := testLock(sender, fromAsset, targetChainID, receiver.Bytes(), amount)
-	assert.NoError(t, err)
+	for i := 0; i < cnt; i++ {
+		_, _, err := testLock(sender, fromAsset, targetChainID, receiver.Bytes(), amount)
+		assert.NoError(t, err)
 
-	txArgs := utils.EncodeTxArgs(fromAsset.Bytes(), sender.Bytes(), amount)
-	txParams := &scom.MakeTxParam{
-		CrossChainID:        []byte{'1', 'a'},
-		FromContractAddress: targetCaller,
-		ToChainID:           native.ZionMainChainID,
-		ToContractAddress:   this.Bytes(),
-		Method:              "unlock",
-		Args:                txArgs,
+		total, err := testGetLockAmount(targetChainID)
+		assert.NoError(t, err)
+		t.Logf("current lock amount %v", total)
+
+		txArgs := utils.EncodeTxArgs(fromAsset.Bytes(), sender.Bytes(), amount)
+		txParams := &scom.MakeTxParam{
+			CrossChainID:        []byte{'1', 'a'},
+			FromContractAddress: this[:],
+			ToChainID:           native.ZionMainChainID,
+			ToContractAddress:   this.Bytes(),
+			Method:              "unlock",
+			Args:                txArgs,
+		}
+		entranParams := &scom.EntranceParam{SourceChainID: targetChainID}
+		_, err = testUnlock(receiver, entranParams, txParams, amount)
+		assert.NoError(t, err)
+
+		total, err = testGetLockAmount(targetChainID)
+		assert.NoError(t, err)
+		t.Logf("current lock amount %v", total)
 	}
-	entranParams := &scom.EntranceParam{SourceChainID: targetChainID}
-	_, err = testUnlock(receiver, entranParams, txParams, amount)
-	assert.NoError(t, err)
 }
 
 func testLock(sender, fromAsset common.Address, toChainID uint64, toAddress []byte, amount *big.Int) (*native.NativeContract, []byte, error) {
@@ -90,6 +104,21 @@ func testUnlock(sender common.Address, entranParams *scom.EntranceParam, makeTxP
 	}
 }
 
+func testGetLockAmount(chainID uint64) (*big.Int, error) {
+	input := &MethodGetSideChainLockAmountInput{ChainId: chainID}
+	payload, err := input.Encode()
+	if err != nil {
+		return nil, err
+	}
+	ctx := generateTestCallCtx(payload)
+
+	enc, err := GetSideChainLockAmount(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(enc), nil
+}
+
 func generateTestSenderTx(sender common.Address, payload []byte) *native.NativeContract {
 	txHash := nm.GenerateTestHash(rand.Int())
 	ref := native.NewContractRef(testStateDB, sender, sender, big.NewInt(testBlockNum), txHash, testSupplyGas, nil)
@@ -111,4 +140,12 @@ func generateTestCallCtx(payload []byte) *native.NativeContract {
 		Payload:         payload,
 	})
 	return native.NewNativeContract(testStateDB, ref)
+}
+
+func testSetSideChain(chainID uint64) error {
+	sc := new(side_chain_manager.SideChain)
+	sc.Router = nu.ZION_ROUTER
+	sc.ChainId = chainID
+	s := generateTestCallCtx(nil)
+	return side_chain_manager.PutSideChain(s, sc)
 }

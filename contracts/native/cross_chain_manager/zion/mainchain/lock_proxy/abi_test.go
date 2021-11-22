@@ -54,3 +54,15 @@ func TestABIMethodLockInput(t *testing.T) {
 
 	assert.Equal(t, expect, got)
 }
+
+func TestABIMethodGetSideChainLockAmountInput(t *testing.T) {
+	expect := &MethodGetSideChainLockAmountInput{ChainId: 12}
+
+	payload, err := expect.Encode()
+	assert.NoError(t, err)
+
+	got := new(MethodGetSideChainLockAmountInput)
+	assert.NoError(t, got.Decode(payload))
+
+	assert.Equal(t, expect, got)
+}

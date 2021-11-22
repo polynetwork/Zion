@@ -97,3 +97,51 @@ func TestStoreTxIndex(t *testing.T) {
 		assert.Equal(t, v.Expect.Uint64(), got.Uint64())
 	}
 }
+
+func TestStoreAmount(t *testing.T) {
+	resetTestContext()
+	s := testEmptyCtx
+	chainID := uint64(12)
+
+	var testcases = []struct {
+		Amount  uint64
+		Add bool
+		Expect uint64
+	}{
+		{
+			Amount: 4,
+			Add: true,
+			Expect: 4,
+		},
+		{
+			Amount: 3,
+			Add: true,
+			Expect: 7,
+		},
+		{
+			Amount: 2,
+			Add: true,
+			Expect: 9,
+		},
+		{
+			Amount: 1,
+			Add: true,
+			Expect: 10,
+		},
+		{
+			Amount: 10,
+			Add: false,
+			Expect: 0,
+		},
+	}
+
+	for _, v := range testcases {
+		if v.Add {
+			addTotalAmount(s, chainID, new(big.Int).SetUint64(v.Amount))
+		} else {
+			subTotalAmount(s, chainID, new(big.Int).SetUint64(v.Amount))
+		}
+		data := getTotalAmount(s, chainID)
+		assert.Equal(t, v.Expect, data.Uint64())
+	}
+}

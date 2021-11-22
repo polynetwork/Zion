@@ -79,6 +79,17 @@ func (i *MethodLockInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodLock, i, payload)
 }
 
+type MethodGetSideChainLockAmountInput struct {
+	ChainId uint64
+}
+
+func (i *MethodGetSideChainLockAmountInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetSideChainLockAmount, i.ChainId)
+}
+func (i *MethodGetSideChainLockAmountInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodGetSideChainLockAmount, i, payload)
+}
+
 //event LockEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount);
 func emitLockEvent(s *native.NativeContract,
 	fromAssetHash, fromAddress common.Address,
@@ -93,7 +104,7 @@ func emitUnlockEvent(s *native.NativeContract, toAssetHash, toAddress common.Add
 	return s.AddNotify(ABI, []string{EventUnlockEvent}, toAssetHash, toAddress, amount)
 }
 
-//event event CrossChainEvent(address indexed sender, bytes txId, address proxyOrAssetContract, uint64 toChainId, bytes toContract, bytes rawdata);
+//event CrossChainEvent(address indexed sender, bytes txId, address proxyOrAssetContract, uint64 toChainId, bytes toContract, bytes rawdata);
 func emitCrossChainEvent(s *native.NativeContract,
 	sender common.Address,
 	txID []byte,
@@ -105,6 +116,7 @@ func emitCrossChainEvent(s *native.NativeContract,
 	return s.AddNotify(ABI, []string{EventCrossChainEvent}, sender, txID, proxyOrAssetContract, toChainID, toContract, rawTx)
 }
 
+// event VerifyHeaderAndExecuteTxEvent(uint64 fromChainID, bytes toContract, bytes crossChainTxHash, bytes fromChainTxHash);
 func emitVerifyHeaderAndExecuteTxEvent(s *native.NativeContract,
 	fromChainID uint64,
 	toContract []byte,

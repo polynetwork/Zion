@@ -11,6 +11,7 @@ interface IMainChainLockProxy {
     // function getAssetHash(address fromAssetHash, uint64 toChainId) external view returns (bytes memory);
     // function bindCaller(uint64 toChainId, bytes calldata caller) external returns (bool);
     // function getCaller(uint64 toChainId) external view returns (bytes memory);
+    function getSideChainLockAmount(uint64 chainId) external view returns (uint);
     function lock(address fromAssetHash, uint64 toChainId, bytes calldata toAddress, uint256 amount) external payable returns (bool);
 
     // event BindProxyEvent(uint64 toChainId, bytes targetProxyHash);

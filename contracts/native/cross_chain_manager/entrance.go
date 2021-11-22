@@ -141,7 +141,7 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 
 	// transfer outcome for main chain
 	dstChainID := txParam.ToChainID
-	if native.IsMainChain(dstChainID) {
+	if srcChain.Router == utils.ZION_ROUTER && native.IsMainChain(dstChainID) {
 		if err := lock_proxy.Unlock(s, params, txParam); err != nil {
 			return nil, err
 		} else {

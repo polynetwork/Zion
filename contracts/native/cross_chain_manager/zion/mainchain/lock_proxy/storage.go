@@ -29,9 +29,10 @@ import (
 )
 
 const (
-	SKP_TX_HASH   = "st_tx_hash"
-	SKP_TX_INDEX  = "st_tx_index"
-	SKP_TX_PARAMS = "st_tx_params"
+	SKP_TX_HASH      = "st_tx_hash"
+	SKP_TX_INDEX     = "st_tx_index"
+	SKP_TX_PARAMS    = "st_tx_params"
+	SKP_TOTAL_AMOUNT = "st_amt"
 )
 
 func getNextTxIndex(s *native.NativeContract) (*big.Int, error) {
@@ -57,25 +58,34 @@ func storeTxIndex(s *native.NativeContract, txIndex *big.Int) {
 	s.GetCacheDB().Put(txIndexKey(), scom.Uint256ToBytes(txIndex))
 }
 
-func getTxProof(s *native.NativeContract, paramTxHash []byte) common.Hash {
-	blob, _ := s.GetCacheDB().Get(txHashKey(paramTxHash))
+func getTotalAmount(s *native.NativeContract, sideChainID uint64) *big.Int {
+	key := totalAmountKey(sideChainID)
+	blob, _ := s.GetCacheDB().Get(key)
 	if blob == nil {
-		return common.EmptyHash
+		return common.Big0
 	}
-	return common.BytesToHash(blob)
+	return new(big.Int).SetBytes(blob)
 }
 
-func storeTxProof(s *native.NativeContract, paramTxHash []byte, proof common.Hash) {
-	s.GetCacheDB().Put(txHashKey(paramTxHash), proof[:])
+func addTotalAmount(s *native.NativeContract, sideChainID uint64, amount *big.Int) {
+	total := getTotalAmount(s, sideChainID)
+	total = new(big.Int).Add(total, amount)
+	storeTotalAmount(s, sideChainID, total)
 }
 
-func getTxParams(s *native.NativeContract, paramTxHash []byte) ([]byte, error) {
-	return s.GetCacheDB().Get(txHashKey(paramTxHash))
+func subTotalAmount(s *native.NativeContract, sideChainID uint64, amount *big.Int) error {
+	total := getTotalAmount(s, sideChainID)
+	if total.Cmp(amount) < 0 {
+		return fmt.Errorf("side chain %d only locked %v native token", sideChainID, total)
+	} else {
+		total = new(big.Int).Sub(total, amount)
+	}
+	storeTotalAmount(s, sideChainID, total)
+	return nil
 }
 
-func storeTxParams(s *native.NativeContract, paramTxHash []byte, params []byte) {
-	key := txParamsKey(paramTxHash)
-	s.GetCacheDB().Put(key, params)
+func storeTotalAmount(s *native.NativeContract, sideChainID uint64, amount *big.Int) {
+	s.GetCacheDB().Put(totalAmountKey(sideChainID), amount.Bytes())
 }
 
 // ====================================================================
@@ -83,14 +93,10 @@ func storeTxParams(s *native.NativeContract, paramTxHash []byte, params []byte) 
 // storage keys
 //
 // ====================================================================
-func txHashKey(paramTxHash []byte) []byte {
-	return utils.ConcatKey(this, []byte(SKP_TX_HASH), paramTxHash)
-}
-
 func txIndexKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_TX_INDEX))
 }
 
-func txParamsKey(hash []byte) []byte {
-	return utils.ConcatKey(this, []byte(SKP_TX_PARAMS), hash)
+func totalAmountKey(chainID uint64) []byte {
+	return utils.ConcatKey(this, []byte(SKP_TOTAL_AMOUNT), utils.Uint64Bytes(chainID))
 }
