@@ -93,17 +93,16 @@ func emitUnlockEvent(s *native.NativeContract, toAssetHash, toAddress common.Add
 	return s.AddNotify(ABI, []string{EventUnlockEvent}, toAssetHash, toAddress, amount)
 }
 
-//event CrossChainEvent(address indexed sender, bytes txId, address proxyOrAssetContract, uint64 toChainId, bytes toContract, string method, bytes rawdata);
+//event event CrossChainEvent(address indexed sender, bytes txId, address proxyOrAssetContract, uint64 toChainId, bytes toContract, bytes rawdata);
 func emitCrossChainEvent(s *native.NativeContract,
 	sender common.Address,
 	txID []byte,
 	proxyOrAssetContract common.Address,
 	toChainID uint64,
 	toContract []byte,
-	method string,
-	rawData []byte,
+	rawTx []byte,
 ) error {
-	return s.AddNotify(ABI, []string{EventCrossChainEvent}, sender, txID, proxyOrAssetContract, toChainID, toContract, method, rawData)
+	return s.AddNotify(ABI, []string{EventCrossChainEvent}, sender, txID, proxyOrAssetContract, toChainID, toContract, rawTx)
 }
 
 func emitVerifyHeaderAndExecuteTxEvent(s *native.NativeContract,

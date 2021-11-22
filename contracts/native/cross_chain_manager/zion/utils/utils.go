@@ -30,7 +30,6 @@ import (
 	internal "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/rlp"
 	polycomm "github.com/polynetwork/poly/common"
@@ -114,10 +113,9 @@ func (d *TunnelData) Decode(payload []byte) error {
 }
 
 func EncodeMakeTxParams(paramTxHash []byte, crossChainId []byte, caller []byte,
-	toChainID uint64, toContract []byte, method string, args []byte) (
-	*scom.MakeTxParam, []byte, common.Hash) {
+	toChainID uint64, toContract []byte, method string, args []byte) (*scom.MakeTxParam, []byte, error) {
 
-	txParams := &scom.MakeTxParam{
+	tx := &scom.MakeTxParam{
 		TxHash:              paramTxHash,
 		CrossChainID:        crossChainId,
 		FromContractAddress: caller,
@@ -127,12 +125,12 @@ func EncodeMakeTxParams(paramTxHash []byte, crossChainId []byte, caller []byte,
 		Args:                args,
 	}
 
-	blob, err := rlp.EncodeToBytes(txParams)
+	blob, err := rlp.EncodeToBytes(tx)
 	if err != nil {
-		return nil, nil, common.EmptyHash
+		return nil, nil, err
 	}
-	txProof := crypto.Keccak256Hash(blob)
-	return txParams, blob, txProof
+	//txProof := crypto.Keccak256Hash(blob)
+	return tx, blob, nil
 }
 
 func DecodeMakeTxParams(payload []byte) (*scom.MakeTxParam, error) {

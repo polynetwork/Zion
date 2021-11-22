@@ -54,17 +54,3 @@ func TestTransferFromContract(t *testing.T) {
 	assert.Equal(t, expectResAmount.Uint64(), testStateDB.GetBalance(this).Uint64())
 	assert.Equal(t, expectTransferAmount.Uint64(), testStateDB.GetBalance(to).Uint64())
 }
-
-func TestTransferToContract(t *testing.T) {
-	resetTestContext()
-	s := testEmptyCtx
-
-	owner := common.HexToAddress("0x12342345")
-	ownerBalance := big.NewInt(10000)
-	testStateDB.SetBalance(owner, ownerBalance)
-
-	expectTransferAmount := big.NewInt(5000)
-	s.ContractRef().SetValue(expectTransferAmount)
-
-	assert.NoError(t, transfer2Contract(s, expectTransferAmount))
-}

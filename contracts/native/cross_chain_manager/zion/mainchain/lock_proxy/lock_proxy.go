@@ -27,6 +27,7 @@ import (
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/main_chain_lock_proxy"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -66,7 +67,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to decode params, err: %v", err)
 	}
-	if !onlySupportNativeToken(input.FromAssetHash) {
+	if input.FromAssetHash != common.EmptyAddress {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, only support native token")
 	}
 	if input.ToChainId == 0 {
@@ -81,27 +82,36 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if input.Amount == nil || input.Amount.Cmp(common.Big0) == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, amount invalid")
 	}
-	if input.FromAssetHash != common.EmptyAddress {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, only support native token cross chain")
+	if input.Amount.Cmp(s.ContractRef().Value()) != 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, amount != tx.value")
 	}
 
-	// transfer asset
+	// input fields alias, caller is proxy itself and `toContract` is `sideChain` proxy, which has the same address
 	txOrigin := s.ContractRef().TxOrigin()
 	msgSender := s.ContractRef().MsgSender()
-	if err := transfer2Contract(s, input.Amount); err != nil {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, transfer to contract failed, err: %v", err)
+	fromAsset := common.EmptyAddress
+	toAsset := common.EmptyAddress.Bytes()
+	toAddr := input.ToAddress
+	amount := input.Amount
+	toChainID := input.ToChainId
+	caller := this
+	toContract := this
+	toMethod := "mint"
+
+	// check side chain registered
+	if sideChain, err := side_chain_manager.GetSideChain(s, toChainID); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to get side chain %d, err: %v", toChainID, err)
+	} else if sideChain == nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, side chain %d is nil", toChainID)
 	}
 
-	// generate tunnel data
-	toAsset := common.EmptyAddress.Bytes()
-	txData := zutils.EncodeTxArgs(toAsset, input.ToAddress, input.Amount)
+	// serialize tx args
+	txData := zutils.EncodeTxArgs(toAsset, toAddr, amount)
 
 	// get and set tx index
-	lastTxIndex := getTxIndex(s)
-	storeTxIndex(s, new(big.Int).Add(lastTxIndex, common.Big1))
-	txIndex := getTxIndex(s)
-	if txIndex.Cmp(common.Big0) <= 0 {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, tx index can not be zero")
+	txIndex, err := getNextTxIndex(s)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to get next tx index, err: %v", err)
 	}
 	paramTxHash := scom.Uint256ToBytes(txIndex)
 	crossChainID := zutils.GenerateCrossChainID(this, paramTxHash)
@@ -115,31 +125,22 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// assemble tx, generate and store cross chain transaction proof
-	txParams, txParamsEnc, proof := zutils.EncodeMakeTxParams(
-		paramTxHash,
-		crossChainID,
-		this[:],
-		input.ToChainId,
-		this[:],
-		"mint",
-		txData,
-	)
-
-	// store tx params and proof
-	storeTxProof(s, paramTxHash, proof)
-	storeTxParams(s, paramTxHash, txParamsEnc)
+	txParams, rawTx, err := zutils.EncodeMakeTxParams(paramTxHash, crossChainID, caller[:], toChainID, toContract[:], toMethod, txData)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to encode `makeTxParams`, err: %v", err)
+	}
 
 	// emit event log
-	if err := emitCrossChainEvent(s, txOrigin, paramTxHash, this, input.ToChainId, toAsset, "unlock", txData); err != nil {
+	if err := emitCrossChainEvent(s, txOrigin, paramTxHash, caller, toChainID, toAsset, rawTx); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit `CrossChainEvent` log, err: %v", err)
 	}
-	if err := emitLockEvent(s, input.FromAssetHash, msgSender, input.ToChainId, toAsset, input.ToAddress, input.Amount); err != nil {
+	if err := emitLockEvent(s, fromAsset, msgSender, toChainID, toAsset, toAddr, amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit `LockEvent` log, err: %v", err)
 	}
 
 	// zion main chain DONT need a `relayer` to commit proof but directly stores the lock request.
 	// but we should ensure that `relayer` of other chain can deserialize the main chain events correctly.
-	if err := scom.MakeTransaction(s, txParams, native.ZionMainChainID); err != nil {
+	if err := scom.MakeTransaction(s, txParams, sourceChainID); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to makeTransaction, err: %v", err)
 	}
 	return utils.ByteSuccess, nil

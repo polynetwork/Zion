@@ -19,6 +19,7 @@
 package lock_proxy
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -32,6 +33,16 @@ const (
 	SKP_TX_INDEX  = "st_tx_index"
 	SKP_TX_PARAMS = "st_tx_params"
 )
+
+func getNextTxIndex(s *native.NativeContract) (*big.Int, error) {
+	lastTxIndex := getTxIndex(s)
+	storeTxIndex(s, new(big.Int).Add(lastTxIndex, common.Big1))
+	txIndex := getTxIndex(s)
+	if txIndex.Cmp(common.Big0) <= 0 {
+		return nil, fmt.Errorf("txIndex invalid")
+	}
+	return txIndex, nil
+}
 
 func getTxIndex(s *native.NativeContract) *big.Int {
 	key := txIndexKey()
