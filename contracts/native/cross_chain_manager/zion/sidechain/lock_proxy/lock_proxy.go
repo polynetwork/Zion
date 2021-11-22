@@ -24,8 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/alloc_proxy"
-	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_lock_proxy"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -47,11 +46,9 @@ import (
 
 var (
 	gasTable = map[string]uint64{
-		MethodName:                0,
-		MethodInitGenesisHeader:   10000,
-		MethodChangeEpoch:         10000,
-		MethodBurn:                10000,
-		MethodVerifyHeaderAndMint: 10000,
+		MethodName:                     0,
+		MethodBurn:                     10000,
+		MethodVerifyHeaderAndExecuteTx: 10000,
 	}
 
 	IsMainChain bool
@@ -63,141 +60,21 @@ func init() {
 	}
 }
 
-func InitAllocProxy() {
+func InitLockProxy() {
 	InitABI()
-	native.Contracts[this] = RegisterAllocProxyContract
+	native.Contracts[this] = RegisterLockProxyContract
 }
 
-func RegisterAllocProxyContract(s *native.NativeContract) {
+func RegisterLockProxyContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
 	s.Register(MethodName, Name)
-	if IsMainChain {
-		s.Register(MethodBurn, Burn)
-	} else {
-		s.Register(MethodInitGenesisHeader, InitGenesisHeader)
-		s.Register(MethodChangeEpoch, ChangeEpoch)
-		s.Register(MethodVerifyHeaderAndMint, Mint)
-	}
+	s.Register(MethodBurn, Burn)
+	s.Register(MethodVerifyHeaderAndExecuteTx, Mint)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
 	return new(MethodContractNameOutput).Encode()
-}
-
-// InitGenesisHeader store first header and epoch, this epoch should contains consensus participants.
-func InitGenesisHeader(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
-
-	input := new(MethodInitGenesisHeaderInput)
-	if err := input.Decode(ctx.Payload); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, failed to decode params, err: %v", err)
-	}
-	if input.Proof == nil || input.Header == nil || input.Epoch == nil || input.Extra == nil ||
-		len(input.Proof) == 0 || len(input.Header) == 0 || len(input.Epoch) == 0 || len(input.Extra) == 0 {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, invalid params")
-	}
-
-	if _, exist, _ := getEpoch(s); exist != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, genesis header already exist")
-	}
-
-	header, err := DecodeHeader(input.Header)
-	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, failed to unmarshal header, err: %v", err)
-	}
-	epoch, err := DecodeEpoch(input.Epoch)
-	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, failed to decode epoch, err: %v", err)
-	}
-	if epoch.Status != nm.ProposalStatusPassed {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, epoch status is not passed")
-	}
-	if _, _, err := zion.VerifyHeader(header, epoch.MemberList(), false); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, failed to verify header, err: %v", err)
-	}
-	if _, err := zutils.VerifyTx(input.Proof, header, utils.NodeManagerContractAddress, input.Extra, true); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, failed to verify proof, err: %v", err)
-	}
-
-	storeEpoch(s, input.Epoch)
-	if err := emitInitGenesisBlockEvent(s, header.Number, input.Header, input.Epoch); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, failed to emit `InitGenesisBlockEvent`, err: %v", err)
-	}
-	return utils.ByteSuccess, nil
-}
-
-// ChangeEpoch update bookeepers for main chain. in hotstuff consensus, epoch changed at the height of
-// `epoch.StartHeight` - 1 denotes that if the epoch start height is 1000, the block header of 999 carry
-// bookeepers addresses and these new bookeepers will participant in consensus after block 999(current
-// block of 999 still verified by old bookeepers). so we should ensure that new epoch's `startHeight` is
-// higher than last epoch's `startHeight` and current header which carry proof of `epochChange`.
-func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
-
-	input := new(MethodChangeEpochInput)
-	if err := input.Decode(ctx.Payload); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, failed to decode params, err: %v", err)
-	}
-	if input.Extra == nil || input.Epoch == nil || input.Header == nil || input.Proof == nil ||
-		len(input.Proof) == 0 || len(input.Header) == 0 || len(input.Epoch) == 0 || len(input.Extra) == 0 {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, invalid params")
-	}
-
-	header, err := DecodeHeader(input.Header)
-	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, failed to unmarshal header, err: %v", err)
-	}
-	epoch, err := DecodeEpoch(input.Epoch)
-	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, failed to decode epoch, err: %v", err)
-	}
-	if epoch.Status != nm.ProposalStatusPassed {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.InitGenesisHeader, epoch status is not passed")
-	}
-
-	lastEpochEnc, lastEpoch, err := getEpoch(s)
-	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, failed to get last epoch, err: %v", err)
-	}
-	if lastEpoch == nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, last epoch is nil")
-	}
-	if lastEpoch.Hash() == epoch.Hash() {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, duplicate epoch")
-	}
-	if header.Number.Uint64()+1 != epoch.StartHeight {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, header height %v + 1 should be equals to %d",
-			header.Number, epoch.StartHeight)
-	}
-	if lstEpID := lastEpoch.ID; epoch.ID <= lstEpID {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, epoch ID should be greater than %d", lstEpID)
-	}
-	if lstEpStartNo := lastEpoch.StartHeight; header.Number.Uint64() <= lstEpStartNo || epoch.StartHeight <= lstEpStartNo {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, header number should > %d", lstEpStartNo)
-	}
-
-	nextEpochStartHeight, nextEpochVals, err := zion.VerifyHeader(header, lastEpoch.MemberList(), true)
-	if err != nil {
-		return nil, fmt.Errorf("AllocProxy.ChangeEpoch, failed to verify header, err: %v", err)
-	}
-	if nextEpochStartHeight != epoch.StartHeight {
-		return nil, fmt.Errorf("AllocProxy.ChangeEpoch, failed to verify header, err: epoch start height expect %d got %d",
-			nextEpochStartHeight, epoch.StartHeight)
-	}
-	if curEpochVals := epoch.MemberList(); !compareVals(nextEpochVals, curEpochVals) {
-		return nil, fmt.Errorf("AllocProxy.ChangeEpoch, failed to verify header, err: vals expect %v got %v",
-			nextEpochVals, curEpochVals)
-	}
-	if _, err := zutils.VerifyTx(input.Proof, header, utils.NodeManagerContractAddress, input.Extra, true); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, failed to verify proof, err: %v", err)
-	}
-
-	storeEpoch(s, input.Epoch)
-	if err := emitChangeEpochEvent(s, header.Number, input.Header, lastEpochEnc, input.Epoch); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, failed to emit `ChangeEpochEvent`, err: %v", err)
-	}
-	return utils.ByteSuccess, nil
 }
 
 func Burn(s *native.NativeContract) ([]byte, error) {
@@ -262,7 +139,7 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 func Mint(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
-	input := new(MethodVerifyHeaderAndMintInput)
+	input := new(MethodVerifyHeaderAndExecuteTxInput)
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to decode params, err: %v", err)
 	}

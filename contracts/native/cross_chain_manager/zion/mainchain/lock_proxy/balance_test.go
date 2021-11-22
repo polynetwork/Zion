@@ -34,8 +34,7 @@ func TestBalanceFor(t *testing.T) {
 	expect := big.NewInt(1234234234)
 	testStateDB.SetBalance(owner, expect)
 
-	got, err := getBalanceFor(s, common.EmptyAddress, owner)
-	assert.NoError(t, err)
+	got := getBalanceFor(s, owner)
 	assert.Equal(t, expect, got)
 }
 
@@ -50,7 +49,7 @@ func TestTransferFromContract(t *testing.T) {
 	expectResAmount := new(big.Int).Sub(lockProxyBalance, expectTransferAmount)
 	to := common.HexToAddress("0x12342345")
 
-	assert.NoError(t, transferFromContract(s, common.EmptyAddress, to, expectTransferAmount))
+	assert.NoError(t, transferFromContract(s, to, expectTransferAmount))
 
 	assert.Equal(t, expectResAmount.Uint64(), testStateDB.GetBalance(this).Uint64())
 	assert.Equal(t, expectTransferAmount.Uint64(), testStateDB.GetBalance(to).Uint64())
@@ -67,5 +66,5 @@ func TestTransferToContract(t *testing.T) {
 	expectTransferAmount := big.NewInt(5000)
 	s.ContractRef().SetValue(expectTransferAmount)
 
-	assert.NoError(t, transfer2Contract(s, common.EmptyAddress, owner, expectTransferAmount))
+	assert.NoError(t, transfer2Contract(s, expectTransferAmount))
 }

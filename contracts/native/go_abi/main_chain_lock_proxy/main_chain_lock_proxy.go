@@ -40,113 +40,113 @@ var (
 	EventVerifyHeaderAndExecuteTxEvent = "VerifyHeaderAndExecuteTxEvent"
 )
 
-// ILockProxyABI is the input ABI used to generate the binding from.
-const ILockProxyABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"txId\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"proxyOrAssetContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toContract\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"method\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"rawdata\",\"type\":\"bytes\"}],\"name\":\"CrossChainEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toAssetHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toAddress\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"UnlockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"fromChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toContract\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"crossChainTxHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"fromChainTxHash\",\"type\":\"bytes\"}],\"name\":\"VerifyHeaderAndExecuteTxEvent\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"toAddress\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"lock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
+// IMainChainLockProxyABI is the input ABI used to generate the binding from.
+const IMainChainLockProxyABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"sender\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"txId\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"proxyOrAssetContract\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toContract\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"method\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"rawdata\",\"type\":\"bytes\"}],\"name\":\"CrossChainEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toAssetHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toAddress\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"LockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"UnlockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"fromChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toContract\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"crossChainTxHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"fromChainTxHash\",\"type\":\"bytes\"}],\"name\":\"VerifyHeaderAndExecuteTxEvent\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"toAddress\",\"type\":\"bytes\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"lock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":true,\"stateMutability\":\"payable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
-// ILockProxyFuncSigs maps the 4-byte function signature to its string representation.
-var ILockProxyFuncSigs = map[string]string{
+// IMainChainLockProxyFuncSigs maps the 4-byte function signature to its string representation.
+var IMainChainLockProxyFuncSigs = map[string]string{
 	"84a6d055": "lock(address,uint64,bytes,uint256)",
 	"06fdde03": "name()",
 }
 
-// ILockProxy is an auto generated Go binding around an Ethereum contract.
-type ILockProxy struct {
-	ILockProxyCaller     // Read-only binding to the contract
-	ILockProxyTransactor // Write-only binding to the contract
-	ILockProxyFilterer   // Log filterer for contract events
+// IMainChainLockProxy is an auto generated Go binding around an Ethereum contract.
+type IMainChainLockProxy struct {
+	IMainChainLockProxyCaller     // Read-only binding to the contract
+	IMainChainLockProxyTransactor // Write-only binding to the contract
+	IMainChainLockProxyFilterer   // Log filterer for contract events
 }
 
-// ILockProxyCaller is an auto generated read-only Go binding around an Ethereum contract.
-type ILockProxyCaller struct {
+// IMainChainLockProxyCaller is an auto generated read-only Go binding around an Ethereum contract.
+type IMainChainLockProxyCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ILockProxyTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type ILockProxyTransactor struct {
+// IMainChainLockProxyTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type IMainChainLockProxyTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ILockProxyFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type ILockProxyFilterer struct {
+// IMainChainLockProxyFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type IMainChainLockProxyFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// ILockProxySession is an auto generated Go binding around an Ethereum contract,
+// IMainChainLockProxySession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
-type ILockProxySession struct {
-	Contract     *ILockProxy       // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+type IMainChainLockProxySession struct {
+	Contract     *IMainChainLockProxy // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts        // Call options to use throughout this session
+	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 }
 
-// ILockProxyCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// IMainChainLockProxyCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
-type ILockProxyCallerSession struct {
-	Contract *ILockProxyCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts     // Call options to use throughout this session
+type IMainChainLockProxyCallerSession struct {
+	Contract *IMainChainLockProxyCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts              // Call options to use throughout this session
 }
 
-// ILockProxyTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// IMainChainLockProxyTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
-type ILockProxyTransactorSession struct {
-	Contract     *ILockProxyTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts     // Transaction auth options to use throughout this session
+type IMainChainLockProxyTransactorSession struct {
+	Contract     *IMainChainLockProxyTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts              // Transaction auth options to use throughout this session
 }
 
-// ILockProxyRaw is an auto generated low-level Go binding around an Ethereum contract.
-type ILockProxyRaw struct {
-	Contract *ILockProxy // Generic contract binding to access the raw methods on
+// IMainChainLockProxyRaw is an auto generated low-level Go binding around an Ethereum contract.
+type IMainChainLockProxyRaw struct {
+	Contract *IMainChainLockProxy // Generic contract binding to access the raw methods on
 }
 
-// ILockProxyCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type ILockProxyCallerRaw struct {
-	Contract *ILockProxyCaller // Generic read-only contract binding to access the raw methods on
+// IMainChainLockProxyCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type IMainChainLockProxyCallerRaw struct {
+	Contract *IMainChainLockProxyCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// ILockProxyTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type ILockProxyTransactorRaw struct {
-	Contract *ILockProxyTransactor // Generic write-only contract binding to access the raw methods on
+// IMainChainLockProxyTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type IMainChainLockProxyTransactorRaw struct {
+	Contract *IMainChainLockProxyTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewILockProxy creates a new instance of ILockProxy, bound to a specific deployed contract.
-func NewILockProxy(address common.Address, backend bind.ContractBackend) (*ILockProxy, error) {
-	contract, err := bindILockProxy(address, backend, backend, backend)
+// NewIMainChainLockProxy creates a new instance of IMainChainLockProxy, bound to a specific deployed contract.
+func NewIMainChainLockProxy(address common.Address, backend bind.ContractBackend) (*IMainChainLockProxy, error) {
+	contract, err := bindIMainChainLockProxy(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &ILockProxy{ILockProxyCaller: ILockProxyCaller{contract: contract}, ILockProxyTransactor: ILockProxyTransactor{contract: contract}, ILockProxyFilterer: ILockProxyFilterer{contract: contract}}, nil
+	return &IMainChainLockProxy{IMainChainLockProxyCaller: IMainChainLockProxyCaller{contract: contract}, IMainChainLockProxyTransactor: IMainChainLockProxyTransactor{contract: contract}, IMainChainLockProxyFilterer: IMainChainLockProxyFilterer{contract: contract}}, nil
 }
 
-// NewILockProxyCaller creates a new read-only instance of ILockProxy, bound to a specific deployed contract.
-func NewILockProxyCaller(address common.Address, caller bind.ContractCaller) (*ILockProxyCaller, error) {
-	contract, err := bindILockProxy(address, caller, nil, nil)
+// NewIMainChainLockProxyCaller creates a new read-only instance of IMainChainLockProxy, bound to a specific deployed contract.
+func NewIMainChainLockProxyCaller(address common.Address, caller bind.ContractCaller) (*IMainChainLockProxyCaller, error) {
+	contract, err := bindIMainChainLockProxy(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &ILockProxyCaller{contract: contract}, nil
+	return &IMainChainLockProxyCaller{contract: contract}, nil
 }
 
-// NewILockProxyTransactor creates a new write-only instance of ILockProxy, bound to a specific deployed contract.
-func NewILockProxyTransactor(address common.Address, transactor bind.ContractTransactor) (*ILockProxyTransactor, error) {
-	contract, err := bindILockProxy(address, nil, transactor, nil)
+// NewIMainChainLockProxyTransactor creates a new write-only instance of IMainChainLockProxy, bound to a specific deployed contract.
+func NewIMainChainLockProxyTransactor(address common.Address, transactor bind.ContractTransactor) (*IMainChainLockProxyTransactor, error) {
+	contract, err := bindIMainChainLockProxy(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &ILockProxyTransactor{contract: contract}, nil
+	return &IMainChainLockProxyTransactor{contract: contract}, nil
 }
 
-// NewILockProxyFilterer creates a new log filterer instance of ILockProxy, bound to a specific deployed contract.
-func NewILockProxyFilterer(address common.Address, filterer bind.ContractFilterer) (*ILockProxyFilterer, error) {
-	contract, err := bindILockProxy(address, nil, nil, filterer)
+// NewIMainChainLockProxyFilterer creates a new log filterer instance of IMainChainLockProxy, bound to a specific deployed contract.
+func NewIMainChainLockProxyFilterer(address common.Address, filterer bind.ContractFilterer) (*IMainChainLockProxyFilterer, error) {
+	contract, err := bindIMainChainLockProxy(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &ILockProxyFilterer{contract: contract}, nil
+	return &IMainChainLockProxyFilterer{contract: contract}, nil
 }
 
-// bindILockProxy binds a generic wrapper to an already deployed contract.
-func bindILockProxy(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(ILockProxyABI))
+// bindIMainChainLockProxy binds a generic wrapper to an already deployed contract.
+func bindIMainChainLockProxy(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(IMainChainLockProxyABI))
 	if err != nil {
 		return nil, err
 	}
@@ -157,46 +157,46 @@ func bindILockProxy(address common.Address, caller bind.ContractCaller, transact
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ILockProxy *ILockProxyRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _ILockProxy.Contract.ILockProxyCaller.contract.Call(opts, result, method, params...)
+func (_IMainChainLockProxy *IMainChainLockProxyRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _IMainChainLockProxy.Contract.IMainChainLockProxyCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_ILockProxy *ILockProxyRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ILockProxy.Contract.ILockProxyTransactor.contract.Transfer(opts)
+func (_IMainChainLockProxy *IMainChainLockProxyRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IMainChainLockProxy.Contract.IMainChainLockProxyTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_ILockProxy *ILockProxyRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ILockProxy.Contract.ILockProxyTransactor.contract.Transact(opts, method, params...)
+func (_IMainChainLockProxy *IMainChainLockProxyRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IMainChainLockProxy.Contract.IMainChainLockProxyTransactor.contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_ILockProxy *ILockProxyCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _ILockProxy.Contract.contract.Call(opts, result, method, params...)
+func (_IMainChainLockProxy *IMainChainLockProxyCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _IMainChainLockProxy.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_ILockProxy *ILockProxyTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _ILockProxy.Contract.contract.Transfer(opts)
+func (_IMainChainLockProxy *IMainChainLockProxyTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _IMainChainLockProxy.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_ILockProxy *ILockProxyTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _ILockProxy.Contract.contract.Transact(opts, method, params...)
+func (_IMainChainLockProxy *IMainChainLockProxyTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _IMainChainLockProxy.Contract.contract.Transact(opts, method, params...)
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
 // Solidity: function name() view returns(string)
-func (_ILockProxy *ILockProxyCaller) Name(opts *bind.CallOpts) (string, error) {
+func (_IMainChainLockProxy *IMainChainLockProxyCaller) Name(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
-	err := _ILockProxy.contract.Call(opts, &out, "name")
+	err := _IMainChainLockProxy.contract.Call(opts, &out, "name")
 
 	if err != nil {
 		return *new(string), err
@@ -211,41 +211,41 @@ func (_ILockProxy *ILockProxyCaller) Name(opts *bind.CallOpts) (string, error) {
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
 // Solidity: function name() view returns(string)
-func (_ILockProxy *ILockProxySession) Name() (string, error) {
-	return _ILockProxy.Contract.Name(&_ILockProxy.CallOpts)
+func (_IMainChainLockProxy *IMainChainLockProxySession) Name() (string, error) {
+	return _IMainChainLockProxy.Contract.Name(&_IMainChainLockProxy.CallOpts)
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
 // Solidity: function name() view returns(string)
-func (_ILockProxy *ILockProxyCallerSession) Name() (string, error) {
-	return _ILockProxy.Contract.Name(&_ILockProxy.CallOpts)
+func (_IMainChainLockProxy *IMainChainLockProxyCallerSession) Name() (string, error) {
+	return _IMainChainLockProxy.Contract.Name(&_IMainChainLockProxy.CallOpts)
 }
 
 // Lock is a paid mutator transaction binding the contract method 0x84a6d055.
 //
 // Solidity: function lock(address fromAssetHash, uint64 toChainId, bytes toAddress, uint256 amount) payable returns(bool)
-func (_ILockProxy *ILockProxyTransactor) Lock(opts *bind.TransactOpts, fromAssetHash common.Address, toChainId uint64, toAddress []byte, amount *big.Int) (*types.Transaction, error) {
-	return _ILockProxy.contract.Transact(opts, "lock", fromAssetHash, toChainId, toAddress, amount)
+func (_IMainChainLockProxy *IMainChainLockProxyTransactor) Lock(opts *bind.TransactOpts, fromAssetHash common.Address, toChainId uint64, toAddress []byte, amount *big.Int) (*types.Transaction, error) {
+	return _IMainChainLockProxy.contract.Transact(opts, "lock", fromAssetHash, toChainId, toAddress, amount)
 }
 
 // Lock is a paid mutator transaction binding the contract method 0x84a6d055.
 //
 // Solidity: function lock(address fromAssetHash, uint64 toChainId, bytes toAddress, uint256 amount) payable returns(bool)
-func (_ILockProxy *ILockProxySession) Lock(fromAssetHash common.Address, toChainId uint64, toAddress []byte, amount *big.Int) (*types.Transaction, error) {
-	return _ILockProxy.Contract.Lock(&_ILockProxy.TransactOpts, fromAssetHash, toChainId, toAddress, amount)
+func (_IMainChainLockProxy *IMainChainLockProxySession) Lock(fromAssetHash common.Address, toChainId uint64, toAddress []byte, amount *big.Int) (*types.Transaction, error) {
+	return _IMainChainLockProxy.Contract.Lock(&_IMainChainLockProxy.TransactOpts, fromAssetHash, toChainId, toAddress, amount)
 }
 
 // Lock is a paid mutator transaction binding the contract method 0x84a6d055.
 //
 // Solidity: function lock(address fromAssetHash, uint64 toChainId, bytes toAddress, uint256 amount) payable returns(bool)
-func (_ILockProxy *ILockProxyTransactorSession) Lock(fromAssetHash common.Address, toChainId uint64, toAddress []byte, amount *big.Int) (*types.Transaction, error) {
-	return _ILockProxy.Contract.Lock(&_ILockProxy.TransactOpts, fromAssetHash, toChainId, toAddress, amount)
+func (_IMainChainLockProxy *IMainChainLockProxyTransactorSession) Lock(fromAssetHash common.Address, toChainId uint64, toAddress []byte, amount *big.Int) (*types.Transaction, error) {
+	return _IMainChainLockProxy.Contract.Lock(&_IMainChainLockProxy.TransactOpts, fromAssetHash, toChainId, toAddress, amount)
 }
 
-// ILockProxyCrossChainEventIterator is returned from FilterCrossChainEvent and is used to iterate over the raw logs and unpacked data for CrossChainEvent events raised by the ILockProxy contract.
-type ILockProxyCrossChainEventIterator struct {
-	Event *ILockProxyCrossChainEvent // Event containing the contract specifics and raw log
+// IMainChainLockProxyCrossChainEventIterator is returned from FilterCrossChainEvent and is used to iterate over the raw logs and unpacked data for CrossChainEvent events raised by the IMainChainLockProxy contract.
+type IMainChainLockProxyCrossChainEventIterator struct {
+	Event *IMainChainLockProxyCrossChainEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -259,7 +259,7 @@ type ILockProxyCrossChainEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *ILockProxyCrossChainEventIterator) Next() bool {
+func (it *IMainChainLockProxyCrossChainEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -268,7 +268,7 @@ func (it *ILockProxyCrossChainEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(ILockProxyCrossChainEvent)
+			it.Event = new(IMainChainLockProxyCrossChainEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -283,7 +283,7 @@ func (it *ILockProxyCrossChainEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(ILockProxyCrossChainEvent)
+		it.Event = new(IMainChainLockProxyCrossChainEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -299,19 +299,19 @@ func (it *ILockProxyCrossChainEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *ILockProxyCrossChainEventIterator) Error() error {
+func (it *IMainChainLockProxyCrossChainEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *ILockProxyCrossChainEventIterator) Close() error {
+func (it *IMainChainLockProxyCrossChainEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// ILockProxyCrossChainEvent represents a CrossChainEvent event raised by the ILockProxy contract.
-type ILockProxyCrossChainEvent struct {
+// IMainChainLockProxyCrossChainEvent represents a CrossChainEvent event raised by the IMainChainLockProxy contract.
+type IMainChainLockProxyCrossChainEvent struct {
 	Sender               common.Address
 	TxId                 []byte
 	ProxyOrAssetContract common.Address
@@ -325,31 +325,31 @@ type ILockProxyCrossChainEvent struct {
 // FilterCrossChainEvent is a free log retrieval operation binding the contract event 0xa50a39568d86d718c11b0750147606498d4b06fbabc1bf01b0fca5c426f5deb9.
 //
 // Solidity: event CrossChainEvent(address indexed sender, bytes txId, address proxyOrAssetContract, uint64 toChainId, bytes toContract, string method, bytes rawdata)
-func (_ILockProxy *ILockProxyFilterer) FilterCrossChainEvent(opts *bind.FilterOpts, sender []common.Address) (*ILockProxyCrossChainEventIterator, error) {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) FilterCrossChainEvent(opts *bind.FilterOpts, sender []common.Address) (*IMainChainLockProxyCrossChainEventIterator, error) {
 
 	var senderRule []interface{}
 	for _, senderItem := range sender {
 		senderRule = append(senderRule, senderItem)
 	}
 
-	logs, sub, err := _ILockProxy.contract.FilterLogs(opts, "CrossChainEvent", senderRule)
+	logs, sub, err := _IMainChainLockProxy.contract.FilterLogs(opts, "CrossChainEvent", senderRule)
 	if err != nil {
 		return nil, err
 	}
-	return &ILockProxyCrossChainEventIterator{contract: _ILockProxy.contract, event: "CrossChainEvent", logs: logs, sub: sub}, nil
+	return &IMainChainLockProxyCrossChainEventIterator{contract: _IMainChainLockProxy.contract, event: "CrossChainEvent", logs: logs, sub: sub}, nil
 }
 
 // WatchCrossChainEvent is a free log subscription operation binding the contract event 0xa50a39568d86d718c11b0750147606498d4b06fbabc1bf01b0fca5c426f5deb9.
 //
 // Solidity: event CrossChainEvent(address indexed sender, bytes txId, address proxyOrAssetContract, uint64 toChainId, bytes toContract, string method, bytes rawdata)
-func (_ILockProxy *ILockProxyFilterer) WatchCrossChainEvent(opts *bind.WatchOpts, sink chan<- *ILockProxyCrossChainEvent, sender []common.Address) (event.Subscription, error) {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) WatchCrossChainEvent(opts *bind.WatchOpts, sink chan<- *IMainChainLockProxyCrossChainEvent, sender []common.Address) (event.Subscription, error) {
 
 	var senderRule []interface{}
 	for _, senderItem := range sender {
 		senderRule = append(senderRule, senderItem)
 	}
 
-	logs, sub, err := _ILockProxy.contract.WatchLogs(opts, "CrossChainEvent", senderRule)
+	logs, sub, err := _IMainChainLockProxy.contract.WatchLogs(opts, "CrossChainEvent", senderRule)
 	if err != nil {
 		return nil, err
 	}
@@ -359,8 +359,8 @@ func (_ILockProxy *ILockProxyFilterer) WatchCrossChainEvent(opts *bind.WatchOpts
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(ILockProxyCrossChainEvent)
-				if err := _ILockProxy.contract.UnpackLog(event, "CrossChainEvent", log); err != nil {
+				event := new(IMainChainLockProxyCrossChainEvent)
+				if err := _IMainChainLockProxy.contract.UnpackLog(event, "CrossChainEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -384,18 +384,18 @@ func (_ILockProxy *ILockProxyFilterer) WatchCrossChainEvent(opts *bind.WatchOpts
 // ParseCrossChainEvent is a log parse operation binding the contract event 0xa50a39568d86d718c11b0750147606498d4b06fbabc1bf01b0fca5c426f5deb9.
 //
 // Solidity: event CrossChainEvent(address indexed sender, bytes txId, address proxyOrAssetContract, uint64 toChainId, bytes toContract, string method, bytes rawdata)
-func (_ILockProxy *ILockProxyFilterer) ParseCrossChainEvent(log types.Log) (*ILockProxyCrossChainEvent, error) {
-	event := new(ILockProxyCrossChainEvent)
-	if err := _ILockProxy.contract.UnpackLog(event, "CrossChainEvent", log); err != nil {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) ParseCrossChainEvent(log types.Log) (*IMainChainLockProxyCrossChainEvent, error) {
+	event := new(IMainChainLockProxyCrossChainEvent)
+	if err := _IMainChainLockProxy.contract.UnpackLog(event, "CrossChainEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// ILockProxyLockEventIterator is returned from FilterLockEvent and is used to iterate over the raw logs and unpacked data for LockEvent events raised by the ILockProxy contract.
-type ILockProxyLockEventIterator struct {
-	Event *ILockProxyLockEvent // Event containing the contract specifics and raw log
+// IMainChainLockProxyLockEventIterator is returned from FilterLockEvent and is used to iterate over the raw logs and unpacked data for LockEvent events raised by the IMainChainLockProxy contract.
+type IMainChainLockProxyLockEventIterator struct {
+	Event *IMainChainLockProxyLockEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -409,7 +409,7 @@ type ILockProxyLockEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *ILockProxyLockEventIterator) Next() bool {
+func (it *IMainChainLockProxyLockEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -418,7 +418,7 @@ func (it *ILockProxyLockEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(ILockProxyLockEvent)
+			it.Event = new(IMainChainLockProxyLockEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -433,7 +433,7 @@ func (it *ILockProxyLockEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(ILockProxyLockEvent)
+		it.Event = new(IMainChainLockProxyLockEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -449,19 +449,19 @@ func (it *ILockProxyLockEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *ILockProxyLockEventIterator) Error() error {
+func (it *IMainChainLockProxyLockEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *ILockProxyLockEventIterator) Close() error {
+func (it *IMainChainLockProxyLockEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// ILockProxyLockEvent represents a LockEvent event raised by the ILockProxy contract.
-type ILockProxyLockEvent struct {
+// IMainChainLockProxyLockEvent represents a LockEvent event raised by the IMainChainLockProxy contract.
+type IMainChainLockProxyLockEvent struct {
 	FromAssetHash common.Address
 	FromAddress   common.Address
 	ToChainId     uint64
@@ -474,21 +474,21 @@ type ILockProxyLockEvent struct {
 // FilterLockEvent is a free log retrieval operation binding the contract event 0x8636abd6d0e464fe725a13346c7ac779b73561c705506044a2e6b2cdb1295ea5.
 //
 // Solidity: event LockEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount)
-func (_ILockProxy *ILockProxyFilterer) FilterLockEvent(opts *bind.FilterOpts) (*ILockProxyLockEventIterator, error) {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) FilterLockEvent(opts *bind.FilterOpts) (*IMainChainLockProxyLockEventIterator, error) {
 
-	logs, sub, err := _ILockProxy.contract.FilterLogs(opts, "LockEvent")
+	logs, sub, err := _IMainChainLockProxy.contract.FilterLogs(opts, "LockEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &ILockProxyLockEventIterator{contract: _ILockProxy.contract, event: "LockEvent", logs: logs, sub: sub}, nil
+	return &IMainChainLockProxyLockEventIterator{contract: _IMainChainLockProxy.contract, event: "LockEvent", logs: logs, sub: sub}, nil
 }
 
 // WatchLockEvent is a free log subscription operation binding the contract event 0x8636abd6d0e464fe725a13346c7ac779b73561c705506044a2e6b2cdb1295ea5.
 //
 // Solidity: event LockEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount)
-func (_ILockProxy *ILockProxyFilterer) WatchLockEvent(opts *bind.WatchOpts, sink chan<- *ILockProxyLockEvent) (event.Subscription, error) {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) WatchLockEvent(opts *bind.WatchOpts, sink chan<- *IMainChainLockProxyLockEvent) (event.Subscription, error) {
 
-	logs, sub, err := _ILockProxy.contract.WatchLogs(opts, "LockEvent")
+	logs, sub, err := _IMainChainLockProxy.contract.WatchLogs(opts, "LockEvent")
 	if err != nil {
 		return nil, err
 	}
@@ -498,8 +498,8 @@ func (_ILockProxy *ILockProxyFilterer) WatchLockEvent(opts *bind.WatchOpts, sink
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(ILockProxyLockEvent)
-				if err := _ILockProxy.contract.UnpackLog(event, "LockEvent", log); err != nil {
+				event := new(IMainChainLockProxyLockEvent)
+				if err := _IMainChainLockProxy.contract.UnpackLog(event, "LockEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -523,18 +523,18 @@ func (_ILockProxy *ILockProxyFilterer) WatchLockEvent(opts *bind.WatchOpts, sink
 // ParseLockEvent is a log parse operation binding the contract event 0x8636abd6d0e464fe725a13346c7ac779b73561c705506044a2e6b2cdb1295ea5.
 //
 // Solidity: event LockEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount)
-func (_ILockProxy *ILockProxyFilterer) ParseLockEvent(log types.Log) (*ILockProxyLockEvent, error) {
-	event := new(ILockProxyLockEvent)
-	if err := _ILockProxy.contract.UnpackLog(event, "LockEvent", log); err != nil {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) ParseLockEvent(log types.Log) (*IMainChainLockProxyLockEvent, error) {
+	event := new(IMainChainLockProxyLockEvent)
+	if err := _IMainChainLockProxy.contract.UnpackLog(event, "LockEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// ILockProxyUnlockEventIterator is returned from FilterUnlockEvent and is used to iterate over the raw logs and unpacked data for UnlockEvent events raised by the ILockProxy contract.
-type ILockProxyUnlockEventIterator struct {
-	Event *ILockProxyUnlockEvent // Event containing the contract specifics and raw log
+// IMainChainLockProxyUnlockEventIterator is returned from FilterUnlockEvent and is used to iterate over the raw logs and unpacked data for UnlockEvent events raised by the IMainChainLockProxy contract.
+type IMainChainLockProxyUnlockEventIterator struct {
+	Event *IMainChainLockProxyUnlockEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -548,7 +548,7 @@ type ILockProxyUnlockEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *ILockProxyUnlockEventIterator) Next() bool {
+func (it *IMainChainLockProxyUnlockEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -557,7 +557,7 @@ func (it *ILockProxyUnlockEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(ILockProxyUnlockEvent)
+			it.Event = new(IMainChainLockProxyUnlockEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -572,7 +572,7 @@ func (it *ILockProxyUnlockEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(ILockProxyUnlockEvent)
+		it.Event = new(IMainChainLockProxyUnlockEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -588,19 +588,19 @@ func (it *ILockProxyUnlockEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *ILockProxyUnlockEventIterator) Error() error {
+func (it *IMainChainLockProxyUnlockEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *ILockProxyUnlockEventIterator) Close() error {
+func (it *IMainChainLockProxyUnlockEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// ILockProxyUnlockEvent represents a UnlockEvent event raised by the ILockProxy contract.
-type ILockProxyUnlockEvent struct {
+// IMainChainLockProxyUnlockEvent represents a UnlockEvent event raised by the IMainChainLockProxy contract.
+type IMainChainLockProxyUnlockEvent struct {
 	ToAssetHash common.Address
 	ToAddress   common.Address
 	Amount      *big.Int
@@ -610,21 +610,21 @@ type ILockProxyUnlockEvent struct {
 // FilterUnlockEvent is a free log retrieval operation binding the contract event 0xd90288730b87c2b8e0c45bd82260fd22478aba30ae1c4d578b8daba9261604df.
 //
 // Solidity: event UnlockEvent(address toAssetHash, address toAddress, uint256 amount)
-func (_ILockProxy *ILockProxyFilterer) FilterUnlockEvent(opts *bind.FilterOpts) (*ILockProxyUnlockEventIterator, error) {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) FilterUnlockEvent(opts *bind.FilterOpts) (*IMainChainLockProxyUnlockEventIterator, error) {
 
-	logs, sub, err := _ILockProxy.contract.FilterLogs(opts, "UnlockEvent")
+	logs, sub, err := _IMainChainLockProxy.contract.FilterLogs(opts, "UnlockEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &ILockProxyUnlockEventIterator{contract: _ILockProxy.contract, event: "UnlockEvent", logs: logs, sub: sub}, nil
+	return &IMainChainLockProxyUnlockEventIterator{contract: _IMainChainLockProxy.contract, event: "UnlockEvent", logs: logs, sub: sub}, nil
 }
 
 // WatchUnlockEvent is a free log subscription operation binding the contract event 0xd90288730b87c2b8e0c45bd82260fd22478aba30ae1c4d578b8daba9261604df.
 //
 // Solidity: event UnlockEvent(address toAssetHash, address toAddress, uint256 amount)
-func (_ILockProxy *ILockProxyFilterer) WatchUnlockEvent(opts *bind.WatchOpts, sink chan<- *ILockProxyUnlockEvent) (event.Subscription, error) {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) WatchUnlockEvent(opts *bind.WatchOpts, sink chan<- *IMainChainLockProxyUnlockEvent) (event.Subscription, error) {
 
-	logs, sub, err := _ILockProxy.contract.WatchLogs(opts, "UnlockEvent")
+	logs, sub, err := _IMainChainLockProxy.contract.WatchLogs(opts, "UnlockEvent")
 	if err != nil {
 		return nil, err
 	}
@@ -634,8 +634,8 @@ func (_ILockProxy *ILockProxyFilterer) WatchUnlockEvent(opts *bind.WatchOpts, si
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(ILockProxyUnlockEvent)
-				if err := _ILockProxy.contract.UnpackLog(event, "UnlockEvent", log); err != nil {
+				event := new(IMainChainLockProxyUnlockEvent)
+				if err := _IMainChainLockProxy.contract.UnpackLog(event, "UnlockEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -659,18 +659,18 @@ func (_ILockProxy *ILockProxyFilterer) WatchUnlockEvent(opts *bind.WatchOpts, si
 // ParseUnlockEvent is a log parse operation binding the contract event 0xd90288730b87c2b8e0c45bd82260fd22478aba30ae1c4d578b8daba9261604df.
 //
 // Solidity: event UnlockEvent(address toAssetHash, address toAddress, uint256 amount)
-func (_ILockProxy *ILockProxyFilterer) ParseUnlockEvent(log types.Log) (*ILockProxyUnlockEvent, error) {
-	event := new(ILockProxyUnlockEvent)
-	if err := _ILockProxy.contract.UnpackLog(event, "UnlockEvent", log); err != nil {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) ParseUnlockEvent(log types.Log) (*IMainChainLockProxyUnlockEvent, error) {
+	event := new(IMainChainLockProxyUnlockEvent)
+	if err := _IMainChainLockProxy.contract.UnpackLog(event, "UnlockEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// ILockProxyVerifyHeaderAndExecuteTxEventIterator is returned from FilterVerifyHeaderAndExecuteTxEvent and is used to iterate over the raw logs and unpacked data for VerifyHeaderAndExecuteTxEvent events raised by the ILockProxy contract.
-type ILockProxyVerifyHeaderAndExecuteTxEventIterator struct {
-	Event *ILockProxyVerifyHeaderAndExecuteTxEvent // Event containing the contract specifics and raw log
+// IMainChainLockProxyVerifyHeaderAndExecuteTxEventIterator is returned from FilterVerifyHeaderAndExecuteTxEvent and is used to iterate over the raw logs and unpacked data for VerifyHeaderAndExecuteTxEvent events raised by the IMainChainLockProxy contract.
+type IMainChainLockProxyVerifyHeaderAndExecuteTxEventIterator struct {
+	Event *IMainChainLockProxyVerifyHeaderAndExecuteTxEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -684,7 +684,7 @@ type ILockProxyVerifyHeaderAndExecuteTxEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *ILockProxyVerifyHeaderAndExecuteTxEventIterator) Next() bool {
+func (it *IMainChainLockProxyVerifyHeaderAndExecuteTxEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -693,7 +693,7 @@ func (it *ILockProxyVerifyHeaderAndExecuteTxEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(ILockProxyVerifyHeaderAndExecuteTxEvent)
+			it.Event = new(IMainChainLockProxyVerifyHeaderAndExecuteTxEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -708,7 +708,7 @@ func (it *ILockProxyVerifyHeaderAndExecuteTxEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(ILockProxyVerifyHeaderAndExecuteTxEvent)
+		it.Event = new(IMainChainLockProxyVerifyHeaderAndExecuteTxEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -724,19 +724,19 @@ func (it *ILockProxyVerifyHeaderAndExecuteTxEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *ILockProxyVerifyHeaderAndExecuteTxEventIterator) Error() error {
+func (it *IMainChainLockProxyVerifyHeaderAndExecuteTxEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *ILockProxyVerifyHeaderAndExecuteTxEventIterator) Close() error {
+func (it *IMainChainLockProxyVerifyHeaderAndExecuteTxEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// ILockProxyVerifyHeaderAndExecuteTxEvent represents a VerifyHeaderAndExecuteTxEvent event raised by the ILockProxy contract.
-type ILockProxyVerifyHeaderAndExecuteTxEvent struct {
+// IMainChainLockProxyVerifyHeaderAndExecuteTxEvent represents a VerifyHeaderAndExecuteTxEvent event raised by the IMainChainLockProxy contract.
+type IMainChainLockProxyVerifyHeaderAndExecuteTxEvent struct {
 	FromChainID      uint64
 	ToContract       []byte
 	CrossChainTxHash []byte
@@ -747,21 +747,21 @@ type ILockProxyVerifyHeaderAndExecuteTxEvent struct {
 // FilterVerifyHeaderAndExecuteTxEvent is a free log retrieval operation binding the contract event 0x8a4a2663ce60ce4955c595da2894de0415240f1ace024cfbff85f513b656bdae.
 //
 // Solidity: event VerifyHeaderAndExecuteTxEvent(uint64 fromChainID, bytes toContract, bytes crossChainTxHash, bytes fromChainTxHash)
-func (_ILockProxy *ILockProxyFilterer) FilterVerifyHeaderAndExecuteTxEvent(opts *bind.FilterOpts) (*ILockProxyVerifyHeaderAndExecuteTxEventIterator, error) {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) FilterVerifyHeaderAndExecuteTxEvent(opts *bind.FilterOpts) (*IMainChainLockProxyVerifyHeaderAndExecuteTxEventIterator, error) {
 
-	logs, sub, err := _ILockProxy.contract.FilterLogs(opts, "VerifyHeaderAndExecuteTxEvent")
+	logs, sub, err := _IMainChainLockProxy.contract.FilterLogs(opts, "VerifyHeaderAndExecuteTxEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &ILockProxyVerifyHeaderAndExecuteTxEventIterator{contract: _ILockProxy.contract, event: "VerifyHeaderAndExecuteTxEvent", logs: logs, sub: sub}, nil
+	return &IMainChainLockProxyVerifyHeaderAndExecuteTxEventIterator{contract: _IMainChainLockProxy.contract, event: "VerifyHeaderAndExecuteTxEvent", logs: logs, sub: sub}, nil
 }
 
 // WatchVerifyHeaderAndExecuteTxEvent is a free log subscription operation binding the contract event 0x8a4a2663ce60ce4955c595da2894de0415240f1ace024cfbff85f513b656bdae.
 //
 // Solidity: event VerifyHeaderAndExecuteTxEvent(uint64 fromChainID, bytes toContract, bytes crossChainTxHash, bytes fromChainTxHash)
-func (_ILockProxy *ILockProxyFilterer) WatchVerifyHeaderAndExecuteTxEvent(opts *bind.WatchOpts, sink chan<- *ILockProxyVerifyHeaderAndExecuteTxEvent) (event.Subscription, error) {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) WatchVerifyHeaderAndExecuteTxEvent(opts *bind.WatchOpts, sink chan<- *IMainChainLockProxyVerifyHeaderAndExecuteTxEvent) (event.Subscription, error) {
 
-	logs, sub, err := _ILockProxy.contract.WatchLogs(opts, "VerifyHeaderAndExecuteTxEvent")
+	logs, sub, err := _IMainChainLockProxy.contract.WatchLogs(opts, "VerifyHeaderAndExecuteTxEvent")
 	if err != nil {
 		return nil, err
 	}
@@ -771,8 +771,8 @@ func (_ILockProxy *ILockProxyFilterer) WatchVerifyHeaderAndExecuteTxEvent(opts *
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(ILockProxyVerifyHeaderAndExecuteTxEvent)
-				if err := _ILockProxy.contract.UnpackLog(event, "VerifyHeaderAndExecuteTxEvent", log); err != nil {
+				event := new(IMainChainLockProxyVerifyHeaderAndExecuteTxEvent)
+				if err := _IMainChainLockProxy.contract.UnpackLog(event, "VerifyHeaderAndExecuteTxEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -796,9 +796,9 @@ func (_ILockProxy *ILockProxyFilterer) WatchVerifyHeaderAndExecuteTxEvent(opts *
 // ParseVerifyHeaderAndExecuteTxEvent is a log parse operation binding the contract event 0x8a4a2663ce60ce4955c595da2894de0415240f1ace024cfbff85f513b656bdae.
 //
 // Solidity: event VerifyHeaderAndExecuteTxEvent(uint64 fromChainID, bytes toContract, bytes crossChainTxHash, bytes fromChainTxHash)
-func (_ILockProxy *ILockProxyFilterer) ParseVerifyHeaderAndExecuteTxEvent(log types.Log) (*ILockProxyVerifyHeaderAndExecuteTxEvent, error) {
-	event := new(ILockProxyVerifyHeaderAndExecuteTxEvent)
-	if err := _ILockProxy.contract.UnpackLog(event, "VerifyHeaderAndExecuteTxEvent", log); err != nil {
+func (_IMainChainLockProxy *IMainChainLockProxyFilterer) ParseVerifyHeaderAndExecuteTxEvent(log types.Log) (*IMainChainLockProxyVerifyHeaderAndExecuteTxEvent, error) {
+	event := new(IMainChainLockProxyVerifyHeaderAndExecuteTxEvent)
+	if err := _IMainChainLockProxy.contract.UnpackLog(event, "VerifyHeaderAndExecuteTxEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

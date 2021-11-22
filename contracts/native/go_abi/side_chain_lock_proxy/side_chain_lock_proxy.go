@@ -29,11 +29,7 @@ var (
 var (
 	MethodBurn = "burn"
 
-	MethodChangeEpoch = "changeEpoch"
-
-	MethodInitGenesisHeader = "initGenesisHeader"
-
-	MethodVerifyHeaderAndMint = "verifyHeaderAndMint"
+	MethodVerifyHeaderAndExecuteTx = "verifyHeaderAndExecuteTx"
 
 	MethodName = "name"
 
@@ -46,116 +42,114 @@ var (
 	EventMintEvent = "MintEvent"
 )
 
-// IAllocProxyABI is the input ABI used to generate the binding from.
-const IAllocProxyABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"crossTxId\",\"type\":\"bytes\"}],\"name\":\"BurnEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"height\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"oldEpoch\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"newEpoch\",\"type\":\"bytes\"}],\"name\":\"ChangeEpochEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"height\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"epoch\",\"type\":\"bytes\"}],\"name\":\"InitGenesisBlockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"MintEvent\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extra\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"epoch\",\"type\":\"bytes\"}],\"name\":\"changeEpoch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extra\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"epoch\",\"type\":\"bytes\"}],\"name\":\"initGenesisHeader\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"rawCrossTx\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extra\",\"type\":\"bytes\"}],\"name\":\"verifyHeaderAndMint\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+// ISideChainLockProxyABI is the input ABI used to generate the binding from.
+const ISideChainLockProxyABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"crossTxId\",\"type\":\"bytes\"}],\"name\":\"BurnEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"height\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"oldEpoch\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"newEpoch\",\"type\":\"bytes\"}],\"name\":\"ChangeEpochEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"height\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"epoch\",\"type\":\"bytes\"}],\"name\":\"InitGenesisBlockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"MintEvent\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"rawCrossTx\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extra\",\"type\":\"bytes\"}],\"name\":\"verifyHeaderAndExecuteTx\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
-// IAllocProxyFuncSigs maps the 4-byte function signature to its string representation.
-var IAllocProxyFuncSigs = map[string]string{
+// ISideChainLockProxyFuncSigs maps the 4-byte function signature to its string representation.
+var ISideChainLockProxyFuncSigs = map[string]string{
 	"a4fa3313": "burn(uint64,address,uint256)",
-	"c5107f3a": "changeEpoch(bytes,bytes,bytes,bytes)",
-	"d4e025ef": "initGenesisHeader(bytes,bytes,bytes,bytes)",
 	"06fdde03": "name()",
-	"12979116": "verifyHeaderAndMint(bytes,bytes,bytes,bytes)",
+	"3a13bc70": "verifyHeaderAndExecuteTx(bytes,bytes,bytes,bytes)",
 }
 
-// IAllocProxy is an auto generated Go binding around an Ethereum contract.
-type IAllocProxy struct {
-	IAllocProxyCaller     // Read-only binding to the contract
-	IAllocProxyTransactor // Write-only binding to the contract
-	IAllocProxyFilterer   // Log filterer for contract events
+// ISideChainLockProxy is an auto generated Go binding around an Ethereum contract.
+type ISideChainLockProxy struct {
+	ISideChainLockProxyCaller     // Read-only binding to the contract
+	ISideChainLockProxyTransactor // Write-only binding to the contract
+	ISideChainLockProxyFilterer   // Log filterer for contract events
 }
 
-// IAllocProxyCaller is an auto generated read-only Go binding around an Ethereum contract.
-type IAllocProxyCaller struct {
+// ISideChainLockProxyCaller is an auto generated read-only Go binding around an Ethereum contract.
+type ISideChainLockProxyCaller struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAllocProxyTransactor is an auto generated write-only Go binding around an Ethereum contract.
-type IAllocProxyTransactor struct {
+// ISideChainLockProxyTransactor is an auto generated write-only Go binding around an Ethereum contract.
+type ISideChainLockProxyTransactor struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAllocProxyFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
-type IAllocProxyFilterer struct {
+// ISideChainLockProxyFilterer is an auto generated log filtering Go binding around an Ethereum contract events.
+type ISideChainLockProxyFilterer struct {
 	contract *bind.BoundContract // Generic contract wrapper for the low level calls
 }
 
-// IAllocProxySession is an auto generated Go binding around an Ethereum contract,
+// ISideChainLockProxySession is an auto generated Go binding around an Ethereum contract,
 // with pre-set call and transact options.
-type IAllocProxySession struct {
-	Contract     *IAllocProxy      // Generic contract binding to set the session for
-	CallOpts     bind.CallOpts     // Call options to use throughout this session
-	TransactOpts bind.TransactOpts // Transaction auth options to use throughout this session
+type ISideChainLockProxySession struct {
+	Contract     *ISideChainLockProxy // Generic contract binding to set the session for
+	CallOpts     bind.CallOpts        // Call options to use throughout this session
+	TransactOpts bind.TransactOpts    // Transaction auth options to use throughout this session
 }
 
-// IAllocProxyCallerSession is an auto generated read-only Go binding around an Ethereum contract,
+// ISideChainLockProxyCallerSession is an auto generated read-only Go binding around an Ethereum contract,
 // with pre-set call options.
-type IAllocProxyCallerSession struct {
-	Contract *IAllocProxyCaller // Generic contract caller binding to set the session for
-	CallOpts bind.CallOpts      // Call options to use throughout this session
+type ISideChainLockProxyCallerSession struct {
+	Contract *ISideChainLockProxyCaller // Generic contract caller binding to set the session for
+	CallOpts bind.CallOpts              // Call options to use throughout this session
 }
 
-// IAllocProxyTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
+// ISideChainLockProxyTransactorSession is an auto generated write-only Go binding around an Ethereum contract,
 // with pre-set transact options.
-type IAllocProxyTransactorSession struct {
-	Contract     *IAllocProxyTransactor // Generic contract transactor binding to set the session for
-	TransactOpts bind.TransactOpts      // Transaction auth options to use throughout this session
+type ISideChainLockProxyTransactorSession struct {
+	Contract     *ISideChainLockProxyTransactor // Generic contract transactor binding to set the session for
+	TransactOpts bind.TransactOpts              // Transaction auth options to use throughout this session
 }
 
-// IAllocProxyRaw is an auto generated low-level Go binding around an Ethereum contract.
-type IAllocProxyRaw struct {
-	Contract *IAllocProxy // Generic contract binding to access the raw methods on
+// ISideChainLockProxyRaw is an auto generated low-level Go binding around an Ethereum contract.
+type ISideChainLockProxyRaw struct {
+	Contract *ISideChainLockProxy // Generic contract binding to access the raw methods on
 }
 
-// IAllocProxyCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
-type IAllocProxyCallerRaw struct {
-	Contract *IAllocProxyCaller // Generic read-only contract binding to access the raw methods on
+// ISideChainLockProxyCallerRaw is an auto generated low-level read-only Go binding around an Ethereum contract.
+type ISideChainLockProxyCallerRaw struct {
+	Contract *ISideChainLockProxyCaller // Generic read-only contract binding to access the raw methods on
 }
 
-// IAllocProxyTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
-type IAllocProxyTransactorRaw struct {
-	Contract *IAllocProxyTransactor // Generic write-only contract binding to access the raw methods on
+// ISideChainLockProxyTransactorRaw is an auto generated low-level write-only Go binding around an Ethereum contract.
+type ISideChainLockProxyTransactorRaw struct {
+	Contract *ISideChainLockProxyTransactor // Generic write-only contract binding to access the raw methods on
 }
 
-// NewIAllocProxy creates a new instance of IAllocProxy, bound to a specific deployed contract.
-func NewIAllocProxy(address common.Address, backend bind.ContractBackend) (*IAllocProxy, error) {
-	contract, err := bindIAllocProxy(address, backend, backend, backend)
+// NewISideChainLockProxy creates a new instance of ISideChainLockProxy, bound to a specific deployed contract.
+func NewISideChainLockProxy(address common.Address, backend bind.ContractBackend) (*ISideChainLockProxy, error) {
+	contract, err := bindISideChainLockProxy(address, backend, backend, backend)
 	if err != nil {
 		return nil, err
 	}
-	return &IAllocProxy{IAllocProxyCaller: IAllocProxyCaller{contract: contract}, IAllocProxyTransactor: IAllocProxyTransactor{contract: contract}, IAllocProxyFilterer: IAllocProxyFilterer{contract: contract}}, nil
+	return &ISideChainLockProxy{ISideChainLockProxyCaller: ISideChainLockProxyCaller{contract: contract}, ISideChainLockProxyTransactor: ISideChainLockProxyTransactor{contract: contract}, ISideChainLockProxyFilterer: ISideChainLockProxyFilterer{contract: contract}}, nil
 }
 
-// NewIAllocProxyCaller creates a new read-only instance of IAllocProxy, bound to a specific deployed contract.
-func NewIAllocProxyCaller(address common.Address, caller bind.ContractCaller) (*IAllocProxyCaller, error) {
-	contract, err := bindIAllocProxy(address, caller, nil, nil)
+// NewISideChainLockProxyCaller creates a new read-only instance of ISideChainLockProxy, bound to a specific deployed contract.
+func NewISideChainLockProxyCaller(address common.Address, caller bind.ContractCaller) (*ISideChainLockProxyCaller, error) {
+	contract, err := bindISideChainLockProxy(address, caller, nil, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &IAllocProxyCaller{contract: contract}, nil
+	return &ISideChainLockProxyCaller{contract: contract}, nil
 }
 
-// NewIAllocProxyTransactor creates a new write-only instance of IAllocProxy, bound to a specific deployed contract.
-func NewIAllocProxyTransactor(address common.Address, transactor bind.ContractTransactor) (*IAllocProxyTransactor, error) {
-	contract, err := bindIAllocProxy(address, nil, transactor, nil)
+// NewISideChainLockProxyTransactor creates a new write-only instance of ISideChainLockProxy, bound to a specific deployed contract.
+func NewISideChainLockProxyTransactor(address common.Address, transactor bind.ContractTransactor) (*ISideChainLockProxyTransactor, error) {
+	contract, err := bindISideChainLockProxy(address, nil, transactor, nil)
 	if err != nil {
 		return nil, err
 	}
-	return &IAllocProxyTransactor{contract: contract}, nil
+	return &ISideChainLockProxyTransactor{contract: contract}, nil
 }
 
-// NewIAllocProxyFilterer creates a new log filterer instance of IAllocProxy, bound to a specific deployed contract.
-func NewIAllocProxyFilterer(address common.Address, filterer bind.ContractFilterer) (*IAllocProxyFilterer, error) {
-	contract, err := bindIAllocProxy(address, nil, nil, filterer)
+// NewISideChainLockProxyFilterer creates a new log filterer instance of ISideChainLockProxy, bound to a specific deployed contract.
+func NewISideChainLockProxyFilterer(address common.Address, filterer bind.ContractFilterer) (*ISideChainLockProxyFilterer, error) {
+	contract, err := bindISideChainLockProxy(address, nil, nil, filterer)
 	if err != nil {
 		return nil, err
 	}
-	return &IAllocProxyFilterer{contract: contract}, nil
+	return &ISideChainLockProxyFilterer{contract: contract}, nil
 }
 
-// bindIAllocProxy binds a generic wrapper to an already deployed contract.
-func bindIAllocProxy(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(IAllocProxyABI))
+// bindISideChainLockProxy binds a generic wrapper to an already deployed contract.
+func bindISideChainLockProxy(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
+	parsed, err := abi.JSON(strings.NewReader(ISideChainLockProxyABI))
 	if err != nil {
 		return nil, err
 	}
@@ -166,46 +160,46 @@ func bindIAllocProxy(address common.Address, caller bind.ContractCaller, transac
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IAllocProxy *IAllocProxyRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _IAllocProxy.Contract.IAllocProxyCaller.contract.Call(opts, result, method, params...)
+func (_ISideChainLockProxy *ISideChainLockProxyRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _ISideChainLockProxy.Contract.ISideChainLockProxyCaller.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_IAllocProxy *IAllocProxyRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.IAllocProxyTransactor.contract.Transfer(opts)
+func (_ISideChainLockProxy *ISideChainLockProxyRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ISideChainLockProxy.Contract.ISideChainLockProxyTransactor.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_IAllocProxy *IAllocProxyRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.IAllocProxyTransactor.contract.Transact(opts, method, params...)
+func (_ISideChainLockProxy *ISideChainLockProxyRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ISideChainLockProxy.Contract.ISideChainLockProxyTransactor.contract.Transact(opts, method, params...)
 }
 
 // Call invokes the (constant) contract method with params as input values and
 // sets the output to result. The result type might be a single field for simple
 // returns, a slice of interfaces for anonymous returns and a struct for named
 // returns.
-func (_IAllocProxy *IAllocProxyCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
-	return _IAllocProxy.Contract.contract.Call(opts, result, method, params...)
+func (_ISideChainLockProxy *ISideChainLockProxyCallerRaw) Call(opts *bind.CallOpts, result *[]interface{}, method string, params ...interface{}) error {
+	return _ISideChainLockProxy.Contract.contract.Call(opts, result, method, params...)
 }
 
 // Transfer initiates a plain transaction to move funds to the contract, calling
 // its default method if one is available.
-func (_IAllocProxy *IAllocProxyTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.contract.Transfer(opts)
+func (_ISideChainLockProxy *ISideChainLockProxyTransactorRaw) Transfer(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _ISideChainLockProxy.Contract.contract.Transfer(opts)
 }
 
 // Transact invokes the (paid) contract method with params as input values.
-func (_IAllocProxy *IAllocProxyTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.contract.Transact(opts, method, params...)
+func (_ISideChainLockProxy *ISideChainLockProxyTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
+	return _ISideChainLockProxy.Contract.contract.Transact(opts, method, params...)
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
 // Solidity: function name() view returns(string)
-func (_IAllocProxy *IAllocProxyCaller) Name(opts *bind.CallOpts) (string, error) {
+func (_ISideChainLockProxy *ISideChainLockProxyCaller) Name(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
-	err := _IAllocProxy.contract.Call(opts, &out, "name")
+	err := _ISideChainLockProxy.contract.Call(opts, &out, "name")
 
 	if err != nil {
 		return *new(string), err
@@ -220,104 +214,62 @@ func (_IAllocProxy *IAllocProxyCaller) Name(opts *bind.CallOpts) (string, error)
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
 // Solidity: function name() view returns(string)
-func (_IAllocProxy *IAllocProxySession) Name() (string, error) {
-	return _IAllocProxy.Contract.Name(&_IAllocProxy.CallOpts)
+func (_ISideChainLockProxy *ISideChainLockProxySession) Name() (string, error) {
+	return _ISideChainLockProxy.Contract.Name(&_ISideChainLockProxy.CallOpts)
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
 //
 // Solidity: function name() view returns(string)
-func (_IAllocProxy *IAllocProxyCallerSession) Name() (string, error) {
-	return _IAllocProxy.Contract.Name(&_IAllocProxy.CallOpts)
+func (_ISideChainLockProxy *ISideChainLockProxyCallerSession) Name() (string, error) {
+	return _ISideChainLockProxy.Contract.Name(&_ISideChainLockProxy.CallOpts)
 }
 
 // Burn is a paid mutator transaction binding the contract method 0xa4fa3313.
 //
 // Solidity: function burn(uint64 toChainId, address toAddress, uint256 amount) returns(bool)
-func (_IAllocProxy *IAllocProxyTransactor) Burn(opts *bind.TransactOpts, toChainId uint64, toAddress common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _IAllocProxy.contract.Transact(opts, "burn", toChainId, toAddress, amount)
+func (_ISideChainLockProxy *ISideChainLockProxyTransactor) Burn(opts *bind.TransactOpts, toChainId uint64, toAddress common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _ISideChainLockProxy.contract.Transact(opts, "burn", toChainId, toAddress, amount)
 }
 
 // Burn is a paid mutator transaction binding the contract method 0xa4fa3313.
 //
 // Solidity: function burn(uint64 toChainId, address toAddress, uint256 amount) returns(bool)
-func (_IAllocProxy *IAllocProxySession) Burn(toChainId uint64, toAddress common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.Burn(&_IAllocProxy.TransactOpts, toChainId, toAddress, amount)
+func (_ISideChainLockProxy *ISideChainLockProxySession) Burn(toChainId uint64, toAddress common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _ISideChainLockProxy.Contract.Burn(&_ISideChainLockProxy.TransactOpts, toChainId, toAddress, amount)
 }
 
 // Burn is a paid mutator transaction binding the contract method 0xa4fa3313.
 //
 // Solidity: function burn(uint64 toChainId, address toAddress, uint256 amount) returns(bool)
-func (_IAllocProxy *IAllocProxyTransactorSession) Burn(toChainId uint64, toAddress common.Address, amount *big.Int) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.Burn(&_IAllocProxy.TransactOpts, toChainId, toAddress, amount)
+func (_ISideChainLockProxy *ISideChainLockProxyTransactorSession) Burn(toChainId uint64, toAddress common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _ISideChainLockProxy.Contract.Burn(&_ISideChainLockProxy.TransactOpts, toChainId, toAddress, amount)
 }
 
-// ChangeEpoch is a paid mutator transaction binding the contract method 0xc5107f3a.
+// VerifyHeaderAndExecuteTx is a paid mutator transaction binding the contract method 0x3a13bc70.
 //
-// Solidity: function changeEpoch(bytes header, bytes proof, bytes extra, bytes epoch) returns(bool)
-func (_IAllocProxy *IAllocProxyTransactor) ChangeEpoch(opts *bind.TransactOpts, header []byte, proof []byte, extra []byte, epoch []byte) (*types.Transaction, error) {
-	return _IAllocProxy.contract.Transact(opts, "changeEpoch", header, proof, extra, epoch)
+// Solidity: function verifyHeaderAndExecuteTx(bytes header, bytes rawCrossTx, bytes proof, bytes extra) returns(bool)
+func (_ISideChainLockProxy *ISideChainLockProxyTransactor) VerifyHeaderAndExecuteTx(opts *bind.TransactOpts, header []byte, rawCrossTx []byte, proof []byte, extra []byte) (*types.Transaction, error) {
+	return _ISideChainLockProxy.contract.Transact(opts, "verifyHeaderAndExecuteTx", header, rawCrossTx, proof, extra)
 }
 
-// ChangeEpoch is a paid mutator transaction binding the contract method 0xc5107f3a.
+// VerifyHeaderAndExecuteTx is a paid mutator transaction binding the contract method 0x3a13bc70.
 //
-// Solidity: function changeEpoch(bytes header, bytes proof, bytes extra, bytes epoch) returns(bool)
-func (_IAllocProxy *IAllocProxySession) ChangeEpoch(header []byte, proof []byte, extra []byte, epoch []byte) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.ChangeEpoch(&_IAllocProxy.TransactOpts, header, proof, extra, epoch)
+// Solidity: function verifyHeaderAndExecuteTx(bytes header, bytes rawCrossTx, bytes proof, bytes extra) returns(bool)
+func (_ISideChainLockProxy *ISideChainLockProxySession) VerifyHeaderAndExecuteTx(header []byte, rawCrossTx []byte, proof []byte, extra []byte) (*types.Transaction, error) {
+	return _ISideChainLockProxy.Contract.VerifyHeaderAndExecuteTx(&_ISideChainLockProxy.TransactOpts, header, rawCrossTx, proof, extra)
 }
 
-// ChangeEpoch is a paid mutator transaction binding the contract method 0xc5107f3a.
+// VerifyHeaderAndExecuteTx is a paid mutator transaction binding the contract method 0x3a13bc70.
 //
-// Solidity: function changeEpoch(bytes header, bytes proof, bytes extra, bytes epoch) returns(bool)
-func (_IAllocProxy *IAllocProxyTransactorSession) ChangeEpoch(header []byte, proof []byte, extra []byte, epoch []byte) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.ChangeEpoch(&_IAllocProxy.TransactOpts, header, proof, extra, epoch)
+// Solidity: function verifyHeaderAndExecuteTx(bytes header, bytes rawCrossTx, bytes proof, bytes extra) returns(bool)
+func (_ISideChainLockProxy *ISideChainLockProxyTransactorSession) VerifyHeaderAndExecuteTx(header []byte, rawCrossTx []byte, proof []byte, extra []byte) (*types.Transaction, error) {
+	return _ISideChainLockProxy.Contract.VerifyHeaderAndExecuteTx(&_ISideChainLockProxy.TransactOpts, header, rawCrossTx, proof, extra)
 }
 
-// InitGenesisHeader is a paid mutator transaction binding the contract method 0xd4e025ef.
-//
-// Solidity: function initGenesisHeader(bytes header, bytes proof, bytes extra, bytes epoch) returns(bool)
-func (_IAllocProxy *IAllocProxyTransactor) InitGenesisHeader(opts *bind.TransactOpts, header []byte, proof []byte, extra []byte, epoch []byte) (*types.Transaction, error) {
-	return _IAllocProxy.contract.Transact(opts, "initGenesisHeader", header, proof, extra, epoch)
-}
-
-// InitGenesisHeader is a paid mutator transaction binding the contract method 0xd4e025ef.
-//
-// Solidity: function initGenesisHeader(bytes header, bytes proof, bytes extra, bytes epoch) returns(bool)
-func (_IAllocProxy *IAllocProxySession) InitGenesisHeader(header []byte, proof []byte, extra []byte, epoch []byte) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.InitGenesisHeader(&_IAllocProxy.TransactOpts, header, proof, extra, epoch)
-}
-
-// InitGenesisHeader is a paid mutator transaction binding the contract method 0xd4e025ef.
-//
-// Solidity: function initGenesisHeader(bytes header, bytes proof, bytes extra, bytes epoch) returns(bool)
-func (_IAllocProxy *IAllocProxyTransactorSession) InitGenesisHeader(header []byte, proof []byte, extra []byte, epoch []byte) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.InitGenesisHeader(&_IAllocProxy.TransactOpts, header, proof, extra, epoch)
-}
-
-// VerifyHeaderAndMint is a paid mutator transaction binding the contract method 0x12979116.
-//
-// Solidity: function verifyHeaderAndMint(bytes header, bytes rawCrossTx, bytes proof, bytes extra) returns(bool)
-func (_IAllocProxy *IAllocProxyTransactor) VerifyHeaderAndMint(opts *bind.TransactOpts, header []byte, rawCrossTx []byte, proof []byte, extra []byte) (*types.Transaction, error) {
-	return _IAllocProxy.contract.Transact(opts, "verifyHeaderAndMint", header, rawCrossTx, proof, extra)
-}
-
-// VerifyHeaderAndMint is a paid mutator transaction binding the contract method 0x12979116.
-//
-// Solidity: function verifyHeaderAndMint(bytes header, bytes rawCrossTx, bytes proof, bytes extra) returns(bool)
-func (_IAllocProxy *IAllocProxySession) VerifyHeaderAndMint(header []byte, rawCrossTx []byte, proof []byte, extra []byte) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.VerifyHeaderAndMint(&_IAllocProxy.TransactOpts, header, rawCrossTx, proof, extra)
-}
-
-// VerifyHeaderAndMint is a paid mutator transaction binding the contract method 0x12979116.
-//
-// Solidity: function verifyHeaderAndMint(bytes header, bytes rawCrossTx, bytes proof, bytes extra) returns(bool)
-func (_IAllocProxy *IAllocProxyTransactorSession) VerifyHeaderAndMint(header []byte, rawCrossTx []byte, proof []byte, extra []byte) (*types.Transaction, error) {
-	return _IAllocProxy.Contract.VerifyHeaderAndMint(&_IAllocProxy.TransactOpts, header, rawCrossTx, proof, extra)
-}
-
-// IAllocProxyBurnEventIterator is returned from FilterBurnEvent and is used to iterate over the raw logs and unpacked data for BurnEvent events raised by the IAllocProxy contract.
-type IAllocProxyBurnEventIterator struct {
-	Event *IAllocProxyBurnEvent // Event containing the contract specifics and raw log
+// ISideChainLockProxyBurnEventIterator is returned from FilterBurnEvent and is used to iterate over the raw logs and unpacked data for BurnEvent events raised by the ISideChainLockProxy contract.
+type ISideChainLockProxyBurnEventIterator struct {
+	Event *ISideChainLockProxyBurnEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -331,7 +283,7 @@ type IAllocProxyBurnEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IAllocProxyBurnEventIterator) Next() bool {
+func (it *ISideChainLockProxyBurnEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -340,7 +292,7 @@ func (it *IAllocProxyBurnEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IAllocProxyBurnEvent)
+			it.Event = new(ISideChainLockProxyBurnEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -355,7 +307,7 @@ func (it *IAllocProxyBurnEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IAllocProxyBurnEvent)
+		it.Event = new(ISideChainLockProxyBurnEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -371,19 +323,19 @@ func (it *IAllocProxyBurnEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IAllocProxyBurnEventIterator) Error() error {
+func (it *ISideChainLockProxyBurnEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IAllocProxyBurnEventIterator) Close() error {
+func (it *ISideChainLockProxyBurnEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IAllocProxyBurnEvent represents a BurnEvent event raised by the IAllocProxy contract.
-type IAllocProxyBurnEvent struct {
+// ISideChainLockProxyBurnEvent represents a BurnEvent event raised by the ISideChainLockProxy contract.
+type ISideChainLockProxyBurnEvent struct {
 	ToChainId   uint64
 	FromAddress common.Address
 	ToAddress   common.Address
@@ -395,21 +347,21 @@ type IAllocProxyBurnEvent struct {
 // FilterBurnEvent is a free log retrieval operation binding the contract event 0x6f8d47349ac6a71905a129c9f07798e8cd37575aeadfe3af6a18948232d7878f.
 //
 // Solidity: event BurnEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount, bytes crossTxId)
-func (_IAllocProxy *IAllocProxyFilterer) FilterBurnEvent(opts *bind.FilterOpts) (*IAllocProxyBurnEventIterator, error) {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) FilterBurnEvent(opts *bind.FilterOpts) (*ISideChainLockProxyBurnEventIterator, error) {
 
-	logs, sub, err := _IAllocProxy.contract.FilterLogs(opts, "BurnEvent")
+	logs, sub, err := _ISideChainLockProxy.contract.FilterLogs(opts, "BurnEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &IAllocProxyBurnEventIterator{contract: _IAllocProxy.contract, event: "BurnEvent", logs: logs, sub: sub}, nil
+	return &ISideChainLockProxyBurnEventIterator{contract: _ISideChainLockProxy.contract, event: "BurnEvent", logs: logs, sub: sub}, nil
 }
 
 // WatchBurnEvent is a free log subscription operation binding the contract event 0x6f8d47349ac6a71905a129c9f07798e8cd37575aeadfe3af6a18948232d7878f.
 //
 // Solidity: event BurnEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount, bytes crossTxId)
-func (_IAllocProxy *IAllocProxyFilterer) WatchBurnEvent(opts *bind.WatchOpts, sink chan<- *IAllocProxyBurnEvent) (event.Subscription, error) {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) WatchBurnEvent(opts *bind.WatchOpts, sink chan<- *ISideChainLockProxyBurnEvent) (event.Subscription, error) {
 
-	logs, sub, err := _IAllocProxy.contract.WatchLogs(opts, "BurnEvent")
+	logs, sub, err := _ISideChainLockProxy.contract.WatchLogs(opts, "BurnEvent")
 	if err != nil {
 		return nil, err
 	}
@@ -419,8 +371,8 @@ func (_IAllocProxy *IAllocProxyFilterer) WatchBurnEvent(opts *bind.WatchOpts, si
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IAllocProxyBurnEvent)
-				if err := _IAllocProxy.contract.UnpackLog(event, "BurnEvent", log); err != nil {
+				event := new(ISideChainLockProxyBurnEvent)
+				if err := _ISideChainLockProxy.contract.UnpackLog(event, "BurnEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -444,18 +396,18 @@ func (_IAllocProxy *IAllocProxyFilterer) WatchBurnEvent(opts *bind.WatchOpts, si
 // ParseBurnEvent is a log parse operation binding the contract event 0x6f8d47349ac6a71905a129c9f07798e8cd37575aeadfe3af6a18948232d7878f.
 //
 // Solidity: event BurnEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount, bytes crossTxId)
-func (_IAllocProxy *IAllocProxyFilterer) ParseBurnEvent(log types.Log) (*IAllocProxyBurnEvent, error) {
-	event := new(IAllocProxyBurnEvent)
-	if err := _IAllocProxy.contract.UnpackLog(event, "BurnEvent", log); err != nil {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) ParseBurnEvent(log types.Log) (*ISideChainLockProxyBurnEvent, error) {
+	event := new(ISideChainLockProxyBurnEvent)
+	if err := _ISideChainLockProxy.contract.UnpackLog(event, "BurnEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// IAllocProxyChangeEpochEventIterator is returned from FilterChangeEpochEvent and is used to iterate over the raw logs and unpacked data for ChangeEpochEvent events raised by the IAllocProxy contract.
-type IAllocProxyChangeEpochEventIterator struct {
-	Event *IAllocProxyChangeEpochEvent // Event containing the contract specifics and raw log
+// ISideChainLockProxyChangeEpochEventIterator is returned from FilterChangeEpochEvent and is used to iterate over the raw logs and unpacked data for ChangeEpochEvent events raised by the ISideChainLockProxy contract.
+type ISideChainLockProxyChangeEpochEventIterator struct {
+	Event *ISideChainLockProxyChangeEpochEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -469,7 +421,7 @@ type IAllocProxyChangeEpochEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IAllocProxyChangeEpochEventIterator) Next() bool {
+func (it *ISideChainLockProxyChangeEpochEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -478,7 +430,7 @@ func (it *IAllocProxyChangeEpochEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IAllocProxyChangeEpochEvent)
+			it.Event = new(ISideChainLockProxyChangeEpochEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -493,7 +445,7 @@ func (it *IAllocProxyChangeEpochEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IAllocProxyChangeEpochEvent)
+		it.Event = new(ISideChainLockProxyChangeEpochEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -509,19 +461,19 @@ func (it *IAllocProxyChangeEpochEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IAllocProxyChangeEpochEventIterator) Error() error {
+func (it *ISideChainLockProxyChangeEpochEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IAllocProxyChangeEpochEventIterator) Close() error {
+func (it *ISideChainLockProxyChangeEpochEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IAllocProxyChangeEpochEvent represents a ChangeEpochEvent event raised by the IAllocProxy contract.
-type IAllocProxyChangeEpochEvent struct {
+// ISideChainLockProxyChangeEpochEvent represents a ChangeEpochEvent event raised by the ISideChainLockProxy contract.
+type ISideChainLockProxyChangeEpochEvent struct {
 	Height   *big.Int
 	Header   []byte
 	OldEpoch []byte
@@ -532,21 +484,21 @@ type IAllocProxyChangeEpochEvent struct {
 // FilterChangeEpochEvent is a free log retrieval operation binding the contract event 0xef6229e7d9f33cdb9aafa4a1ec2deb98baa7fd31ffb3e15a6371979f49e954b5.
 //
 // Solidity: event ChangeEpochEvent(uint256 height, bytes header, bytes oldEpoch, bytes newEpoch)
-func (_IAllocProxy *IAllocProxyFilterer) FilterChangeEpochEvent(opts *bind.FilterOpts) (*IAllocProxyChangeEpochEventIterator, error) {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) FilterChangeEpochEvent(opts *bind.FilterOpts) (*ISideChainLockProxyChangeEpochEventIterator, error) {
 
-	logs, sub, err := _IAllocProxy.contract.FilterLogs(opts, "ChangeEpochEvent")
+	logs, sub, err := _ISideChainLockProxy.contract.FilterLogs(opts, "ChangeEpochEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &IAllocProxyChangeEpochEventIterator{contract: _IAllocProxy.contract, event: "ChangeEpochEvent", logs: logs, sub: sub}, nil
+	return &ISideChainLockProxyChangeEpochEventIterator{contract: _ISideChainLockProxy.contract, event: "ChangeEpochEvent", logs: logs, sub: sub}, nil
 }
 
 // WatchChangeEpochEvent is a free log subscription operation binding the contract event 0xef6229e7d9f33cdb9aafa4a1ec2deb98baa7fd31ffb3e15a6371979f49e954b5.
 //
 // Solidity: event ChangeEpochEvent(uint256 height, bytes header, bytes oldEpoch, bytes newEpoch)
-func (_IAllocProxy *IAllocProxyFilterer) WatchChangeEpochEvent(opts *bind.WatchOpts, sink chan<- *IAllocProxyChangeEpochEvent) (event.Subscription, error) {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) WatchChangeEpochEvent(opts *bind.WatchOpts, sink chan<- *ISideChainLockProxyChangeEpochEvent) (event.Subscription, error) {
 
-	logs, sub, err := _IAllocProxy.contract.WatchLogs(opts, "ChangeEpochEvent")
+	logs, sub, err := _ISideChainLockProxy.contract.WatchLogs(opts, "ChangeEpochEvent")
 	if err != nil {
 		return nil, err
 	}
@@ -556,8 +508,8 @@ func (_IAllocProxy *IAllocProxyFilterer) WatchChangeEpochEvent(opts *bind.WatchO
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IAllocProxyChangeEpochEvent)
-				if err := _IAllocProxy.contract.UnpackLog(event, "ChangeEpochEvent", log); err != nil {
+				event := new(ISideChainLockProxyChangeEpochEvent)
+				if err := _ISideChainLockProxy.contract.UnpackLog(event, "ChangeEpochEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -581,18 +533,18 @@ func (_IAllocProxy *IAllocProxyFilterer) WatchChangeEpochEvent(opts *bind.WatchO
 // ParseChangeEpochEvent is a log parse operation binding the contract event 0xef6229e7d9f33cdb9aafa4a1ec2deb98baa7fd31ffb3e15a6371979f49e954b5.
 //
 // Solidity: event ChangeEpochEvent(uint256 height, bytes header, bytes oldEpoch, bytes newEpoch)
-func (_IAllocProxy *IAllocProxyFilterer) ParseChangeEpochEvent(log types.Log) (*IAllocProxyChangeEpochEvent, error) {
-	event := new(IAllocProxyChangeEpochEvent)
-	if err := _IAllocProxy.contract.UnpackLog(event, "ChangeEpochEvent", log); err != nil {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) ParseChangeEpochEvent(log types.Log) (*ISideChainLockProxyChangeEpochEvent, error) {
+	event := new(ISideChainLockProxyChangeEpochEvent)
+	if err := _ISideChainLockProxy.contract.UnpackLog(event, "ChangeEpochEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// IAllocProxyInitGenesisBlockEventIterator is returned from FilterInitGenesisBlockEvent and is used to iterate over the raw logs and unpacked data for InitGenesisBlockEvent events raised by the IAllocProxy contract.
-type IAllocProxyInitGenesisBlockEventIterator struct {
-	Event *IAllocProxyInitGenesisBlockEvent // Event containing the contract specifics and raw log
+// ISideChainLockProxyInitGenesisBlockEventIterator is returned from FilterInitGenesisBlockEvent and is used to iterate over the raw logs and unpacked data for InitGenesisBlockEvent events raised by the ISideChainLockProxy contract.
+type ISideChainLockProxyInitGenesisBlockEventIterator struct {
+	Event *ISideChainLockProxyInitGenesisBlockEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -606,7 +558,7 @@ type IAllocProxyInitGenesisBlockEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IAllocProxyInitGenesisBlockEventIterator) Next() bool {
+func (it *ISideChainLockProxyInitGenesisBlockEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -615,7 +567,7 @@ func (it *IAllocProxyInitGenesisBlockEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IAllocProxyInitGenesisBlockEvent)
+			it.Event = new(ISideChainLockProxyInitGenesisBlockEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -630,7 +582,7 @@ func (it *IAllocProxyInitGenesisBlockEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IAllocProxyInitGenesisBlockEvent)
+		it.Event = new(ISideChainLockProxyInitGenesisBlockEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -646,19 +598,19 @@ func (it *IAllocProxyInitGenesisBlockEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IAllocProxyInitGenesisBlockEventIterator) Error() error {
+func (it *ISideChainLockProxyInitGenesisBlockEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IAllocProxyInitGenesisBlockEventIterator) Close() error {
+func (it *ISideChainLockProxyInitGenesisBlockEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IAllocProxyInitGenesisBlockEvent represents a InitGenesisBlockEvent event raised by the IAllocProxy contract.
-type IAllocProxyInitGenesisBlockEvent struct {
+// ISideChainLockProxyInitGenesisBlockEvent represents a InitGenesisBlockEvent event raised by the ISideChainLockProxy contract.
+type ISideChainLockProxyInitGenesisBlockEvent struct {
 	Height *big.Int
 	Header []byte
 	Epoch  []byte
@@ -668,21 +620,21 @@ type IAllocProxyInitGenesisBlockEvent struct {
 // FilterInitGenesisBlockEvent is a free log retrieval operation binding the contract event 0x0dab1016941cb99833e4adee14a432336685eb90c538bff97cfe2052be2de2c7.
 //
 // Solidity: event InitGenesisBlockEvent(uint256 height, bytes header, bytes epoch)
-func (_IAllocProxy *IAllocProxyFilterer) FilterInitGenesisBlockEvent(opts *bind.FilterOpts) (*IAllocProxyInitGenesisBlockEventIterator, error) {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) FilterInitGenesisBlockEvent(opts *bind.FilterOpts) (*ISideChainLockProxyInitGenesisBlockEventIterator, error) {
 
-	logs, sub, err := _IAllocProxy.contract.FilterLogs(opts, "InitGenesisBlockEvent")
+	logs, sub, err := _ISideChainLockProxy.contract.FilterLogs(opts, "InitGenesisBlockEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &IAllocProxyInitGenesisBlockEventIterator{contract: _IAllocProxy.contract, event: "InitGenesisBlockEvent", logs: logs, sub: sub}, nil
+	return &ISideChainLockProxyInitGenesisBlockEventIterator{contract: _ISideChainLockProxy.contract, event: "InitGenesisBlockEvent", logs: logs, sub: sub}, nil
 }
 
 // WatchInitGenesisBlockEvent is a free log subscription operation binding the contract event 0x0dab1016941cb99833e4adee14a432336685eb90c538bff97cfe2052be2de2c7.
 //
 // Solidity: event InitGenesisBlockEvent(uint256 height, bytes header, bytes epoch)
-func (_IAllocProxy *IAllocProxyFilterer) WatchInitGenesisBlockEvent(opts *bind.WatchOpts, sink chan<- *IAllocProxyInitGenesisBlockEvent) (event.Subscription, error) {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) WatchInitGenesisBlockEvent(opts *bind.WatchOpts, sink chan<- *ISideChainLockProxyInitGenesisBlockEvent) (event.Subscription, error) {
 
-	logs, sub, err := _IAllocProxy.contract.WatchLogs(opts, "InitGenesisBlockEvent")
+	logs, sub, err := _ISideChainLockProxy.contract.WatchLogs(opts, "InitGenesisBlockEvent")
 	if err != nil {
 		return nil, err
 	}
@@ -692,8 +644,8 @@ func (_IAllocProxy *IAllocProxyFilterer) WatchInitGenesisBlockEvent(opts *bind.W
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IAllocProxyInitGenesisBlockEvent)
-				if err := _IAllocProxy.contract.UnpackLog(event, "InitGenesisBlockEvent", log); err != nil {
+				event := new(ISideChainLockProxyInitGenesisBlockEvent)
+				if err := _ISideChainLockProxy.contract.UnpackLog(event, "InitGenesisBlockEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -717,18 +669,18 @@ func (_IAllocProxy *IAllocProxyFilterer) WatchInitGenesisBlockEvent(opts *bind.W
 // ParseInitGenesisBlockEvent is a log parse operation binding the contract event 0x0dab1016941cb99833e4adee14a432336685eb90c538bff97cfe2052be2de2c7.
 //
 // Solidity: event InitGenesisBlockEvent(uint256 height, bytes header, bytes epoch)
-func (_IAllocProxy *IAllocProxyFilterer) ParseInitGenesisBlockEvent(log types.Log) (*IAllocProxyInitGenesisBlockEvent, error) {
-	event := new(IAllocProxyInitGenesisBlockEvent)
-	if err := _IAllocProxy.contract.UnpackLog(event, "InitGenesisBlockEvent", log); err != nil {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) ParseInitGenesisBlockEvent(log types.Log) (*ISideChainLockProxyInitGenesisBlockEvent, error) {
+	event := new(ISideChainLockProxyInitGenesisBlockEvent)
+	if err := _ISideChainLockProxy.contract.UnpackLog(event, "InitGenesisBlockEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
 	return event, nil
 }
 
-// IAllocProxyMintEventIterator is returned from FilterMintEvent and is used to iterate over the raw logs and unpacked data for MintEvent events raised by the IAllocProxy contract.
-type IAllocProxyMintEventIterator struct {
-	Event *IAllocProxyMintEvent // Event containing the contract specifics and raw log
+// ISideChainLockProxyMintEventIterator is returned from FilterMintEvent and is used to iterate over the raw logs and unpacked data for MintEvent events raised by the ISideChainLockProxy contract.
+type ISideChainLockProxyMintEventIterator struct {
+	Event *ISideChainLockProxyMintEvent // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -742,7 +694,7 @@ type IAllocProxyMintEventIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IAllocProxyMintEventIterator) Next() bool {
+func (it *ISideChainLockProxyMintEventIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -751,7 +703,7 @@ func (it *IAllocProxyMintEventIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IAllocProxyMintEvent)
+			it.Event = new(ISideChainLockProxyMintEvent)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -766,7 +718,7 @@ func (it *IAllocProxyMintEventIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IAllocProxyMintEvent)
+		it.Event = new(ISideChainLockProxyMintEvent)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -782,19 +734,19 @@ func (it *IAllocProxyMintEventIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IAllocProxyMintEventIterator) Error() error {
+func (it *ISideChainLockProxyMintEventIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IAllocProxyMintEventIterator) Close() error {
+func (it *ISideChainLockProxyMintEventIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IAllocProxyMintEvent represents a MintEvent event raised by the IAllocProxy contract.
-type IAllocProxyMintEvent struct {
+// ISideChainLockProxyMintEvent represents a MintEvent event raised by the ISideChainLockProxy contract.
+type ISideChainLockProxyMintEvent struct {
 	ToChainId   uint64
 	FromAddress common.Address
 	ToAddress   common.Address
@@ -805,21 +757,21 @@ type IAllocProxyMintEvent struct {
 // FilterMintEvent is a free log retrieval operation binding the contract event 0x78ee4538b11131291669cab42be6d75e08b37b8f3dedbead5b1f23c753e4bd12.
 //
 // Solidity: event MintEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount)
-func (_IAllocProxy *IAllocProxyFilterer) FilterMintEvent(opts *bind.FilterOpts) (*IAllocProxyMintEventIterator, error) {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) FilterMintEvent(opts *bind.FilterOpts) (*ISideChainLockProxyMintEventIterator, error) {
 
-	logs, sub, err := _IAllocProxy.contract.FilterLogs(opts, "MintEvent")
+	logs, sub, err := _ISideChainLockProxy.contract.FilterLogs(opts, "MintEvent")
 	if err != nil {
 		return nil, err
 	}
-	return &IAllocProxyMintEventIterator{contract: _IAllocProxy.contract, event: "MintEvent", logs: logs, sub: sub}, nil
+	return &ISideChainLockProxyMintEventIterator{contract: _ISideChainLockProxy.contract, event: "MintEvent", logs: logs, sub: sub}, nil
 }
 
 // WatchMintEvent is a free log subscription operation binding the contract event 0x78ee4538b11131291669cab42be6d75e08b37b8f3dedbead5b1f23c753e4bd12.
 //
 // Solidity: event MintEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount)
-func (_IAllocProxy *IAllocProxyFilterer) WatchMintEvent(opts *bind.WatchOpts, sink chan<- *IAllocProxyMintEvent) (event.Subscription, error) {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) WatchMintEvent(opts *bind.WatchOpts, sink chan<- *ISideChainLockProxyMintEvent) (event.Subscription, error) {
 
-	logs, sub, err := _IAllocProxy.contract.WatchLogs(opts, "MintEvent")
+	logs, sub, err := _ISideChainLockProxy.contract.WatchLogs(opts, "MintEvent")
 	if err != nil {
 		return nil, err
 	}
@@ -829,8 +781,8 @@ func (_IAllocProxy *IAllocProxyFilterer) WatchMintEvent(opts *bind.WatchOpts, si
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IAllocProxyMintEvent)
-				if err := _IAllocProxy.contract.UnpackLog(event, "MintEvent", log); err != nil {
+				event := new(ISideChainLockProxyMintEvent)
+				if err := _ISideChainLockProxy.contract.UnpackLog(event, "MintEvent", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -854,9 +806,9 @@ func (_IAllocProxy *IAllocProxyFilterer) WatchMintEvent(opts *bind.WatchOpts, si
 // ParseMintEvent is a log parse operation binding the contract event 0x78ee4538b11131291669cab42be6d75e08b37b8f3dedbead5b1f23c753e4bd12.
 //
 // Solidity: event MintEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount)
-func (_IAllocProxy *IAllocProxyFilterer) ParseMintEvent(log types.Log) (*IAllocProxyMintEvent, error) {
-	event := new(IAllocProxyMintEvent)
-	if err := _IAllocProxy.contract.UnpackLog(event, "MintEvent", log); err != nil {
+func (_ISideChainLockProxy *ISideChainLockProxyFilterer) ParseMintEvent(log types.Log) (*ISideChainLockProxyMintEvent, error) {
+	event := new(ISideChainLockProxyMintEvent)
+	if err := _ISideChainLockProxy.contract.UnpackLog(event, "MintEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

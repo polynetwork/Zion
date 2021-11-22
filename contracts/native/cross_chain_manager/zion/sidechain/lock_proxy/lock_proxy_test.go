@@ -128,7 +128,7 @@ func testBurn(toChainID uint64, sender, toAddress common.Address, amount *big.In
 }
 
 func testUnlock(sender common.Address, header, crossTx, proof, extra []byte) (*native.NativeContract, []byte, error) {
-	input := &MethodVerifyHeaderAndMintInput{
+	input := &MethodVerifyHeaderAndExecuteTxInput{
 		Header:     header,
 		RawCrossTx: crossTx,
 		Proof:      proof,

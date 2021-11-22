@@ -19,7 +19,6 @@
 package lock_proxy
 
 import (
-	"errors"
 	"fmt"
 	"math/big"
 
@@ -28,39 +27,22 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 )
 
-var ErrUnSupported = errors.New("erc20 asset cross chain unsupported yet")
-
-func getBalanceFor(s *native.NativeContract, fromAsset, owner common.Address) (*big.Int, error) {
-	if fromAsset == common.EmptyAddress {
-		return s.StateDB().GetBalance(owner), nil
-	} else {
-		return erc20Balance(s, fromAsset, owner)
-	}
+func getBalanceFor(s *native.NativeContract, owner common.Address) *big.Int {
+	return s.StateDB().GetBalance(owner)
 }
 
-func transfer2Contract(s *native.NativeContract, fromAsset, txOrigin common.Address, amount *big.Int) error {
-	if fromAsset == common.EmptyAddress {
-		if amount.Cmp(common.Big0) == 0 {
-			return fmt.Errorf("transferred native token cannot be zero!")
-		}
-		if s.ContractRef().Value() == nil || s.ContractRef().Value().Cmp(amount) != 0 {
-			return fmt.Errorf("transferred native token is not equal to amount!")
-		}
-	} else {
-		if s.ContractRef().Value() != nil && s.ContractRef().Value().Cmp(common.Big0) != 0 {
-			return fmt.Errorf("there should be no native token transfer!")
-		}
-		return erc20Transfer(s, fromAsset, txOrigin, this, amount)
+func transfer2Contract(s *native.NativeContract, amount *big.Int) error {
+	if amount.Cmp(common.Big0) == 0 {
+		return fmt.Errorf("transferred native token cannot be zero!")
+	}
+	if s.ContractRef().Value() == nil || s.ContractRef().Value().Cmp(amount) != 0 {
+		return fmt.Errorf("transferred native token is not equal to amount!")
 	}
 	return nil
 }
 
-func transferFromContract(s *native.NativeContract, toAsset, toAddress common.Address, amount *big.Int) error {
-	if toAsset == common.EmptyAddress {
-		return nativeTransfer(s, this, toAddress, amount)
-	} else {
-		return erc20TransferFrom(s, toAsset, this, toAddress, amount)
-	}
+func transferFromContract(s *native.NativeContract, toAddress common.Address, amount *big.Int) error {
+	return nativeTransfer(s, this, toAddress, amount)
 }
 
 func nativeTransfer(s *native.NativeContract, from, to common.Address, amount *big.Int) error {
@@ -76,17 +58,4 @@ func onlySupportNativeToken(fromAsset common.Address) bool {
 		return true
 	}
 	return false
-}
-
-// todo: implement erc20 interfaces
-func erc20Balance(s *native.NativeContract, asset, owner common.Address) (*big.Int, error) {
-	return nil, ErrUnSupported
-}
-
-func erc20Transfer(s *native.NativeContract, asset, from, to common.Address, amount *big.Int) error {
-	return ErrUnSupported
-}
-
-func erc20TransferFrom(s *native.NativeContract, asset, from, to common.Address, amount *big.Int) error {
-	return ErrUnSupported
 }

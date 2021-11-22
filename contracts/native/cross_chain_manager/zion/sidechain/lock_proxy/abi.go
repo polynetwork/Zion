@@ -26,14 +26,14 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/alloc_proxy"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_lock_proxy"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
 const contractName = "alloc proxy"
 
 func InitABI() {
-	ab, err := abi.JSON(strings.NewReader(IAllocProxyABI))
+	ab, err := abi.JSON(strings.NewReader(ISideChainLockProxyABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
@@ -64,36 +64,6 @@ func (m *MethodContractNameOutput) Decode(payload []byte) error {
 	return utils.UnpackOutputs(ABI, MethodName, m, payload)
 }
 
-//function initGenesisHeader(bytes calldata header, bytes calldata proof, bytes calldata extra, bytes calldata epoch) external returns (bool);
-type MethodInitGenesisHeaderInput struct {
-	Header []byte
-	Proof  []byte
-	Extra  []byte
-	Epoch  []byte
-}
-
-func (i *MethodInitGenesisHeaderInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodInitGenesisHeader, i.Header, i.Proof, i.Extra, i.Epoch)
-}
-func (i *MethodInitGenesisHeaderInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodInitGenesisHeader, i, payload)
-}
-
-//function changeEpoch(bytes calldata header, bytes calldata proof, bytes calldata extra, bytes calldata epoch) external returns (bool);
-type MethodChangeEpochInput struct {
-	Header []byte
-	Proof  []byte
-	Extra  []byte
-	Epoch  []byte
-}
-
-func (i *MethodChangeEpochInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodChangeEpoch, i.Header, i.Proof, i.Extra, i.Epoch)
-}
-func (i *MethodChangeEpochInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodChangeEpoch, i, payload)
-}
-
 //function burn(uint64 toChainId, address toAddress, uint256 amount) external returns (bool);
 type MethodBurnInput struct {
 	ToChainId uint64
@@ -108,29 +78,19 @@ func (i *MethodBurnInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodBurn, i, payload)
 }
 
-//function verifyHeaderAndMint(bytes calldata header, bytes calldata rawCrossTx, bytes calldata proof) external returns (bool);
-type MethodVerifyHeaderAndMintInput struct {
+//function verifyHeaderAndExecuteTxInput(bytes calldata header, bytes calldata rawCrossTx, bytes calldata proof) external returns (bool);
+type MethodVerifyHeaderAndExecuteTxInput struct {
 	Header     []byte
 	RawCrossTx []byte
 	Proof      []byte
 	Extra      []byte
 }
 
-func (i *MethodVerifyHeaderAndMintInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodVerifyHeaderAndMint, i.Header, i.RawCrossTx, i.Proof, i.Extra)
+func (i *MethodVerifyHeaderAndExecuteTxInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodVerifyHeaderAndExecuteTx, i.Header, i.RawCrossTx, i.Proof, i.Extra)
 }
-func (i *MethodVerifyHeaderAndMintInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodVerifyHeaderAndMint, i, payload)
-}
-
-//event InitGenesisBlockEvent(uint256 height, bytes header, bytes epoch);
-func emitInitGenesisBlockEvent(s *native.NativeContract, height *big.Int, header, epoch []byte) error {
-	return s.AddNotify(ABI, []string{EventInitGenesisBlockEvent}, height, header, epoch)
-}
-
-//event ChangeEpochEvent(uint256 height, bytes header, bytes oldEpoch, bytes newEpoch);
-func emitChangeEpochEvent(s *native.NativeContract, height *big.Int, header, oldEpoch, newEpoch []byte) error {
-	return s.AddNotify(ABI, []string{EventChangeEpochEvent}, height, header, oldEpoch, newEpoch)
+func (i *MethodVerifyHeaderAndExecuteTxInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodVerifyHeaderAndExecuteTx, i, payload)
 }
 
 //event BurnEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount, bytes crossTxId);

@@ -3,7 +3,7 @@ pragma solidity ^0.5.0;
 /**
  * @dev Interface of the LockProxy contract
  */
-interface ILockProxy {
+interface IMainChainLockProxy {
     function name() external view returns (string memory);
     // function bindProxyHash(uint64 toChainId, bytes calldata targetProxyHash) external returns (bool);
     // function getProxyHash(uint64 toChainId) external view returns (bytes memory);

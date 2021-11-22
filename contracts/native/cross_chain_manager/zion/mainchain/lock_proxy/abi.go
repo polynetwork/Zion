@@ -33,7 +33,7 @@ import (
 const contractName = "zion main chain cross chain manager"
 
 func InitABI() {
-	ab, err := abi.JSON(strings.NewReader(ILockProxyABI))
+	ab, err := abi.JSON(strings.NewReader(IMainChainLockProxyABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
@@ -64,79 +64,6 @@ func (m *MethodContractNameOutput) Decode(payload []byte) error {
 	return utils.UnpackOutputs(ABI, MethodName, m, payload)
 }
 
-// function bindProxy
-type MethodBindProxyInput struct {
-	ToChainId       uint64
-	TargetProxyHash []byte
-}
-
-func (i *MethodBindProxyInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodBindProxyHash, i.ToChainId, i.TargetProxyHash)
-}
-func (i *MethodBindProxyInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodBindProxyHash, i, payload)
-}
-
-type MethodGetProxyInput struct {
-	ToChainId uint64
-}
-
-func (i *MethodGetProxyInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodGetProxyHash, i.ToChainId)
-}
-func (i *MethodGetProxyInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodGetProxyHash, i, payload)
-}
-
-// function bindAsset
-type MethodBindAssetHashInput struct {
-	FromAssetHash common.Address
-	ToChainId     uint64
-	ToAssetHash   []byte
-}
-
-func (i *MethodBindAssetHashInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodBindAssetHash, i.FromAssetHash, i.ToChainId, i.ToAssetHash)
-}
-func (i *MethodBindAssetHashInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodBindAssetHash, i, payload)
-}
-
-type MethodGetAssetInput struct {
-	FromAssetHash common.Address
-	ToChainId     uint64
-}
-
-func (i *MethodGetAssetInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodGetAssetHash, i.FromAssetHash, i.ToChainId)
-}
-func (i *MethodGetAssetInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodGetAssetHash, i, payload)
-}
-
-type MethodBindCallerInput struct {
-	ToChainId uint64
-	Caller    []byte
-}
-
-func (i *MethodBindCallerInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodBindCaller, i.ToChainId, i.Caller)
-}
-func (i *MethodBindCallerInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodBindCaller, i, payload)
-}
-
-type MethodGetCallerInput struct {
-	ToChainId uint64
-}
-
-func (i *MethodGetCallerInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodGetCaller, i.ToChainId)
-}
-func (i *MethodGetCallerInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodGetCaller, i, payload)
-}
-
 // function lock
 type MethodLockInput struct {
 	FromAssetHash common.Address
@@ -150,25 +77,6 @@ func (i *MethodLockInput) Encode() ([]byte, error) {
 }
 func (i *MethodLockInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodLock, i, payload)
-}
-
-//event BindProxyEvent(uint64 toChainId, bytes targetProxyHash);
-func emitBindProxyEvent(s *native.NativeContract, toChainID uint64, targetProxyHash []byte) error {
-	return s.AddNotify(ABI, []string{EventBindProxyEvent}, toChainID, targetProxyHash)
-}
-
-//event BindAssetEvent(address fromAssetHash, uint64 toChainId, bytes targetProxyHash, uint initialAmount);
-func emitBindAssetEvent(s *native.NativeContract,
-	fromAsset common.Address,
-	toChainID uint64,
-	targetProxyHash []byte,
-	initialAmount *big.Int) error {
-	return s.AddNotify(ABI, []string{EventBindAssetEvent}, fromAsset, toChainID, targetProxyHash, initialAmount)
-}
-
-// event BindCaller(uint64 toChainId, bytes caller);
-func emitBindCallerEvent(s *native.NativeContract, toChainID uint64, targetCaller []byte) error {
-	return s.AddNotify(ABI, []string{EventBindCaller}, toChainID, targetCaller)
 }
 
 //event LockEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount);

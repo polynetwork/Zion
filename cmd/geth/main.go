@@ -19,7 +19,6 @@ package main
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/contracts/native/boot"
 	"os"
 	"sort"
 	"strconv"
@@ -305,8 +304,6 @@ func prepare(ctx *cli.Context) {
 	// hotstuff: set miner recommit time value as hotstuff block period duration
 	defaultRecommitTime := time.Second * time.Duration(hotstuff.DefaultBasicConfig.BlockPeriod)
 	ctx.GlobalSet(utils.MinerRecommitIntervalFlag.Name, strconv.Itoa(int(defaultRecommitTime)))
-
-	boot.InitialMainChainNativeContracts()
 
 	// Start metrics export if enabled
 	utils.SetupMetrics(ctx)

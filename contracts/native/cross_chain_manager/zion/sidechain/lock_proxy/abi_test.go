@@ -38,40 +38,6 @@ func TestABIMethodContractNameOutput(t *testing.T) {
 	assert.Equal(t, expect, got)
 }
 
-func TestABIMethodInitGenesisHeaderInput(t *testing.T) {
-	expect := &MethodInitGenesisHeaderInput{
-		Header: []byte{'1', 'a'},
-		Proof:  []byte{'d', '3'},
-		Extra:  []byte{'8', '6', 'a'},
-		Epoch:  []byte{'d', '3'},
-	}
-
-	payload, err := expect.Encode()
-	assert.NoError(t, err)
-
-	got := new(MethodInitGenesisHeaderInput)
-	assert.NoError(t, got.Decode(payload))
-
-	assert.Equal(t, expect, got)
-}
-
-func TestABIMethodChangeEpochInput(t *testing.T) {
-	expect := &MethodChangeEpochInput{
-		Header: []byte{'1', 'a'},
-		Proof:  []byte{'d', '3'},
-		Extra:  []byte{'8', '6', 'a'},
-		Epoch:  []byte{'d', '3'},
-	}
-
-	payload, err := expect.Encode()
-	assert.NoError(t, err)
-
-	got := new(MethodChangeEpochInput)
-	assert.NoError(t, got.Decode(payload))
-
-	assert.Equal(t, expect, got)
-}
-
 func TestABIMethodBurnInput(t *testing.T) {
 	expect := &MethodBurnInput{
 		ToChainId: 3,
@@ -89,7 +55,7 @@ func TestABIMethodBurnInput(t *testing.T) {
 }
 
 func TestABIMethodMintInput(t *testing.T) {
-	expect := &MethodVerifyHeaderAndMintInput{
+	expect := &MethodVerifyHeaderAndExecuteTxInput{
 		Header:     []byte{'a'},
 		RawCrossTx: []byte{},
 		Proof:      []byte{'a'},
@@ -99,7 +65,7 @@ func TestABIMethodMintInput(t *testing.T) {
 	payload, err := expect.Encode()
 	assert.NoError(t, err)
 
-	got := new(MethodVerifyHeaderAndMintInput)
+	got := new(MethodVerifyHeaderAndExecuteTxInput)
 	assert.NoError(t, got.Decode(payload))
 
 	assert.Equal(t, expect, got)

@@ -28,41 +28,10 @@ import (
 )
 
 const (
-	SKP_PROXY     = "st_proxy"
-	SKP_ASSET     = "st_asset"
-	SKP_CALLER    = "st_caller"
 	SKP_TX_HASH   = "st_tx_hash"
 	SKP_TX_INDEX  = "st_tx_index"
 	SKP_TX_PARAMS = "st_tx_params"
 )
-
-func getProxy(s *native.NativeContract, targetChainID uint64) ([]byte, error) {
-	key := proxyKey(targetChainID)
-	return s.GetCacheDB().Get(key)
-}
-func storeProxy(s *native.NativeContract, targetChainID uint64, proxyHash []byte) {
-	key := proxyKey(targetChainID)
-	s.GetCacheDB().Put(key, proxyHash)
-}
-
-func getAsset(s *native.NativeContract, fromAsset common.Address, targetChainID uint64) ([]byte, error) {
-	key := assetKey(fromAsset, targetChainID)
-	return s.GetCacheDB().Get(key)
-}
-func storeAsset(s *native.NativeContract, fromAsset common.Address, targetChainID uint64, toAssetHash []byte) {
-	key := assetKey(fromAsset, targetChainID)
-	s.GetCacheDB().Put(key, toAssetHash)
-}
-
-func getCaller(s *native.NativeContract, toChainID uint64) ([]byte, error) {
-	key := callerKey(toChainID)
-	return s.GetCacheDB().Get(key)
-}
-
-func storeCaller(s *native.NativeContract, toChainID uint64, targetCaller []byte) {
-	key := callerKey(toChainID)
-	s.GetCacheDB().Put(key, targetCaller)
-}
 
 func getTxIndex(s *native.NativeContract) *big.Int {
 	key := txIndexKey()
@@ -103,19 +72,6 @@ func storeTxParams(s *native.NativeContract, paramTxHash []byte, params []byte) 
 // storage keys
 //
 // ====================================================================
-
-func proxyKey(chainID uint64) []byte {
-	return utils.ConcatKey(this, []byte(SKP_PROXY), utils.GetUint64Bytes(chainID))
-}
-
-func assetKey(fromAsset common.Address, chainID uint64) []byte {
-	return utils.ConcatKey(this, []byte(SKP_ASSET), fromAsset[:], utils.GetUint64Bytes(chainID))
-}
-
-func callerKey(toChainID uint64) []byte {
-	return utils.ConcatKey(this, []byte(SKP_CALLER), utils.GetUint64Bytes(toChainID))
-}
-
 func txHashKey(paramTxHash []byte) []byte {
 	return utils.ConcatKey(this, []byte(SKP_TX_HASH), paramTxHash)
 }
