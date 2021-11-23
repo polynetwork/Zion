@@ -38,6 +38,7 @@ type ContractRef struct {
 	evmHandler  EVMHandler
 	gasLeft     uint64
 	value       *big.Int
+	transferred bool
 }
 
 func NewContractRef(
@@ -58,6 +59,8 @@ func NewContractRef(
 		txHash:      txHash,
 		gasLeft:     suppliedGas,
 		evmHandler:  evmHandler,
+		transferred: false,
+		value:       common.Big0,
 	}
 }
 
@@ -88,11 +91,21 @@ func (s *ContractRef) EVMCall(caller, contractAddr common.Address, input []byte)
 }
 
 func (s *ContractRef) SetValue(value *big.Int) {
-	s.value = value
+	if value != nil && value.Cmp(common.Big0) > 0 {
+		s.value = value
+	}
 }
 
 func (s *ContractRef) Value() *big.Int {
 	return s.value
+}
+
+func (s *ContractRef) SetTransferred(isTransferred bool) {
+	s.transferred = isTransferred
+}
+
+func (s *ContractRef) Transferred() bool {
+	return s.transferred
 }
 
 func (s *ContractRef) StateDB() *state.StateDB {

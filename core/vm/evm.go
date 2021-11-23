@@ -22,10 +22,9 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/core/state"
-
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/holiman/uint256"
@@ -209,6 +208,14 @@ func (evm *EVM) Interpreter() Interpreter {
 // parameters. It also handles any necessary value transfer required and takes
 // the necessary steps to create accounts and reverses the state in case of an
 // execution error or failed value transfer.
+//
+// native contracts only allowed to be called in the form of `Call`, and the other
+// 3 kinds calling as follow:
+// . `delegateCall`, in which `tx.Origin` will passed in all context.
+// . `staticCall`, used in scope of `pure` and `view`
+// . `callCode`, modify the caller's storage but not the callee's storage.
+// are forbidden for safety!
+//
 func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
@@ -217,9 +224,13 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
+	transferffed := false
 	// Fail if we're trying to transfer more than the available balance
 	if value.Sign() != 0 && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, gas, ErrInsufficientBalance
+	}
+	if value != nil && value.Cmp(common.Big0) > 0 {
+		transferffed = true
 	}
 	snapshot := evm.StateDB.Snapshot()
 	p, isPrecompile := evm.precompile(addr)
@@ -246,7 +257,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 
 	if native.IsNativeContract(addr) {
-		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, value)
+		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, value, transferffed)
 	} else {
 		if isPrecompile {
 			ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -307,21 +318,17 @@ func (evm *EVM) CallCode(caller ContractRef, addr common.Address, input []byte, 
 	}
 	var snapshot = evm.StateDB.Snapshot()
 
-	if native.IsNativeContract(addr) {
-		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, value)
+	// It is allowed to call precompiles, even via delegatecall
+	if p, isPrecompile := evm.precompile(addr); isPrecompile {
+		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
-		// It is allowed to call precompiles, even via delegatecall
-		if p, isPrecompile := evm.precompile(addr); isPrecompile {
-			ret, gas, err = RunPrecompiledContract(p, input, gas)
-		} else {
-			addrCopy := addr
-			// Initialise a new contract and set the code that is to be used by the EVM.
-			// The contract is a scoped environment for this execution context only.
-			contract := NewContract(caller, AccountRef(caller.Address()), value, gas)
-			contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
-			ret, err = run(evm, contract, input, false)
-			gas = contract.Gas
-		}
+		addrCopy := addr
+		// Initialise a new contract and set the code that is to be used by the EVM.
+		// The contract is a scoped environment for this execution context only.
+		contract := NewContract(caller, AccountRef(caller.Address()), value, gas)
+		contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
+		ret, err = run(evm, contract, input, false)
+		gas = contract.Gas
 	}
 
 	if err != nil {
@@ -348,20 +355,16 @@ func (evm *EVM) DelegateCall(caller ContractRef, addr common.Address, input []by
 	}
 	var snapshot = evm.StateDB.Snapshot()
 
-	if native.IsNativeContract(addr) {
-		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, nil)
+	// It is allowed to call precompiles, even via delegatecall
+	if p, isPrecompile := evm.precompile(addr); isPrecompile {
+		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
-		// It is allowed to call precompiles, even via delegatecall
-		if p, isPrecompile := evm.precompile(addr); isPrecompile {
-			ret, gas, err = RunPrecompiledContract(p, input, gas)
-		} else {
-			addrCopy := addr
-			// Initialise a new contract and make initialise the delegate values
-			contract := NewContract(caller, AccountRef(caller.Address()), nil, gas).AsDelegate()
-			contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
-			ret, err = run(evm, contract, input, false)
-			gas = contract.Gas
-		}
+		addrCopy := addr
+		// Initialise a new contract and make initialise the delegate values
+		contract := NewContract(caller, AccountRef(caller.Address()), nil, gas).AsDelegate()
+		contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
+		ret, err = run(evm, contract, input, false)
+		gas = contract.Gas
 	}
 
 	if err != nil {
@@ -398,26 +401,22 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 	// future scenarios
 	evm.StateDB.AddBalance(addr, big0)
 
-	if native.IsNativeContract(addr) {
-		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, nil)
+	if p, isPrecompile := evm.precompile(addr); isPrecompile {
+		ret, gas, err = RunPrecompiledContract(p, input, gas)
 	} else {
-		if p, isPrecompile := evm.precompile(addr); isPrecompile {
-			ret, gas, err = RunPrecompiledContract(p, input, gas)
-		} else {
-			// At this point, we use a copy of address. If we don't, the go compiler will
-			// leak the 'contract' to the outer scope, and make allocation for 'contract'
-			// even if the actual execution ends on RunPrecompiled above.
-			addrCopy := addr
-			// Initialise a new contract and set the code that is to be used by the EVM.
-			// The contract is a scoped environment for this execution context only.
-			contract := NewContract(caller, AccountRef(addrCopy), new(big.Int), gas)
-			contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
-			// When an error was returned by the EVM or when setting the creation code
-			// above we revert to the snapshot and consume any gas remaining. Additionally
-			// when we're in Homestead this also counts for code storage gas errors.
-			ret, err = run(evm, contract, input, true)
-			gas = contract.Gas
-		}
+		// At this point, we use a copy of address. If we don't, the go compiler will
+		// leak the 'contract' to the outer scope, and make allocation for 'contract'
+		// even if the actual execution ends on RunPrecompiled above.
+		addrCopy := addr
+		// Initialise a new contract and set the code that is to be used by the EVM.
+		// The contract is a scoped environment for this execution context only.
+		contract := NewContract(caller, AccountRef(addrCopy), new(big.Int), gas)
+		contract.SetCallCode(&addrCopy, evm.StateDB.GetCodeHash(addrCopy), evm.StateDB.GetCode(addrCopy))
+		// When an error was returned by the EVM or when setting the creation code
+		// above we revert to the snapshot and consume any gas remaining. Additionally
+		// when we're in Homestead this also counts for code storage gas errors.
+		ret, err = run(evm, contract, input, true)
+		gas = contract.Gas
 	}
 
 	if err != nil {
@@ -435,8 +434,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 //
 // In addition, the gas of native call temporarily uses a fixed value
 //
-// todo(fuk): try to test precompile and ensure that `nativeCall` is safe enough
-func (evm *EVM) nativeCall(caller, addr common.Address, input []byte, suppliedGas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) nativeCall(caller, addr common.Address, input []byte, suppliedGas uint64, value *big.Int, transferred bool) (ret []byte, leftOverGas uint64, err error) {
 	sdb := evm.StateDB.(*state.StateDB)
 	blockNumber := evm.Context.BlockNumber
 
@@ -445,11 +443,10 @@ func (evm *EVM) nativeCall(caller, addr common.Address, input []byte, suppliedGa
 	if evm.TxContext.Origin != common.EmptyAddress && len(evm.TxContext.Origin[:]) == common.AddressLength {
 		msgSender = evm.TxContext.Origin
 	}
-	if value == nil {
-		value = common.Big0
-	}
 	contractRef := native.NewContractRef(sdb, msgSender, caller, blockNumber, txHash, suppliedGas, evm.Callback)
 	contractRef.SetValue(value)
+	contractRef.SetTransferred(transferred)
+
 	ret, leftOverGas, err = contractRef.NativeCall(caller, addr, input)
 	return
 }
