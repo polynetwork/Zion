@@ -17,3 +17,38 @@
  */
 
 package auth
+
+import (
+	"math/big"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+)
+
+const (
+	SKP_AUTH = "st_auth"
+)
+
+func getAllowance(s *native.NativeContract, owner, spender common.Address) *big.Int {
+	key := allowanceKey(owner, spender)
+	blob, _ := s.GetCacheDB().Get(key)
+	if blob == nil {
+		return common.Big0
+	}
+	return new(big.Int).SetBytes(blob)
+}
+
+func setAllowance(s *native.NativeContract, owner, spender common.Address, amount *big.Int) {
+	key := allowanceKey(owner, spender)
+	s.GetCacheDB().Put(key, amount.Bytes())
+}
+
+// ====================================================================
+//
+// storage keys
+//
+// ====================================================================
+func allowanceKey(owner, spender common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_AUTH), owner[:], spender[:])
+}

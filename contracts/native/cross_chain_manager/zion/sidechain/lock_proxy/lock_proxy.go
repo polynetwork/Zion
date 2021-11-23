@@ -21,10 +21,13 @@ package lock_proxy
 import (
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/auth"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_lock_proxy"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/auth_abi"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_lock_proxy_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -49,6 +52,8 @@ var (
 		MethodName:                     0,
 		MethodBurn:                     10000,
 		MethodVerifyHeaderAndExecuteTx: 10000,
+		MethodApprove:                  10000,
+		MethodAllowance:                0,
 	}
 
 	IsMainChain bool
@@ -71,6 +76,8 @@ func RegisterLockProxyContract(s *native.NativeContract) {
 	s.Register(MethodName, Name)
 	s.Register(MethodBurn, Burn)
 	s.Register(MethodVerifyHeaderAndExecuteTx, Mint)
+	s.Register(MethodApprove, auth.Approve)
+	s.Register(MethodAllowance, auth.Allowance)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -94,7 +101,7 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 	if input.Amount == nil || input.Amount.Cmp(common.Big0) <= 0 {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, invalid amount")
 	}
-	if input.ToChainId == native.ZionMainChainID || input.ToChainId == 0 {
+	if input.ToChainId != native.ZionMainChainID || input.ToChainId == 0 {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, dest chain id invalid")
 	}
 
@@ -106,10 +113,9 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// check and sub balance
-	if s.StateDB().GetBalance(from).Cmp(input.Amount) <= 0 {
+	if err := auth.SubBalance(s, from, input.Amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, Insufficient balance")
 	}
-	s.StateDB().SubBalance(from, input.Amount)
 
 	// store cross tx data
 	lastCrossTxIndex := getCrossTxIndex(s)

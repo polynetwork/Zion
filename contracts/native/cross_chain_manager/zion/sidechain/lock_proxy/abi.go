@@ -26,11 +26,11 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_lock_proxy"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_lock_proxy_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
-const contractName = "alloc proxy"
+const contractName = "side chain lock proxy"
 
 func InitABI() {
 	ab, err := abi.JSON(strings.NewReader(ISideChainLockProxyABI))

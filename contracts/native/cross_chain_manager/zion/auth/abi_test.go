@@ -17,3 +17,47 @@
  */
 
 package auth
+
+import (
+	"math/big"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+)
+
+func TestABIMethodApproveInput(t *testing.T) {
+	expect := &MethodApproveInput{
+		Spender: common.HexToAddress("0x12"),
+		Amount:  big.NewInt(3),
+	}
+
+	payload, err := expect.Encode()
+	assert.NoError(t, err)
+
+	got := new(MethodApproveInput)
+	assert.NoError(t, got.Decode(payload))
+
+	assert.Equal(t, expect, got)
+}
+
+func TestABIMethodAllowanceInput(t *testing.T) {
+	expect := &MethodAllowanceInput{
+		Owner:   common.HexToAddress("0x12"),
+		Spender: this,
+	}
+
+	payload, err := expect.Encode()
+	assert.NoError(t, err)
+
+	got := new(MethodAllowanceInput)
+	assert.NoError(t, got.Decode(payload))
+
+	assert.Equal(t, expect, got)
+}
+
+func TestEmitApproval(t *testing.T) {
+	resetTestContext()
+	s := testEmptyCtx
+	assert.NoError(t, emitApprovedEvent(s, common.HexToAddress("0x13"), this, big.NewInt(13)))
+}

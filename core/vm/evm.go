@@ -104,6 +104,8 @@ type TxContext struct {
 	Origin   common.Address // Provides information for ORIGIN
 	GasPrice *big.Int       // Provides information for GASPRICE
 	TxHash   common.Hash
+	To       common.Address // Provides information for dest ACCOUNT/CONTRACT
+	Value    *big.Int       // Provides information for user spent
 }
 
 // EVM is the Ethereum Virtual Machine base object and provides
@@ -224,13 +226,9 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	if evm.depth > int(params.CallCreateDepth) {
 		return nil, gas, ErrDepth
 	}
-	transferffed := false
 	// Fail if we're trying to transfer more than the available balance
 	if value.Sign() != 0 && !evm.Context.CanTransfer(evm.StateDB, caller.Address(), value) {
 		return nil, gas, ErrInsufficientBalance
-	}
-	if value != nil && value.Cmp(common.Big0) > 0 {
-		transferffed = true
 	}
 	snapshot := evm.StateDB.Snapshot()
 	p, isPrecompile := evm.precompile(addr)
@@ -257,7 +255,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	}
 
 	if native.IsNativeContract(addr) {
-		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, value, transferffed)
+		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas)
 	} else {
 		if isPrecompile {
 			ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -434,7 +432,7 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 //
 // In addition, the gas of native call temporarily uses a fixed value
 //
-func (evm *EVM) nativeCall(caller, addr common.Address, input []byte, suppliedGas uint64, value *big.Int, transferred bool) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) nativeCall(caller, toContract common.Address, input []byte, suppliedGas uint64) (ret []byte, leftOverGas uint64, err error) {
 	sdb := evm.StateDB.(*state.StateDB)
 	blockNumber := evm.Context.BlockNumber
 
@@ -444,10 +442,14 @@ func (evm *EVM) nativeCall(caller, addr common.Address, input []byte, suppliedGa
 		msgSender = evm.TxContext.Origin
 	}
 	contractRef := native.NewContractRef(sdb, msgSender, caller, blockNumber, txHash, suppliedGas, evm.Callback)
-	contractRef.SetValue(value)
-	contractRef.SetTransferred(transferred)
+	if evm.Value != nil {
+		contractRef.SetValue(evm.Value)
+	}
+	if evm.To != common.EmptyAddress {
+		contractRef.SetTo(evm.To)
+	}
 
-	ret, leftOverGas, err = contractRef.NativeCall(caller, addr, input)
+	ret, leftOverGas, err = contractRef.NativeCall(caller, toContract, input)
 	return
 }
 

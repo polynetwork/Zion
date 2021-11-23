@@ -24,11 +24,12 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/auth"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/main_chain_lock_proxy"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/auth_abi"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/main_chain_lock_proxy_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core"
 )
 
 var (
@@ -36,6 +37,8 @@ var (
 		MethodName:                   0,
 		MethodLock:                   10000,
 		MethodGetSideChainLockAmount: 0,
+		MethodApprove:                10000,
+		MethodAllowance:              0,
 	}
 )
 
@@ -50,6 +53,8 @@ func RegisterLockProxyContract(s *native.NativeContract) {
 	s.Register(MethodName, Name)
 	s.Register(MethodLock, Lock)
 	s.Register(MethodGetSideChainLockAmount, GetSideChainLockAmount)
+	s.Register(MethodApprove, auth.Approve)
+	s.Register(MethodAllowance, auth.Allowance)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -59,6 +64,8 @@ func Name(s *native.NativeContract) ([]byte, error) {
 func Lock(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	sourceChainID := native.ZionMainChainID
+	txOrigin := s.ContractRef().TxOrigin()
+	msgSender := s.ContractRef().MsgSender()
 
 	input := new(MethodLockInput)
 	if err := input.Decode(ctx.Payload); err != nil {
@@ -76,16 +83,14 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if input.ToAddress == nil || len(input.ToAddress) == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target address invalid")
 	}
+	if common.BytesToAddress(input.ToAddress) != txOrigin {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target address MUST be tx origin")
+	}
 	if input.Amount == nil || input.Amount.Cmp(common.Big0) == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, amount invalid")
 	}
-	if value := s.ContractRef().Value(); value == nil || input.Amount.Cmp(value) != 0 {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, amount != tx.value")
-	}
 
 	// input fields alias, caller is proxy itself and `toContract` is `sideChain` proxy, which has the same address
-	txOrigin := s.ContractRef().TxOrigin()
-	msgSender := s.ContractRef().MsgSender()
 	fromAsset := common.EmptyAddress
 	toAsset := common.EmptyAddress.Bytes()
 	toAddr := input.ToAddress
@@ -103,6 +108,14 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	} else if sideChain.Router != utils.ZION_ROUTER {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, side chain %d router is not zion", toChainID)
 	}
+
+	// lock token into lock proxy
+	if err := auth.SafeTransfer2Contract(s, amount); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to transfer token to lock proxy, err: %v", err)
+	}
+
+	// set total amount
+	addTotalAmount(s, toChainID, amount)
 
 	// serialize tx args
 	txData := zutils.EncodeTxArgs(toAsset, toAddr, amount)
@@ -122,9 +135,6 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if err := scom.PutDoneTx(s, crossChainID, sourceChainID); err != nil {
 		return nil, fmt.Errorf("LockProxy.Lock, faield to store cross transaction, err: %v", err)
 	}
-
-	// set total amount
-	addTotalAmount(s, toChainID, amount)
 
 	// assemble tx, generate and store cross chain transaction proof
 	txParams, rawTx, err := zutils.EncodeMakeTxParams(paramTxHash, crossChainID, caller[:], toChainID, toContract[:], toMethod, txData)
@@ -193,10 +203,8 @@ func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txPara
 
 	// transfer asset
 	toAddress := common.BytesToAddress(args.ToAddress)
-	if !core.CanTransfer(s.StateDB(), this, args.Amount) {
-		return fmt.Errorf("LockProxy.Unlock, failed to transfer native toekn, err: Insufficient balance")
-	} else {
-		core.Transfer(s.StateDB(), this, toAddress, args.Amount)
+	if err := auth.SafeTransferFromContract(s, toAddress, args.Amount); err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to transfer native token, err: %v", err)
 	}
 	if err := subTotalAmount(s, sourceChainID, args.Amount); err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to sub total amount, err: %v", err)

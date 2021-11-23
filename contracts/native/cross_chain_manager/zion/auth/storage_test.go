@@ -17,3 +17,63 @@
  */
 
 package auth
+
+import (
+	"math/big"
+	"os"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/stretchr/testify/assert"
+)
+
+var (
+	testStateDB  *state.StateDB
+	testEmptyCtx *native.NativeContract
+
+	testSupplyGas uint64 = 100000000000000000
+	testBlockNum         = int64(12)
+	testTxHash           = common.EmptyHash
+	testCaller           = common.EmptyAddress
+)
+
+func TestMain(m *testing.M) {
+	db := rawdb.NewMemoryDatabase()
+	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
+	ref := generateContractRef()
+	testEmptyCtx = native.NewNativeContract(testStateDB, ref)
+	InitABI()
+
+	os.Exit(m.Run())
+}
+
+func generateContractRef() *native.ContractRef {
+	return native.NewContractRef(testStateDB, testCaller, testCaller, big.NewInt(testBlockNum), testTxHash, testSupplyGas, nil)
+}
+
+func resetTestContext() {
+	db := rawdb.NewMemoryDatabase()
+	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
+	ref := generateContractRef()
+	ref.PushContext(&native.Context{
+		Caller:          testCaller,
+		ContractAddress: this,
+		Payload:         nil,
+	})
+	testEmptyCtx = native.NewNativeContract(testStateDB, ref)
+}
+
+func TestStoreAllowance(t *testing.T) {
+	resetTestContext()
+	s := testEmptyCtx
+	owner := common.HexToAddress("0x13")
+	spender := this
+	expect := big.NewInt(899)
+
+	setAllowance(s, owner, spender, expect)
+	got := getAllowance(s, owner, spender)
+	assert.Equal(t, expect, got)
+}
