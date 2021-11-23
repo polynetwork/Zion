@@ -59,23 +59,23 @@ func storeVoteMessage(s *native.NativeContract, sign *VoteMessage) error {
 
 func storeSignerAndCheckQuorum(s *native.NativeContract, hash common.Hash, signer common.Address, quorum int) (bool, error) {
 	height := s.ContractRef().BlockHeight().Uint64()
-	data, err := getSignerMap(s, hash)
+	data, err := getSignerList(s, hash)
 	if err != nil {
 		if err.Error() == ErrEof.Error() {
-			data = &SignerMap{
+			data = &SignerList{
 				StartHeight: height,
-				SignerMap: make(map[common.Address]*SignerInfo),
+				SignerList:   make([]*SignerInfo, 0),
 			}
 		} else {
 			return false, err
 		}
 	}
-	data.SignerMap[signer] = &SignerInfo{height}
+	data.SignerList = append(data.SignerList, &SignerInfo{Address: signer, SignHeight: height})
 
 	flag := false
 	//check quorum and store quorum height
 	if data.EndHeight == 0 {
-		size := len(data.SignerMap)
+		size := len(data.SignerList)
 		if size >= quorum {
 			data.EndHeight = height
 			flag = true
@@ -94,37 +94,38 @@ func storeSignerAndCheckQuorum(s *native.NativeContract, hash common.Hash, signe
 }
 
 func findSigner(s *native.NativeContract, hash common.Hash, signer common.Address) bool {
-	signerMap, err := getSignerMap(s, hash)
+	signerList, err := getSignerList(s, hash)
 	if err != nil {
 		return false
 	}
-	_, ok := signerMap.SignerMap[signer]
-	if ok {
-		return true
+	for _, v := range signerList.SignerList {
+		if v.Address == signer {
+			return true
+		}
 	}
 	return false
 }
 
-func getSignerMap(s *native.NativeContract, hash common.Hash) (*SignerMap, error) {
+func getSignerList(s *native.NativeContract, hash common.Hash) (*SignerList, error) {
 	key := signerMapKey(hash)
 	value, err := get(s, key)
 	if err != nil {
 		return nil, err
 	}
 
-	var signerMap *SignerMap
-	if err := rlp.DecodeBytes(value, &signerMap); err != nil {
+	var signerList *SignerList
+	if err := rlp.DecodeBytes(value, &signerList); err != nil {
 		return nil, err
 	}
-	return signerMap, nil
+	return signerList, nil
 }
 
 func getSignerSize(s *native.NativeContract, hash common.Hash) int {
-	signerMap, err := getSignerMap(s, hash)
+	signerList, err := getSignerList(s, hash)
 	if err != nil {
 		return 0
 	}
-	return len(signerMap.SignerMap)
+	return len(signerList.SignerList)
 }
 
 // ====================================================================

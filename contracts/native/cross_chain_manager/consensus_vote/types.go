@@ -27,21 +27,21 @@ import (
 	"golang.org/x/crypto/sha3"
 )
 
-type SignerMap struct {
+type SignerList struct {
 	StartHeight uint64
 	EndHeight   uint64
-	SignerMap   map[common.Address]*SignerInfo
+	SignerList  []*SignerInfo
 }
 
-func (m *SignerMap) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.StartHeight, m.EndHeight, m.SignerMap})
+func (m *SignerList) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.StartHeight, m.EndHeight, m.SignerList})
 }
 
-func (m *SignerMap) DecodeRLP(s *rlp.Stream) error {
+func (m *SignerList) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		StartHeight uint64
 		EndHeight   uint64
-		SignerMap   map[common.Address]*SignerInfo
+		SignerMap   []*SignerInfo
 	}
 
 	if err := s.Decode(&data); err != nil {
@@ -49,26 +49,29 @@ func (m *SignerMap) DecodeRLP(s *rlp.Stream) error {
 	}
 	m.StartHeight = data.StartHeight
 	m.EndHeight = data.EndHeight
-	m.SignerMap = data.SignerMap
+	m.SignerList = data.SignerMap
 	return nil
 }
 
 type SignerInfo struct {
+	Address    common.Address
 	SignHeight uint64
 }
 
 func (m *SignerInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.SignHeight})
+	return rlp.Encode(w, []interface{}{m.Address, m.SignHeight})
 }
 
 func (m *SignerInfo) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
+		Address    common.Address
 		SignHeight uint64
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
+	m.Address = data.Address
 	m.SignHeight = data.SignHeight
 	return nil
 }
@@ -83,7 +86,6 @@ func (m *VoteMessage) EncodeRLP(w io.Writer) error {
 }
 func (m *VoteMessage) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Method string
 		Input  []byte
 	}
 

@@ -146,6 +146,7 @@ func (m *MakeTxParam) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+//used for param from evm contract
 type MakeTxParamShim struct {
 	TxHash              []byte
 	CrossChainID        []byte
@@ -184,12 +185,41 @@ func DecodeTxParam(data []byte) (param *MakeTxParam, err error) {
 	param = &MakeTxParam{
 		TxHash:              shim.TxHash,
 		CrossChainID:        shim.CrossChainID,
-		ToChainID:           shim.ToChainID.Uint64(),
 		FromContractAddress: shim.FromContractAddress,
+		ToChainID:           shim.ToChainID.Uint64(),
 		ToContractAddress:   shim.ToContractAddress,
 		Method:              string(shim.Method),
 		Args:                shim.Args,
 	}
+	return
+}
+
+func EncodeTxParam(param *MakeTxParam) (data []byte, err error) {
+	BytesTy, _ := abi.NewType("bytes", "", nil)
+	IntTy, _ := abi.NewType("int", "", nil)
+	// StringTy, _ := abi.NewType("string", "", nil)
+
+	TxParam := abi.Arguments{
+		{Type: BytesTy, Name: "txHash"},
+		{Type: BytesTy, Name: "crossChainID"},
+		{Type: BytesTy, Name: "fromContractAddress"},
+		{Type: IntTy, Name: "toChainID"},
+		{Type: BytesTy, Name: "toContractAddress"},
+		{Type: BytesTy, Name: "method"},
+		{Type: BytesTy, Name: "args"},
+	}
+
+	shim := &MakeTxParamShim{
+		TxHash:              param.TxHash,
+		CrossChainID:        param.CrossChainID,
+		FromContractAddress: param.FromContractAddress,
+		ToChainID:           new(big.Int).SetUint64(param.ToChainID),
+		ToContractAddress:   param.ToContractAddress,
+		Method:              []byte(param.Method),
+		Args:                param.Args,
+	}
+
+	data, err = TxParam.Pack(shim.TxHash, shim.CrossChainID, shim.FromContractAddress, shim.ToChainID, shim.ToContractAddress, shim.Method, shim.Args)
 	return
 }
 
