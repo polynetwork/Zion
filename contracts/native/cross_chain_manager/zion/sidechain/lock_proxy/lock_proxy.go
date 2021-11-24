@@ -39,7 +39,7 @@ var (
 		MethodAllowance: 0,
 	}
 
-	ccmp = common.HexToAddress("")
+	ccmp = common.HexToAddress("0xc6195336878Fc34B1b5A13895015a97c1aD9cc25")
 )
 
 func InitLockProxy() {
