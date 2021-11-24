@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package auth
+package delegate
 
 import (
 	"math/big"

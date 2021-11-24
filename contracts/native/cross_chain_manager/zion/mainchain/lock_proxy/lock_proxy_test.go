@@ -63,8 +63,7 @@ func TestLockAndUnlock(t *testing.T) {
 			Method:              "unlock",
 			Args:                txArgs,
 		}
-		entranParams := &scom.EntranceParam{SourceChainID: targetChainID}
-		_, err = testUnlock(receiver, entranParams, txParams, amount)
+		_, err = testUnlock(receiver, targetChainID, txParams, amount)
 		assert.NoError(t, err)
 
 		total, err = testGetLockAmount(targetChainID)
@@ -85,8 +84,9 @@ func testLock(sender, fromAsset common.Address, toChainID uint64, toAddress []by
 		return nil, nil, err
 	}
 
-	ctx := generateTestSenderTx(sender, payload)
+	ctx := generateTestSenderTx(sender, sender, payload)
 	ctx.ContractRef().SetValue(amount)
+	ctx.ContractRef().SetTo(this)
 	if ret, err := Lock(ctx); err != nil {
 		return nil, nil, err
 	} else {
@@ -94,10 +94,12 @@ func testLock(sender, fromAsset common.Address, toChainID uint64, toAddress []by
 	}
 }
 
-func testUnlock(sender common.Address, entranParams *scom.EntranceParam, makeTxParams *scom.MakeTxParam, amount *big.Int) (*native.NativeContract, error) {
-	ctx := generateTestSenderTx(sender, nil)
+func testUnlock(sender common.Address, srcChainID uint64, makeTxParams *scom.MakeTxParam, amount *big.Int) (*native.NativeContract, error) {
+	entrance := nu.NodeManagerContractAddress
+	ctx := generateTestSenderTx(sender, entrance,nil)
 	ctx.ContractRef().SetValue(amount)
-	if err := Unlock(ctx, entranParams, makeTxParams); err != nil {
+	ctx.ContractRef().SetTo(entrance)
+	if err := Unlock(ctx, srcChainID, makeTxParams); err != nil {
 		return nil, err
 	} else {
 		return ctx, nil
@@ -119,9 +121,9 @@ func testGetLockAmount(chainID uint64) (*big.Int, error) {
 	return new(big.Int).SetBytes(enc), nil
 }
 
-func generateTestSenderTx(sender common.Address, payload []byte) *native.NativeContract {
+func generateTestSenderTx(sender, caller common.Address, payload []byte) *native.NativeContract {
 	txHash := nm.GenerateTestHash(rand.Int())
-	ref := native.NewContractRef(testStateDB, sender, sender, big.NewInt(testBlockNum), txHash, testSupplyGas, nil)
+	ref := native.NewContractRef(testStateDB, sender, caller, big.NewInt(testBlockNum), txHash, testSupplyGas, nil)
 	ref.PushContext(&native.Context{
 		Caller:          sender,
 		ContractAddress: this,

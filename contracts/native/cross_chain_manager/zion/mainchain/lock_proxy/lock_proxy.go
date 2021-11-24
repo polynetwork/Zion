@@ -24,9 +24,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/auth"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/delegate"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/auth_abi"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/delegate_abi"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/main_chain_lock_proxy_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -53,8 +53,8 @@ func RegisterLockProxyContract(s *native.NativeContract) {
 	s.Register(MethodName, Name)
 	s.Register(MethodLock, Lock)
 	s.Register(MethodGetSideChainLockAmount, GetSideChainLockAmount)
-	s.Register(MethodApprove, auth.Approve)
-	s.Register(MethodAllowance, auth.Allowance)
+	s.Register(MethodApprove, delegate.Approve)
+	s.Register(MethodAllowance, delegate.Allowance)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -104,7 +104,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// lock token into lock proxy
-	if err := auth.SafeTransfer2Contract(s, owner, amount); err != nil {
+	if err := delegate.SafeTransfer2Contract(s, owner, amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to transfer token to lock proxy, err: %v", err)
 	}
 
@@ -202,8 +202,8 @@ func Unlock(s *native.NativeContract, sourceChainID uint64, txParams *scom.MakeT
 		return fmt.Errorf("LockProxy.Unlock, target address is invalid")
 	}
 
-	entrance := s.ContractRef().CurrentContext().Caller
-	if err := auth.SafeTransferFromContract(s, entrance, toAddress, args.Amount); err != nil {
+	entrance := utils.NodeManagerContractAddress
+	if err := delegate.SafeTransferFromContract(s, entrance, toAddress, args.Amount); err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to transfer native token, err: %v", err)
 	}
 	if err := subTotalAmount(s, sourceChainID, args.Amount); err != nil {

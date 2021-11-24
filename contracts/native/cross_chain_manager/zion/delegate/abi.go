@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package auth
+package delegate
 
 import (
 	"fmt"
@@ -26,12 +26,12 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/auth_abi"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/delegate_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
 func InitABI() {
-	ab, err := abi.JSON(strings.NewReader(IAuthABI))
+	ab, err := abi.JSON(strings.NewReader(IDelegateABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}

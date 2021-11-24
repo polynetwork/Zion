@@ -23,9 +23,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/auth"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/delegate"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/auth_abi"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/delegate_abi"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_lock_proxy_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
@@ -53,8 +53,8 @@ func RegisterLockProxyContract(s *native.NativeContract) {
 	s.Register(MethodName, Name)
 	s.Register(MethodBurn, Burn)
 	s.Register(MethodMint, Mint)
-	s.Register(MethodApprove, auth.Approve)
-	s.Register(MethodAllowance, auth.Allowance)
+	s.Register(MethodApprove, delegate.Approve)
+	s.Register(MethodAllowance, delegate.Allowance)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -85,7 +85,7 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 	toChainID := input.ToChainId
 
 	// check and sub balance
-	if err := auth.SubBalance(s, from, amount); err != nil {
+	if err := delegate.SubBalance(s, from, amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to sub balance, err: %v", err)
 	}
 
@@ -143,7 +143,7 @@ func Mint(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, source amount invalid")
 	}
 
-	if err := auth.AddBalance(s, eccm, toAddr, amount); err != nil {
+	if err := delegate.AddBalance(s, eccm, toAddr, amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, failed to add balance, err: %v", err)
 	}
 
