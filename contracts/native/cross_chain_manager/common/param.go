@@ -197,7 +197,6 @@ func DecodeTxParam(data []byte) (param *MakeTxParam, err error) {
 func EncodeTxParam(param *MakeTxParam) (data []byte, err error) {
 	BytesTy, _ := abi.NewType("bytes", "", nil)
 	IntTy, _ := abi.NewType("int", "", nil)
-	// StringTy, _ := abi.NewType("string", "", nil)
 
 	TxParam := abi.Arguments{
 		{Type: BytesTy, Name: "txHash"},
