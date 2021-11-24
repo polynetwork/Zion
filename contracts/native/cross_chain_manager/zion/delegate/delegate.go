@@ -224,6 +224,6 @@ func nativeTransfer(s *native.NativeContract, from, to common.Address, amount *b
 	if !core.CanTransfer(s.StateDB(), from, amount) {
 		return fmt.Errorf("%s insufficient balance", from.Hex())
 	}
-	core.Transfer(s.StateDB(), this, to, amount)
+	core.Transfer(s.StateDB(), from, to, amount)
 	return nil
 }
