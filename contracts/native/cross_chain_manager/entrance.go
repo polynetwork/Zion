@@ -20,6 +20,7 @@ package cross_chain_manager
 
 import (
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
@@ -108,7 +109,7 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 
 	srcChainID := params.SourceChainID
 	if native.IsMainChain(srcChainID) {
-		return nil, nil
+		return nil, fmt.Errorf("ImportExTransfer, source chain CAN'T be main chain")
 	}
 
 	blacked, err := CheckIfChainBlacked(s, srcChainID)
