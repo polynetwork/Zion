@@ -29,9 +29,7 @@ import (
 )
 
 const (
-	SKP_TX_HASH      = "st_tx_hash"
 	SKP_TX_INDEX     = "st_tx_index"
-	SKP_TX_PARAMS    = "st_tx_params"
 	SKP_TOTAL_AMOUNT = "st_amt"
 )
 

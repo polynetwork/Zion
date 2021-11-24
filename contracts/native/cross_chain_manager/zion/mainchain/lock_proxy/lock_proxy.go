@@ -64,7 +64,7 @@ func Name(s *native.NativeContract) ([]byte, error) {
 func Lock(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	sourceChainID := native.ZionMainChainID
-	txOrigin := s.ContractRef().TxOrigin()
+	owner := s.ContractRef().TxOrigin()
 	msgSender := s.ContractRef().MsgSender()
 
 	input := new(MethodLockInput)
@@ -79,9 +79,6 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	}
 	if input.ToAddress == nil || len(input.ToAddress) == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target address invalid")
-	}
-	if common.BytesToAddress(input.ToAddress) != txOrigin {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target address MUST be tx origin")
 	}
 	if input.Amount == nil || input.Amount.Cmp(common.Big0) == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, amount invalid")
@@ -107,7 +104,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// lock token into lock proxy
-	if err := auth.SafeTransfer2Contract(s, amount); err != nil {
+	if err := auth.SafeTransfer2Contract(s, owner, amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to transfer token to lock proxy, err: %v", err)
 	}
 
@@ -140,7 +137,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// emit event log
-	if err := emitCrossChainEvent(s, txOrigin, paramTxHash, caller, toChainID, toAsset, rawTx); err != nil {
+	if err := emitCrossChainEvent(s, owner, paramTxHash, caller, toChainID, toAsset, rawTx); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to emit `CrossChainEvent` log, err: %v", err)
 	}
 	if err := emitLockEvent(s, fromAsset, msgSender, toChainID, toAsset, toAddr, amount); err != nil {
@@ -155,14 +152,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	return utils.ByteSuccess, nil
 }
 
-func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txParams *scom.MakeTxParam) error {
-	args, err := zutils.DecodeTxArgs(txParams.Args)
-	if err != nil {
-		return fmt.Errorf("LockProxy.Unlock, failed to decode txArgs, err: %v", err)
-	}
-
-	// check params
-	sourceChainID := entranceParams.SourceChainID
+func Unlock(s *native.NativeContract, sourceChainID uint64, txParams *scom.MakeTxParam) error {
 	if sourceChainID == native.ZionMainChainID || sourceChainID == 0 {
 		return fmt.Errorf("LockProxy.Unlock, source chain id invalid")
 	}
@@ -190,6 +180,14 @@ func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txPara
 		return fmt.Errorf("LockProxy.Unlock, method is invalid")
 	}
 
+	args, err := zutils.DecodeTxArgs(txParams.Args)
+	if err != nil {
+		return fmt.Errorf("LockProxy.Unlock, failed to decode txArgs, err: %v", err)
+	}
+	if args.ToAddress == nil || args.ToAssetHash == nil || args.Amount == nil {
+		return fmt.Errorf("LockProxy.Unlock, invalid arg fields")
+	}
+
 	// check asset
 	toAsset := common.BytesToAddress(args.ToAssetHash)
 	if toAsset != common.EmptyAddress {
@@ -200,6 +198,10 @@ func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txPara
 
 	// transfer asset
 	toAddress := common.BytesToAddress(args.ToAddress)
+	if toAddress == common.EmptyAddress {
+		return fmt.Errorf("LockProxy.Unlock, target address is invalid")
+	}
+
 	entrance := s.ContractRef().CurrentContext().Caller
 	if err := auth.SafeTransferFromContract(s, entrance, toAddress, args.Amount); err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to transfer native token, err: %v", err)

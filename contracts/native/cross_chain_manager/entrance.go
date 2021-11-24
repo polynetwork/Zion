@@ -142,7 +142,7 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	// transfer outcome for main chain
 	dstChainID := txParam.ToChainID
 	if srcChain.Router == utils.ZION_ROUTER && native.IsMainChain(dstChainID) {
-		if err := lock_proxy.Unlock(s, params, txParam); err != nil {
+		if err := lock_proxy.Unlock(s, params.SourceChainID, txParam); err != nil {
 			return nil, err
 		} else {
 			return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)

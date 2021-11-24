@@ -72,32 +72,33 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 	if input.ToAddress == common.EmptyAddress {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, invaild to address")
 	}
-	if from != input.ToAddress {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, only allow self tx cross chain")
-	}
 	if input.Amount == nil || input.Amount.Cmp(common.Big0) <= 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, invalid amount")
 	}
-	if input.ToChainId != native.ZionMainChainID || input.ToChainId == 0 {
+	if input.ToChainId != native.ZionMainChainID {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, dest chain id invalid")
 	}
 
+	amount := input.Amount
+	asset := common.EmptyAddress
+	toAddr := input.ToAddress[:]
+	toChainID := input.ToChainId
+
 	// check and sub balance
-	if err := auth.SubBalance(s, from, input.Amount); err != nil {
+	if err := auth.SubBalance(s, from, amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to sub balance, err: %v", err)
 	}
 
-	rawArgs := zutils.EncodeTxArgs(common.EmptyAddress[:], input.ToAddress[:], input.Amount)
+	rawArgs := zutils.EncodeTxArgs(asset[:], toAddr, amount)
 	eccm, err := getEthCrossChainManager(s, ccmp)
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to get eccm address, err: %v", err)
 	}
-	if err := crossChain(s, eccm, this, input.ToChainId, "unlock", rawArgs); err != nil {
+	if err := crossChain(s, eccm, this, toChainID, "unlock", rawArgs); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to ")
 	}
 
-	asset := common.EmptyAddress
-	if err := emitBurnEvent(s, asset, from, input.ToChainId, asset[:], input.ToAddress[:], input.Amount); err != nil {
+	if err := emitBurnEvent(s, asset, from, toChainID, asset[:], toAddr, amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, emit `BurnEvent` failed, err: %v", err)
 	}
 
@@ -121,23 +122,23 @@ func Mint(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, failed to get eccm contract address, err: %v", err)
 	}
 	if caller != eccm {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, caller authority invalid, must be eccm")
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, DANGER! caller is not eccm!")
 	}
 
 	args, err := zutils.DecodeTxArgs(input.ArgsBs)
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, failed to decode args, err: %v", err)
 	}
-	if args.ToAssetHash == nil || args.ToAddress == nil || args.Amount == nil {
+	if args == nil || args.ToAssetHash == nil || args.ToAddress == nil || args.Amount == nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, args field invalid")
 	}
 
 	toAddr := common.BytesToAddress(args.ToAddress)
 	asset := common.EmptyAddress
+	amount := args.Amount
 	if common.BytesToAddress(args.ToAssetHash) != asset {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, target asset invalid")
 	}
-	amount := args.Amount
 	if amount.Cmp(common.Big0) <= 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, source amount invalid")
 	}

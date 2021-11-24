@@ -48,17 +48,16 @@ func Approve(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Approve, failed to decode params, err: %v", err)
 	}
+	if input.Spender == common.EmptyAddress {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Approve, spender address invalid")
+	}
+	if input.Amount == nil || input.Amount.Cmp(common.Big0) <= 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Approve, amount invalid")
+	}
 
 	owner := s.ContractRef().TxOrigin()
 	spender := input.Spender
 	amount := input.Amount
-
-	if spender == common.EmptyAddress {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Approve, spender address invalid")
-	}
-	if amount == nil || amount.Cmp(common.Big0) <= 0 {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Approve, amount invalid")
-	}
 
 	setAllowance(s, owner, spender, amount)
 	if err := emitApprovedEvent(s, owner, spender, amount); err != nil {
@@ -85,7 +84,7 @@ func Allowance(s *native.NativeContract) ([]byte, error) {
 	return data.Bytes(), nil
 }
 
-func SafeTransfer2Contract(s *native.NativeContract, amount *big.Int) error {
+func SafeTransfer2Contract(s *native.NativeContract, from common.Address, amount *big.Int) error {
 	ctx := s.ContractRef().CurrentContext()
 	owner := s.ContractRef().TxOrigin()
 	caller := ctx.Caller
@@ -99,11 +98,23 @@ func SafeTransfer2Contract(s *native.NativeContract, amount *big.Int) error {
 	if caller == common.EmptyAddress {
 		return fmt.Errorf("caller is invalid")
 	}
+	if from != owner {
+		return fmt.Errorf("tx.from != owner")
+	}
 
-	// if user sender tx by himself, the context caller should be equal to `tx.From`, and
-	// the `tx.Value` should be equal to transfer amount. and `tx.Value` will be sub from
-	// `tx.From` in evm handler. in this condition, the `tx.value` only contains user lock
-	// amount, gas cost is calculated on the remaining part of the account balance.
+	// if user sender tx by himself, the context caller should be equal to `tx.From`, and the
+	// `tx.Value` should be equal to transfer amount. and `tx.Value` will be sub from `tx.From`
+	// in evm handler.
+	// in this condition, the `tx.value` only contains user lock amount, gas cost is calculated
+	// on the remaining part of the account balance.
+	//
+	// if user transfer native token with an wrapper/delegate contract, user should approve the
+	// lock proxy contract with enough amount first.
+	// in this condition, the context caller is not the `tx.From` but an wrapper/delegate contract
+	// address. and there are 2 parts in `tx.value`, wrapper/delegate handling fee and the
+	// `lock amount`. because the `tx.value` will be transferred to the wrapper/delegate contract
+	// before native contract executing, so we need to transfer the `lock amount` from wrapper/delegate
+	// contract to `lock proxy`.
 	if caller == owner {
 		if !allowNoDelegateContract {
 			return fmt.Errorf("transfer without delegate contract is forbidden!")
@@ -114,30 +125,25 @@ func SafeTransfer2Contract(s *native.NativeContract, amount *big.Int) error {
 		if value.Cmp(amount) != 0 {
 			return fmt.Errorf("transfer amount %v not equal to tx.value %v", amount, value)
 		}
-		return nil
+	} else {
+		if delegator != caller {
+			return fmt.Errorf("delegator should be some wrapper contract, and this contract is the only caller")
+		}
+		// handling fee can be zero, value can be equal to lock amount.
+		if value.Cmp(amount) < 0 {
+			return fmt.Errorf("tx value is not enough, it should be greater than %v", amount)
+		}
+		allowance := getAllowance(s, owner, spender)
+		if allowance.Cmp(amount) < 0 {
+			return fmt.Errorf("allowance not enought, expect %v, got %v", amount, allowance)
+		}
+		resAllowance := new(big.Int).Sub(allowance, amount)
+		setAllowance(s, owner, spender, resAllowance)
+		if err := nativeTransfer(s, delegator, spender, amount); err != nil {
+			return err
+		}
 	}
 
-	// if user transfer native token with an wrapper/delegate contract, user should approve the
-	// lock proxy contract with enough amount first.
-	//
-	// in this condition, the context caller is not the `tx.From` but an wrapper/delegate contract
-	// address. and there are 2 parts in `tx.value`, wrapper/delegate handling fee and the `lock amount`.
-	// because the `tx.value` will be transferred to the wrapper/delegate contract before native contract
-	// executing, so we need to transfer the `lock amount` from wrapper/delegate contract to `lock proxy`.
-	if delegator != caller {
-		return fmt.Errorf("delegator should be some wrapper contract, and this contract is the only caller")
-	}
-	allowance := getAllowance(s, owner, spender)
-	if allowance.Cmp(amount) < 0 {
-		return fmt.Errorf("allowance not enought, expect %v, got %v", amount, allowance)
-	}
-	// handling fee can be zero, value can be equal to lock amount.
-	if value.Cmp(amount) < 0 {
-		return fmt.Errorf("tx value is not enough, it should be greater than %v", amount)
-	}
-	if err := nativeTransfer(s, delegator, spender, amount); err != nil {
-		return err
-	}
 	return nil
 }
 
@@ -217,21 +223,22 @@ func SubBalance(s *native.NativeContract, from common.Address, amount *big.Int) 
 		if value.Cmp(amount) != 0 {
 			return fmt.Errorf("transfer amount %v not equal to tx.value %v", amount, value)
 		}
-		s.StateDB().SubBalance(this, amount)
-		return nil
+	} else {
+		if delegator != caller {
+			return fmt.Errorf("delegator should be some wrapper contract, and this contract is the only caller")
+		}
+		if value.Cmp(amount) < 0 {
+			return fmt.Errorf("tx value is not enough, it should be greater than %v", amount)
+		}
+		allowance := getAllowance(s, owner, spender)
+		if allowance.Cmp(amount) < 0 {
+			return fmt.Errorf("allowance not enought, expect %v, got %v", amount, allowance)
+		}
+		resAllowance := new(big.Int).Sub(allowance, amount)
+		setAllowance(s, owner, spender, resAllowance)
 	}
 
-	if delegator != caller {
-		return fmt.Errorf("delegator should be some wrapper contract, and this contract is the only caller")
-	}
-	allowance := getAllowance(s, owner, spender)
-	if allowance.Cmp(amount) < 0 {
-		return fmt.Errorf("allowance not enought, expect %v, got %v", amount, allowance)
-	}
-	if value.Cmp(amount) < 0 {
-		return fmt.Errorf("tx value is not enough, it should be greater than %v", amount)
-	}
-	s.StateDB().SubBalance(this, amount)
+	s.StateDB().SubBalance(delegator, amount)
 
 	return nil
 }
