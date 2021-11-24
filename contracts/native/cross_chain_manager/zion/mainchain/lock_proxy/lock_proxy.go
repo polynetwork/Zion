@@ -112,7 +112,10 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	addTotalAmount(s, toChainID, amount)
 
 	// serialize tx args
-	txData := zutils.EncodeTxArgs(toAsset, toAddr, amount)
+	txData, err := zutils.EncodeTxArgs(toAsset, toAddr, amount)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to encode txArgs, err: %v", err)
+	}
 
 	// get and set tx index
 	txIndex, err := getNextTxIndex(s)

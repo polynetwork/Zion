@@ -301,28 +301,20 @@ type TxArgs struct {
 	Amount      *big.Int
 }
 
-func (this *TxArgs) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteVarBytes(this.ToAssetHash)
-	sink.WriteVarBytes(this.ToAddress)
-	sink.WriteVarBytes(Uint256ToBytes(this.Amount))
+func (tx *TxArgs) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{tx.ToAssetHash, tx.ToAddress, tx.Amount})
 }
 
-func (this *TxArgs) Deserialization(source *polycomm.ZeroCopySource) error {
-	toAssetHash, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("TxArgs deserialize toAssetHash error")
-	}
-	toAddress, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("TxArgs deserialize toAddress error")
-	}
-	enc, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("TxArgs deserialize amount error")
+func (tx *TxArgs) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ToAssetHash []byte
+		ToAddress   []byte
+		Amount      *big.Int
 	}
 
-	this.ToAssetHash = toAssetHash
-	this.ToAddress = toAddress
-	this.Amount = BytesToUint256(enc)
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	tx.ToAssetHash, tx.ToAddress, tx.Amount = data.ToAssetHash, data.ToAddress, data.Amount
 	return nil
 }

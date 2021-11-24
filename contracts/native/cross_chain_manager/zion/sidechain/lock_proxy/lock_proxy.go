@@ -89,7 +89,10 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to sub balance, err: %v", err)
 	}
 
-	rawArgs := zutils.EncodeTxArgs(asset[:], toAddr, amount)
+	rawArgs, err := zutils.EncodeTxArgs(asset[:], toAddr, amount)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to encode txArgs, err: %v", err)
+	}
 	eccm, err := getEthCrossChainManager(s, ccmp)
 	if err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to get eccm address, err: %v", err)

@@ -54,7 +54,9 @@ func TestLockAndUnlock(t *testing.T) {
 		assert.NoError(t, err)
 		t.Logf("current lock amount %v", total)
 
-		txArgs := utils.EncodeTxArgs(fromAsset.Bytes(), sender.Bytes(), amount)
+		txArgs, err := utils.EncodeTxArgs(fromAsset.Bytes(), sender.Bytes(), amount)
+		assert.NoError(t, err)
+		
 		txParams := &scom.MakeTxParam{
 			CrossChainID:        []byte{'1', 'a'},
 			FromContractAddress: this[:],

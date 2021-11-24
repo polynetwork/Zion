@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"github.com/ethereum/go-ethereum/rlp"
-	polycomm "github.com/polynetwork/poly/common"
 )
 
 func VerifyTx(proof []byte, hdr *types.Header, contract common.Address, extra []byte, checkResult bool) ([]byte, error) {
@@ -56,21 +55,18 @@ func VerifyTx(proof []byte, hdr *types.Header, contract common.Address, extra []
 	return proofResult, nil
 }
 
-func EncodeTxArgs(toAssetHash, toAddress []byte, amount *big.Int) []byte {
-	sink := polycomm.NewZeroCopySink(nil)
+func EncodeTxArgs(toAssetHash, toAddress []byte, amount *big.Int) ([]byte, error) {
 	args := &scom.TxArgs{
 		ToAssetHash: toAssetHash,
 		ToAddress:   toAddress,
 		Amount:      amount,
 	}
-	args.Serialization(sink)
-	return utils.EncodePacked(sink.Bytes())
+	return rlp.EncodeToBytes(args)
 }
 
 func DecodeTxArgs(payload []byte) (*scom.TxArgs, error) {
-	source := polycomm.NewZeroCopySource(payload)
 	args := new(scom.TxArgs)
-	if err := args.Deserialization(source); err != nil {
+	if err := rlp.DecodeBytes(payload, args); err != nil {
 		return nil, err
 	}
 	return args, nil
