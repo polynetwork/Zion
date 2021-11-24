@@ -78,27 +78,26 @@ func (i *MethodBurnInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodBurn, i, payload)
 }
 
-//function verifyHeaderAndExecuteTxInput(bytes calldata header, bytes calldata rawCrossTx, bytes calldata proof) external returns (bool);
-type MethodVerifyHeaderAndExecuteTxInput struct {
-	Header     []byte
-	RawCrossTx []byte
-	Proof      []byte
-	Extra      []byte
+//function mint(bytes calldata argsBs, bytes calldata fromContractAddr, uint64 fromChainId) external returns (bool);
+type MethodMintInput struct {
+	ArgsBs           []byte
+	FromContractAddr []byte
+	FromChainId      uint64
 }
 
-func (i *MethodVerifyHeaderAndExecuteTxInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodVerifyHeaderAndExecuteTx, i.Header, i.RawCrossTx, i.Proof, i.Extra)
+func (i *MethodMintInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodMint, i.ArgsBs, i.FromContractAddr, i.FromChainId)
 }
-func (i *MethodVerifyHeaderAndExecuteTxInput) Decode(payload []byte) error {
-	return utils.UnpackMethod(ABI, MethodVerifyHeaderAndExecuteTx, i, payload)
-}
-
-//event BurnEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount, bytes crossTxId);
-func emitBurnEvent(s *native.NativeContract, toChainId uint64, fromAddr, toAddr common.Address, amount *big.Int, crossTxId uint64) error {
-	return s.AddNotify(ABI, []string{EventBurnEvent}, toChainId, fromAddr, toAddr, amount, utils.Uint64Bytes(crossTxId))
+func (i *MethodMintInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodMint, i, payload)
 }
 
-//event MintEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount);
-func emitMintEvent(s *native.NativeContract, toChainId uint64, fromAddr, toAddr common.Address, amount *big.Int) error {
-	return s.AddNotify(ABI, []string{EventMintEvent}, toChainId, fromAddr, toAddr, amount)
+//event BurnEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount);
+func emitBurnEvent(s *native.NativeContract, fromAsset, fromAddr common.Address, toChainID uint64, toAsset, toAddr []byte, amount *big.Int) error {
+	return s.AddNotify(ABI, []string{EventBurnEvent}, fromAsset, fromAddr, toChainID, toAsset, toAddr, amount.Bytes())
+}
+
+//event MintEvent(address toAssetHash, address toAddress, uint256 amount);
+func emitMintEvent(s *native.NativeContract, toAsset, toAddr common.Address, amount *big.Int) error {
+	return s.AddNotify(ABI, []string{EventMintEvent}, toAsset, toAddr, amount)
 }

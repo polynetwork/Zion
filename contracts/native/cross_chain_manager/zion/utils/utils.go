@@ -77,8 +77,10 @@ func DecodeTxArgs(payload []byte) (*scom.TxArgs, error) {
 }
 
 var (
-	ByteTy, _ = abi.NewType("bytes", "", nil)
-	AddrTy, _ = abi.NewType("address", "", nil)
+	BytesTy, _   = abi.NewType("bytes", "", nil)
+	AddrTy, _    = abi.NewType("address", "", nil)
+	Uint64Ty, _  = abi.NewType("uint64", "", nil)
+	Uint256Ty, _ = abi.NewType("uint256", "", nil)
 )
 
 type TunnelData struct {
@@ -91,9 +93,9 @@ type TunnelData struct {
 func newTunnelArguments() abi.Arguments {
 	return abi.Arguments{
 		{Type: AddrTy, Name: "_caller"},
-		{Type: ByteTy, Name: "_toContract"},
-		{Type: ByteTy, Name: "_method"},
-		{Type: ByteTy, Name: "_txData"},
+		{Type: BytesTy, Name: "_toContract"},
+		{Type: BytesTy, Name: "_method"},
+		{Type: BytesTy, Name: "_txData"},
 	}
 }
 

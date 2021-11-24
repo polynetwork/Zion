@@ -20,11 +20,21 @@ package lock_proxy
 
 import (
 	"math/big"
+	"os"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 )
+
+func TestMain(m *testing.M) {
+	InitLockProxy()
+	os.Exit(m.Run())
+}
 
 func TestABIMethodContractNameOutput(t *testing.T) {
 	expect := &MethodContractNameOutput{Name: contractName}
@@ -55,18 +65,37 @@ func TestABIMethodBurnInput(t *testing.T) {
 }
 
 func TestABIMethodMintInput(t *testing.T) {
-	expect := &MethodVerifyHeaderAndExecuteTxInput{
-		Header:     []byte{'a'},
-		RawCrossTx: []byte{},
-		Proof:      []byte{'a'},
-		Extra:      []byte{},
+	expect := &MethodMintInput{
+		ArgsBs:           []byte{'a'},
+		FromContractAddr: []byte{'x'},
+		FromChainId:      12,
 	}
 
 	payload, err := expect.Encode()
 	assert.NoError(t, err)
 
-	got := new(MethodVerifyHeaderAndExecuteTxInput)
+	got := new(MethodMintInput)
 	assert.NoError(t, got.Decode(payload))
 
 	assert.Equal(t, expect, got)
+
+	// test mint packed
+	id := crypto.Keccak256(utils.EncodePacked([]byte("mint"), []byte("(bytes,bytes,uint64)")))[:4]
+	args := abi.Arguments{
+		{Type: zutils.BytesTy, Name: "_argsBs"},
+		{Type: zutils.BytesTy, Name: "_fromContractAddr"},
+		{Type: zutils.Uint64Ty, Name: "_fromChainId"},
+	}
+	data, err := args.Pack(expect.ArgsBs, expect.FromContractAddr, expect.FromChainId)
+	assert.NoError(t, err)
+
+	packed := utils.EncodePacked(id, data)
+	assert.Equal(t, payload, packed)
+
+	// test name packed
+	id = crypto.Keccak256(utils.EncodePacked([]byte("name"), []byte("()")))[:4]
+	nameInput := new(MethodContractNameInput)
+	namePayload, err := nameInput.Encode()
+	assert.NoError(t, err)
+	assert.Equal(t, namePayload, id)
 }

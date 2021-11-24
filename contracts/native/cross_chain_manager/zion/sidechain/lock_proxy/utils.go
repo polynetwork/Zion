@@ -19,8 +19,48 @@
 package lock_proxy
 
 import (
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native"
+	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/crypto"
 )
+
+var (
+	midGetEthCrossChainManager = crypto.Keccak256(utils.EncodePacked([]byte("getEthCrossChainManager"), []byte("()")))[:4]
+	midCrossChain              = crypto.Keccak256(utils.EncodePacked([]byte("crossChain"), []byte("(uint64,bytes,bytes,bytes)")))[:4]
+	argsCrossChain             = abi.Arguments{
+		{Type: zutils.Uint64Ty, Name: "_toChainId"},
+		{Type: zutils.BytesTy, Name: "_toContract"},
+		{Type: zutils.BytesTy, Name: "_method"},
+		{Type: zutils.BytesTy, Name: "_txData"},
+	}
+)
+
+func getEthCrossChainManager(s *native.NativeContract, ccmp common.Address) (common.Address, error) {
+	gas := s.ContractRef().GasLeft()
+	payload := midGetEthCrossChainManager
+	if ret, _, err := s.ContractRef().EVMCall(this, ccmp, gas, payload); err != nil {
+		return common.EmptyAddress, err
+	} else {
+		return common.BytesToAddress(ret), nil
+	}
+}
+
+func crossChain(s *native.NativeContract, eccm, toProxy common.Address, toChainID uint64, method string, txData []byte) error {
+	callData, err := argsCrossChain.Pack(toChainID, toProxy[:], []byte(method), txData)
+	if err != nil {
+		return err
+	}
+	payload := utils.EncodePacked(midCrossChain, callData)
+
+	gas := s.ContractRef().GasLeft()
+	if _, _, err := s.ContractRef().EVMCall(this, eccm, gas, payload); err != nil {
+		return err
+	}
+	return nil
+}
 
 // compareVals return true if `src` equals to `cmp`
 func compareVals(v1, v2 []common.Address) bool {

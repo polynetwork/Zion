@@ -25,7 +25,7 @@ import (
 )
 
 // support native functions to evm functions.
-type EVMHandler func(caller, addr common.Address, input []byte) ([]byte, uint64, error)
+type EVMHandler func(caller, addr common.Address, gas uint64, input []byte) ([]byte, uint64, error)
 
 type ContractRef struct {
 	contexts []*Context
@@ -83,11 +83,11 @@ func (s *ContractRef) NativeCall(
 	return
 }
 
-func (s *ContractRef) EVMCall(caller, contractAddr common.Address, input []byte) ([]byte, uint64, error) {
+func (s *ContractRef) EVMCall(caller, contractAddr common.Address, gas uint64, input []byte) ([]byte, uint64, error) {
 	if s.evmHandler == nil {
 		return nil, 0, nil
 	}
-	return s.evmHandler(caller, contractAddr, input)
+	return s.evmHandler(caller, contractAddr, gas, input)
 }
 
 func (s *ContractRef) SetValue(value *big.Int) {

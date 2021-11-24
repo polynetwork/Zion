@@ -454,9 +454,9 @@ func (evm *EVM) nativeCall(caller, toContract common.Address, input []byte, supp
 }
 
 // Callback used when the native contract call back the evm contracts.
-func (evm *EVM) Callback(nativeCaller, addr common.Address, input []byte) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) Callback(nativeCaller, addr common.Address, gas uint64, input []byte) (ret []byte, leftOverGas uint64, err error) {
 	accRef := AccountRef(nativeCaller)
-	return evm.Call(accRef, addr, input, 0, big.NewInt(0))
+	return evm.Call(accRef, addr, input, gas, big.NewInt(0))
 }
 
 type codeAndHash struct {

@@ -29,27 +29,23 @@ var (
 var (
 	MethodBurn = "burn"
 
-	MethodVerifyHeaderAndExecuteTx = "verifyHeaderAndExecuteTx"
+	MethodMint = "mint"
 
 	MethodName = "name"
 
 	EventBurnEvent = "BurnEvent"
 
-	EventChangeEpochEvent = "ChangeEpochEvent"
-
-	EventInitGenesisBlockEvent = "InitGenesisBlockEvent"
-
 	EventMintEvent = "MintEvent"
 )
 
 // ISideChainLockProxyABI is the input ABI used to generate the binding from.
-const ISideChainLockProxyABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"crossTxId\",\"type\":\"bytes\"}],\"name\":\"BurnEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"height\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"oldEpoch\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"newEpoch\",\"type\":\"bytes\"}],\"name\":\"ChangeEpochEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"height\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"epoch\",\"type\":\"bytes\"}],\"name\":\"InitGenesisBlockEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"MintEvent\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"header\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"rawCrossTx\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extra\",\"type\":\"bytes\"}],\"name\":\"verifyHeaderAndExecuteTx\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ISideChainLockProxyABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"fromAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toAssetHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"toAddress\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"BurnEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAssetHash\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"MintEvent\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"internalType\":\"address\",\"name\":\"toAddress\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"}],\"name\":\"burn\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"argsBs\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"fromContractAddr\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"fromChainId\",\"type\":\"uint64\"}],\"name\":\"mint\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // ISideChainLockProxyFuncSigs maps the 4-byte function signature to its string representation.
 var ISideChainLockProxyFuncSigs = map[string]string{
 	"a4fa3313": "burn(uint64,address,uint256)",
+	"48e6dbbb": "mint(bytes,bytes,uint64)",
 	"06fdde03": "name()",
-	"3a13bc70": "verifyHeaderAndExecuteTx(bytes,bytes,bytes,bytes)",
 }
 
 // ISideChainLockProxy is an auto generated Go binding around an Ethereum contract.
@@ -246,25 +242,25 @@ func (_ISideChainLockProxy *ISideChainLockProxyTransactorSession) Burn(toChainId
 	return _ISideChainLockProxy.Contract.Burn(&_ISideChainLockProxy.TransactOpts, toChainId, toAddress, amount)
 }
 
-// VerifyHeaderAndExecuteTx is a paid mutator transaction binding the contract method 0x3a13bc70.
+// Mint is a paid mutator transaction binding the contract method 0x48e6dbbb.
 //
-// Solidity: function verifyHeaderAndExecuteTx(bytes header, bytes rawCrossTx, bytes proof, bytes extra) returns(bool)
-func (_ISideChainLockProxy *ISideChainLockProxyTransactor) VerifyHeaderAndExecuteTx(opts *bind.TransactOpts, header []byte, rawCrossTx []byte, proof []byte, extra []byte) (*types.Transaction, error) {
-	return _ISideChainLockProxy.contract.Transact(opts, "verifyHeaderAndExecuteTx", header, rawCrossTx, proof, extra)
+// Solidity: function mint(bytes argsBs, bytes fromContractAddr, uint64 fromChainId) returns(bool)
+func (_ISideChainLockProxy *ISideChainLockProxyTransactor) Mint(opts *bind.TransactOpts, argsBs []byte, fromContractAddr []byte, fromChainId uint64) (*types.Transaction, error) {
+	return _ISideChainLockProxy.contract.Transact(opts, "mint", argsBs, fromContractAddr, fromChainId)
 }
 
-// VerifyHeaderAndExecuteTx is a paid mutator transaction binding the contract method 0x3a13bc70.
+// Mint is a paid mutator transaction binding the contract method 0x48e6dbbb.
 //
-// Solidity: function verifyHeaderAndExecuteTx(bytes header, bytes rawCrossTx, bytes proof, bytes extra) returns(bool)
-func (_ISideChainLockProxy *ISideChainLockProxySession) VerifyHeaderAndExecuteTx(header []byte, rawCrossTx []byte, proof []byte, extra []byte) (*types.Transaction, error) {
-	return _ISideChainLockProxy.Contract.VerifyHeaderAndExecuteTx(&_ISideChainLockProxy.TransactOpts, header, rawCrossTx, proof, extra)
+// Solidity: function mint(bytes argsBs, bytes fromContractAddr, uint64 fromChainId) returns(bool)
+func (_ISideChainLockProxy *ISideChainLockProxySession) Mint(argsBs []byte, fromContractAddr []byte, fromChainId uint64) (*types.Transaction, error) {
+	return _ISideChainLockProxy.Contract.Mint(&_ISideChainLockProxy.TransactOpts, argsBs, fromContractAddr, fromChainId)
 }
 
-// VerifyHeaderAndExecuteTx is a paid mutator transaction binding the contract method 0x3a13bc70.
+// Mint is a paid mutator transaction binding the contract method 0x48e6dbbb.
 //
-// Solidity: function verifyHeaderAndExecuteTx(bytes header, bytes rawCrossTx, bytes proof, bytes extra) returns(bool)
-func (_ISideChainLockProxy *ISideChainLockProxyTransactorSession) VerifyHeaderAndExecuteTx(header []byte, rawCrossTx []byte, proof []byte, extra []byte) (*types.Transaction, error) {
-	return _ISideChainLockProxy.Contract.VerifyHeaderAndExecuteTx(&_ISideChainLockProxy.TransactOpts, header, rawCrossTx, proof, extra)
+// Solidity: function mint(bytes argsBs, bytes fromContractAddr, uint64 fromChainId) returns(bool)
+func (_ISideChainLockProxy *ISideChainLockProxyTransactorSession) Mint(argsBs []byte, fromContractAddr []byte, fromChainId uint64) (*types.Transaction, error) {
+	return _ISideChainLockProxy.Contract.Mint(&_ISideChainLockProxy.TransactOpts, argsBs, fromContractAddr, fromChainId)
 }
 
 // ISideChainLockProxyBurnEventIterator is returned from FilterBurnEvent and is used to iterate over the raw logs and unpacked data for BurnEvent events raised by the ISideChainLockProxy contract.
@@ -336,17 +332,18 @@ func (it *ISideChainLockProxyBurnEventIterator) Close() error {
 
 // ISideChainLockProxyBurnEvent represents a BurnEvent event raised by the ISideChainLockProxy contract.
 type ISideChainLockProxyBurnEvent struct {
-	ToChainId   uint64
-	FromAddress common.Address
-	ToAddress   common.Address
-	Amount      *big.Int
-	CrossTxId   []byte
-	Raw         types.Log // Blockchain specific contextual infos
+	FromAssetHash common.Address
+	FromAddress   common.Address
+	ToChainId     uint64
+	ToAssetHash   []byte
+	ToAddress     []byte
+	Amount        *big.Int
+	Raw           types.Log // Blockchain specific contextual infos
 }
 
-// FilterBurnEvent is a free log retrieval operation binding the contract event 0x6f8d47349ac6a71905a129c9f07798e8cd37575aeadfe3af6a18948232d7878f.
+// FilterBurnEvent is a free log retrieval operation binding the contract event 0x9f6f5896351abb9d6af7998e408c5b94b906038aaac69f1d6da63d395f2a2ab3.
 //
-// Solidity: event BurnEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount, bytes crossTxId)
+// Solidity: event BurnEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount)
 func (_ISideChainLockProxy *ISideChainLockProxyFilterer) FilterBurnEvent(opts *bind.FilterOpts) (*ISideChainLockProxyBurnEventIterator, error) {
 
 	logs, sub, err := _ISideChainLockProxy.contract.FilterLogs(opts, "BurnEvent")
@@ -356,9 +353,9 @@ func (_ISideChainLockProxy *ISideChainLockProxyFilterer) FilterBurnEvent(opts *b
 	return &ISideChainLockProxyBurnEventIterator{contract: _ISideChainLockProxy.contract, event: "BurnEvent", logs: logs, sub: sub}, nil
 }
 
-// WatchBurnEvent is a free log subscription operation binding the contract event 0x6f8d47349ac6a71905a129c9f07798e8cd37575aeadfe3af6a18948232d7878f.
+// WatchBurnEvent is a free log subscription operation binding the contract event 0x9f6f5896351abb9d6af7998e408c5b94b906038aaac69f1d6da63d395f2a2ab3.
 //
-// Solidity: event BurnEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount, bytes crossTxId)
+// Solidity: event BurnEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount)
 func (_ISideChainLockProxy *ISideChainLockProxyFilterer) WatchBurnEvent(opts *bind.WatchOpts, sink chan<- *ISideChainLockProxyBurnEvent) (event.Subscription, error) {
 
 	logs, sub, err := _ISideChainLockProxy.contract.WatchLogs(opts, "BurnEvent")
@@ -393,285 +390,12 @@ func (_ISideChainLockProxy *ISideChainLockProxyFilterer) WatchBurnEvent(opts *bi
 	}), nil
 }
 
-// ParseBurnEvent is a log parse operation binding the contract event 0x6f8d47349ac6a71905a129c9f07798e8cd37575aeadfe3af6a18948232d7878f.
+// ParseBurnEvent is a log parse operation binding the contract event 0x9f6f5896351abb9d6af7998e408c5b94b906038aaac69f1d6da63d395f2a2ab3.
 //
-// Solidity: event BurnEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount, bytes crossTxId)
+// Solidity: event BurnEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount)
 func (_ISideChainLockProxy *ISideChainLockProxyFilterer) ParseBurnEvent(log types.Log) (*ISideChainLockProxyBurnEvent, error) {
 	event := new(ISideChainLockProxyBurnEvent)
 	if err := _ISideChainLockProxy.contract.UnpackLog(event, "BurnEvent", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// ISideChainLockProxyChangeEpochEventIterator is returned from FilterChangeEpochEvent and is used to iterate over the raw logs and unpacked data for ChangeEpochEvent events raised by the ISideChainLockProxy contract.
-type ISideChainLockProxyChangeEpochEventIterator struct {
-	Event *ISideChainLockProxyChangeEpochEvent // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ISideChainLockProxyChangeEpochEventIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ISideChainLockProxyChangeEpochEvent)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ISideChainLockProxyChangeEpochEvent)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ISideChainLockProxyChangeEpochEventIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ISideChainLockProxyChangeEpochEventIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ISideChainLockProxyChangeEpochEvent represents a ChangeEpochEvent event raised by the ISideChainLockProxy contract.
-type ISideChainLockProxyChangeEpochEvent struct {
-	Height   *big.Int
-	Header   []byte
-	OldEpoch []byte
-	NewEpoch []byte
-	Raw      types.Log // Blockchain specific contextual infos
-}
-
-// FilterChangeEpochEvent is a free log retrieval operation binding the contract event 0xef6229e7d9f33cdb9aafa4a1ec2deb98baa7fd31ffb3e15a6371979f49e954b5.
-//
-// Solidity: event ChangeEpochEvent(uint256 height, bytes header, bytes oldEpoch, bytes newEpoch)
-func (_ISideChainLockProxy *ISideChainLockProxyFilterer) FilterChangeEpochEvent(opts *bind.FilterOpts) (*ISideChainLockProxyChangeEpochEventIterator, error) {
-
-	logs, sub, err := _ISideChainLockProxy.contract.FilterLogs(opts, "ChangeEpochEvent")
-	if err != nil {
-		return nil, err
-	}
-	return &ISideChainLockProxyChangeEpochEventIterator{contract: _ISideChainLockProxy.contract, event: "ChangeEpochEvent", logs: logs, sub: sub}, nil
-}
-
-// WatchChangeEpochEvent is a free log subscription operation binding the contract event 0xef6229e7d9f33cdb9aafa4a1ec2deb98baa7fd31ffb3e15a6371979f49e954b5.
-//
-// Solidity: event ChangeEpochEvent(uint256 height, bytes header, bytes oldEpoch, bytes newEpoch)
-func (_ISideChainLockProxy *ISideChainLockProxyFilterer) WatchChangeEpochEvent(opts *bind.WatchOpts, sink chan<- *ISideChainLockProxyChangeEpochEvent) (event.Subscription, error) {
-
-	logs, sub, err := _ISideChainLockProxy.contract.WatchLogs(opts, "ChangeEpochEvent")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ISideChainLockProxyChangeEpochEvent)
-				if err := _ISideChainLockProxy.contract.UnpackLog(event, "ChangeEpochEvent", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseChangeEpochEvent is a log parse operation binding the contract event 0xef6229e7d9f33cdb9aafa4a1ec2deb98baa7fd31ffb3e15a6371979f49e954b5.
-//
-// Solidity: event ChangeEpochEvent(uint256 height, bytes header, bytes oldEpoch, bytes newEpoch)
-func (_ISideChainLockProxy *ISideChainLockProxyFilterer) ParseChangeEpochEvent(log types.Log) (*ISideChainLockProxyChangeEpochEvent, error) {
-	event := new(ISideChainLockProxyChangeEpochEvent)
-	if err := _ISideChainLockProxy.contract.UnpackLog(event, "ChangeEpochEvent", log); err != nil {
-		return nil, err
-	}
-	event.Raw = log
-	return event, nil
-}
-
-// ISideChainLockProxyInitGenesisBlockEventIterator is returned from FilterInitGenesisBlockEvent and is used to iterate over the raw logs and unpacked data for InitGenesisBlockEvent events raised by the ISideChainLockProxy contract.
-type ISideChainLockProxyInitGenesisBlockEventIterator struct {
-	Event *ISideChainLockProxyInitGenesisBlockEvent // Event containing the contract specifics and raw log
-
-	contract *bind.BoundContract // Generic contract to use for unpacking event data
-	event    string              // Event name to use for unpacking event data
-
-	logs chan types.Log        // Log channel receiving the found contract events
-	sub  ethereum.Subscription // Subscription for errors, completion and termination
-	done bool                  // Whether the subscription completed delivering logs
-	fail error                 // Occurred error to stop iteration
-}
-
-// Next advances the iterator to the subsequent event, returning whether there
-// are any more events found. In case of a retrieval or parsing error, false is
-// returned and Error() can be queried for the exact failure.
-func (it *ISideChainLockProxyInitGenesisBlockEventIterator) Next() bool {
-	// If the iterator failed, stop iterating
-	if it.fail != nil {
-		return false
-	}
-	// If the iterator completed, deliver directly whatever's available
-	if it.done {
-		select {
-		case log := <-it.logs:
-			it.Event = new(ISideChainLockProxyInitGenesisBlockEvent)
-			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-				it.fail = err
-				return false
-			}
-			it.Event.Raw = log
-			return true
-
-		default:
-			return false
-		}
-	}
-	// Iterator still in progress, wait for either a data or an error event
-	select {
-	case log := <-it.logs:
-		it.Event = new(ISideChainLockProxyInitGenesisBlockEvent)
-		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
-			it.fail = err
-			return false
-		}
-		it.Event.Raw = log
-		return true
-
-	case err := <-it.sub.Err():
-		it.done = true
-		it.fail = err
-		return it.Next()
-	}
-}
-
-// Error returns any retrieval or parsing error occurred during filtering.
-func (it *ISideChainLockProxyInitGenesisBlockEventIterator) Error() error {
-	return it.fail
-}
-
-// Close terminates the iteration process, releasing any pending underlying
-// resources.
-func (it *ISideChainLockProxyInitGenesisBlockEventIterator) Close() error {
-	it.sub.Unsubscribe()
-	return nil
-}
-
-// ISideChainLockProxyInitGenesisBlockEvent represents a InitGenesisBlockEvent event raised by the ISideChainLockProxy contract.
-type ISideChainLockProxyInitGenesisBlockEvent struct {
-	Height *big.Int
-	Header []byte
-	Epoch  []byte
-	Raw    types.Log // Blockchain specific contextual infos
-}
-
-// FilterInitGenesisBlockEvent is a free log retrieval operation binding the contract event 0x0dab1016941cb99833e4adee14a432336685eb90c538bff97cfe2052be2de2c7.
-//
-// Solidity: event InitGenesisBlockEvent(uint256 height, bytes header, bytes epoch)
-func (_ISideChainLockProxy *ISideChainLockProxyFilterer) FilterInitGenesisBlockEvent(opts *bind.FilterOpts) (*ISideChainLockProxyInitGenesisBlockEventIterator, error) {
-
-	logs, sub, err := _ISideChainLockProxy.contract.FilterLogs(opts, "InitGenesisBlockEvent")
-	if err != nil {
-		return nil, err
-	}
-	return &ISideChainLockProxyInitGenesisBlockEventIterator{contract: _ISideChainLockProxy.contract, event: "InitGenesisBlockEvent", logs: logs, sub: sub}, nil
-}
-
-// WatchInitGenesisBlockEvent is a free log subscription operation binding the contract event 0x0dab1016941cb99833e4adee14a432336685eb90c538bff97cfe2052be2de2c7.
-//
-// Solidity: event InitGenesisBlockEvent(uint256 height, bytes header, bytes epoch)
-func (_ISideChainLockProxy *ISideChainLockProxyFilterer) WatchInitGenesisBlockEvent(opts *bind.WatchOpts, sink chan<- *ISideChainLockProxyInitGenesisBlockEvent) (event.Subscription, error) {
-
-	logs, sub, err := _ISideChainLockProxy.contract.WatchLogs(opts, "InitGenesisBlockEvent")
-	if err != nil {
-		return nil, err
-	}
-	return event.NewSubscription(func(quit <-chan struct{}) error {
-		defer sub.Unsubscribe()
-		for {
-			select {
-			case log := <-logs:
-				// New log arrived, parse the event and forward to the user
-				event := new(ISideChainLockProxyInitGenesisBlockEvent)
-				if err := _ISideChainLockProxy.contract.UnpackLog(event, "InitGenesisBlockEvent", log); err != nil {
-					return err
-				}
-				event.Raw = log
-
-				select {
-				case sink <- event:
-				case err := <-sub.Err():
-					return err
-				case <-quit:
-					return nil
-				}
-			case err := <-sub.Err():
-				return err
-			case <-quit:
-				return nil
-			}
-		}
-	}), nil
-}
-
-// ParseInitGenesisBlockEvent is a log parse operation binding the contract event 0x0dab1016941cb99833e4adee14a432336685eb90c538bff97cfe2052be2de2c7.
-//
-// Solidity: event InitGenesisBlockEvent(uint256 height, bytes header, bytes epoch)
-func (_ISideChainLockProxy *ISideChainLockProxyFilterer) ParseInitGenesisBlockEvent(log types.Log) (*ISideChainLockProxyInitGenesisBlockEvent, error) {
-	event := new(ISideChainLockProxyInitGenesisBlockEvent)
-	if err := _ISideChainLockProxy.contract.UnpackLog(event, "InitGenesisBlockEvent", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -747,16 +471,15 @@ func (it *ISideChainLockProxyMintEventIterator) Close() error {
 
 // ISideChainLockProxyMintEvent represents a MintEvent event raised by the ISideChainLockProxy contract.
 type ISideChainLockProxyMintEvent struct {
-	ToChainId   uint64
-	FromAddress common.Address
+	ToAssetHash common.Address
 	ToAddress   common.Address
 	Amount      *big.Int
 	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterMintEvent is a free log retrieval operation binding the contract event 0x78ee4538b11131291669cab42be6d75e08b37b8f3dedbead5b1f23c753e4bd12.
+// FilterMintEvent is a free log retrieval operation binding the contract event 0xa185a288bfeb0bc3ac58fe6994088736867f1a8ca58eecf2cd37978d51b9de6b.
 //
-// Solidity: event MintEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount)
+// Solidity: event MintEvent(address toAssetHash, address toAddress, uint256 amount)
 func (_ISideChainLockProxy *ISideChainLockProxyFilterer) FilterMintEvent(opts *bind.FilterOpts) (*ISideChainLockProxyMintEventIterator, error) {
 
 	logs, sub, err := _ISideChainLockProxy.contract.FilterLogs(opts, "MintEvent")
@@ -766,9 +489,9 @@ func (_ISideChainLockProxy *ISideChainLockProxyFilterer) FilterMintEvent(opts *b
 	return &ISideChainLockProxyMintEventIterator{contract: _ISideChainLockProxy.contract, event: "MintEvent", logs: logs, sub: sub}, nil
 }
 
-// WatchMintEvent is a free log subscription operation binding the contract event 0x78ee4538b11131291669cab42be6d75e08b37b8f3dedbead5b1f23c753e4bd12.
+// WatchMintEvent is a free log subscription operation binding the contract event 0xa185a288bfeb0bc3ac58fe6994088736867f1a8ca58eecf2cd37978d51b9de6b.
 //
-// Solidity: event MintEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount)
+// Solidity: event MintEvent(address toAssetHash, address toAddress, uint256 amount)
 func (_ISideChainLockProxy *ISideChainLockProxyFilterer) WatchMintEvent(opts *bind.WatchOpts, sink chan<- *ISideChainLockProxyMintEvent) (event.Subscription, error) {
 
 	logs, sub, err := _ISideChainLockProxy.contract.WatchLogs(opts, "MintEvent")
@@ -803,9 +526,9 @@ func (_ISideChainLockProxy *ISideChainLockProxyFilterer) WatchMintEvent(opts *bi
 	}), nil
 }
 
-// ParseMintEvent is a log parse operation binding the contract event 0x78ee4538b11131291669cab42be6d75e08b37b8f3dedbead5b1f23c753e4bd12.
+// ParseMintEvent is a log parse operation binding the contract event 0xa185a288bfeb0bc3ac58fe6994088736867f1a8ca58eecf2cd37978d51b9de6b.
 //
-// Solidity: event MintEvent(uint64 toChainId, address fromAddress, address toAddress, uint256 amount)
+// Solidity: event MintEvent(address toAssetHash, address toAddress, uint256 amount)
 func (_ISideChainLockProxy *ISideChainLockProxyFilterer) ParseMintEvent(log types.Log) (*ISideChainLockProxyMintEvent, error) {
 	event := new(ISideChainLockProxyMintEvent)
 	if err := _ISideChainLockProxy.contract.UnpackLog(event, "MintEvent", log); err != nil {

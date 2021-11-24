@@ -21,49 +21,26 @@ package lock_proxy
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/auth"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/auth"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/auth_abi"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_lock_proxy_abi"
-	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core"
 )
-
-// zion `alloc` module used to implement native asset cross chain between main/side chain.
-// this module implement interface of `mint` and `burn` of native token between zion main chain and side chain.
-// the native asset only alloc in genesis block on the main chain, and the side chain do not allow to do this.
-//
-// main chain only use the interface of `burn`, and side chain only use the interface of `mint`.
-// the amount of `mint` and `burn` should always be the same.
-//
-// user get zion native token at main chain and only allow to burn/mint asset for it's self.
-//
-// sequence of logic:
-// main chain alloc -> exchange -> user burn on main net -> side chain relayer `verifyHeaderAndMint` -> user add balance
-//
 
 var (
 	gasTable = map[string]uint64{
-		MethodName:                     0,
-		MethodBurn:                     10000,
-		MethodVerifyHeaderAndExecuteTx: 10000,
-		MethodApprove:                  10000,
-		MethodAllowance:                0,
+		MethodName:      0,
+		MethodBurn:      10000,
+		MethodMint:      10000,
+		MethodApprove:   10000,
+		MethodAllowance: 0,
 	}
 
-	IsMainChain bool
+	ccmp = common.HexToAddress("")
 )
-
-func init() {
-	core.SetMainChain = func(_isMainChain bool) {
-		IsMainChain = _isMainChain
-	}
-}
 
 func InitLockProxy() {
 	InitABI()
@@ -75,7 +52,7 @@ func RegisterLockProxyContract(s *native.NativeContract) {
 
 	s.Register(MethodName, Name)
 	s.Register(MethodBurn, Burn)
-	s.Register(MethodVerifyHeaderAndExecuteTx, Mint)
+	s.Register(MethodMint, Mint)
 	s.Register(MethodApprove, auth.Approve)
 	s.Register(MethodAllowance, auth.Allowance)
 }
@@ -90,130 +67,87 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 
 	input := new(MethodBurnInput)
 	if err := input.Decode(ctx.Payload); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, failed to decode params, err: %v", err)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to decode params, err: %v", err)
 	}
 	if input.ToAddress == common.EmptyAddress {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, invaild to address")
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, invaild to address")
 	}
 	if from != input.ToAddress {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, only allow self tx cross chain")
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, only allow self tx cross chain")
 	}
 	if input.Amount == nil || input.Amount.Cmp(common.Big0) <= 0 {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, invalid amount")
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, invalid amount")
 	}
 	if input.ToChainId != native.ZionMainChainID || input.ToChainId == 0 {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, dest chain id invalid")
-	}
-
-	// check side chain
-	if srcChain, err := side_chain_manager.GetSideChain(s, input.ToChainId); err != nil {
-		return nil, fmt.Errorf("AllocProxy.Burn, failed to get side chain, err: %v", err)
-	} else if srcChain == nil {
-		return nil, fmt.Errorf("AllocProxy.Burn, side chain %d is not registered", input.ToChainId)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, dest chain id invalid")
 	}
 
 	// check and sub balance
 	if err := auth.SubBalance(s, from, input.Amount); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, Insufficient balance")
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to sub balance, err: %v", err)
 	}
 
-	// store cross tx data
-	lastCrossTxIndex := getCrossTxIndex(s)
-	nextCrossTxIndex := lastCrossTxIndex + 1
-	storeCrossTxIndex(s, nextCrossTxIndex)
-	crossTxIndex := getCrossTxIndex(s)
-	if crossTxIndex != nextCrossTxIndex {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, store cross tx failed, expect tx index %d, got %d", nextCrossTxIndex, crossTxIndex)
+	rawArgs := zutils.EncodeTxArgs(common.EmptyAddress[:], input.ToAddress[:], input.Amount)
+	eccm, err := getEthCrossChainManager(s, ccmp)
+	if err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to get eccm address, err: %v", err)
+	}
+	if err := crossChain(s, eccm, this, input.ToChainId, "unlock", rawArgs); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to ")
 	}
 
-	crossTx := &CrossTx{
-		ToChainId:   input.ToChainId,
-		FromAddress: from,
-		ToAddress:   input.ToAddress,
-		Amount:      input.Amount,
-		Index:       crossTxIndex,
+	asset := common.EmptyAddress
+	if err := emitBurnEvent(s, asset, from, input.ToChainId, asset[:], input.ToAddress[:], input.Amount); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, emit `BurnEvent` failed, err: %v", err)
 	}
-	proof := crossTx.Proof()
-	storeCrossTxProof(s, crossTxIndex, proof)
 
-	if err := emitBurnEvent(s, input.ToChainId, from, input.ToAddress, input.Amount, crossTxIndex); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Burn, emit `BurnEvent` failed, err: %v", err)
-	}
 	return utils.ByteSuccess, nil
 }
 
 func Mint(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
+	caller := ctx.Caller
 
-	input := new(MethodVerifyHeaderAndExecuteTxInput)
+	input := new(MethodMintInput)
 	if err := input.Decode(ctx.Payload); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to decode params, err: %v", err)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, failed to decode params, err: %v", err)
 	}
-	if input.Header == nil || input.Proof == nil || input.RawCrossTx == nil || input.Extra == nil ||
-		len(input.Proof) == 0 || len(input.Header) == 0 || len(input.RawCrossTx) == 0 || len(input.Extra) == 0 {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, invalid params")
+	if input.ArgsBs == nil || input.FromContractAddr == nil || input.FromChainId == 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, invalid params")
 	}
 
-	// deserialize parameters
-	header, err := DecodeHeader(input.Header)
+	eccm, err := getEthCrossChainManager(s, ccmp)
 	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to decode header, err: %v", err)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, failed to get eccm contract address, err: %v", err)
 	}
-	crossTx, err := DecodeCrossTx(input.RawCrossTx)
+	if caller != eccm {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, caller authority invalid, must be eccm")
+	}
+
+	args, err := zutils.DecodeTxArgs(input.ArgsBs)
 	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to decode cross tx, err: %v", err)
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, failed to decode args, err: %v", err)
 	}
-	if crossTx.ToChainId == native.ZionMainChainID || crossTx.ToChainId == 0 {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, target chain id invalid")
-	}
-	if crossTx.Amount == nil || crossTx.Amount.Uint64() == 0 {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, amount invalid")
-	}
-	if crossTx.ToAddress == common.EmptyAddress {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, to address invalid")
-	}
-	if crossTx.Index == 0 {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, invalid cross tx index")
-	}
-	if crossTx.FromAddress == common.EmptyAddress {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, invalid cross tx from address")
-	}
-	if crossTx.FromAddress != crossTx.ToAddress {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, only allow self tx cross chain")
+	if args.ToAssetHash == nil || args.ToAddress == nil || args.Amount == nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, args field invalid")
 	}
 
-	// check and store cross tx
-	if exist, _ := getCrossTxContent(s, crossTx.Hash()); exist != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, duplicate cross tx %s", exist.Hash().Hex())
+	toAddr := common.BytesToAddress(args.ToAddress)
+	asset := common.EmptyAddress
+	if common.BytesToAddress(args.ToAssetHash) != asset {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, target asset invalid")
 	}
-	if err := storeCrossTxContent(s, crossTx); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to store cross tx, err: %v", err)
-	}
-
-	// get and check epoch start height
-	_, epoch, err := getEpoch(s)
-	if err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to get epoch, err: %v", err)
-	}
-	if epoch == nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.ChangeEpoch, current epoch is nil")
-	}
-	// allow epoch.startHeight == header.Num, there may be some cross tx happened at the first block of new epoch
-	if epoch.StartHeight < header.Number.Uint64() {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, header number should be greater than %d", epoch.StartHeight)
+	amount := args.Amount
+	if amount.Cmp(common.Big0) <= 0 {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, source amount invalid")
 	}
 
-	if _, _, err := zion.VerifyHeader(header, epoch.MemberList(), false); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to verify header, err: %v", err)
-	}
-	if _, err := zutils.VerifyTx(input.Proof, header, this, input.Extra, true); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to verify proof, err: %v", err)
+	if err := auth.AddBalance(s, eccm, toAddr, amount); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, failed to add balance, err: %v", err)
 	}
 
-	s.StateDB().AddBalance(crossTx.ToAddress, crossTx.Amount)
-
-	if err := emitMintEvent(s, crossTx.ToChainId, crossTx.FromAddress, crossTx.ToAddress, crossTx.Amount); err != nil {
-		return utils.ByteFailed, fmt.Errorf("AllocProxy.Mint, failed to emit `MintEvent`, err: %v", err)
+	if err := emitMintEvent(s, asset, toAddr, amount); err != nil {
+		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, failed to emit `MintEvent`, err: %v", err)
 	}
 	return utils.ByteSuccess, nil
 }

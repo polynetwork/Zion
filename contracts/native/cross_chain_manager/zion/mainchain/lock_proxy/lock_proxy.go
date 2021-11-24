@@ -74,11 +74,8 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if input.FromAssetHash != common.EmptyAddress {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, only support native token")
 	}
-	if input.ToChainId == 0 {
+	if input.ToChainId == 0 || input.ToChainId == sourceChainID {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target chain id invalid")
-	}
-	if input.ToChainId == sourceChainID {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target chain id wont be %d", sourceChainID)
 	}
 	if input.ToAddress == nil || len(input.ToAddress) == 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target address invalid")
@@ -203,7 +200,8 @@ func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txPara
 
 	// transfer asset
 	toAddress := common.BytesToAddress(args.ToAddress)
-	if err := auth.SafeTransferFromContract(s, toAddress, args.Amount); err != nil {
+	entrance := s.ContractRef().CurrentContext().Caller
+	if err := auth.SafeTransferFromContract(s, entrance, toAddress, args.Amount); err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to transfer native token, err: %v", err)
 	}
 	if err := subTotalAmount(s, sourceChainID, args.Amount); err != nil {
@@ -230,7 +228,6 @@ func Unlock(s *native.NativeContract, entranceParams *scom.EntranceParam, txPara
 
 func GetSideChainLockAmount(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-
 	failed := common.Big0.Bytes()
 
 	input := new(MethodGetSideChainLockAmountInput)

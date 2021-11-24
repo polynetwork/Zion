@@ -262,9 +262,6 @@ var (
 
 	// StoreGenesis store genesis validators in consensus snapshot
 	StoreGenesis func(db ethdb.Database, header *types.Header) error
-
-	// SetMainChain
-	SetMainChain func(isMainChain bool)
 )
 
 // ToBlock creates the genesis block and writes state of a genesis specification
