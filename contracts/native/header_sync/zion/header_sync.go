@@ -61,10 +61,6 @@ func (h *Handler) SyncGenesisHeader(s *native.NativeContract) error {
 	if err := json.Unmarshal(params.GenesisHeader, &header); err != nil {
 		return fmt.Errorf("ZionHandler SyncGenesisHeader, json.Unmarshal header err: %v", err)
 	}
-	height := header.Number.Uint64()
-	if height != 0 {
-		return fmt.Errorf("ZionHandler SyncGenesisHeader, header height invalid")
-	}
 
 	if isGenesisStored(s, chainID) {
 		return fmt.Errorf("ZionHandler SyncGenesisHeader, genesis header had been initialized")
@@ -80,6 +76,7 @@ func (h *Handler) SyncGenesisHeader(s *native.NativeContract) error {
 		return fmt.Errorf("ZionHandler SyncGenesisHeader, get validators from header err: %v", err)
 	}
 
+	height := header.Number.Uint64()
 	if err := storeEpoch(s, chainID, height, validators); err != nil {
 		return fmt.Errorf("ZionHandler SyncGenesisHeader, store epoch err: %v", err)
 	}
