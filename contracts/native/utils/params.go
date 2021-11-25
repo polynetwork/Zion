@@ -44,6 +44,7 @@ var (
 	LockProxyContractAddress         = common.HexToAddress("0x7d79D936DA7833c7fe056eB450064f34A327DcA8")
 	AllocProxyContractAddress        = common.HexToAddress("0xD37F626c9E007DdD244E5Cbee0C223fec6D11289")
 
+	VOTE_ROUTER             = uint64(0)
 	BTC_ROUTER              = uint64(1)
 	ETH_ROUTER              = uint64(2)
 	ONT_ROUTER              = uint64(3)

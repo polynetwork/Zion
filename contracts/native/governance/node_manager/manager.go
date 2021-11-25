@@ -102,7 +102,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
-	if err := checkAuthority(proposer, caller, curEpoch); err != nil {
+	if err := CheckAuthority(proposer, caller, curEpoch); err != nil {
 		log.Trace("propose", "check authority failed", err, "tx origin", proposer.Hex())
 		return utils.ByteFailed, ErrInvalidAuthority
 	}
@@ -214,7 +214,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 		log.Trace("vote", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
-	if err := checkAuthority(voter, caller, curEpoch); err != nil {
+	if err := CheckAuthority(voter, caller, curEpoch); err != nil {
 		log.Trace("vote", "check authority failed", err, "voter", voter.Hex())
 		return utils.ByteFailed, ErrInvalidAuthority
 	}
@@ -465,7 +465,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	}
 
 	// check authority
-	if err := checkAuthority(signer, caller, epoch); err != nil {
+	if err := CheckAuthority(signer, caller, epoch); err != nil {
 		log.Trace("checkConsensusSign", "check authority failed", err)
 		return false, ErrInvalidAuthority
 	}

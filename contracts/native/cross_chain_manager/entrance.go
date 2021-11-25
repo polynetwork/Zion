@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/consensus_vote"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
@@ -71,6 +72,8 @@ func RegisterCrossChainManagerContract(s *native.NativeContract) {
 
 func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 	switch router {
+	case utils.VOTE_ROUTER:
+		return consensus_vote.NewVoteHandler(), nil
 	case utils.BSC_ROUTER:
 		return bsc.NewHandler(), nil
 	case utils.ETH_ROUTER:
@@ -138,6 +141,9 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	txParam, err := handler.MakeDepositProposal(s)
 	if err != nil {
 		return nil, err
+	}
+	if txParam == nil && sideChain.Router == utils.VOTE_ROUTER {
+		return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
 	}
 
 	// transfer outcome for main chain
