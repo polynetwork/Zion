@@ -142,7 +142,7 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if txParam == nil && sideChain.Router == utils.VOTE_ROUTER {
+	if txParam == nil && srcChain.Router == utils.VOTE_ROUTER {
 		return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
 	}
 
