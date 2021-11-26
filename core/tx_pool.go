@@ -424,6 +424,13 @@ func (pool *TxPool) GasPrice() *big.Int {
 // new transaction, and drops all transactions below this threshold.
 func (pool *TxPool) SetGasPrice(price *big.Int) {
 	// minimum `gasPrice` never change for zion.
+	// only allow zero `gasPrice` for side chain
+	pool.mu.Lock()
+	defer pool.mu.Unlock()
+
+	if price.Cmp(common.Big0) == 0 {
+		pool.gasPrice = price
+	}
 	return
 }
 
