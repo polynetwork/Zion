@@ -97,7 +97,7 @@ func testLock(sender, fromAsset common.Address, toChainID uint64, toAddress []by
 }
 
 func testUnlock(sender common.Address, srcChainID uint64, makeTxParams *scom.MakeTxParam, amount *big.Int) (*native.NativeContract, error) {
-	entrance := nu.NodeManagerContractAddress
+	entrance := nu.CrossChainManagerContractAddress
 	ctx := generateTestSenderTx(sender, entrance,nil)
 	ctx.ContractRef().SetValue(amount)
 	ctx.ContractRef().SetTo(entrance)

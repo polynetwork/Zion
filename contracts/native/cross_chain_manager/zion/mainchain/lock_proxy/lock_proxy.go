@@ -214,7 +214,7 @@ func Unlock(s *native.NativeContract, sourceChainID uint64, txParams *scom.MakeT
 		return fmt.Errorf("LockProxy.Unlock, failed to sub total amount, err: %v", err)
 	}
 
-	entrance := utils.NodeManagerContractAddress
+	entrance := utils.CrossChainManagerContractAddress
 	if err := delegate.SafeTransferFromContract(s, entrance, toAddress, args.Amount); err != nil {
 		return fmt.Errorf("LockProxy.Unlock, failed to transfer native token, err: %v", err)
 	}
