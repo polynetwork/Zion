@@ -47,10 +47,8 @@ func VerifyTx(proof []byte, hdr *types.Header, contract common.Address, extra []
 	if proofResult == nil {
 		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed, err:%s", "proof result is nil")
 	}
-	if checkResult {
-		if err := internal.CheckStorageResult(proofResult, extra); err != nil {
-			return nil, fmt.Errorf("VerifyFromEthProof, check result err: %v", err)
-		}
+	if checkResult && internal.CheckProofResult(proofResult, extra) {
+		return nil, fmt.Errorf("VerifyFromEthProof, faield to check result")
 	}
 	return proofResult, nil
 }
