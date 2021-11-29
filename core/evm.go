@@ -63,7 +63,9 @@ func NewEVMTxContext(msg Message) vm.TxContext {
 		GasPrice: new(big.Int).Set(msg.GasPrice()),
 		TxHash:   msg.TxHash(),
 	}
-	ctx.To = *msg.To()
+	if msg.To() != nil {
+		ctx.To = *msg.To()
+	}
 	ctx.Value = msg.Value()
 	return ctx
 }

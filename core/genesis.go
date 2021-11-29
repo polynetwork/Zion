@@ -314,7 +314,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 }
 
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
-	if params.IsMainChain(g.Config.ChainID.Uint64()) || addr == utils.LockProxyContractAddress {
+	if params.IsMainChain(g.Config.ChainID.Uint64()) || addr == utils.LockProxyContractAddress || addr == utils.NodeManagerContractAddress {
 		db.CreateAccount(addr)
 		db.SetCode(addr, addr[:])
 		initBlockNumber := big.NewInt(0)

@@ -136,12 +136,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
 	}
-	if chainConfig == nil || chainConfig.ChainID == nil {
-		return nil, genesisErr
-	}
 
 	// init different native contracts
-	if params.IsMainChain(chainConfig.ChainID.Uint64()) {
+	if params.IsMainChain(config.NetworkId) {
 		boot.InitMainChainNativeContracts()
 	} else {
 		boot.InitSideChainNativeContracts()

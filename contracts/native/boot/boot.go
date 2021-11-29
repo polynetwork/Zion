@@ -50,6 +50,9 @@ func InitMainChainNativeContracts() {
 }
 
 func InitSideChainNativeContracts() {
+	node_manager.InitNodeManager()
 	slp.InitLockProxy()
-	log.Info("Initialize side chain native contracts", "native lock proxy", utils.LockProxyContractAddress.Hex())
+	log.Info("Initialize side chain native contracts",
+		"node manager", utils.NodeManagerContractAddress.Hex(),
+		"native lock proxy", utils.LockProxyContractAddress.Hex())
 }
