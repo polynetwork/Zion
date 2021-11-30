@@ -161,6 +161,12 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 }
 
 func Unlock(s *native.NativeContract, sourceChainID uint64, txParams *scom.MakeTxParam) error {
+	s.ContractRef().PushContext(&native.Context{
+		Caller:          utils.CrossChainManagerContractAddress,
+		ContractAddress: this,
+		Payload:         nil,
+	})
+
 	if sourceChainID == native.ZionMainChainID || sourceChainID == 0 {
 		return fmt.Errorf("LockProxy.Unlock, source chain id invalid")
 	}
