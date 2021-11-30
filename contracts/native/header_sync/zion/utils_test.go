@@ -31,15 +31,6 @@ func TestVerifyHeader(t *testing.T) {
 	header := new(types.Header)
 	assert.NoError(t, header.UnmarshalJSON([]byte(rawHeader)))
 
-	/*
-		peer: 0x258af48e28E4A6846E931dDfF8e1Cdf8579821e5, pubkey: 0x02c07fb7d48eac559a2483e249d27841c18c7ce5dbbbf2796a6963cc9cef27cabd
-		peer: 0x6A708455C8777630AaC9d1e7702d13F7a865b27C, pubkey: 0x02f5135ae0853af71f017a8ecb68e720b729ab92c7123c686e75b7487d4a57ae07
-		peer: 0x8c09D936a1B408D6e0afAA537ba4E06c4504a0AE, pubkey: 0x03ecac0ebe7224cfd04056c940605a4a9d4cb0367cf5819bf7e5502bf44f68bdd4
-		peer: 0xAd3Bf5eD640CC72f37BD21d64A65C3C756e9C88C, pubkey: 0x03d0ecfd09db6b1e4f59da7ebde8f6c3ea3ed09f06f5190477ae4ee528ec692fa8
-		peer: 0xC095448424A5ECd5cA7CcDaDFaAD127a9d7E88ec, pubkey: 0x0244e509103445d5e8fd290608308d16d08c739655d6994254e413bc1a06783856
-		peer: 0xD47a4e56e9262543Db39d9203CF1a2e53735f834, pubkey: 0x023884de29148505a8d862992e5721767d4b47ff52ffab4c2d2527182d812a6d95
-		peer: 0xbfB558F0dceb07Fbb09E1C283048B551A4310921, pubkey: 0x03b838fa2387beb3a56aed86e447309f8844cb208387c63af64ad740729b5c0a27
-	*/
 	valsets := []common.Address{
 		common.HexToAddress("0x258af48e28E4A6846E931dDfF8e1Cdf8579821e5"),
 		common.HexToAddress("0x6A708455C8777630AaC9d1e7702d13F7a865b27C"),
@@ -47,6 +38,7 @@ func TestVerifyHeader(t *testing.T) {
 		common.HexToAddress("0xAd3Bf5eD640CC72f37BD21d64A65C3C756e9C88C"),
 		common.HexToAddress("0xC095448424A5ECd5cA7CcDaDFaAD127a9d7E88ec"),
 	}
+
 	nextEpochStartHeight, nextEpochVals, err := VerifyHeader(header, valsets, true)
 	assert.NoError(t, err)
 	t.Logf("next epoch start height %d", nextEpochStartHeight)

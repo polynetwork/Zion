@@ -77,6 +77,9 @@ func (h *Handler) SyncGenesisHeader(s *native.NativeContract) error {
 	}
 
 	height := header.Number.Uint64()
+	if height != 0 {
+		height += 1
+	}
 	if err := storeEpoch(s, chainID, height, validators); err != nil {
 		return fmt.Errorf("ZionHandler SyncGenesisHeader, store epoch err: %v", err)
 	}
@@ -94,11 +97,17 @@ func (h *Handler) SyncBlockHeader(s *native.NativeContract) error {
 		return err
 	}
 
+	if params.Headers == nil || len(params.Headers) < 2 {
+		return fmt.Errorf("invalid params")
+	}
+
 	chainID := params.ChainID
 	curEpochStartHeight, curEpochValidators, err := getEpoch(s, chainID)
 	if err != nil {
 		return fmt.Errorf("ZionHandler SynnBlockHeader, failed to get current epoch info, err: %v", err)
 	}
+	lastHeaderHeight := uint64(0)
+	initStartHeight := curEpochStartHeight
 
 	for i, v := range params.Headers {
 		header := new(types.Header)
@@ -106,12 +115,25 @@ func (h *Handler) SyncBlockHeader(s *native.NativeContract) error {
 			return fmt.Errorf("ZionHandler SyncBlockHeader, deserialize No.%d header err: %v", i, err)
 		}
 
+		// check height
+		h := header.Number.Uint64()
+		if initStartHeight >= h {
+			return fmt.Errorf("ZionHandler SyncBlockHeader, wrong height of No.%d header: (curr: %d, commit: %d)", i, initStartHeight, h)
+		}
+		if lastHeaderHeight > 0 && h != lastHeaderHeight+1 {
+			return fmt.Errorf("ZionHandler SyncBlockHeader, should be continues block headers")
+		} else {
+			lastHeaderHeight = h
+		}
+
+		// validate header and epoch
 		nextEpochStartHeight, nextEpochValidators, err := VerifyHeader(header, curEpochValidators, true)
 		if err != nil {
 			return fmt.Errorf("ZionHandler SyncBlockHeader, failed to verify No.%d quorum header %s: %v", i, header.Hash().Hex(), err)
 		}
 
-		if nextEpochStartHeight > 0 && nextEpochStartHeight > curEpochStartHeight {
+		// epoch changed
+		if nextEpochStartHeight > 0 && len(nextEpochValidators) > 0 && nextEpochStartHeight > curEpochStartHeight {
 			emitEpochChangeEvent(s, chainID, header.Number.Uint64(), header.Hash())
 			if err := storeEpoch(s, chainID, nextEpochStartHeight, nextEpochValidators); err != nil {
 				return fmt.Errorf("ZionHandler SyncBlockHeader, failed to store next epoch info, err: %v", err)

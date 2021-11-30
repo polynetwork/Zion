@@ -22,6 +22,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // support native functions to evm functions.
@@ -80,6 +81,9 @@ func (s *ContractRef) NativeCall(
 	contract := NewNativeContract(s.stateDB, s)
 	ret, err = contract.Invoke()
 	gasLeft = s.gasLeft
+	if err != nil {
+		log.Error("Native contract", "invoke err", err)
+	}
 	return
 }
 

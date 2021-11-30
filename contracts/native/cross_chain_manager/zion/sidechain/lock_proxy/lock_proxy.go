@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/delegate"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/delegate_abi"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_lock_proxy_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
@@ -44,6 +43,8 @@ var (
 
 func InitLockProxy() {
 	InitABI()
+	delegate.InitABI(ABI)
+
 	native.Contracts[this] = RegisterLockProxyContract
 }
 

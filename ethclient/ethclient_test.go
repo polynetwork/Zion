@@ -650,7 +650,10 @@ func TestUnmarshalHeader(t *testing.T) {
 	url := "http://101.32.99.70:22002"
 	cli := NewClient(dialNode(url))
 
-	var blockNum uint64 = 1099
+	var (
+		blockNum uint64 = 1099
+		epochID uint64 = 5
+	)
 	block, err := cli.BlockByNumber(context.Background(), new(big.Int).SetUint64(blockNum))
 	if err != nil {
 		t.Fatal(err)
@@ -677,7 +680,7 @@ func TestUnmarshalHeader(t *testing.T) {
 
 	// cache db slot
 	contractAddr := utils.NodeManagerContractAddress
-	proofHash := node_manager.EpochProofHash(5)
+	proofHash := node_manager.EpochProofHash(epochID)
 	cacheKey := utils.ConcatKey(contractAddr, []byte("st_proof"), proofHash.Bytes())
 	slot := state.Key2Slot(cacheKey[common.AddressLength:])
 	t.Logf("slot hex before keccak: %s", slot.Hex())

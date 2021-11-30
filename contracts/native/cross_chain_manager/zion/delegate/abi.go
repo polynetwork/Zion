@@ -19,28 +19,31 @@
 package delegate
 
 import (
-	"fmt"
 	"math/big"
-	"strings"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/delegate_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
-func InitABI() {
-	ab, err := abi.JSON(strings.NewReader(IDelegateABI))
-	if err != nil {
-		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
-	}
-	ABI = &ab
-}
-
 var (
-	ABI *abi.ABI
+	ABI  *abi.ABI
+	once sync.Once
 )
+
+const (
+	MethodApprove   = "approve"
+	MethodAllowance = "allowance"
+	EventApproval   = "Approval"
+)
+
+func InitABI(ab *abi.ABI) {
+	once.Do(func() {
+		ABI = ab
+	})
+}
 
 type MethodApproveInput struct {
 	Spender common.Address
