@@ -149,6 +149,11 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 
 	// zion main chain DONT need a `relayer` to commit proof but directly stores the lock request.
 	// but we should ensure that `relayer` of other chain can deserialize the main chain events correctly.
+	s.ContractRef().PushContext(&native.Context{
+		Caller:          this,
+		ContractAddress: utils.CrossChainManagerContractAddress,
+		Payload:         nil,
+	})
 	if err := scom.MakeTransaction(s, txParams, sourceChainID); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to makeTransaction, err: %v", err)
 	}
