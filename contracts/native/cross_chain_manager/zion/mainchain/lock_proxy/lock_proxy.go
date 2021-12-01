@@ -157,7 +157,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if err := scom.MakeTransaction(s, txParams, sourceChainID); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to makeTransaction, err: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodLock, true)
 }
 
 func Unlock(s *native.NativeContract, sourceChainID uint64, txParams *scom.MakeTxParam) error {
@@ -259,5 +259,5 @@ func GetSideChainLockAmount(s *native.NativeContract) ([]byte, error) {
 
 	// ignore side chain register checking
 	amount := getTotalAmount(s, input.ChainId)
-	return amount.Bytes(), nil
+	return utils.PackOutputs(ABI, MethodGetSideChainLockAmount, amount)
 }

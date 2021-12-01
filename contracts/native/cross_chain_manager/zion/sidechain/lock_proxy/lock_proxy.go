@@ -105,7 +105,7 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, emit `BurnEvent` failed, err: %v", err)
 	}
 
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodBurn, true)
 }
 
 func Mint(s *native.NativeContract) ([]byte, error) {
@@ -153,5 +153,5 @@ func Mint(s *native.NativeContract) ([]byte, error) {
 	if err := emitMintEvent(s, asset, toAddr, amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Mint, failed to emit `MintEvent`, err: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodMint, true)
 }

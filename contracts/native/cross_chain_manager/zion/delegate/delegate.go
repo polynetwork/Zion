@@ -63,7 +63,7 @@ func Approve(s *native.NativeContract) ([]byte, error) {
 	if err := emitApprovedEvent(s, owner, spender, amount); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Approve, failed to emit `ApprovedEvent`, err: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodApprove, true)
 }
 
 func Allowance(s *native.NativeContract) ([]byte, error) {
@@ -81,7 +81,7 @@ func Allowance(s *native.NativeContract) ([]byte, error) {
 	}
 
 	data := getAllowance(s, input.Owner, input.Spender)
-	return data.Bytes(), nil
+	return utils.PackOutputs(ABI, MethodAllowance, data)
 }
 
 func SafeTransfer2Contract(s *native.NativeContract, from common.Address, amount *big.Int) error {

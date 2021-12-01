@@ -5,7 +5,7 @@ pragma solidity ^0.5.0;
  */
 interface IMainChainLockProxy {
     function name() external view returns (string memory);
-    function getSideChainLockAmount(uint64 chainId) external view returns (uint);
+    function getSideChainLockAmount(uint64 chainId) external view returns (uint256);
     function lock(address fromAssetHash, uint64 toChainId, bytes calldata toAddress, uint256 amount) external payable returns (bool);
     function approve(address spender, uint256 amount) external returns (bool);
     function allowance(address owner, address spender) external view returns (uint256);

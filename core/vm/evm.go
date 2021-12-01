@@ -18,6 +18,7 @@ package vm
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"sync/atomic"
 	"time"
@@ -288,6 +289,11 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		// TODO: consider clearing up unused snapshots:
 		//} else {
 		//	evm.StateDB.DiscardSnapshot(snapshot)
+	}
+	if err == nil {
+		fmt.Println("----------without err", addr.Hex())
+	} else {
+		fmt.Println("----------execute err", err, addr.Hex())
 	}
 	return ret, gas, err
 }

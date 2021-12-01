@@ -82,7 +82,7 @@ func (s *ContractRef) NativeCall(
 	ret, err = contract.Invoke()
 	gasLeft = s.gasLeft
 	if err != nil {
-		log.Error("Native contract", "invoke err", err)
+		log.Error("Native contract", "invoke err", err, "txhash", s.txHash.Hex())
 	}
 	return
 }
