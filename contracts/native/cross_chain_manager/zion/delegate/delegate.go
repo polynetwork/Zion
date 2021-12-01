@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 var (
@@ -225,5 +226,6 @@ func nativeTransfer(s *native.NativeContract, from, to common.Address, amount *b
 		return fmt.Errorf("%s insufficient balance", from.Hex())
 	}
 	core.Transfer(s.StateDB(), from, to, amount)
+	log.Trace("cross chain, native transfer from %s, to %s, amount %s", from.Hex(), to.Hex(), amount.String())
 	return nil
 }
