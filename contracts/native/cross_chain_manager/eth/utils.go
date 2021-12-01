@@ -177,5 +177,6 @@ func CheckProofResult(result, value []byte) bool {
 	}
 	s = append(s, s_temp...)
 	hash := crypto.Keccak256(value)
+
 	return bytes.Equal(s, hash)
 }

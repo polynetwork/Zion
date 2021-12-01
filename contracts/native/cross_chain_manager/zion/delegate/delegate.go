@@ -116,13 +116,13 @@ func SafeTransferFromContract(s *native.NativeContract, entrance, to common.Addr
 		return fmt.Errorf("invalid amount")
 	}
 
-	// caller MUST be from, e.g: some relayer
-	if caller != from {
-		return fmt.Errorf("caller must be equal to tx.from")
+	// caller MUST be entrance, e.g: cross_manager_address
+	if caller != entrance {
+		return fmt.Errorf("caller must be equal to tx.from, caller %s, tx.from %s", caller.Hex(), from.Hex())
 	}
 	// tx must be sent to cross chain manager contract, and the native asset which locked before can be unlocked after proof validation.
 	if txTo != entrance {
-		return fmt.Errorf("the tx.to should be cross chain manager contract address")
+		return fmt.Errorf("the tx.to should be cross chain manager contract address, tx.to %s, entrance %s", txTo.Hex(), entrance.Hex())
 	}
 
 	return nativeTransfer(s, this, to, amount)

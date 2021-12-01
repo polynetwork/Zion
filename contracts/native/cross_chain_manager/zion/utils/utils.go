@@ -26,6 +26,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	internal "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -47,8 +48,8 @@ func VerifyTx(proof []byte, hdr *types.Header, contract common.Address, extra []
 	if proofResult == nil {
 		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed, err:%s", "proof result is nil")
 	}
-	if checkResult && internal.CheckProofResult(proofResult, extra) {
-		return nil, fmt.Errorf("VerifyFromEthProof, faield to check result")
+	if checkResult && !internal.CheckProofResult(proofResult, extra) {
+		return nil, fmt.Errorf("VerifyFromEthProof, failed to check result, stored %s, got %s", hexutil.Encode(proofResult), hexutil.Encode(extra))
 	}
 	return proofResult, nil
 }
