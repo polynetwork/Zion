@@ -94,7 +94,7 @@ func (i *MethodMintInput) Decode(payload []byte) error {
 
 //event BurnEvent(address fromAssetHash, address fromAddress, uint64 toChainId, bytes toAssetHash, bytes toAddress, uint256 amount);
 func emitBurnEvent(s *native.NativeContract, fromAsset, fromAddr common.Address, toChainID uint64, toAsset, toAddr []byte, amount *big.Int) error {
-	return s.AddNotify(ABI, []string{EventBurnEvent}, fromAsset, fromAddr, toChainID, toAsset, toAddr, amount.Bytes())
+	return s.AddNotify(ABI, []string{EventBurnEvent}, fromAsset, fromAddr, toChainID, toAsset, toAddr, amount)
 }
 
 //event MintEvent(address toAssetHash, address toAddress, uint256 amount);

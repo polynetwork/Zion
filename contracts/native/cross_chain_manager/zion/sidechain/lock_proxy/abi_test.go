@@ -25,15 +25,49 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native"
 	zutils "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/utils"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
+var (
+	testStateDB  *state.StateDB
+	testEmptyCtx *native.NativeContract
+
+	testSupplyGas uint64 = 100000000000000000
+	testBlockNum         = int64(12)
+	testTxHash           = common.EmptyHash
+	testCaller           = common.EmptyAddress
+)
+
 func TestMain(m *testing.M) {
+	db := rawdb.NewMemoryDatabase()
+	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
+	ref := generateContractRef()
+	testEmptyCtx = native.NewNativeContract(testStateDB, ref)
+
 	InitLockProxy()
 	os.Exit(m.Run())
+}
+
+func generateContractRef() *native.ContractRef {
+	return native.NewContractRef(testStateDB, testCaller, testCaller, big.NewInt(testBlockNum), testTxHash, testSupplyGas, nil)
+}
+
+func resetTestContext() {
+	db := rawdb.NewMemoryDatabase()
+	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
+	ref := generateContractRef()
+	testEmptyCtx = native.NewNativeContract(testStateDB, ref)
+	ref.PushContext(&native.Context{
+		Caller:          this,
+		ContractAddress: this,
+		Payload:         nil,
+	})
 }
 
 func TestABIMethodContractNameOutput(t *testing.T) {
@@ -98,4 +132,19 @@ func TestABIMethodMintInput(t *testing.T) {
 	namePayload, err := nameInput.Encode()
 	assert.NoError(t, err)
 	assert.Equal(t, namePayload, id)
+}
+
+func TestEmitBurn(t *testing.T) {
+	resetTestContext()
+	s := testEmptyCtx
+
+	fromAsset := common.HexToAddress("0x2")
+	fromAddr := common.HexToAddress("0x3")
+	toChainID := uint64(3)
+	toAsset := common.HexToAddress("0x5").Bytes()
+	toAddr := common.HexToAddress("0x6").Bytes()
+	amount := big.NewInt(13)
+
+	err := emitBurnEvent(s, fromAsset, fromAddr, toChainID, toAsset, toAddr, amount)
+	assert.NoError(t, err)
 }
