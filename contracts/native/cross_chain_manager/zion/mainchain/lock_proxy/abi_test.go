@@ -40,9 +40,8 @@ func TestABIMethodContractNameOutput(t *testing.T) {
 
 func TestABIMethodLockInput(t *testing.T) {
 	expect := &MethodLockInput{
-		FromAssetHash: common.HexToAddress("0x123456"),
 		ToChainId:     13,
-		ToAddress:     common.HexToAddress("0x335").Bytes(),
+		ToAddress:     common.HexToAddress("0x335"),
 		Amount:        big.NewInt(123648),
 	}
 

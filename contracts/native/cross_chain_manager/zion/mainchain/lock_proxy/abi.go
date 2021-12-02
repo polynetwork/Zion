@@ -66,14 +66,13 @@ func (m *MethodContractNameOutput) Decode(payload []byte) error {
 
 // function lock
 type MethodLockInput struct {
-	FromAssetHash common.Address
-	ToChainId     uint64
-	ToAddress     []byte
-	Amount        *big.Int
+	ToChainId uint64
+	ToAddress common.Address
+	Amount    *big.Int
 }
 
 func (i *MethodLockInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodLock, i.FromAssetHash, i.ToChainId, i.ToAddress, i.Amount)
+	return utils.PackMethod(ABI, MethodLock, i.ToChainId, i.ToAddress, i.Amount)
 }
 func (i *MethodLockInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodLock, i, payload)

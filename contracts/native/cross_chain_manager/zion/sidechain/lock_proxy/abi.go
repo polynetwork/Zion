@@ -67,12 +67,11 @@ func (m *MethodContractNameOutput) Decode(payload []byte) error {
 //function burn(uint64 toChainId, address toAddress, uint256 amount) external returns (bool);
 type MethodBurnInput struct {
 	ToChainId uint64
-	ToAddress common.Address
 	Amount    *big.Int
 }
 
 func (i *MethodBurnInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodBurn, i.ToChainId, i.ToAddress, i.Amount)
+	return utils.PackMethod(ABI, MethodBurn, i.ToChainId, i.Amount)
 }
 func (i *MethodBurnInput) Decode(payload []byte) error {
 	return utils.UnpackMethod(ABI, MethodBurn, i, payload)

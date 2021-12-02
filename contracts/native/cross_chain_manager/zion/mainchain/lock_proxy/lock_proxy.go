@@ -71,13 +71,10 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, failed to decode params, err: %v", err)
 	}
-	if input.FromAssetHash != common.EmptyAddress {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, only support native token")
-	}
 	if input.ToChainId == 0 || input.ToChainId == sourceChainID {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target chain id invalid")
 	}
-	if input.ToAddress == nil || len(input.ToAddress) == 0 {
+	if input.ToAddress == common.EmptyAddress {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Lock, target address invalid")
 	}
 	if input.Amount == nil || input.Amount.Cmp(common.Big0) == 0 {
@@ -87,7 +84,7 @@ func Lock(s *native.NativeContract) ([]byte, error) {
 	// input fields alias, caller is proxy itself and `toContract` is `sideChain` proxy, which has the same address
 	fromAsset := common.EmptyAddress
 	toAsset := common.EmptyAddress.Bytes()
-	toAddr := input.ToAddress
+	toAddr := input.ToAddress.Bytes()
 	amount := input.Amount
 	toChainID := input.ToChainId
 	caller := this

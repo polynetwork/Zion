@@ -70,9 +70,6 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 	if err := input.Decode(ctx.Payload); err != nil {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, failed to decode params, err: %v", err)
 	}
-	if input.ToAddress == common.EmptyAddress {
-		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, invaild to address")
-	}
 	if input.Amount == nil || input.Amount.Cmp(common.Big0) <= 0 {
 		return utils.ByteFailed, fmt.Errorf("LockProxy.Burn, invalid amount")
 	}
@@ -82,7 +79,7 @@ func Burn(s *native.NativeContract) ([]byte, error) {
 
 	amount := input.Amount
 	asset := common.EmptyAddress
-	toAddr := input.ToAddress[:]
+	toAddr := from[:]
 	toChainID := input.ToChainId
 
 	// check and sub balance

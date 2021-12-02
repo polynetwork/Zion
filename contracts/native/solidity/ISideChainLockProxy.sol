@@ -6,7 +6,7 @@ pragma solidity ^0.5.0;
 interface ISideChainLockProxy {
     function name() external view returns (string memory);
     function mint(bytes calldata argsBs, bytes calldata fromContractAddr, uint64 fromChainId) external returns (bool);
-    function burn(uint64 toChainId, address toAddress, uint256 amount) external returns (bool);
+    function burn(uint64 toChainId, uint256 amount) external returns (bool);
     function approve(address spender, uint256 amount) external returns (bool);
     function allowance(address owner, address spender) external view returns (uint256);
 

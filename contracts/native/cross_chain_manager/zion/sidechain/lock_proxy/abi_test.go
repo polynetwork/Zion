@@ -85,7 +85,6 @@ func TestABIMethodContractNameOutput(t *testing.T) {
 func TestABIMethodBurnInput(t *testing.T) {
 	expect := &MethodBurnInput{
 		ToChainId: 3,
-		ToAddress: common.HexToAddress("0x3"),
 		Amount:    big.NewInt(145),
 	}
 

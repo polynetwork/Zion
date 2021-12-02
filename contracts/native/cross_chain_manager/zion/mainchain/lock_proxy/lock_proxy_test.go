@@ -47,7 +47,7 @@ func TestLockAndUnlock(t *testing.T) {
 	assert.NoError(t, testSetSideChain(targetChainID))
 
 	for i := 0; i < cnt; i++ {
-		_, _, err := testLock(sender, fromAsset, targetChainID, receiver.Bytes(), amount)
+		_, _, err := testLock(sender, receiver, targetChainID, amount)
 		assert.NoError(t, err)
 
 		total, err := testGetLockAmount(targetChainID)
@@ -74,9 +74,8 @@ func TestLockAndUnlock(t *testing.T) {
 	}
 }
 
-func testLock(sender, fromAsset common.Address, toChainID uint64, toAddress []byte, amount *big.Int) (*native.NativeContract, []byte, error) {
+func testLock(sender, toAddress common.Address, toChainID uint64, amount *big.Int) (*native.NativeContract, []byte, error) {
 	input := &MethodLockInput{
-		FromAssetHash: fromAsset,
 		ToChainId:     toChainID,
 		ToAddress:     toAddress,
 		Amount:        amount,
