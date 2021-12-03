@@ -23,6 +23,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/rlp"
 	polycomm "github.com/polynetwork/poly/common"
@@ -111,6 +112,26 @@ func (this *EntranceParam) Deserialization(source *polycomm.ZeroCopySource) erro
 	this.Extra = extra
 	this.HeaderOrCrossChainMsg = headerOrCrossChainMsg
 	return nil
+}
+
+func (this *EntranceParam) String() string {
+	str := "{"
+	str += fmt.Sprintf("source chain id: %d,", this.SourceChainID)
+	str += fmt.Sprintf("height: %d,", this.Height)
+	if this.Proof != nil && len(this.Proof) > 0 {
+		str += fmt.Sprintf("proof: %s,", hexutil.Encode(this.Proof))
+	}
+	if this.RelayerAddress != nil && len(this.RelayerAddress) > 0 {
+		str += fmt.Sprintf("relayer address: %s,", hexutil.Encode(this.RelayerAddress))
+	}
+	if this.Extra != nil && len(this.Extra) > 0 {
+		str += fmt.Sprintf("extra: %s,", hexutil.Encode(this.Extra))
+	}
+	if this.HeaderOrCrossChainMsg != nil && len(this.HeaderOrCrossChainMsg) > 0 {
+		str += fmt.Sprintf("header or cross chain msg: %s", hexutil.Encode(this.HeaderOrCrossChainMsg))
+	}
+	str += "}"
+	return str
 }
 
 type MakeTxParam struct {
@@ -300,5 +321,29 @@ func (this *MultiSignParam) Deserialization(source *polycomm.ZeroCopySource) err
 	this.TxHash = txHash
 	this.Address = address
 	this.Signs = signs
+	return nil
+}
+
+type TxArgs struct {
+	ToAssetHash []byte
+	ToAddress   []byte
+	Amount      *big.Int
+}
+
+func (tx *TxArgs) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{tx.ToAssetHash, tx.ToAddress, tx.Amount})
+}
+
+func (tx *TxArgs) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ToAssetHash []byte
+		ToAddress   []byte
+		Amount      *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	tx.ToAssetHash, tx.ToAddress, tx.Amount = data.ToAssetHash, data.ToAddress, data.Amount
 	return nil
 }

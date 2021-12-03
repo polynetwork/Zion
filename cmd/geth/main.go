@@ -31,7 +31,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/console/prompt"
-	"github.com/ethereum/go-ethereum/contracts/native/boot"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -305,9 +304,6 @@ func prepare(ctx *cli.Context) {
 	// hotstuff: set miner recommit time value as hotstuff block period duration
 	defaultRecommitTime := time.Second * time.Duration(hotstuff.DefaultBasicConfig.BlockPeriod)
 	ctx.GlobalSet(utils.MinerRecommitIntervalFlag.Name, strconv.Itoa(int(defaultRecommitTime)))
-
-	// Setup native contract ab
-	boot.InitialNativeContracts()
 
 	// Start metrics export if enabled
 	utils.SetupMetrics(ctx)

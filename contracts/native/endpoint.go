@@ -22,10 +22,11 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // support native functions to evm functions.
-type EVMHandler func(caller, addr common.Address, input []byte) ([]byte, uint64, error)
+type EVMHandler func(caller, addr common.Address, gas uint64, input []byte) ([]byte, uint64, error)
 
 type ContractRef struct {
 	contexts []*Context
@@ -37,6 +38,8 @@ type ContractRef struct {
 	caller      common.Address
 	evmHandler  EVMHandler
 	gasLeft     uint64
+	value       *big.Int
+	txTo        common.Address
 }
 
 func NewContractRef(
@@ -57,6 +60,8 @@ func NewContractRef(
 		txHash:      txHash,
 		gasLeft:     suppliedGas,
 		evmHandler:  evmHandler,
+		txTo:        common.EmptyAddress,
+		value:       common.Big0,
 	}
 }
 
@@ -76,14 +81,39 @@ func (s *ContractRef) NativeCall(
 	contract := NewNativeContract(s.stateDB, s)
 	ret, err = contract.Invoke()
 	gasLeft = s.gasLeft
+	if err != nil {
+		log.Error("Native contract", "invoke err", err, "txhash", s.txHash.Hex())
+	}
 	return
 }
 
-func (s *ContractRef) EVMCall(caller, contractAddr common.Address, input []byte) ([]byte, uint64, error) {
+func (s *ContractRef) EVMCall(caller, contractAddr common.Address, gas uint64, input []byte) ([]byte, uint64, error) {
 	if s.evmHandler == nil {
 		return nil, 0, nil
 	}
-	return s.evmHandler(caller, contractAddr, input)
+	return s.evmHandler(caller, contractAddr, gas, input)
+}
+
+func (s *ContractRef) SetValue(value *big.Int) {
+	if value != nil && value.Cmp(common.Big0) > 0 {
+		s.value = value
+	}
+}
+
+// Value retrieve tx.value
+func (s *ContractRef) Value() *big.Int {
+	return s.value
+}
+
+func (s *ContractRef) SetTo(to common.Address) {
+	if to != common.EmptyAddress {
+		s.txTo = to
+	}
+}
+
+// To retrieve tx.to
+func (s *ContractRef) TxTo() common.Address {
+	return s.txTo
 }
 
 func (s *ContractRef) StateDB() *state.StateDB {

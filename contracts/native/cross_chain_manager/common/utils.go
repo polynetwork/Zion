@@ -19,8 +19,10 @@ package common
 
 import (
 	"fmt"
+	"math/big"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	cstates "github.com/polynetwork/poly/core/states"
@@ -53,4 +55,18 @@ func CheckDoneTx(native *native.NativeContract, crossChainID []byte, chainID uin
 
 func NotifyMakeProof(native *native.NativeContract, merkleValueHex string, key string) error {
 	return native.AddNotify(ABI, []string{NOTIFY_MAKE_PROOF_EVENT}, merkleValueHex, native.ContractRef().BlockHeight().Uint64(), key)
+}
+
+func Uint256ToBytes(num *big.Int) []byte {
+	if num == nil {
+		return common.EmptyHash[:]
+	}
+	return common.LeftPadBytes(num.Bytes(), 32)
+}
+
+func BytesToUint256(data []byte) *big.Int {
+	if data == nil || len(data) == 0 {
+		return common.Big0
+	}
+	return new(big.Int).SetBytes(common.TrimLeftZeroes(data))
 }

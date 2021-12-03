@@ -36,10 +36,7 @@ type Signer interface {
 	SignHash(hash common.Hash) ([]byte, error)
 
 	// Recover extracts the proposer address from a signed header.
-	Recover(h *types.Header) (common.Address, error)
-
-	// PrepareExtra returns a extra-data of the given header and validators, without `Seal` and `CommittedSeal`
-	// PrepareExtra(header *types.Header, valSet ValidatorSet) ([]byte, error)
+	Recover(h *types.Header) (common.Address, *types.HotstuffExtra, error)
 
 	// SealBeforeCommit writes the extra-data field of a block header with given seal.
 	SealBeforeCommit(h *types.Header) error
@@ -48,7 +45,7 @@ type Signer interface {
 	SealAfterCommit(h *types.Header, committedSeals [][]byte) error
 
 	// VerifyHeader verify proposer signature and committed seals
-	VerifyHeader(header *types.Header, valSet ValidatorSet, seal bool) error
+	VerifyHeader(header *types.Header, valSet ValidatorSet, seal bool) (*types.HotstuffExtra, error)
 
 	// VerifyQC verify quorum cert
 	VerifyQC(qc *QuorumCert, valSet ValidatorSet) error

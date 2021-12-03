@@ -377,6 +377,22 @@ func GetEpochWithStateDB(db *state.StateDB) (*EpochInfo, error) {
 	return getCurrentEpoch(ctx)
 }
 
+func GetEpochByHeight(db *state.StateDB, height uint64) (*EpochInfo, error) {
+	ctx := generateEmptyContext(db)
+	epoch, err := getCurrentEpoch(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for height < epoch.StartHeight {
+		if epoch, err = getEffectiveEpochByID(ctx, epoch.ID-1); err != nil {
+			return nil, err
+		}
+	}
+
+	return epoch, nil
+}
+
 func GetChangingEpoch(s *native.NativeContract) ([]byte, error) {
 	curEpochHash, err := getCurrentEpochHash(s)
 	if err != nil {
@@ -483,7 +499,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	sizeBeforeSign := getSignerSize(s, sign.Hash())
 	log.Trace("checkConsensusSign", "sign hash", sign.Hash().Hex(), "size before sign", sizeBeforeSign)
 	if sizeBeforeSign >= epoch.QuorumSize() {
-		return true, nil
+		return false, nil
 	}
 
 	// store signer address and emit event log

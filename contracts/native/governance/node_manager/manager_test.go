@@ -26,11 +26,9 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -48,7 +46,7 @@ func TestMain(m *testing.M) {
 	db := rawdb.NewMemoryDatabase()
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
-	testGenesisPeers := generateTestPeers(testGenesisNum)
+	testGenesisPeers := GenerateTestPeers(testGenesisNum)
 	testGenesisEpoch, _ = storeGenesisEpoch(testStateDB, testGenesisPeers)
 	InitNodeManager()
 
@@ -73,7 +71,7 @@ func TestPropose(t *testing.T) {
 			StartHeight: 2,
 			Index:       1,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := generateTestPeers(2)
+				peers := GenerateTestPeers(2)
 				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
 				c.Payload, _ = input.Encode()
 				delEpoch(ctx, testGenesisEpoch.Hash())
@@ -85,10 +83,10 @@ func TestPropose(t *testing.T) {
 			StartHeight: 2,
 			Index:       2,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := generateTestPeers(2)
+				peers := GenerateTestPeers(2)
 				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
 				c.Payload, _ = input.Encode()
-				testCaller = generateTestAddress(78)
+				testCaller = GenerateTestAddress(78)
 			},
 			Expect: ErrInvalidAuthority,
 		},
@@ -108,7 +106,7 @@ func TestPropose(t *testing.T) {
 			StartHeight: 2,
 			Index:       4,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := generateTestPeers(3)
+				peers := GenerateTestPeers(3)
 				peers.List = nil
 				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
 				c.Payload, _ = input.Encode()
@@ -120,7 +118,7 @@ func TestPropose(t *testing.T) {
 			StartHeight: 2,
 			Index:       5,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := generateTestPeers(MinProposalPeersLen - 1)
+				peers := GenerateTestPeers(MinProposalPeersLen - 1)
 				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
 				c.Payload, _ = input.Encode()
 			},
@@ -131,7 +129,7 @@ func TestPropose(t *testing.T) {
 			StartHeight: 2,
 			Index:       6,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := generateTestPeers(MaxProposalPeersLen + 1)
+				peers := GenerateTestPeers(MaxProposalPeersLen + 1)
 				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
 				c.Payload, _ = input.Encode()
 			},
@@ -142,7 +140,7 @@ func TestPropose(t *testing.T) {
 			StartHeight: 2,
 			Index:       7,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := generateTestPeers(MinProposalPeersLen + 1)
+				peers := GenerateTestPeers(MinProposalPeersLen + 1)
 				peers.List[0].PubKey = "0ruf8nkj"
 				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
 				c.Payload, _ = input.Encode()
@@ -155,7 +153,7 @@ func TestPropose(t *testing.T) {
 			Index:       8,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				peers := testGenesisEpoch.Peers.Copy()
-				newPeers := generateTestPeers(len(peers.List))
+				newPeers := GenerateTestPeers(len(peers.List))
 				for i, _ := range peers.List {
 					if i%2 == 0 {
 						peers.List[i] = newPeers.List[i]
@@ -172,7 +170,7 @@ func TestPropose(t *testing.T) {
 			Index:       9,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				peers := testGenesisEpoch.Peers.Copy()
-				peers.List = append(peers.List, generateTestPeers(1).List...)
+				peers.List = append(peers.List, GenerateTestPeers(1).List...)
 				c.StartHeight += MinEpochValidPeriod - 1
 				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
 				c.Payload, _ = input.Encode()
@@ -185,7 +183,7 @@ func TestPropose(t *testing.T) {
 			Index:       10,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				peers := testGenesisEpoch.Peers.Copy()
-				peers.List = append(peers.List, generateTestPeers(1).List...)
+				peers.List = append(peers.List, GenerateTestPeers(1).List...)
 				c.StartHeight += MaxEpochValidPeriod + 10
 				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
 				c.Payload, _ = input.Encode()
@@ -198,7 +196,7 @@ func TestPropose(t *testing.T) {
 			Index:       11,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				peers := testGenesisEpoch.Peers.Copy()
-				peers.List = append(peers.List, generateTestPeers(1).List...)
+				peers.List = append(peers.List, GenerateTestPeers(1).List...)
 				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
 				sort.Sort(peers)
 				epoch := &EpochInfo{
@@ -218,7 +216,7 @@ func TestPropose(t *testing.T) {
 			Index:       12,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				peers := testGenesisEpoch.Peers.Copy()
-				peers.List = append(peers.List, generateTestPeers(1).List...)
+				peers.List = append(peers.List, GenerateTestPeers(1).List...)
 				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
 				sort.Sort(peers)
 				proposer := ctx.ContractRef().TxOrigin()
@@ -242,7 +240,7 @@ func TestPropose(t *testing.T) {
 			Index:       13,
 			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
 				peers := testGenesisEpoch.Peers.Copy()
-				peers.List = append(peers.List, generateTestPeers(1).List...)
+				peers.List = append(peers.List, GenerateTestPeers(1).List...)
 				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
 				c.Payload, _ = input.Encode()
 			},
@@ -292,7 +290,7 @@ func TestVote(t *testing.T) {
 		for _, v := range peers.List {
 			c.OldMembers = append(c.OldMembers, v.Address)
 		}
-		newList := generateTestPeers(1)
+		newList := GenerateTestPeers(1)
 		for _, v := range newList.List {
 			c.NewMembers = append(c.NewMembers, v.Address)
 		}
@@ -321,7 +319,7 @@ func TestVote(t *testing.T) {
 			Index:               1,
 			BeforeHandler: func(c *TestCase) {
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: epochID, EpochHash: generateTestHash(12)}
+				input := &MethodVoteInput{EpochID: epochID, EpochHash: GenerateTestHash(12)}
 				c.Payload, _ = input.Encode()
 
 				delEpoch(c.Ctx, testGenesisEpoch.Hash())
@@ -335,7 +333,7 @@ func TestVote(t *testing.T) {
 			VoteBlockNum:        3,
 			Index:               2,
 			BeforeHandler: func(c *TestCase) {
-				c.Caller = generateTestAddress(1)
+				c.Caller = GenerateTestAddress(1)
 				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
 				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
 				c.Payload, _ = input.Encode()
@@ -483,7 +481,7 @@ func TestProposalPassed(t *testing.T) {
 	for _, v := range peers.List {
 		oldMembers = append(oldMembers, v.Address)
 	}
-	newList := generateTestPeers(1)
+	newList := GenerateTestPeers(1)
 	peers.List = append(peers.List, newList.List...)
 	sort.Sort(peers)
 
@@ -535,7 +533,7 @@ func TestDirtyJob(t *testing.T) {
 
 	s := testEmptyCtx
 	epochID := uint64(2)
-	peers := generateTestPeers(12)
+	peers := GenerateTestPeers(12)
 	voters := []common.Address{peers.List[2].Address, peers.List[3].Address}
 
 	// store last epoch
@@ -555,7 +553,7 @@ func TestDirtyJob(t *testing.T) {
 		storeVoteTo(s, v.ID, voters[i], v.Hash())
 	}
 
-	curEpoch := generateTestEpochInfo(epochID, 270, 13)
+	curEpoch := GenerateTestEpochInfo(epochID, 270, 13)
 	assert.NoError(t, storeEpoch(s, curEpoch))
 	assert.NoError(t, storeProposal(s, curEpoch.ID, curEpoch.Hash()))
 
@@ -589,7 +587,7 @@ func TestGetEpochByID(t *testing.T) {
 	s := testEmptyCtx
 
 	block := uint64(100)
-	epoch := generateTestEpochInfo(2, block, 7)
+	epoch := GenerateTestEpochInfo(2, block, 7)
 
 	assert.NoError(t, storeEpoch(s, epoch))
 	assert.NoError(t, storeProposal(s, epoch.ID, epoch.Hash()))
@@ -614,7 +612,7 @@ func TestGetProofByID(t *testing.T) {
 	s := testEmptyCtx
 
 	block := uint64(100)
-	epoch := generateTestEpochInfo(2, block, 7)
+	epoch := GenerateTestEpochInfo(2, block, 7)
 	storeEpochProof(s, epoch.ID, epoch.Hash())
 
 	input := new(MethodProofInput)
@@ -646,59 +644,7 @@ func resetTestContext() {
 	db := rawdb.NewMemoryDatabase()
 	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
-	testGenesisPeers := generateTestPeers(testGenesisNum)
+	testGenesisPeers := GenerateTestPeers(testGenesisNum)
 	testGenesisEpoch, _ = storeGenesisEpoch(testStateDB, testGenesisPeers)
 	testCaller = testGenesisEpoch.Peers.List[0].Address
-}
-
-// generateTestPeer ONLY used for testing
-func generateTestPeer() *PeerInfo {
-	pk, _ := crypto.GenerateKey()
-	return &PeerInfo{
-		PubKey:  hexutil.Encode(crypto.CompressPubkey(&pk.PublicKey)),
-		Address: crypto.PubkeyToAddress(pk.PublicKey),
-	}
-}
-
-func generateTestPeers(n int) *Peers {
-	peers := &Peers{List: make([]*PeerInfo, n)}
-	for i := 0; i < n; i++ {
-		peers.List[i] = generateTestPeer()
-	}
-	return peers
-}
-
-func generateTestEpochInfo(id, height uint64, peersNum int) *EpochInfo {
-	epoch := new(EpochInfo)
-	epoch.ID = id
-	epoch.StartHeight = height
-	epoch.Peers = generateTestPeers(peersNum)
-	epoch.Proposer = epoch.Peers.List[0].Address
-	return epoch
-}
-
-func generateTestHash(n int) common.Hash {
-	data := big.NewInt(int64(n))
-	return common.BytesToHash(data.Bytes())
-}
-
-func generateTestHashList(n int) *HashList {
-	data := &HashList{List: make([]common.Hash, n)}
-	for i := 0; i < n; i++ {
-		data.List[i] = generateTestHash(i + 1)
-	}
-	return data
-}
-
-func generateTestAddress(n int) common.Address {
-	data := big.NewInt(int64(n))
-	return common.BytesToAddress(data.Bytes())
-}
-
-func generateTestAddressList(n int) *AddressList {
-	data := &AddressList{List: make([]common.Address, n)}
-	for i := 0; i < n; i++ {
-		data.List[i] = generateTestAddress(i + 1)
-	}
-	return data
 }

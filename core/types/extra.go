@@ -19,8 +19,10 @@ package types
 import (
 	"bytes"
 	"errors"
+	"fmt"
 	"io"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -67,6 +69,15 @@ func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	}
 	ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
 	return nil
+}
+
+// Dump only used for debug or test
+func (ist *HotstuffExtra) Dump() string {
+	seals := []string{}
+	for _, v := range ist.CommittedSeal {
+		seals = append(seals, hexutil.Encode(v))
+	}
+	return fmt.Sprintf("{Validators: %v, Seal: %s, CommittedSeal: %v}", ist.Validators, hexutil.Encode(ist.Seal), seals)
 }
 
 // ExtractHotstuffExtra extracts all values of the HotstuffExtra from the header. It returns an

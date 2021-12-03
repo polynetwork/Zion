@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zilliqa"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
@@ -59,16 +60,20 @@ func Name(s *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(hscommon.ABI, hscommon.MethodContractName, contractName)
 }
 
-func SyncGenesisHeader(native *native.NativeContract) ([]byte, error) {
-	ctx := native.ContractRef().CurrentContext()
+func SyncGenesisHeader(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
 	params := &hscommon.SyncGenesisHeaderParam{}
 	if err := utils.UnpackMethod(hscommon.ABI, hscommon.MethodSyncGenesisHeader, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 	chainID := params.ChainID
 
+	if native.IsMainChain(chainID) {
+		return nil, fmt.Errorf("SyncGenesisHeader, sync relay chain's genesis header is NOT allowed!")
+	}
+
 	//check if chainid exist
-	sideChain, err := side_chain_manager.GetSideChain(native, chainID)
+	sideChain, err := side_chain_manager.GetSideChain(s, chainID)
 	if err != nil {
 		return nil, fmt.Errorf("SyncGenesisHeader, side_chain_manager.GetSideChain error: %v", err)
 	}
@@ -81,7 +86,7 @@ func SyncGenesisHeader(native *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	err = handler.SyncGenesisHeader(native)
+	err = handler.SyncGenesisHeader(s)
 	if err != nil {
 		return nil, err
 	}
@@ -89,21 +94,25 @@ func SyncGenesisHeader(native *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(hscommon.ABI, hscommon.MethodSyncGenesisHeader, true)
 }
 
-func SyncBlockHeader(native *native.NativeContract) ([]byte, error) {
-	ctx := native.ContractRef().CurrentContext()
+func SyncBlockHeader(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
 	params := &hscommon.SyncBlockHeaderParam{}
 	if err := utils.UnpackMethod(hscommon.ABI, hscommon.MethodSyncBlockHeader, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
 	chainID := params.ChainID
+	if native.IsMainChain(chainID) {
+		return nil, fmt.Errorf("SyncBlockHeader, sync relay chain's header is NOT allowed!")
+	}
+
 	//check if chainid exist
-	sideChain, err := side_chain_manager.GetSideChain(native, chainID)
+	sideChain, err := side_chain_manager.GetSideChain(s, chainID)
 	if err != nil {
-		return nil, fmt.Errorf("SyncGenesisHeader, side_chain_manager.GetSideChain error: %v", err)
+		return nil, fmt.Errorf("SyncBlockHeader, side_chain_manager.GetSideChain error: %v", err)
 	}
 	if sideChain == nil {
-		return nil, fmt.Errorf("SyncGenesisHeader, side chain is not registered")
+		return nil, fmt.Errorf("SyncBlockHeader, side chain is not registered")
 	}
 
 	handler, err := GetChainHandler(sideChain.Router)
@@ -111,7 +120,7 @@ func SyncBlockHeader(native *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	err = handler.SyncBlockHeader(native)
+	err = handler.SyncBlockHeader(s)
 	if err != nil {
 		return nil, err
 	}
@@ -119,21 +128,25 @@ func SyncBlockHeader(native *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(hscommon.ABI, hscommon.MethodSyncBlockHeader, true)
 }
 
-func SyncCrossChainMsg(native *native.NativeContract) ([]byte, error) {
-	ctx := native.ContractRef().CurrentContext()
+func SyncCrossChainMsg(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
 	params := &hscommon.SyncCrossChainMsgParam{}
 	if err := utils.UnpackMethod(hscommon.ABI, hscommon.MethodSyncCrossChainMsg, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
 	chainID := params.ChainID
+	if native.IsMainChain(chainID) {
+		return nil, fmt.Errorf("SyncCrossChainMsg, sync relay chain's cross chain message is NOT allowed")
+	}
+
 	//check if chainid exist
-	sideChain, err := side_chain_manager.GetSideChain(native, chainID)
+	sideChain, err := side_chain_manager.GetSideChain(s, chainID)
 	if err != nil {
-		return nil, fmt.Errorf("SyncGenesisHeader, side_chain_manager.GetSideChain error: %v", err)
+		return nil, fmt.Errorf("SyncCrossChainMsg, side_chain_manager.GetSideChain error: %v", err)
 	}
 	if sideChain == nil {
-		return nil, fmt.Errorf("SyncGenesisHeader, side chain is not registered")
+		return nil, fmt.Errorf("SyncCrossChainMsg, side chain is not registered")
 	}
 
 	handler, err := GetChainHandler(sideChain.Router)
@@ -141,8 +154,7 @@ func SyncCrossChainMsg(native *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	err = handler.SyncCrossChainMsg(native)
-	if err != nil {
+	if err := handler.SyncCrossChainMsg(s); err != nil {
 		return nil, err
 	}
 
@@ -171,6 +183,8 @@ func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
 		return cosmos.NewCosmosHandler(), nil
 	case utils.ZILLIQA_ROUTER:
 		return zilliqa.NewHandler(), nil
+	case utils.ZION_ROUTER:
+		return zion.NewHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}

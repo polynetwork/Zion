@@ -1,10 +1,9 @@
-pragma solidity >=0.6.0 <0.9.0;
+pragma solidity ^0.5.0;
 
 interface INodeManager {
-
     function name() external view returns (string memory);
-    function propose(uint64 startHeight, bytes memory peers) external returns (bool);
-    function vote(uint64 epochID, bytes memory epochHash) external returns (bool);
+    function propose(uint64 startHeight, bytes calldata peers) external returns (bool);
+    function vote(uint64 epochID, bytes calldata epochHash) external returns (bool);
     function epoch() external view returns (bytes memory);
     function getChangingEpoch() external view returns (bytes memory);
     function getEpochByID(uint64 epochID) external view returns (bytes memory);

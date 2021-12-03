@@ -46,7 +46,8 @@ var (
 )
 
 func (s *backend) Author(header *types.Header) (common.Address, error) {
-	return s.signer.Recover(header)
+	signer, _, err := s.signer.Recover(header)
+	return signer, err
 }
 
 func (s *backend) VerifyHeader(chain consensus.ChainHeaderReader, header *types.Header, seal bool) error {
@@ -238,21 +239,8 @@ func (s *backend) Close() error {
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
 func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header, seal bool) error {
-	if header.Number == nil {
-		return errUnknownBlock
-	}
-
-	// Ensure that the mix digest is zero as we don't have fork protection currently
-	if header.MixDigest != types.HotstuffDigest {
-		return errInvalidMixDigest
-	}
-	// Ensure that the block doesn't contain any uncles which are meaningless in Istanbul
-	if header.UncleHash != nilUncleHash {
-		return errInvalidUncleHash
-	}
-	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
-	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
-		return errInvalidDifficulty
+	if err := CustomVerifyHeader(header); err != nil {
+		return err
 	}
 
 	// verifyCascadingFields verifies all the header fields that are not standalone,
@@ -282,8 +270,33 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if err := s.UpdateEpoch(parent, header); err != nil {
 		return err
 	}
+
 	vals := s.Validators(number)
-	return s.signer.VerifyHeader(header, vals, seal)
+	if _, err := s.signer.VerifyHeader(header, vals, seal); err != nil {
+		return err
+	}
+	return nil
+}
+
+func CustomVerifyHeader(header *types.Header) error {
+	if header.Number == nil {
+		return errUnknownBlock
+	}
+
+	// Ensure that the mix digest is zero as we don't have fork protection currently
+	if header.MixDigest != types.HotstuffDigest {
+		return errInvalidMixDigest
+	}
+	// Ensure that the block doesn't contain any uncles which are meaningless in Istanbul
+	if header.UncleHash != nilUncleHash {
+		return errInvalidUncleHash
+	}
+	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
+	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
+		return errInvalidDifficulty
+	}
+
+	return nil
 }
 
 func (s *backend) getPendingParentHeader(chain consensus.ChainHeaderReader, header *types.Header) (*types.Header, error) {
