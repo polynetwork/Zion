@@ -80,7 +80,7 @@ func storeGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
 	cache.Put(proposalKey, value)
 
 	// store genesis epoch proof
-	key := EpochProofKey(EpochProofHash(epoch.ID))
+	key := epochProofKey(EpochProofHash(epoch.ID))
 	cache.Put(key, epoch.Hash().Bytes())
 
 	return epoch, nil

@@ -115,12 +115,12 @@ func getCurrentEpochHash(s *native.NativeContract) (common.Hash, error) {
 // ====================================================================
 
 func storeEpochProof(s *native.NativeContract, epochID uint64, epochHash common.Hash) {
-	key := EpochProofKey(EpochProofHash(epochID))
+	key := epochProofKey(EpochProofHash(epochID))
 	set(s, key, epochHash.Bytes())
 }
 
 func getEpochProof(s *native.NativeContract, epochID uint64) (common.Hash, error) {
-	key := EpochProofKey(EpochProofHash(epochID))
+	key := epochProofKey(EpochProofHash(epochID))
 	value, err := get(s, key)
 	if err != nil {
 		return common.EmptyHash, nil
@@ -509,7 +509,7 @@ func epochKey(epochHash common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_EPOCH), epochHash.Bytes())
 }
 
-func EpochProofKey(proofHashKey common.Hash) []byte {
+func epochProofKey(proofHashKey common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_PROOF), proofHashKey.Bytes())
 }
 

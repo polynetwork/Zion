@@ -22,14 +22,13 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
-	proof2 "github.com/ethereum/go-ethereum/contracts/native/helper"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
-	internal "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
+	hlp "github.com/ethereum/go-ethereum/contracts/native/helper"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/internal/ethapi"
@@ -42,14 +41,14 @@ func VerifyTx(proof []byte, hdr *types.Header, contract common.Address, extra []
 		return nil, fmt.Errorf("VerifyFromEthProof, unmarshal proof failed, err:%v", err)
 	}
 
-	proofResult, err := proof2.VerifyAccountResult(ethProof, hdr, contract)
+	proofResult, err := hlp.VerifyAccountResult(ethProof, hdr, contract)
 	if err != nil {
 		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed, err:%v", err)
 	}
 	if proofResult == nil {
 		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed, err:%s", "proof result is nil")
 	}
-	if checkResult && !internal.CheckProofResult(proofResult, extra) {
+	if checkResult && !hlp.CheckProofResult(proofResult, extra) {
 		return nil, fmt.Errorf("VerifyFromEthProof, failed to check result, stored %s, got %s", hexutil.Encode(proofResult), hexutil.Encode(extra))
 	}
 	return proofResult, nil
