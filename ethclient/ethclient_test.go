@@ -22,10 +22,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core/state"
 	"math/big"
 	"reflect"
 	"testing"
@@ -33,9 +29,13 @@ import (
 
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth"
@@ -652,7 +652,7 @@ func TestUnmarshalHeader(t *testing.T) {
 
 	var (
 		blockNum uint64 = 1099
-		epochID uint64 = 5
+		epochID  uint64 = 5
 	)
 	block, err := cli.BlockByNumber(context.Background(), new(big.Int).SetUint64(blockNum))
 	if err != nil {

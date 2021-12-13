@@ -36,7 +36,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -763,7 +762,9 @@ func (s *PublicBlockChainAPI) GetStorageAtCacheDB(ctx context.Context, address c
 	if err != nil {
 		return nil, err
 	}
-	value, err := (*state.CacheDB)(stateDB).Get(utils.ConcatKey(address, key))
+
+	concatKey := append(address[:], key[:]...)
+	value, err := (*state.CacheDB)(stateDB).Get(concatKey)
 	if err != nil {
 		return nil, err
 	}

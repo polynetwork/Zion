@@ -22,6 +22,7 @@ import (
 	"crypto/sha256"
 	"encoding/json"
 	"fmt"
+	proof2 "github.com/ethereum/go-ethereum/contracts/native/helper"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -41,7 +42,7 @@ func VerifyTx(proof []byte, hdr *types.Header, contract common.Address, extra []
 		return nil, fmt.Errorf("VerifyFromEthProof, unmarshal proof failed, err:%v", err)
 	}
 
-	proofResult, err := internal.VerifyAccountResult(ethProof, hdr, contract)
+	proofResult, err := proof2.VerifyAccountResult(ethProof, hdr, contract)
 	if err != nil {
 		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed, err:%v", err)
 	}

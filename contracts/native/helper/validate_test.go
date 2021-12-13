@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package eth
+package helper
 
 import (
 	"encoding/json"
@@ -45,28 +45,4 @@ func TestVerifyAccountResult(t *testing.T) {
 	if _, err := VerifyAccountResult(&proof, header, user); err != nil {
 		t.Fatal(err)
 	}
-
-	//ethProof := &ETHProof{
-	//	Address:       proof.Address.Hex(),
-	//	Balance:       proof.Balance.String(),
-	//	CodeHash:      proof.CodeHash.Hex(),
-	//	Nonce:         proof.Nonce.String(),
-	//	StorageHash:   proof.StorageHash.Hex(),
-	//	AccountProof:  proof.AccountProof,
-	//}
-	//for _, v := range proof.StorageProof {
-	//	ethProof.StorageProofs = append(ethProof.StorageProofs, StorageProof{
-	//		Key:   v.Key,
-	//		Value: v.Value.String(),
-	//		Proof: v.Proof,
-	//	})
-	//}
-	//
-	//rawHeader := new(internal.Header)
-	//if err := rawHeader.UnmarshalJSON([]byte(headerJson)); err != nil {
-	//	t.Fatal(err)
-	//}
-	//if _, err := VerifyMerkleProof(ethProof, rawHeader, user.Bytes()); err != nil {
-	//	t.Fatal(err)
-	//}
 }
