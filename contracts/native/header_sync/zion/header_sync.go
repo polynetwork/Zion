@@ -118,13 +118,15 @@ func (h *Handler) SyncBlockHeader(s *native.NativeContract) error {
 		header := hdp.Header
 		epoch := hdp.Epoch
 		proof := hdp.Proof
+		nextEpochStartHeight := epoch.StartHeight
+		nextEpochValidators := epoch.MemberList()
 
 		h := header.Number.Uint64()
 		if curEpochStartHeight >= h {
 			continue
 		}
 
-		nextEpochStartHeight, nextEpochValidators, err := VerifyHeader(hdp.Header, curEpochValidators, false)
+		_, _, err := VerifyHeader(hdp.Header, curEpochValidators, false)
 		if err != nil {
 			return fmt.Errorf("ZionHandler SyncBlockHeader, verify No.%d header err: %v", i, err)
 		}

@@ -23,15 +23,14 @@ import (
 	"math/rand"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	hsc "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	nutils "github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -105,6 +104,12 @@ func TestSyncGenesisAndBlockHeader(t *testing.T) {
 	if err := handler.SyncBlockHeader(ctx); err != nil {
 		t.Logf("err: %v", err)
 	}
+
+	height, valset, err := getEpoch(ctx, chainID)
+	assert.NoError(t, err)
+
+	assert.Equal(t, rawEpoch.StartHeight, height)
+	assert.Equal(t, rawEpoch.MemberList(), valset)
 }
 
 func generateTestSenderTx(sender, caller common.Address, payload []byte, blockNum uint64) *native.NativeContract {
