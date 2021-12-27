@@ -19,18 +19,14 @@
 package zion
 
 import (
-	"bytes"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type Handler struct {
@@ -141,19 +137,5 @@ func (h *Handler) SyncBlockHeader(s *native.NativeContract) error {
 
 // todo(fuk): useless interface
 func (h *Handler) SyncCrossChainMsg(native *native.NativeContract) error {
-	return nil
-}
-
-func checkProof(ep *node_manager.EpochInfo, proofResult []byte) error {
-	hash := ep.Hash()
-	data := append([]byte{1}, hash[:]...)[:common.HashLength]
-	value, err := rlp.EncodeToBytes(data[:])
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(value, proofResult) {
-		return fmt.Errorf("expect %s, got %s", hexutil.Encode(value), hexutil.Encode(proofResult))
-	}
-
 	return nil
 }
