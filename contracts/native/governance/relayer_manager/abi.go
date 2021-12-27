@@ -19,12 +19,13 @@ package relayer_manager
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/rlp"
+	"io"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/relayer_manager_abi"
-	polycomm "github.com/polynetwork/poly/common"
 )
 
 var (
@@ -47,44 +48,61 @@ type RelayerListParam struct {
 	Address     common.Address
 }
 
-func (this *RelayerListParam) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteVarUint(uint64(len(this.AddressList)))
-	for _, v := range this.AddressList {
-		sink.WriteVarBytes(v[:])
-	}
-	sink.WriteVarBytes(this.Address[:])
+func (m *RelayerListParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.AddressList, m.Address})
 }
-
-func (this *RelayerListParam) Deserialization(source *polycomm.ZeroCopySource) error {
-	n, eof := source.NextVarUint()
-	if eof {
-		return fmt.Errorf("source.NextVarUint, deserialize AddressList length error")
-	}
-	addressList := make([]common.Address, 0)
-	for i := 0; uint64(i) < n; i++ {
-		address, eof := source.NextVarBytes()
-		if eof {
-			return fmt.Errorf("source.NextVarBytes, deserialize address error")
-		}
-		addr, err := common.AddressParseFromBytes(address)
-		if err != nil {
-			return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
-		}
-		addressList = append(addressList, addr)
+func (m *RelayerListParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		AddressList []common.Address
+		Address     common.Address
 	}
 
-	address, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("source.NextVarBytes, deserialize address error")
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-	addr, err := common.AddressParseFromBytes(address)
-	if err != nil {
-		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
-	}
-	this.AddressList = addressList
-	this.Address = addr
+	m.AddressList, m.Address = data.AddressList, data.Address
 	return nil
 }
+
+//
+//func (this *RelayerListParam) Serialization(sink *polycomm.ZeroCopySink) {
+//	sink.WriteVarUint(uint64(len(this.AddressList)))
+//	for _, v := range this.AddressList {
+//		sink.WriteVarBytes(v[:])
+//	}
+//	sink.WriteVarBytes(this.Address[:])
+//}
+//
+//func (this *RelayerListParam) Deserialization(source *polycomm.ZeroCopySource) error {
+//	n, eof := source.NextVarUint()
+//	if eof {
+//		return fmt.Errorf("source.NextVarUint, deserialize AddressList length error")
+//	}
+//	addressList := make([]common.Address, 0)
+//	for i := 0; uint64(i) < n; i++ {
+//		address, eof := source.NextVarBytes()
+//		if eof {
+//			return fmt.Errorf("source.NextVarBytes, deserialize address error")
+//		}
+//		addr, err := common.AddressParseFromBytes(address)
+//		if err != nil {
+//			return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
+//		}
+//		addressList = append(addressList, addr)
+//	}
+//
+//	address, eof := source.NextVarBytes()
+//	if eof {
+//		return fmt.Errorf("source.NextVarBytes, deserialize address error")
+//	}
+//	addr, err := common.AddressParseFromBytes(address)
+//	if err != nil {
+//		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
+//	}
+//	this.AddressList = addressList
+//	this.Address = addr
+//	return nil
+//}
 
 type ApproveRelayerParam struct {
 	ID      uint64

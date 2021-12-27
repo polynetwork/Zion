@@ -20,39 +20,36 @@ package common
 import (
 	"testing"
 
-	polycomm "github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestSyncGenesisHeaderParam(t *testing.T) {
-	param := SyncGenesisHeaderParam{
+	expect := &SyncGenesisHeaderParam{
 		ChainID:       123,
 		GenesisHeader: []byte{1, 2, 3},
 	}
 
-	sink := polycomm.NewZeroCopySink(nil)
-	param.Serialization(sink)
-
-	var p SyncGenesisHeaderParam
-	err := p.Deserialization(polycomm.NewZeroCopySource(sink.Bytes()))
+	blob, err := rlp.EncodeToBytes(expect)
 	assert.NoError(t, err)
 
-	assert.Equal(t, p, param)
+	got := new(SyncGenesisHeaderParam)
+	assert.NoError(t, rlp.DecodeBytes(blob, got))
+
+	assert.Equal(t, expect, got)
 }
 
 func TestSyncBlockHeaderParam(t *testing.T) {
-	p := SyncBlockHeaderParam{
+	expect := &SyncBlockHeaderParam{
 		ChainID: 123,
 		Headers: [][]byte{{1, 2, 3}},
 	}
 
-	sink := polycomm.NewZeroCopySink(nil)
-	p.Serialization(sink)
-
-	var param SyncBlockHeaderParam
-	err := param.Deserialization(polycomm.NewZeroCopySource(sink.Bytes()))
-
+	blob, err := rlp.EncodeToBytes(expect)
 	assert.NoError(t, err)
 
-	assert.Equal(t, p, param)
+	got := new(SyncBlockHeaderParam)
+	assert.NoError(t, rlp.DecodeBytes(blob, got))
+
+	assert.Equal(t, expect, got)
 }

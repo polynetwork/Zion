@@ -20,8 +20,8 @@ package cosmos
 import (
 	"bytes"
 	"fmt"
-	"github.com/cosmos/cosmos-sdk/codec"
 
+	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
@@ -81,12 +81,14 @@ func (this *CosmosHandler) SyncGenesisHeader(native *native.NativeContract) erro
 	if err == nil && info != nil {
 		return fmt.Errorf("CosmosHandler SyncGenesisHeader, genesis header had been initialized")
 	}
-	PutEpochSwitchInfo(native, param.ChainID, &CosmosEpochSwitchInfo{
-		Height:             header.Header.Height,
+	if err := PutEpochSwitchInfo(native, param.ChainID, &CosmosEpochSwitchInfo{
+		Height:             uint64(header.Header.Height),
 		NextValidatorsHash: header.Header.NextValidatorsHash,
 		ChainID:            header.Header.ChainID,
 		BlockHash:          header.Header.Hash(),
-	})
+	}); err != nil {
+		return fmt.Errorf("CosmosHandler SyncGenesisHeader, failed to PutEpochSwitchInfo: %v", err)
+	}
 	return nil
 }
 
@@ -113,7 +115,7 @@ func (this *CosmosHandler) SyncBlockHeader(native *native.NativeContract) error 
 		if bytes.Equal(myHeader.Header.NextValidatorsHash, myHeader.Header.ValidatorsHash) {
 			continue
 		}
-		if info.Height >= myHeader.Header.Height {
+		if info.Height >= uint64(myHeader.Header.Height) {
 			log.Debugf("SyncBlockHeader, height %d is lower or equal than epoch switching height %d",
 				myHeader.Header.Height, info.Height)
 			continue
@@ -122,14 +124,16 @@ func (this *CosmosHandler) SyncBlockHeader(native *native.NativeContract) error 
 			return fmt.Errorf("SyncBlockHeader, failed to verify header: %v", err)
 		}
 		info.NextValidatorsHash = myHeader.Header.NextValidatorsHash
-		info.Height = myHeader.Header.Height
+		info.Height = uint64(myHeader.Header.Height)
 		info.BlockHash = myHeader.Header.Hash()
 		cnt++
 	}
 	if cnt == 0 {
 		return fmt.Errorf("no header you commited is useful")
 	}
-	PutEpochSwitchInfo(native, params.ChainID, info)
+	if err := PutEpochSwitchInfo(native, params.ChainID, info); err != nil {
+		return fmt.Errorf("SyncBlockHeader, failed to PutEpochSwitchInfo: %v", err)
+	}
 	return nil
 }
 

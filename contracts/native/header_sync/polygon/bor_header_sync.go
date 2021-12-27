@@ -35,12 +35,12 @@ import (
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
+	polygonTypes "github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon/types"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	cstates "github.com/polynetwork/poly/core/states"
-	polygonTypes "github.com/polynetwork/poly/native/service/header_sync/polygon/types"
 	"github.com/tendermint/tendermint/crypto/merkle"
 	"golang.org/x/crypto/sha3"
 )

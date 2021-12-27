@@ -18,11 +18,10 @@
 package side_chain_manager
 
 import (
-	"fmt"
-	"sort"
+	"io"
 
 	ethcomm "github.com/ethereum/go-ethereum/common"
-	"github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type SideChain struct {
@@ -35,58 +34,27 @@ type SideChain struct {
 	ExtraInfo    []byte
 }
 
-func (this *SideChain) Serialization(sink *common.ZeroCopySink) error {
-	sink.WriteVarBytes(this.Address[:])
-	sink.WriteVarUint(this.ChainId)
-	sink.WriteVarUint(this.Router)
-	sink.WriteVarBytes([]byte(this.Name))
-	sink.WriteVarUint(this.BlocksToWait)
-	sink.WriteVarBytes(this.CCMCAddress)
-	sink.WriteVarBytes(this.ExtraInfo)
-	return nil
+func (m *SideChain) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Address, m.ChainId, m.Router, m.Name, m.BlocksToWait, m.CCMCAddress, m.ExtraInfo})
 }
 
-func (this *SideChain) Deserialization(source *common.ZeroCopySource) error {
-	address, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("utils.NextVarBytes, deserialize address error")
-	}
-	addr, err := common.AddressParseFromBytes(address)
-	if err != nil {
-		return fmt.Errorf("common.AddressParseFromBytes, deserialize address error: %s", err)
-	}
-	chainId, eof := source.NextVarUint()
-	if eof {
-		return fmt.Errorf("source.NextVarUint, deserialize chainid error")
-	}
-	router, eof := source.NextVarUint()
-	if eof {
-		return fmt.Errorf("source.NextVarUint, deserialize router error")
-	}
-	name, eof := source.NextString()
-	if eof {
-		return fmt.Errorf("source.NextString, deserialize name error")
-	}
-	blocksToWait, eof := source.NextVarUint()
-	if eof {
-		return fmt.Errorf("source.NextVarUint, deserialize blocksToWait error")
-	}
-	CCMCAddress, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("source.NextVarBytes, deserialize CCMCAddress error")
-	}
-	ExtraInfo, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("source.NextVarBytes, deserialize ExtraInfo error")
+func (m *SideChain) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Address      ethcomm.Address
+		ChainId      uint64
+		Router       uint64
+		Name         string
+		BlocksToWait uint64
+		CCMCAddress  []byte
+		ExtraInfo    []byte
 	}
 
-	this.Address = ethcomm.Address(addr)
-	this.ChainId = chainId
-	this.Router = router
-	this.Name = name
-	this.BlocksToWait = blocksToWait
-	this.CCMCAddress = CCMCAddress
-	this.ExtraInfo = ExtraInfo
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+
+	m.Address, m.ChainId, m.Router, m.Name, m.BlocksToWait, m.CCMCAddress, m.ExtraInfo =
+		data.Address, data.ChainId, data.Router, data.Name, data.BlocksToWait, data.CCMCAddress, data.ExtraInfo
 	return nil
 }
 
@@ -94,39 +62,20 @@ type BindSignInfo struct {
 	BindSignInfo map[string][]byte
 }
 
-func (this *BindSignInfo) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteVarUint(uint64(len(this.BindSignInfo)))
-	var BindSignInfoList []string
-	for k := range this.BindSignInfo {
-		BindSignInfoList = append(BindSignInfoList, k)
-	}
-	sort.SliceStable(BindSignInfoList, func(i, j int) bool {
-		return BindSignInfoList[i] > BindSignInfoList[j]
-	})
-	for _, k := range BindSignInfoList {
-		sink.WriteString(k)
-		sink.WriteVarBytes(this.BindSignInfo[k])
-	}
+func (m *BindSignInfo) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.BindSignInfo})
 }
 
-func (this *BindSignInfo) Deserialization(source *common.ZeroCopySource) error {
-	n, eof := source.NextVarUint()
-	if eof {
-		return fmt.Errorf("BindSignInfo deserialize MultiSignInfo length error")
+func (m *BindSignInfo) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		BindSignInfo map[string][]byte
 	}
-	bindSignInfo := make(map[string][]byte)
-	for i := 0; uint64(i) < n; i++ {
-		k, eof := source.NextString()
-		if eof {
-			return fmt.Errorf("BindSignInfo deserialize public key error")
-		}
-		v, eof := source.NextVarBytes()
-		if eof {
-			return fmt.Errorf("BindSignInfo deserialize byte error")
-		}
-		bindSignInfo[k] = v
+
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-	this.BindSignInfo = bindSignInfo
+
+	m.BindSignInfo = data.BindSignInfo
 	return nil
 }
 
@@ -135,20 +84,20 @@ type ContractBinded struct {
 	Ver      uint64
 }
 
-func (this *ContractBinded) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteVarBytes(this.Contract)
-	sink.WriteUint64(this.Ver)
+func (m *ContractBinded) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Contract, m.Ver})
 }
 
-func (this *ContractBinded) Deserialization(source *common.ZeroCopySource) error {
-	var eof bool
-	this.Contract, eof = source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("BindContract deserialize contract error")
+func (m *ContractBinded) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Contract []byte
+		Ver      uint64
 	}
-	this.Ver, eof = source.NextUint64()
-	if eof {
-		return fmt.Errorf("BindContract deserialize version error")
+
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
+
+	m.Contract, m.Ver = data.Contract, data.Ver
 	return nil
 }

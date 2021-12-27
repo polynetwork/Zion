@@ -23,7 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	polycomm "github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/rlp"
 	cstates "github.com/polynetwork/poly/core/states"
 )
 
@@ -44,10 +44,13 @@ func putRelayerApply(native *native.NativeContract, relayerListParam *RelayerLis
 	if err != nil {
 		return fmt.Errorf("putRelayerApply, putApplyID error: %v", err)
 	}
-	sink := polycomm.NewZeroCopySink(nil)
-	relayerListParam.Serialization(sink)
+
+	blob, err := rlp.EncodeToBytes(relayerListParam)
+	if err != nil {
+		return fmt.Errorf("putRelayerApply, encodeToBytes error: %v", err)
+	}
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(RELAYER_APPLY), utils.GetUint64Bytes(applyID)),
-		cstates.GenRawStorageItem(sink.Bytes()))
+		cstates.GenRawStorageItem(blob))
 
 	err = native.AddNotify(ABI, []string{EventRegisterRelayer}, applyID)
 	if err != nil {
@@ -95,8 +98,8 @@ func getRelayerApply(native *native.NativeContract, applyID uint64) (*RelayerLis
 	if err != nil {
 		return nil, fmt.Errorf("getRelayerApply, deserialize from raw storage item err:%v", err)
 	}
-	err = relayerListParam.Deserialization(polycomm.NewZeroCopySource(relayerListParamBytes))
-	if err != nil {
+
+	if err = rlp.DecodeBytes(relayerListParamBytes, relayerListParam); err != nil {
 		return nil, fmt.Errorf("getRelayerApply, relayerListParam.Deserialization fail:%v", err)
 	}
 	return relayerListParam, nil
@@ -113,10 +116,13 @@ func putRelayerRemove(native *native.NativeContract, relayerListParam *RelayerLi
 	if err != nil {
 		return fmt.Errorf("putRelayerRemove, putRemoveID error: %v", err)
 	}
-	sink := polycomm.NewZeroCopySink(nil)
-	relayerListParam.Serialization(sink)
+
+	blob, err := rlp.EncodeToBytes(relayerListParam)
+	if err != nil {
+		return fmt.Errorf("putRelayerRemove, encodeToBytes error: %v", err)
+	}
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(RELAYER_REMOVE), utils.GetUint64Bytes(removeID)),
-		cstates.GenRawStorageItem(sink.Bytes()))
+		cstates.GenRawStorageItem(blob))
 
 	err = native.AddNotify(ABI, []string{EventRemoveRelayer}, removeID)
 	if err != nil {
@@ -164,8 +170,8 @@ func getRelayerRemove(native *native.NativeContract, removeID uint64) (*RelayerL
 	if err != nil {
 		return nil, fmt.Errorf("getRelayerRemove, deserialize from raw storage item err:%v", err)
 	}
-	err = relayerListParam.Deserialization(polycomm.NewZeroCopySource(relayerListParamBytes))
-	if err != nil {
+
+	if err = rlp.DecodeBytes(relayerListParamBytes, relayerListParam); err != nil {
 		return nil, fmt.Errorf("getRelayerRemove, Deserialization fail:%v", err)
 	}
 	return relayerListParam, nil
