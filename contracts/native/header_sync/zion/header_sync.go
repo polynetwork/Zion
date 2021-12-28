@@ -19,19 +19,14 @@
 package zion
 
 import (
-	"bytes"
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
-	"github.com/ethereum/go-ethereum/contracts/native/helper"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type Handler struct {
@@ -106,48 +101,30 @@ func (h *Handler) SyncBlockHeader(s *native.NativeContract) error {
 	}
 
 	for i, v := range params.Headers {
-		hdp := new(HeaderWithEpoch)
-		if err := hdp.Decode(v); err != nil {
+		hd := new(types.Header)
+		if err := hd.UnmarshalJSON(v); err != nil {
 			return fmt.Errorf("ZionHandler SyncBlockHeader, deserialize No.%d header err: %v", i, err)
 		}
 
-		if hdp.Header == nil || hdp.Proof == nil || hdp.Epoch == nil {
-			return fmt.Errorf("ZionHandler SyncBlockHeader, No.%d invalid params", i)
-		}
-
 		// check height
-		header := hdp.Header
-		epoch := hdp.Epoch
-		proof := hdp.Proof
-		nextEpochStartHeight := epoch.StartHeight
-		nextEpochValidators := epoch.MemberList()
-
-		h := header.Number.Uint64()
+		hash := hd.Hash()
+		h := hd.Number.Uint64()
 
 		if curEpochStartHeight >= h {
 			continue
 		}
 
-		_, _, err := VerifyHeader(hdp.Header, curEpochValidators, false)
+		nextEpochStartHeight, nextEpochValidators, err := VerifyHeader(hd, curEpochValidators, true)
 		if err != nil {
 			return fmt.Errorf("ZionHandler SyncBlockHeader, verify No.%d header err: %v", i, err)
-		}
-
-		proofResult, err := helper.VerifyTx(proof, header, utils.NodeManagerContractAddress, nil, false)
-		if err != nil {
-			return fmt.Errorf("ZionHandler SyncBlockHeader, verify No.%d tx err: %v", i, err)
-		}
-
-		if err := checkProof(epoch, proofResult); err != nil {
-			return fmt.Errorf("ZionHandler SyncBlockHeader, check No.%d proof err: %v", i, err)
 		}
 
 		if err := storeEpoch(s, chainID, nextEpochStartHeight, nextEpochValidators); err != nil {
 			return fmt.Errorf("ZionHandler SyncBlockHeader, store No.%d epoch err: %v", i, err)
 		}
-		emitEpochChangeEvent(s, chainID, header.Number.Uint64(), header.Hash())
 
-		log.Debug("ZionHandler SyncBlockHeader", "chainID", chainID, "height", header.Number, "hash", header.Hash(),
+		emitEpochChangeEvent(s, chainID, h, hash)
+		log.Debug("ZionHandler SyncBlockHeader", "chainID", chainID, "height", h, "hash", hash,
 			"current epoch start height", curEpochStartHeight, "current epoch validators", curEpochValidators,
 			"next epoch start height", nextEpochStartHeight, "next epoch validators", nextEpochValidators)
 
@@ -160,19 +137,5 @@ func (h *Handler) SyncBlockHeader(s *native.NativeContract) error {
 
 // todo(fuk): useless interface
 func (h *Handler) SyncCrossChainMsg(native *native.NativeContract) error {
-	return nil
-}
-
-func checkProof(ep *node_manager.EpochInfo, proofResult []byte) error {
-	hash := ep.Hash()
-	data := append([]byte{1}, hash[:]...)[:common.HashLength]
-	value, err := rlp.EncodeToBytes(data[:])
-	if err != nil {
-		return err
-	}
-	if !bytes.Equal(value, proofResult) {
-		return fmt.Errorf("expect %s, got %s", hexutil.Encode(value), hexutil.Encode(proofResult))
-	}
-
 	return nil
 }
