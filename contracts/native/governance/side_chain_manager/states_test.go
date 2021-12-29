@@ -30,6 +30,8 @@ func TestBindSignInfo(t *testing.T) {
 	expect := &BindSignInfo{BindSignInfo: map[string][]byte{
 		"ab":  []byte{'1', 'a', 'b'},
 		"abc": []byte{'2', 'a', 'b', 'c'},
+		"abd": []byte{},
+		"":    []byte{'c', 'a', '2'},
 	}}
 
 	raw, err := rlp.EncodeToBytes(expect)
@@ -39,4 +41,6 @@ func TestBindSignInfo(t *testing.T) {
 	assert.NoError(t, rlp.DecodeBytes(raw, got))
 
 	assert.Equal(t, expect, got)
+
+	t.Log(got)
 }

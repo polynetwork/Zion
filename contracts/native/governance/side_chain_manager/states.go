@@ -18,6 +18,7 @@
 package side_chain_manager
 
 import (
+	"fmt"
 	"io"
 
 	ethcomm "github.com/ethereum/go-ethereum/common"
@@ -63,19 +64,39 @@ type BindSignInfo struct {
 }
 
 func (m *BindSignInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.BindSignInfo})
+	keys := make([]string, 0)
+	values := make([][]byte, 0)
+
+	if m.BindSignInfo == nil || len(m.BindSignInfo) == 0 {
+		return fmt.Errorf("invalid BindSignInfo")
+	}
+
+	for k, v := range m.BindSignInfo {
+		if v == nil {
+			return fmt.Errorf("BindSignInfo value can be empty slice but not nil")
+		}
+		keys = append(keys, k)
+		values = append(values, v)
+	}
+	return rlp.Encode(w, []interface{}{keys, values})
 }
 
 func (m *BindSignInfo) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		BindSignInfo map[string][]byte
+		Keys   []string
+		Values [][]byte
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	m.BindSignInfo = data.BindSignInfo
+	for i := 0; i < len(data.Keys); i++ {
+		if m.BindSignInfo == nil {
+			m.BindSignInfo = make(map[string][]byte)
+		}
+		m.BindSignInfo[data.Keys[i]] = data.Values[i]
+	}
 	return nil
 }
 
