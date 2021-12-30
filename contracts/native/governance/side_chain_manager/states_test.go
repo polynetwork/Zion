@@ -25,7 +25,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-// todo: test
 func TestBindSignInfo(t *testing.T) {
 	expect := &BindSignInfo{BindSignInfo: map[string][]byte{
 		"ab":  []byte{'1', 'a', 'b'},

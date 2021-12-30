@@ -24,12 +24,11 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
-	cstates "github.com/polynetwork/poly/core/states"
 )
 
 func putRelayer(native *native.NativeContract, relayer common.Address) error {
 	contract := utils.RelayerManagerContractAddress
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(RELAYER), relayer[:]), cstates.GenRawStorageItem(relayer[:]))
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(RELAYER), relayer[:]), relayer[:])
 	return nil
 }
 
@@ -49,8 +48,7 @@ func putRelayerApply(native *native.NativeContract, relayerListParam *RelayerLis
 	if err != nil {
 		return fmt.Errorf("putRelayerApply, encodeToBytes error: %v", err)
 	}
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(RELAYER_APPLY), utils.GetUint64Bytes(applyID)),
-		cstates.GenRawStorageItem(blob))
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(RELAYER_APPLY), utils.GetUint64Bytes(applyID)), blob)
 
 	err = native.AddNotify(ABI, []string{EventRegisterRelayer}, applyID)
 	if err != nil {
@@ -67,11 +65,7 @@ func getApplyID(native *native.NativeContract) (uint64, error) {
 	}
 	var applyID uint64 = 0
 	if applyIDStore != nil {
-		applyIDBytes, err := cstates.GetValueFromRawStorageItem(applyIDStore)
-		if err != nil {
-			return 0, fmt.Errorf("getApplyID, deserialize from raw storage item err:%v", err)
-		}
-		applyID = utils.GetBytesUint64(applyIDBytes)
+		applyID = utils.GetBytesUint64(applyIDStore)
 	}
 	return applyID, nil
 }
@@ -79,8 +73,7 @@ func getApplyID(native *native.NativeContract) (uint64, error) {
 func putApplyID(native *native.NativeContract, applyID uint64) error {
 	contract := utils.RelayerManagerContractAddress
 	applyIDByte := utils.GetUint64Bytes(applyID)
-
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(APPLY_ID)), cstates.GenRawStorageItem(applyIDByte))
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(APPLY_ID)), applyIDByte)
 	return nil
 }
 
@@ -94,12 +87,8 @@ func getRelayerApply(native *native.NativeContract, applyID uint64) (*RelayerLis
 		return nil, fmt.Errorf("getRelayerApply, can't find any record")
 	}
 	relayerListParam := new(RelayerListParam)
-	relayerListParamBytes, err := cstates.GetValueFromRawStorageItem(relayerListParamStore)
-	if err != nil {
-		return nil, fmt.Errorf("getRelayerApply, deserialize from raw storage item err:%v", err)
-	}
 
-	if err = rlp.DecodeBytes(relayerListParamBytes, relayerListParam); err != nil {
+	if err = rlp.DecodeBytes(relayerListParamStore, relayerListParam); err != nil {
 		return nil, fmt.Errorf("getRelayerApply, relayerListParam.Deserialization fail:%v", err)
 	}
 	return relayerListParam, nil
@@ -121,8 +110,7 @@ func putRelayerRemove(native *native.NativeContract, relayerListParam *RelayerLi
 	if err != nil {
 		return fmt.Errorf("putRelayerRemove, encodeToBytes error: %v", err)
 	}
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(RELAYER_REMOVE), utils.GetUint64Bytes(removeID)),
-		cstates.GenRawStorageItem(blob))
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(RELAYER_REMOVE), utils.GetUint64Bytes(removeID)), blob)
 
 	err = native.AddNotify(ABI, []string{EventRemoveRelayer}, removeID)
 	if err != nil {
@@ -139,11 +127,7 @@ func getRemoveID(native *native.NativeContract) (uint64, error) {
 	}
 	var removeID uint64 = 0
 	if removeIDStore != nil {
-		removeIDBytes, err := cstates.GetValueFromRawStorageItem(removeIDStore)
-		if err != nil {
-			return 0, fmt.Errorf("getRemoveID, deserialize from raw storage item err:%v", err)
-		}
-		removeID = utils.GetBytesUint64(removeIDBytes)
+		removeID = utils.GetBytesUint64(removeIDStore)
 	}
 	return removeID, nil
 }
@@ -152,7 +136,7 @@ func putRemoveID(native *native.NativeContract, removeID uint64) error {
 	contract := utils.RelayerManagerContractAddress
 	removeIDByte := utils.GetUint64Bytes(removeID)
 
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(REMOVE_ID)), cstates.GenRawStorageItem(removeIDByte))
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(REMOVE_ID)), removeIDByte)
 	return nil
 }
 
@@ -165,13 +149,9 @@ func getRelayerRemove(native *native.NativeContract, removeID uint64) (*RelayerL
 	if relayerListParamStore == nil {
 		return nil, fmt.Errorf("getRelayerRemove, can't find any record")
 	}
-	relayerListParam := new(RelayerListParam)
-	relayerListParamBytes, err := cstates.GetValueFromRawStorageItem(relayerListParamStore)
-	if err != nil {
-		return nil, fmt.Errorf("getRelayerRemove, deserialize from raw storage item err:%v", err)
-	}
 
-	if err = rlp.DecodeBytes(relayerListParamBytes, relayerListParam); err != nil {
+	relayerListParam := new(RelayerListParam)
+	if err = rlp.DecodeBytes(relayerListParamStore, relayerListParam); err != nil {
 		return nil, fmt.Errorf("getRelayerRemove, Deserialization fail:%v", err)
 	}
 	return relayerListParam, nil

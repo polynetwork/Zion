@@ -30,7 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
-	cstates "github.com/polynetwork/poly/core/states"
 	tbytes "github.com/tendermint/tendermint/libs/bytes"
 	"github.com/tendermint/tendermint/types"
 )
@@ -150,14 +149,10 @@ func (h *Handler) SyncCrossChainMsg(native *native.NativeContract) error {
 }
 
 func GetEpochSwitchInfo(service *native.NativeContract, chainId uint64) (*CosmosEpochSwitchInfo, error) {
-	val, err := service.GetCacheDB().Get(
+	raw, err := service.GetCacheDB().Get(
 		utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(hscommon.EPOCH_SWITCH), utils.GetUint64Bytes(chainId)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get epoch switching height: %v", err)
-	}
-	raw, err := cstates.GetValueFromRawStorageItem(val)
-	if err != nil {
-		return nil, fmt.Errorf("deserialize bytes from raw storage item err: %v", err)
 	}
 	info := new(CosmosEpochSwitchInfo)
 	if err = rlp.DecodeBytes(raw, info); err != nil {
@@ -172,8 +167,7 @@ func PutEpochSwitchInfo(service *native.NativeContract, chainId uint64, info *Co
 		return err
 	}
 	service.GetCacheDB().Put(
-		utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(hscommon.EPOCH_SWITCH), utils.GetUint64Bytes(chainId)),
-		cstates.GenRawStorageItem(blob))
+		utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(hscommon.EPOCH_SWITCH), utils.GetUint64Bytes(chainId)), blob)
 	return notifyEpochSwitchInfo(service, chainId, info)
 }
 

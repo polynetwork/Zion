@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
-	cstates "github.com/polynetwork/poly/core/states"
 )
 
 var netParam = &chaincfg.TestNet3Params
@@ -43,11 +42,7 @@ func GetSideChainApply(native *native.NativeContract, chanid uint64) (*SideChain
 	}
 	sideChain := new(SideChain)
 	if sideChainStore != nil {
-		sideChainBytes, err := cstates.GetValueFromRawStorageItem(sideChainStore)
-		if err != nil {
-			return nil, fmt.Errorf("getRegisterSideChain, deserialize from raw storage item err:%v", err)
-		}
-		if err := rlp.DecodeBytes(sideChainBytes, sideChain); err != nil {
+		if err := rlp.DecodeBytes(sideChainStore, sideChain); err != nil {
 			return nil, fmt.Errorf("getRegisterSideChain, deserialize sideChain error: %v", err)
 		}
 		return sideChain, nil
@@ -65,8 +60,7 @@ func putSideChainApply(native *native.NativeContract, sideChain *SideChain) erro
 		return fmt.Errorf("putRegisterSideChain, sideChain.Serialization error: %v", err)
 	}
 
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(SIDE_CHAIN_APPLY), chainidByte),
-		cstates.GenRawStorageItem(blob))
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(SIDE_CHAIN_APPLY), chainidByte), blob)
 	return nil
 }
 
@@ -81,11 +75,7 @@ func GetSideChain(native *native.NativeContract, chainID uint64) (*SideChain, er
 	}
 	sideChain := new(SideChain)
 	if sideChainStore != nil {
-		sideChainBytes, err := cstates.GetValueFromRawStorageItem(sideChainStore)
-		if err != nil {
-			return nil, fmt.Errorf("getSideChain, deserialize from raw storage item err:%v", err)
-		}
-		if err := rlp.DecodeBytes(sideChainBytes, sideChain); err != nil {
+		if err := rlp.DecodeBytes(sideChainStore, sideChain); err != nil {
 			return nil, fmt.Errorf("getSideChain, deserialize sideChain error: %v", err)
 		}
 		return sideChain, nil
@@ -103,8 +93,7 @@ func PutSideChain(native *native.NativeContract, sideChain *SideChain) error {
 		return fmt.Errorf("putSideChain, sideChain.Serialization error: %v", err)
 	}
 
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(SIDE_CHAIN), chainidByte),
-		cstates.GenRawStorageItem(blob))
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(SIDE_CHAIN), chainidByte), blob)
 	return nil
 }
 
@@ -119,11 +108,7 @@ func getUpdateSideChain(native *native.NativeContract, chanid uint64) (*SideChai
 	}
 	sideChain := new(SideChain)
 	if sideChainStore != nil {
-		sideChainBytes, err := cstates.GetValueFromRawStorageItem(sideChainStore)
-		if err != nil {
-			return nil, fmt.Errorf("getUpdateSideChain, deserialize from raw storage item err:%v", err)
-		}
-		if err := rlp.DecodeBytes(sideChainBytes, sideChain); err != nil {
+		if err := rlp.DecodeBytes(sideChainStore, sideChain); err != nil {
 			return nil, fmt.Errorf("getUpdateSideChain, deserialize sideChain error: %v", err)
 		}
 		return sideChain, nil
@@ -141,8 +126,7 @@ func putUpdateSideChain(native *native.NativeContract, sideChain *SideChain) err
 		return fmt.Errorf("putUpdateSideChain, sideChain.Serialization error: %v", err)
 	}
 
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(UPDATE_SIDE_CHAIN_REQUEST), chainidByte),
-		cstates.GenRawStorageItem(blob))
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(UPDATE_SIDE_CHAIN_REQUEST), chainidByte), blob)
 	return nil
 }
 
@@ -165,8 +149,7 @@ func putQuitSideChain(native *native.NativeContract, chainid uint64) error {
 	contract := utils.SideChainManagerContractAddress
 	chainidByte := utils.GetUint64Bytes(chainid)
 
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(QUIT_SIDE_CHAIN_REQUEST), chainidByte),
-		cstates.GenRawStorageItem(chainidByte))
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(QUIT_SIDE_CHAIN_REQUEST), chainidByte),chainidByte)
 	return nil
 }
 
@@ -181,12 +164,8 @@ func GetContractBind(native *native.NativeContract, redeemChainID, contractChain
 		return nil, fmt.Errorf("GetContractBind, get contractBindStore error: %v", err)
 	}
 	if contractBindStore != nil {
-		val, err := cstates.GetValueFromRawStorageItem(contractBindStore)
-		if err != nil {
-			return nil, fmt.Errorf("GetContractBind, deserialize from raw storage item err:%v", err)
-		}
 		cb := new(ContractBinded)
-		err = rlp.DecodeBytes(val, cb)
+		err = rlp.DecodeBytes(contractBindStore, cb)
 		if err != nil {
 			return nil, fmt.Errorf("GetContractBind, deserialize BindContract err:%v", err)
 		}
@@ -211,7 +190,7 @@ func putContractBind(native *native.NativeContract, redeemChainID, contractChain
 		return fmt.Errorf("putContractBind, contractBind.Serialization error: %v", err)
 	}
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(REDEEM_BIND),
-		redeemChainIDByte, contractChainIDByte, redeemKey), cstates.GenRawStorageItem(blob))
+		redeemChainIDByte, contractChainIDByte, redeemKey), blob)
 	return nil
 }
 
@@ -222,7 +201,7 @@ func putBindSignInfo(native *native.NativeContract, message []byte, multiSignInf
 		return fmt.Errorf("putBindSignInfo, BindSignInfo.Serialization error: %v", err)
 	}
 
-	native.GetCacheDB().Put(key, cstates.GenRawStorageItem(blob))
+	native.GetCacheDB().Put(key, blob)
 	return nil
 }
 
@@ -237,11 +216,7 @@ func getBindSignInfo(native *native.NativeContract, message []byte) (*BindSignIn
 		BindSignInfo: make(map[string][]byte),
 	}
 	if bindSignInfoStore != nil {
-		bindSignInfoBytes, err := cstates.GetValueFromRawStorageItem(bindSignInfoStore)
-		if err != nil {
-			return nil, fmt.Errorf("getBtcMultiSignInfo, deserialize from raw storage item err:%v", err)
-		}
-		err = rlp.DecodeBytes(bindSignInfoBytes, bindSignInfo)
+		err = rlp.DecodeBytes(bindSignInfoStore, bindSignInfo)
 		if err != nil {
 			return nil, fmt.Errorf("getBtcMultiSignInfo, deserialize multiSignInfo err:%v", err)
 		}
@@ -257,7 +232,7 @@ func putBtcTxParam(native *native.NativeContract, redeemKey []byte, redeemChainI
 	}
 
 	native.GetCacheDB().Put(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(BTC_TX_PARAM), redeemKey,
-		redeemChainIdBytes), cstates.GenRawStorageItem(blob))
+		redeemChainIdBytes), blob)
 	return nil
 }
 
@@ -269,12 +244,8 @@ func GetBtcTxParam(native *native.NativeContract, redeemKey []byte, redeemChainI
 		return nil, fmt.Errorf("GetBtcTxParam, get btcTxParam error: %v", err)
 	}
 	if store != nil {
-		detialBytes, err := cstates.GetValueFromRawStorageItem(store)
-		if err != nil {
-			return nil, fmt.Errorf("GetBtcTxParam, deserialize from raw storage item error: %v", err)
-		}
 		detial := new(BtcTxParamDetial)
-		if err := rlp.DecodeBytes(detialBytes, detial); err != nil {
+		if err := rlp.DecodeBytes(store, detial); err != nil {
 			return nil, fmt.Errorf("GetBtcTxParam, DecodeBytes error: %v", err)
 		}
 		return detial, nil
@@ -334,7 +305,7 @@ func putBtcRedeemScript(native *native.NativeContract, redeemScriptKey string, r
 	if cls.String() != "multisig" {
 		return fmt.Errorf("putBtcRedeemScript, wrong type of redeem: %s", cls)
 	}
-	native.GetCacheDB().Put(key, cstates.GenRawStorageItem(redeemScriptBytes))
+	native.GetCacheDB().Put(key, redeemScriptBytes)
 	return nil
 }
 
@@ -348,9 +319,5 @@ func GetBtcRedeemScriptBytes(native *native.NativeContract, redeemScriptKey stri
 	if redeemStore == nil {
 		return nil, fmt.Errorf("getBtcRedeemScript, can not find any records")
 	}
-	redeemBytes, err := cstates.GetValueFromRawStorageItem(redeemStore)
-	if err != nil {
-		return nil, fmt.Errorf("getBtcRedeemScript, deserialize from raw storage item err:%v", err)
-	}
-	return redeemBytes, nil
+	return redeemStore, nil
 }

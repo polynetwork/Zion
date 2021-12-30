@@ -82,7 +82,7 @@ func (this *ETHHandler) SyncGenesisHeader(native *native.NativeContract) error {
 		return fmt.Errorf("SyncGenesisHeader, json.Unmarshal header err: %v", err)
 	}
 
-	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.GENESIS_HEADER), utils.GetUint64Bytes(params.ChainID)))
+	headerStore, err := scom.GetGenesisHeader(native, params.ChainID)
 	if err != nil {
 		return fmt.Errorf("ETHHandler GetHeaderByHeight, get blockHashStore error: %v", err)
 	}

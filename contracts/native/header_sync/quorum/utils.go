@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/polynetwork/poly/core/states"
 )
 
 var (
@@ -40,9 +39,8 @@ func putValSet(ns *native.NativeContract, chainID, height uint64, vals []ecom.Ad
 
 	rawChainID := utils.GetUint64Bytes(chainID)
 	rawHeight := utils.GetUint64Bytes(height)
-	ns.GetCacheDB().Put(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(common.CONSENSUS_PEER), rawChainID), states.GenRawStorageItem(blob))
-	ns.GetCacheDB().Put(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(common.CONSENSUS_PEER_BLOCK_HEIGHT), rawChainID),
-		states.GenRawStorageItem(rawHeight))
+	ns.GetCacheDB().Put(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(common.CONSENSUS_PEER), rawChainID), blob)
+	ns.GetCacheDB().Put(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(common.CONSENSUS_PEER_BLOCK_HEIGHT), rawChainID), rawHeight)
 
 	return nil
 }
@@ -56,11 +54,8 @@ func GetValSet(ns *native.NativeContract, chainID uint64) (QuorumValSet, error) 
 	if store == nil {
 		return nil, fmt.Errorf("GetValSet, can not find any records")
 	}
-	raw, err := states.GetValueFromRawStorageItem(store)
-	if err != nil {
-		return nil, fmt.Errorf("GetValSet, deserialize from raw storage item err: %v", err)
-	}
-	return DecodeQuorumValSet(raw)
+
+	return DecodeQuorumValSet(store)
 }
 
 func GetCurrentValHeight(ns *native.NativeContract, chainID uint64) (uint64, error) {
@@ -72,12 +67,8 @@ func GetCurrentValHeight(ns *native.NativeContract, chainID uint64) (uint64, err
 	if store == nil {
 		return 0, fmt.Errorf("getCurrentValHeight, can not find any records")
 	}
-	raw, err := states.GetValueFromRawStorageItem(store)
-	if err != nil {
-		return 0, fmt.Errorf("getCurrentValHeight, deserialize from raw storage item err: %v", err)
-	}
 
-	return utils.GetBytesUint64(raw), nil
+	return utils.GetBytesUint64(store), nil
 }
 
 func GetSigners(hash ecom.Hash, sealArr [][]byte) ([]ecom.Address, error) {

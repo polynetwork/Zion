@@ -19,11 +19,7 @@ package utils
 
 import (
 	"encoding/binary"
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ontio/ontology-crypto/vrf"
-	vbftconfig "github.com/polynetwork/poly/consensus/vbft/config"
 )
 
 func ConcatKey(contract common.Address, args ...[]byte) []byte {
@@ -58,15 +54,4 @@ func GetUint64Bytes(num uint64) []byte {
 	var p [8]byte
 	binary.LittleEndian.PutUint64(p[:], num)
 	return p[:]
-}
-
-func ValidatePeerPubKeyFormat(pubkey string) error {
-	pk, err := vbftconfig.Pubkey(pubkey)
-	if err != nil {
-		return fmt.Errorf("failed to parse pubkey")
-	}
-	if !vrf.ValidatePublicKey(pk) {
-		return fmt.Errorf("invalid for VRF")
-	}
-	return nil
 }

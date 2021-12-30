@@ -35,7 +35,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
-	cstates "github.com/polynetwork/poly/core/states"
 	"golang.org/x/crypto/sha3"
 )
 
@@ -127,20 +126,12 @@ func isGenesisStored(native *native.NativeContract, params *scom.SyncGenesisHead
 }
 
 func getGenesis(native *native.NativeContract, chainID uint64) (genesisHeader *GenesisHeader, err error) {
-
-	genesisBytes, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.GENESIS_HEADER), utils.GetUint64Bytes(chainID)))
+	genesisBytes, err := scom.GetGenesisHeader(native, chainID)
 	if err != nil {
 		err = fmt.Errorf("getGenesis, GetCacheDB err:%v", err)
 		return
 	}
-
 	if genesisBytes == nil {
-		return
-	}
-
-	genesisBytes, err = cstates.GetValueFromRawStorageItem(genesisBytes)
-	if err != nil {
-		err = fmt.Errorf("getGenesis, GetValueFromRawStorageItem err:%v", err)
 		return
 	}
 
@@ -157,16 +148,12 @@ func getGenesis(native *native.NativeContract, chainID uint64) (genesisHeader *G
 }
 
 func storeGenesis(native *native.NativeContract, params *scom.SyncGenesisHeaderParam, genesisHeader *GenesisHeader) (err error) {
-
 	genesisBytes, err := json.Marshal(genesisHeader)
 	if err != nil {
 		return
 	}
 
-	native.GetCacheDB().Put(
-		utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.GENESIS_HEADER), utils.GetUint64Bytes(params.ChainID)),
-		cstates.GenRawStorageItem(genesisBytes))
-
+	scom.SetGenesisHeader(native, params.ChainID, genesisBytes)
 	headerWithSum := &HeaderWithDifficultySum{Header: &genesisHeader.Header, DifficultySum: genesisHeader.Header.Difficulty}
 
 	err = putHeaderWithSum(native, params.ChainID, headerWithSum)
@@ -313,8 +300,7 @@ func (h *Handler) SyncBlockHeader(native *native.NativeContract) error {
 }
 
 func isHeaderExist(native *native.NativeContract, headerHash ecommon.Hash, ctx *Context) (bool, error) {
-	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
-		[]byte(scom.HEADER_INDEX), utils.GetUint64Bytes(ctx.ChainID), headerHash.Bytes()))
+	headerStore, err := scom.GetHeaderIndex(native, ctx.ChainID, headerHash.Bytes())
 	if err != nil {
 		return false, fmt.Errorf("heco Handler isHeaderExist error: %v", err)
 	}
@@ -335,13 +321,7 @@ func GetCanonicalHeight(native *native.NativeContract, chainID uint64) (height u
 		return
 	}
 
-	storeBytes, err := cstates.GetValueFromRawStorageItem(heightStore)
-	if err != nil {
-		err = fmt.Errorf("heco Handler GetCanonicalHeight, GetValueFromRawStorageItem err:%v", err)
-		return
-	}
-
-	height = utils.GetBytesUint64(storeBytes)
+	height = utils.GetBytesUint64(heightStore)
 	return
 }
 
@@ -361,7 +341,7 @@ func GetCanonicalHeader(native *native.NativeContract, chainID uint64, height ui
 }
 
 func deleteCanonicalHash(native *native.NativeContract, chainID uint64, height uint64) {
-	native.GetCacheDB().Delete(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.MAIN_CHAIN), utils.GetUint64Bytes(chainID), utils.GetUint64Bytes(height)))
+	scom.DelMainChain(native, chainID, height)
 }
 
 func getCanonicalHash(native *native.NativeContract, chainID uint64, height uint64) (hash ecommon.Hash, err error) {
@@ -369,47 +349,33 @@ func getCanonicalHash(native *native.NativeContract, chainID uint64, height uint
 	if err != nil {
 		return
 	}
-
 	if hashBytesStore == nil {
 		return
 	}
 
-	hashBytes, err := cstates.GetValueFromRawStorageItem(hashBytesStore)
-	if err != nil {
-		err = fmt.Errorf("heco Handler getCanonicalHash, GetValueFromRawStorageItem err:%v", err)
-		return
-	}
-
-	hash = ecommon.BytesToHash(hashBytes)
+	hash = ecommon.BytesToHash(hashBytesStore)
 	return
 }
 
 func putCanonicalHash(native *native.NativeContract, chainID uint64, height uint64, hash ecommon.Hash) {
-	native.GetCacheDB().Put(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.MAIN_CHAIN), utils.GetUint64Bytes(chainID), utils.GetUint64Bytes(height)),
-		cstates.GenRawStorageItem(hash.Bytes()))
+	scom.SetMainChain(native, chainID, height, hash.Bytes())
 }
 
 func putHeaderWithSum(native *native.NativeContract, chainID uint64, headerWithSum *HeaderWithDifficultySum) (err error) {
-
 	headerBytes, err := json.Marshal(headerWithSum)
 	if err != nil {
 		return
 	}
 
-	native.GetCacheDB().Put(
-		utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.HEADER_INDEX), utils.GetUint64Bytes(chainID), headerWithSum.Header.Hash().Bytes()),
-		cstates.GenRawStorageItem(headerBytes))
+	scom.SetHeaderIndex(native, chainID, headerWithSum.Header.Hash().Bytes(), headerBytes)
 	return
 }
 
 func putCanonicalHeight(native *native.NativeContract, chainID uint64, height uint64) {
-	native.GetCacheDB().Put(
-		utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.CURRENT_HEADER_HEIGHT), utils.GetUint64Bytes(chainID)),
-		cstates.GenRawStorageItem(utils.GetUint64Bytes(uint64(height))))
+	scom.SetCurrentHeight(native, chainID, utils.GetUint64Bytes(height))
 }
 
 func addHeader(native *native.NativeContract, header *eth.Header, phv *HeightAndValidators, ctx *Context) (err error) {
-
 	parentHeader, err := getHeader(native, header.ParentHash, ctx.ChainID)
 	if err != nil {
 		return
@@ -624,21 +590,16 @@ func getPrevHeightAndValidators(native *native.NativeContract, header *eth.Heade
 }
 
 func getHeader(native *native.NativeContract, hash ecommon.Hash, chainID uint64) (headerWithSum *HeaderWithDifficultySum, err error) {
-
-	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
-		[]byte(scom.HEADER_INDEX), utils.GetUint64Bytes(chainID), hash.Bytes()))
+	headerStore, err := scom.GetHeaderIndex(native, chainID, hash.Bytes())
 	if err != nil {
 		return nil, fmt.Errorf("heco Handler getHeader error: %v", err)
 	}
 	if headerStore == nil {
 		return nil, fmt.Errorf("heco Handler getHeader, can not find any header records")
 	}
-	storeBytes, err := cstates.GetValueFromRawStorageItem(headerStore)
-	if err != nil {
-		return nil, fmt.Errorf("heco Handler getHeader, deserialize headerBytes from raw storage item err:%v", err)
-	}
+
 	headerWithSum = &HeaderWithDifficultySum{}
-	if err := json.Unmarshal(storeBytes, &headerWithSum); err != nil {
+	if err := json.Unmarshal(headerStore, &headerWithSum); err != nil {
 		return nil, fmt.Errorf("heco Handler getHeader, deserialize header error: %v", err)
 	}
 

@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
-	cstates "github.com/polynetwork/poly/core/states"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -68,14 +67,9 @@ func TestSyncGenesisHeader(t *testing.T) {
 }
 
 func getEthHeaderByHash(native *native.NativeContract, hash ethcommon.Hash) []byte {
-	headerStore, _ := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
-		[]byte(scom.HEADER_INDEX), utils.GetUint64Bytes(ethChainID), hash.Bytes()))
-	headerBytes, err := cstates.GetValueFromRawStorageItem(headerStore)
-	if err != nil {
-		return nil
-	}
+	headerStore, _ := scom.GetHeaderIndex(native, ethChainID, hash.Bytes())
 	var headerWithDifficultySum eth.HeaderWithDifficultySum
-	if err := json.Unmarshal(headerBytes, &headerWithDifficultySum); err != nil {
+	if err := json.Unmarshal(headerStore, &headerWithDifficultySum); err != nil {
 		return nil
 	}
 	headerOnly, err := json.Marshal(headerWithDifficultySum.Header)
@@ -86,24 +80,18 @@ func getEthHeaderByHash(native *native.NativeContract, hash ethcommon.Hash) []by
 }
 
 func getEthHeaderHashByHeight(native *native.NativeContract, height uint64) ethcommon.Hash {
-	headerStore, _ := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
-		[]byte(scom.MAIN_CHAIN), utils.GetUint64Bytes(ethChainID), utils.GetUint64Bytes(height)))
-	hashBytes, _ := cstates.GetValueFromRawStorageItem(headerStore)
-	return ethcommon.BytesToHash(hashBytes)
+	headerStore, _ := scom.GetMainChain(native, ethChainID, height)
+	return ethcommon.BytesToHash(headerStore)
 }
 
 func getEthLatestHeight(native *native.NativeContract) uint64 {
-	contractAddress := utils.HeaderSyncContractAddress
-	key := append([]byte(scom.CURRENT_HEADER_HEIGHT), utils.GetUint64Bytes(ethChainID)...)
-	// try to get storage
-	result, err := native.GetCacheDB().Get(utils.ConcatKey(contractAddress, key))
+	result, err := scom.GetCurrentHeight(native, ethChainID)
 	if err != nil {
 		return 0
 	}
 	if result == nil || len(result) == 0 {
 		return 0
 	} else {
-		heightBytes, _ := cstates.GetValueFromRawStorageItem(result)
-		return binary.LittleEndian.Uint64(heightBytes)
+		return binary.LittleEndian.Uint64(result)
 	}
 }
