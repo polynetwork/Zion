@@ -90,11 +90,13 @@ func (m *BindSignInfo) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
+	if data.Keys == nil || data.Values == nil ||
+		len(data.Keys) == 0 || len(data.Keys) != len(data.Values) {
+		return fmt.Errorf("invalid bindSignInfo")
+	}
 
+	m.BindSignInfo = make(map[string][]byte)
 	for i := 0; i < len(data.Keys); i++ {
-		if m.BindSignInfo == nil {
-			m.BindSignInfo = make(map[string][]byte)
-		}
 		m.BindSignInfo[data.Keys[i]] = data.Values[i]
 	}
 	return nil
