@@ -19,7 +19,6 @@
 package zion
 
 import (
-	"encoding/json"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -57,13 +56,13 @@ func (h *Handler) SyncGenesisHeader(s *native.NativeContract) error {
 		return nil
 	}
 
-	var header *types.Header
-	if err := json.Unmarshal(params.GenesisHeader, &header); err != nil {
-		return fmt.Errorf("ZionHandler SyncGenesisHeader, json.Unmarshal header err: %v", err)
-	}
-
 	if isGenesisStored(s, chainID) {
 		return fmt.Errorf("ZionHandler SyncGenesisHeader, genesis header had been initialized")
+	}
+
+	header := new(types.Header)
+	if err := header.UnmarshalJSON(params.GenesisHeader); err != nil {
+		return fmt.Errorf("ZionHandler SyncGenesisHeader, json.Unmarshal header err: %v", err)
 	}
 
 	//block header storage
@@ -71,22 +70,20 @@ func (h *Handler) SyncGenesisHeader(s *native.NativeContract) error {
 		return fmt.Errorf("ZionHandler SyncGenesisHeader, put blockHeader err: %v", err)
 	}
 
+	hash := header.Hash()
+	height := header.Number.Uint64() + 1
 	validators, err := getValidatorsFromHeader(header)
 	if err != nil {
 		return fmt.Errorf("ZionHandler SyncGenesisHeader, get validators from header err: %v", err)
 	}
 
-	height := header.Number.Uint64()
-	if height != 0 {
-		height += 1
-	}
 	if err := storeEpoch(s, chainID, height, validators); err != nil {
 		return fmt.Errorf("ZionHandler SyncGenesisHeader, store epoch err: %v", err)
 	}
 
-	emitEpochChangeEvent(s, chainID, height, header.Hash())
+	emitEpochChangeEvent(s, chainID, height, hash)
 
-	log.Debug("ZionHandler SyncGenesisHeader", "chainID", chainID, "height", height, "hash", header.Hash())
+	log.Debug("ZionHandler SyncGenesisHeader", "chainID", chainID, "height", height, "hash", hash)
 	return nil
 }
 
@@ -97,55 +94,42 @@ func (h *Handler) SyncBlockHeader(s *native.NativeContract) error {
 		return err
 	}
 
-	if params.Headers == nil || len(params.Headers) < 2 {
-		return fmt.Errorf("invalid params")
-	}
-
 	chainID := params.ChainID
 	curEpochStartHeight, curEpochValidators, err := getEpoch(s, chainID)
 	if err != nil {
 		return fmt.Errorf("ZionHandler SynnBlockHeader, failed to get current epoch info, err: %v", err)
 	}
-	lastHeaderHeight := uint64(0)
-	initStartHeight := curEpochStartHeight
 
 	for i, v := range params.Headers {
-		header := new(types.Header)
-		if err := header.UnmarshalJSON(v); err != nil {
+		hd := new(types.Header)
+		if err := hd.UnmarshalJSON(v); err != nil {
 			return fmt.Errorf("ZionHandler SyncBlockHeader, deserialize No.%d header err: %v", i, err)
 		}
 
 		// check height
-		h := header.Number.Uint64()
-		if initStartHeight >= h {
-			return fmt.Errorf("ZionHandler SyncBlockHeader, wrong height of No.%d header: (curr: %d, commit: %d)", i, initStartHeight, h)
-		}
-		if lastHeaderHeight > 0 && h != lastHeaderHeight+1 {
-			return fmt.Errorf("ZionHandler SyncBlockHeader, should be continues block headers")
-		} else {
-			lastHeaderHeight = h
+		hash := hd.Hash()
+		h := hd.Number.Uint64()
+
+		if curEpochStartHeight >= h {
+			continue
 		}
 
-		// validate header and epoch
-		nextEpochStartHeight, nextEpochValidators, err := VerifyHeader(header, curEpochValidators, true)
+		nextEpochStartHeight, nextEpochValidators, err := VerifyHeader(hd, curEpochValidators, true)
 		if err != nil {
-			return fmt.Errorf("ZionHandler SyncBlockHeader, failed to verify No.%d quorum header %s: %v", i, header.Hash().Hex(), err)
+			return fmt.Errorf("ZionHandler SyncBlockHeader, verify No.%d header err: %v", i, err)
 		}
 
-		// epoch changed
-		if nextEpochStartHeight > 0 && len(nextEpochValidators) > 0 && nextEpochStartHeight > curEpochStartHeight {
-			emitEpochChangeEvent(s, chainID, header.Number.Uint64(), header.Hash())
-			if err := storeEpoch(s, chainID, nextEpochStartHeight, nextEpochValidators); err != nil {
-				return fmt.Errorf("ZionHandler SyncBlockHeader, failed to store next epoch info, err: %v", err)
-			}
-
-			log.Debug("ZionHandler SyncBlockHeader", "chainID", chainID, "height", header.Number, "hash", header.Hash(),
-				"current epoch start height", curEpochStartHeight, "current epoch validators", curEpochValidators,
-				"next epoch start height", nextEpochStartHeight, "next epoch validators", nextEpochValidators)
-
-			curEpochStartHeight = nextEpochStartHeight
-			curEpochValidators = nextEpochValidators
+		if err := storeEpoch(s, chainID, nextEpochStartHeight, nextEpochValidators); err != nil {
+			return fmt.Errorf("ZionHandler SyncBlockHeader, store No.%d epoch err: %v", i, err)
 		}
+
+		emitEpochChangeEvent(s, chainID, h, hash)
+		log.Debug("ZionHandler SyncBlockHeader", "chainID", chainID, "height", h, "hash", hash,
+			"current epoch start height", curEpochStartHeight, "current epoch validators", curEpochValidators,
+			"next epoch start height", nextEpochStartHeight, "next epoch validators", nextEpochValidators)
+
+		curEpochStartHeight = nextEpochStartHeight
+		curEpochValidators = nextEpochValidators
 	}
 
 	return nil
