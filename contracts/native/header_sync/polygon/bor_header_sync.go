@@ -842,7 +842,7 @@ func SealHash(header *eth.Header) (hash ecommon.Hash) {
 }
 
 func encodeSigHeader(w io.Writer, header *eth.Header) {
-	err := rlp.Encode(w, []interface{}{
+	enc := []interface{}{
 		header.ParentHash,
 		header.UncleHash,
 		header.Coinbase,
@@ -858,8 +858,11 @@ func encodeSigHeader(w io.Writer, header *eth.Header) {
 		header.Extra[:len(header.Extra)-65], // this will panic if extra is too short, should check before calling encodeSigHeader
 		header.MixDigest,
 		header.Nonce,
-	})
-	if err != nil {
+	}
+	if header.BaseFee != nil {
+		enc = append(enc, header.BaseFee)
+	}
+	if err := rlp.Encode(w, enc); err != nil {
 		panic("can't encode: " + err.Error())
 	}
 }
