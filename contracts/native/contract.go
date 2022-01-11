@@ -129,32 +129,60 @@ func (s *NativeContract) Invoke() ([]byte, error) {
 	return ret, err
 }
 
-func (s *NativeContract) AddNotify(abi *abiPkg.ABI, topics []string, data ...interface{}) (err error) {
-
+func (s *NativeContract) AddNotify(abi *abiPkg.ABI, topics []string, data ...interface{}) error {
 	var topicIDs []common.Hash
-	for _, topic := range topics {
-		eventInfo, ok := abi.Events[topic]
-		if !ok {
-			eventInfo, ok = abi.Events["evt"+abiPkg.ToCamelCase(topic)]
-			if !ok {
-				err = fmt.Errorf("topic %s/%s not exists", topic, "evt"+abiPkg.ToCamelCase(topic))
-				return
-			}
 
-		}
-		topicIDs = append(topicIDs, eventInfo.ID)
+	if topics == nil || len(topics) == 0 {
+		return fmt.Errorf("AddNotify, topics length invalid")
 	}
 
 	topic := topics[0]
-	if _, ok := abi.Events[topic]; !ok {
-		topic = "evt" + abiPkg.ToCamelCase(topic)
+	topic, event, err := getTopicAndEvent(abi, topic)
+	if err != nil {
+		return fmt.Errorf("AddNotify, getTopicAndEvent err: %v", err)
 	}
+	topicIDs = append(topicIDs, event.ID)
+
+	if len(data) != len(event.Inputs) {
+		return fmt.Errorf("AddNotify, args length not equal to params number")
+	}
+
+	for i, input := range event.Inputs {
+		if !input.Indexed {
+			continue
+		}
+
+		topicID, ok := data[i].(common.Hash)
+		if !ok {
+			return fmt.Errorf("AddNotify, indexed field should be type of common.Hash")
+		}
+		topicIDs = append(topicIDs, topicID)
+	}
+
 	packedData, err := utils.PackEvents(abi, topic, data...)
 	if err != nil {
-		err = fmt.Errorf("AddNotify, PackEvents error: %v", err)
-		return
+		return fmt.Errorf("AddNotify, PackEvents error: %v", err)
 	}
 	emitter := utils.NewEventEmitter(s.ref.CurrentContext().ContractAddress, s.ContractRef().BlockHeight().Uint64(), s.StateDB())
 	emitter.Event(topicIDs, packedData)
-	return
+
+	return nil
+}
+
+func topic2CamelCase(topic string) string {
+	return "evt" + abiPkg.ToCamelCase(topic)
+}
+
+func getTopicAndEvent(abi *abiPkg.ABI, topic string) (string, *abiPkg.Event, error) {
+	eventInfo, ok := abi.Events[topic]
+	if ok {
+		return topic, &eventInfo, nil
+	}
+
+	topicWithCamel := topic2CamelCase(topic)
+	eventInfo, ok = abi.Events[topicWithCamel]
+	if ok {
+		return topicWithCamel, &eventInfo, nil
+	}
+	return topic, nil, fmt.Errorf("topic %s not exist", topic)
 }
