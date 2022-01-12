@@ -60,6 +60,7 @@ func storeGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
 		ID:          StartEpochID,
 		Peers:       peers,
 		StartHeight: 0,
+		Status:      ProposalStatusPassed,
 	}
 
 	// store current epoch and epoch info

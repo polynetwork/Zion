@@ -32,13 +32,15 @@ import (
 )
 
 // Storage represents a contract's storage.
-type Storage map[common.Hash]common.Hash
+type Storage map[common.Hash][]byte
 
 // Copy duplicates the current storage.
 func (s Storage) Copy() Storage {
 	cpy := make(Storage)
 	for key, value := range s {
-		cpy[key] = value
+		valueCpy := make([]byte, len(value))
+		copy(valueCpy, value)
+		cpy[key] = valueCpy
 	}
 	return cpy
 }
@@ -60,18 +62,18 @@ type LogConfig struct {
 // StructLog is emitted to the EVM each cycle and lists information about the current internal state
 // prior to the execution of the statement.
 type StructLog struct {
-	Pc            uint64                      `json:"pc"`
-	Op            OpCode                      `json:"op"`
-	Gas           uint64                      `json:"gas"`
-	GasCost       uint64                      `json:"gasCost"`
-	Memory        []byte                      `json:"memory"`
-	MemorySize    int                         `json:"memSize"`
-	Stack         []*big.Int                  `json:"stack"`
-	ReturnData    []byte                      `json:"returnData"`
-	Storage       map[common.Hash]common.Hash `json:"-"`
-	Depth         int                         `json:"depth"`
-	RefundCounter uint64                      `json:"refund"`
-	Err           error                       `json:"-"`
+	Pc            uint64                 `json:"pc"`
+	Op            OpCode                 `json:"op"`
+	Gas           uint64                 `json:"gas"`
+	GasCost       uint64                 `json:"gasCost"`
+	Memory        []byte                 `json:"memory"`
+	MemorySize    int                    `json:"memSize"`
+	Stack         []*big.Int             `json:"stack"`
+	ReturnData    []byte                 `json:"returnData"`
+	Storage       map[common.Hash][]byte `json:"-"`
+	Depth         int                    `json:"depth"`
+	RefundCounter uint64                 `json:"refund"`
+	Err           error                  `json:"-"`
 }
 
 // overrides for gencodec
@@ -186,7 +188,7 @@ func (l *StructLogger) CaptureState(env *EVM, pc uint64, op OpCode, gas, cost ui
 				value   = common.Hash(stack.data[stack.len()-2].Bytes32())
 				address = common.Hash(stack.data[stack.len()-1].Bytes32())
 			)
-			l.storage[contract.Address()][address] = value
+			l.storage[contract.Address()][address] = value[:]
 		}
 		storage = l.storage[contract.Address()].Copy()
 	}
