@@ -54,9 +54,11 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 
 // cross chain related params
 var (
-	MainnetMainChainID uint64 = 1
-	TestnetMainChainID uint64 = 2
-	DevnetMainChainID  uint64 = 3
+	// The chain id should avoid other side chain ids of Ethereum to be compatible with apps such as metamask,
+	// e.g: eth mainnet at 1, ropsten at 3, bsc at 76, heco at 7. ref: https://chainlist.org/
+	MainnetMainChainID uint64 = 60801
+	TestnetMainChainID uint64 = 60802
+	DevnetMainChainID  uint64 = 60803
 
 	OneEth, _ = new(big.Int).SetString("1000000000000000000", 10)
 	// mint some native token for side chain genesis validators, because genesis validators will spent
