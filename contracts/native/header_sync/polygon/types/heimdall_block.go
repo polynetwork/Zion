@@ -19,7 +19,7 @@ package types
 import (
 	"bytes"
 
-	"github.com/polynetwork/poly/native/service/header_sync/polygon/types/common"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon/types/common"
 )
 
 // BlockID defines the unique ID of a block as its Hash and its PartSetHeader

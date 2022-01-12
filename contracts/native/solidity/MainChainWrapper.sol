@@ -1,6 +1,6 @@
 pragma solidity ^0.5.0;
 
-import "IMainChainLockProxy.sol";
+import "./IMainChainLockProxy.sol";
 
 contract MainChainWrapperTest {
 

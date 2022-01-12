@@ -18,21 +18,18 @@
 package side_chain_manager
 
 import (
-	"encoding/hex"
+	"crypto/ecdsa"
 	"math/big"
 	"testing"
 
-	"crypto/ecdsa"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
-	polycomm "github.com/polynetwork/poly/common"
-	cstates "github.com/polynetwork/poly/core/states"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -41,37 +38,23 @@ func init() {
 	node_manager.InitNodeManager()
 	db := rawdb.NewMemoryDatabase()
 	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-
-	cacheDB := (*state.CacheDB)(sdb)
-	putPeerMapPoolAndView(cacheDB)
+	putPeerMapPoolAndView(sdb)
 }
 
-func putPeerMapPoolAndView(db *state.CacheDB) {
-	key, _ := crypto.GenerateKey()
-	acct = &key.PublicKey
+func putPeerMapPoolAndView(db *state.StateDB) {
+	height := uint64(120)
+	epoch := node_manager.GenerateTestEpochInfo(1, height, 4)
 
-	peerPoolMap := new(node_manager.PeerPoolMap)
-	peerPoolMap.PeerPoolMap = make(map[string]*node_manager.PeerPoolItem)
-	pkStr := hex.EncodeToString(crypto.FromECDSAPub(acct))
-	peerPoolMap.PeerPoolMap[pkStr] = &node_manager.PeerPoolItem{
-		Index:      uint32(0),
-		PeerPubkey: pkStr,
-		Address:    crypto.PubkeyToAddress(*acct),
-		Status:     node_manager.ConsensusStatus,
-	}
-	view := uint32(0)
-	viewBytes := utils.GetUint32Bytes(view)
-	sink := polycomm.NewZeroCopySink(nil)
-	peerPoolMap.Serialization(sink)
-	db.Put(utils.ConcatKey(utils.NodeManagerContractAddress, []byte(node_manager.PEER_POOL), viewBytes), cstates.GenRawStorageItem(sink.Bytes()))
+	peer := epoch.Peers.List[0]
+	rawPubKey, _ := hexutil.Decode(peer.PubKey)
+	pubkey, _ := crypto.DecompressPubkey(rawPubKey)
+	acct = pubkey
+	caller := peer.Address
 
-	sink.Reset()
-
-	govView := node_manager.GovernanceView{
-		View: view,
-	}
-	govView.Serialization(sink)
-	db.Put(utils.ConcatKey(utils.NodeManagerContractAddress, []byte(node_manager.GOVERNANCE_VIEW)), cstates.GenRawStorageItem(sink.Bytes()))
+	txhash := common.HexToHash("0x123")
+	ref := native.NewContractRef(db, caller, caller, new(big.Int).SetUint64(height), txhash, 0, nil)
+	s := native.NewNativeContract(db, ref)
+	node_manager.StoreTestEpoch(s, epoch)
 }
 
 var (

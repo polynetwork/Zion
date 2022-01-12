@@ -15,43 +15,31 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
-package utils
+
+package side_chain_manager
 
 import (
-	"encoding/binary"
-	"github.com/ethereum/go-ethereum/common"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/stretchr/testify/assert"
 )
 
-func ConcatKey(contract common.Address, args ...[]byte) []byte {
-	temp := contract[:]
-	for _, arg := range args {
-		temp = append(temp, arg...)
-	}
-	return temp
-}
+func TestBindSignInfo(t *testing.T) {
+	expect := &BindSignInfo{BindSignInfo: map[string][]byte{
+		"ab":  []byte{'1', 'a', 'b'},
+		"abc": []byte{'2', 'a', 'b', 'c'},
+		"abd": []byte{},
+		"":    []byte{'c', 'a', '2'},
+	}}
 
-func GetUint32Bytes(num uint32) []byte {
-	var p [4]byte
-	binary.LittleEndian.PutUint32(p[:], num)
-	return p[:]
-}
+	raw, err := rlp.EncodeToBytes(expect)
+	assert.NoError(t, err)
 
-func GetBytesUint32(b []byte) uint32 {
-	if len(b) != 4 {
-		return 0
-	}
-	return binary.LittleEndian.Uint32(b[:])
-}
+	got := new(BindSignInfo)
+	assert.NoError(t, rlp.DecodeBytes(raw, got))
 
-func GetBytesUint64(b []byte) uint64 {
-	if len(b) != 8 {
-		return 0
-	}
-	return binary.LittleEndian.Uint64(b[:])
-}
+	assert.Equal(t, expect, got)
 
-func GetUint64Bytes(num uint64) []byte {
-	var p [8]byte
-	binary.LittleEndian.PutUint64(p[:], num)
-	return p[:]
+	t.Log(got)
 }

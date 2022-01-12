@@ -18,7 +18,7 @@ package types
 
 import (
 	"github.com/cosmos/cosmos-sdk/codec"
-	"github.com/polynetwork/poly/native/service/header_sync/polygon/types/secp256k1"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon/types/secp256k1"
 	"github.com/tendermint/tendermint/crypto"
 )
 

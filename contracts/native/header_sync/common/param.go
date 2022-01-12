@@ -19,10 +19,11 @@ package common
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/rlp"
+	"io"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	polycomm "github.com/polynetwork/poly/common"
 )
 
 const (
@@ -55,22 +56,19 @@ type SyncGenesisHeaderParam struct {
 	GenesisHeader []byte
 }
 
-func (this *SyncGenesisHeaderParam) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteUint64(this.ChainID)
-	sink.WriteVarBytes(this.GenesisHeader)
+func (m *SyncGenesisHeaderParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ChainID, m.GenesisHeader})
 }
+func (m *SyncGenesisHeaderParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ChainID       uint64
+		GenesisHeader []byte
+	}
 
-func (this *SyncGenesisHeaderParam) Deserialization(source *polycomm.ZeroCopySource) error {
-	chainID, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("SyncGenesisHeaderParam deserialize chainID error")
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-	genesisHeader, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("utils.DecodeVarBytes, deserialize genesisHeader count error")
-	}
-	this.ChainID = chainID
-	this.GenesisHeader = genesisHeader
+	m.ChainID, m.GenesisHeader = data.ChainID, data.GenesisHeader
 	return nil
 }
 
@@ -80,40 +78,21 @@ type SyncBlockHeaderParam struct {
 	Headers [][]byte
 }
 
-func (this *SyncBlockHeaderParam) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteUint64(this.ChainID)
-	sink.WriteAddress(polycomm.Address(this.Address))
-	sink.WriteUint64(uint64(len(this.Headers)))
-	for _, v := range this.Headers {
-		sink.WriteVarBytes(v)
-	}
+func (m *SyncBlockHeaderParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ChainID, m.Address, m.Headers})
 }
+func (m *SyncBlockHeaderParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ChainID uint64
+		Address common.Address
+		Headers [][]byte
+	}
 
-func (this *SyncBlockHeaderParam) Deserialization(source *polycomm.ZeroCopySource) error {
-	chainID, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("SyncGenesisHeaderParam deserialize chainID error")
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-	address, eof := source.NextAddress()
-	if eof {
-		return fmt.Errorf("utils.DecodeAddress, deserialize address error")
-	}
-	n, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("utils.DecodeVarUint, deserialize header count error")
-	}
-	var headers [][]byte
-	for i := 0; uint64(i) < n; i++ {
-		header, eof := source.NextVarBytes()
-		if eof {
 
-			return fmt.Errorf("utils.DecodeVarBytes, deserialize header error")
-		}
-		headers = append(headers, header)
-	}
-	this.ChainID = chainID
-	this.Address = common.Address(address)
-	this.Headers = headers
+	m.ChainID, m.Address, m.Headers = data.ChainID, data.Address, data.Headers
 	return nil
 }
 
@@ -123,40 +102,21 @@ type SyncCrossChainMsgParam struct {
 	CrossChainMsgs [][]byte
 }
 
-func (this *SyncCrossChainMsgParam) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteUint64(this.ChainID)
-	sink.WriteAddress(polycomm.Address(this.Address))
-	sink.WriteUint64(uint64(len(this.CrossChainMsgs)))
-	for _, v := range this.CrossChainMsgs {
-		sink.WriteVarBytes(v)
-	}
+func (m *SyncCrossChainMsgParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ChainID, m.Address, m.CrossChainMsgs})
 }
+func (m *SyncCrossChainMsgParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ChainID        uint64
+		Address        common.Address
+		CrossChainMsgs [][]byte
+	}
 
-func (this *SyncCrossChainMsgParam) Deserialization(source *polycomm.ZeroCopySource) error {
-	chainID, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("SyncGenesisHeaderParam deserialize chainID error")
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-	address, eof := source.NextAddress()
-	if eof {
-		return fmt.Errorf("utils.DecodeAddress, deserialize address error")
-	}
-	n, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("utils.DecodeVarUint, deserialize header count error")
-	}
-	var crossChainMsgs [][]byte
-	for i := 0; uint64(i) < n; i++ {
-		crossChainMsg, eof := source.NextVarBytes()
-		if eof {
 
-			return fmt.Errorf("utils.DecodeVarBytes, deserialize crossChainMsg error")
-		}
-		crossChainMsgs = append(crossChainMsgs, crossChainMsg)
-	}
-	this.ChainID = chainID
-	this.Address = common.Address(address)
-	this.CrossChainMsgs = crossChainMsgs
+	m.ChainID, m.Address, m.CrossChainMsgs = data.ChainID, data.Address, data.CrossChainMsgs
 	return nil
 }
 

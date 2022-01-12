@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	cstates "github.com/polynetwork/poly/core/states"
 )
 
 func Replace0x(s string) string {
@@ -33,17 +32,12 @@ func Replace0x(s string) string {
 }
 
 func PutDoneTx(native *native.NativeContract, crossChainID []byte, chainID uint64) error {
-	contract := utils.CrossChainManagerContractAddress
-	chainIDBytes := utils.GetUint64Bytes(chainID)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(DONE_TX), chainIDBytes, crossChainID),
-		cstates.GenRawStorageItem(crossChainID))
+	native.GetCacheDB().Put(doneTxKey(chainID, crossChainID), crossChainID)
 	return nil
 }
 
 func CheckDoneTx(native *native.NativeContract, crossChainID []byte, chainID uint64) error {
-	contract := utils.CrossChainManagerContractAddress
-	chainIDBytes := utils.GetUint64Bytes(chainID)
-	value, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(DONE_TX), chainIDBytes, crossChainID))
+	value, err := native.GetCacheDB().Get(doneTxKey(chainID, crossChainID))
 	if err != nil {
 		return fmt.Errorf("checkDoneTx, native.GetCacheDB().Get error: %v", err)
 	}
@@ -69,4 +63,9 @@ func BytesToUint256(data []byte) *big.Int {
 		return common.Big0
 	}
 	return new(big.Int).SetBytes(common.TrimLeftZeroes(data))
+}
+
+func doneTxKey(chainID uint64, crossChainID []byte) []byte {
+	contract := utils.CrossChainManagerContractAddress
+	return utils.ConcatKey(contract, []byte(DONE_TX), utils.GetUint64Bytes(chainID), crossChainID)
 }

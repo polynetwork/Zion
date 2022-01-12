@@ -21,27 +21,23 @@ import (
 	"container/list"
 	"encoding/json"
 	"fmt"
+
 	"github.com/Zilliqa/gozilliqa-sdk/core"
 	"github.com/Zilliqa/gozilliqa-sdk/util"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	cstates "github.com/polynetwork/poly/core/states"
 )
 
-const dsCommKey = "dsComm"
-
 func IsHeaderExist(native *native.NativeContract, hash []byte, chainID uint64) (bool, error) {
-	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
-		[]byte(scom.HEADER_INDEX), utils.GetUint64Bytes(chainID), hash))
+	headerStore, err := scom.GetHeaderIndex(native, chainID, hash)
 	if err != nil {
 		return false, fmt.Errorf("IsHeaderExist, get blockHashStore error: %v", err)
 	}
 	if headerStore == nil {
 		return false, nil
-	} else {
-		return true, nil
 	}
+	return true, nil
 }
 
 func GetTxHeaderByHeight(native *native.NativeContract, height, chainID uint64) (*core.TxBlock, error) {
@@ -54,38 +50,28 @@ func GetTxHeaderByHeight(native *native.NativeContract, height, chainID uint64) 
 		return nil, fmt.Errorf("GetTxHeaderByHeight, height is too big")
 	}
 
-	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
-		[]byte(scom.MAIN_CHAIN), utils.GetUint64Bytes(chainID), utils.GetUint64Bytes(height)))
-
+	headerStore, err := scom.GetMainChain(native, chainID, height)
 	if err != nil {
 		return nil, fmt.Errorf("GetTxHeaderByHeight, get blockHashStore error: %v", err)
 	}
-
 	if headerStore == nil {
 		return nil, fmt.Errorf("GetTxHeaderByHeight, can not find any header records")
 	}
-	hashBytes, err := cstates.GetValueFromRawStorageItem(headerStore)
-	if err != nil {
-		return nil, fmt.Errorf("GetHeaderByHeight, deserialize headerBytes from raw storage item err:%v", err)
-	}
-	return GetTxHeaderByHash(native, hashBytes, chainID)
+
+	return GetTxHeaderByHash(native, headerStore, chainID)
 }
 
 func GetTxHeaderByHash(native *native.NativeContract, hash []byte, chainID uint64) (*core.TxBlock, error) {
-	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
-		[]byte(scom.HEADER_INDEX), utils.GetUint64Bytes(chainID), hash))
+	headerStore, err := scom.GetHeaderIndex(native, chainID, hash)
 	if err != nil {
 		return nil, fmt.Errorf("GetTxHeaderByHash, get blockHashStore error: %v", err)
 	}
 	if headerStore == nil {
 		return nil, fmt.Errorf("GetTxHeaderByHash, can not find any header records")
 	}
-	storeBytes, err := cstates.GetValueFromRawStorageItem(headerStore)
-	if err != nil {
-		return nil, fmt.Errorf("GetTxHeaderByHash, deserialize headerBytes from raw storage item err:%v", err)
-	}
+
 	var txBlock core.TxBlock
-	if err := json.Unmarshal(storeBytes, &txBlock); err != nil {
+	if err := json.Unmarshal(headerStore, &txBlock); err != nil {
 		return nil, fmt.Errorf("GetTxHeaderByHash, deserialize header error: %v", err)
 	}
 	return &txBlock, nil
@@ -106,70 +92,51 @@ func GetCurrentTxHeader(native *native.NativeContract, chainId uint64) (*core.Tx
 }
 
 func AppendHeader2Main(native *native.NativeContract, height uint64, txHash []byte, chainID uint64) error {
-	contract := utils.HeaderSyncContractAddress
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.MAIN_CHAIN), utils.GetUint64Bytes(chainID), utils.GetUint64Bytes(height)),
-		cstates.GenRawStorageItem(txHash))
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.CURRENT_HEADER_HEIGHT),
-		utils.GetUint64Bytes(chainID)), cstates.GenRawStorageItem(utils.GetUint64Bytes(height)))
+	scom.SetMainChain(native, chainID, height, txHash)
+	scom.SetCurrentHeight(native, chainID, utils.GetUint64Bytes(height))
 	scom.NotifyPutHeader(native, chainID, height, util.EncodeHex(txHash))
 	return nil
 }
 
 func GetCurrentTxHeaderHeight(native *native.NativeContract, chainID uint64) (uint64, error) {
-	heightStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
-		[]byte(scom.CURRENT_HEADER_HEIGHT), utils.GetUint64Bytes(chainID)))
-
+	heightStore, err := scom.GetCurrentHeight(native, chainID)
 	if err != nil {
 		return 0, fmt.Errorf("GetCurrentTxBlockHeight error: %v", err)
 	}
-
 	if heightStore == nil {
 		return 0, fmt.Errorf("GetCurrentTxBlockHeight, heightStore is nil")
 	}
 
-	heightBytes, err := cstates.GetValueFromRawStorageItem(heightStore)
-	if err != nil {
-		return 0, fmt.Errorf("GetCurrentTxBlockHeight, deserialize headerBytes from raw storage item err:%v", err)
-	}
-	return utils.GetBytesUint64(heightBytes), nil
+	return utils.GetBytesUint64(heightStore), nil
 }
 
 func putTxBlockHeader(native *native.NativeContract, txBlock *core.TxBlock, chainID uint64) error {
-	contract := utils.HeaderSyncContractAddress
 	storeBytes, _ := json.Marshal(txBlock)
 	hash := txBlock.BlockHash[:]
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.HEADER_INDEX), utils.GetUint64Bytes(chainID), hash),
-		cstates.GenRawStorageItem(storeBytes))
+	scom.SetHeaderIndex(native, chainID, hash, storeBytes)
 	scom.NotifyPutHeader(native, chainID, txBlock.BlockHeader.BlockNum, util.EncodeHex(hash))
 	return nil
 }
 
 func GetDsHeaderByHash(native *native.NativeContract, hash []byte, chainID uint64) (*core.DsBlock, error) {
-	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress,
-		[]byte(scom.HEADER_INDEX), utils.GetUint64Bytes(chainID), hash))
+	headerStore, err := scom.GetHeaderIndex(native, chainID, hash)
 	if err != nil {
 		return nil, fmt.Errorf("GetDsHeaderByHash, get blockHashStore error: %v", err)
 	}
 	if headerStore == nil {
 		return nil, fmt.Errorf("GetDsHeaderByHash, can not find any header records")
 	}
-	storeBytes, err := cstates.GetValueFromRawStorageItem(headerStore)
-	if err != nil {
-		return nil, fmt.Errorf("GetDsHeaderByHash, deserialize headerBytes from raw storage item err:%v", err)
-	}
 	var dsBlock core.DsBlock
-	if err := json.Unmarshal(storeBytes, &dsBlock); err != nil {
+	if err := json.Unmarshal(headerStore, &dsBlock); err != nil {
 		return nil, fmt.Errorf("GetDsHeaderByHash, deserialize header error: %v", err)
 	}
 	return &dsBlock, nil
 }
 
 func putDsBlockHeader(native *native.NativeContract, dsBlock *core.DsBlock, chainID uint64) error {
-	contract := utils.HeaderSyncContractAddress
 	storeBytes, _ := json.Marshal(dsBlock)
 	hash := dsBlock.BlockHash[:]
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.HEADER_INDEX), utils.GetUint64Bytes(chainID), hash),
-		cstates.GenRawStorageItem(storeBytes))
+	scom.SetHeaderIndex(native, chainID, hash, storeBytes)
 	scom.NotifyPutHeader(native, chainID, dsBlock.BlockHeader.BlockNum, util.EncodeHex(hash))
 	return nil
 }
@@ -178,41 +145,33 @@ func putGenesisBlockHeader(native *native.NativeContract, txBlockAndDsComm TxBlo
 	blockHash := txBlockAndDsComm.TxBlock.BlockHash[:]
 	blockNum := txBlockAndDsComm.TxBlock.BlockHeader.BlockNum
 	dsBlockNum := txBlockAndDsComm.TxBlock.BlockHeader.DSBlockNum
-	contract := utils.HeaderSyncContractAddress
 	storeBytes, _ := json.Marshal(&txBlockAndDsComm.TxBlock)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.GENESIS_HEADER), utils.GetUint64Bytes(chainID)),
-		cstates.GenRawStorageItem(storeBytes))
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.HEADER_INDEX), utils.GetUint64Bytes(chainID), blockHash),
-		cstates.GenRawStorageItem(storeBytes))
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.MAIN_CHAIN), utils.GetUint64Bytes(chainID), utils.GetUint64Bytes(blockNum)),
-		cstates.GenRawStorageItem(blockHash))
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(scom.CURRENT_HEADER_HEIGHT),
-		utils.GetUint64Bytes(chainID)), cstates.GenRawStorageItem(utils.GetUint64Bytes(blockNum)))
+
+	scom.SetGenesisHeader(native, chainID, storeBytes)
+	scom.SetHeaderIndex(native, chainID, blockHash, storeBytes)
+	scom.SetMainChain(native, chainID, blockNum, blockHash)
+	scom.SetCurrentHeight(native, chainID, utils.GetUint64Bytes(blockNum))
+
 	putDsComm(native, dsBlockNum, txBlockAndDsComm.DsComm, chainID)
 	putDsBlockHeader(native, txBlockAndDsComm.DsBlock, chainID)
+
 	scom.NotifyPutHeader(native, chainID, blockNum, util.EncodeHex(blockHash))
 	return nil
 }
 
 func putDsComm(native *native.NativeContract, blockNum uint64, dsComm []core.PairOfNode, chainID uint64) {
-	contract := utils.HeaderSyncContractAddress
 	dsbytes, _ := json.Marshal(dsComm)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, utils.GetUint64Bytes(chainID), []byte(dsCommKey), utils.GetUint64Bytes(blockNum)), cstates.GenRawStorageItem(dsbytes))
-	native.GetCacheDB().Delete(utils.ConcatKey(contract, utils.GetUint64Bytes(chainID), []byte(dsCommKey), utils.GetUint64Bytes(blockNum-1)))
+	native.GetCacheDB().Put(dsCommonKey(chainID, blockNum), dsbytes)
+	native.GetCacheDB().Delete(dsCommonKey(chainID, blockNum-1))
 }
 
 func getDsComm(native *native.NativeContract, blockNum uint64, chainID uint64) ([]core.PairOfNode, error) {
-	contract := utils.HeaderSyncContractAddress
-	dsbytesStore, err := native.GetCacheDB().Get(utils.ConcatKey(contract, utils.GetUint64Bytes(chainID), []byte(dsCommKey), utils.GetUint64Bytes(blockNum)))
-	if err != nil {
-		return nil, err
-	}
-	dsbytes, err := cstates.GetValueFromRawStorageItem(dsbytesStore)
+	dsbytesStore, err := native.GetCacheDB().Get(dsCommonKey(chainID, blockNum))
 	if err != nil {
 		return nil, err
 	}
 	var dsComm []core.PairOfNode
-	err = json.Unmarshal(dsbytes, &dsComm)
+	err = json.Unmarshal(dsbytesStore, &dsComm)
 	if err != nil {
 		return nil, err
 	}
@@ -237,4 +196,18 @@ func dsCommArrayFromList(dscomm *list.List) []core.PairOfNode {
 		head = head.Next()
 	}
 	return dsArray
+}
+
+////////////////////////////////////////////////////////////////////////////////////////////////
+//
+// storage keys
+//
+////////////////////////////////////////////////////////////////////////////////////////////////
+
+const dsCommKey = "dsComm"
+
+var contractAddr = utils.HeaderSyncContractAddress
+
+func dsCommonKey(chainID, blockNum uint64) []byte {
+	return utils.ConcatKey(contractAddr, utils.GetUint64Bytes(chainID), []byte(dsCommKey), utils.GetUint64Bytes(blockNum))
 }

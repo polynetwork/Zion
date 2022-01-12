@@ -5,26 +5,19 @@ import (
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	cstates "github.com/polynetwork/poly/core/states"
 )
 
-func PutBlackChain(native *native.NativeContract, chainID uint64) {
-	contract := utils.CrossChainManagerContractAddress
-	chainIDBytes := utils.GetUint64Bytes(chainID)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(BLACKED_CHAIN), chainIDBytes),
-		cstates.GenRawStorageItem(chainIDBytes))
+func PutBlackChain(native *native.NativeContract, chainID uint64) error {
+	native.GetCacheDB().Put(blackChainKey(chainID), utils.GetUint64Bytes(chainID))
+	return nil
 }
 
 func RemoveBlackChain(native *native.NativeContract, chainID uint64) {
-	contract := utils.CrossChainManagerContractAddress
-	chainIDBytes := utils.GetUint64Bytes(chainID)
-	native.GetCacheDB().Delete(utils.ConcatKey(contract, []byte(BLACKED_CHAIN), chainIDBytes))
+	native.GetCacheDB().Delete(blackChainKey(chainID))
 }
 
 func CheckIfChainBlacked(native *native.NativeContract, chainID uint64) (bool, error) {
-	contract := utils.CrossChainManagerContractAddress
-	chainIDBytes := utils.GetUint64Bytes(chainID)
-	chainIDStore, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(BLACKED_CHAIN), chainIDBytes))
+	chainIDStore, err := native.GetCacheDB().Get(blackChainKey(chainID))
 	if err != nil {
 		return true, fmt.Errorf("CheckBlackChain, get black chainIDStore error: %v", err)
 	}
@@ -32,4 +25,9 @@ func CheckIfChainBlacked(native *native.NativeContract, chainID uint64) (bool, e
 		return false, nil
 	}
 	return true, nil
+}
+
+func blackChainKey(chainID uint64) []byte {
+	contract := utils.CrossChainManagerContractAddress
+	return utils.ConcatKey(contract, []byte(BLACKED_CHAIN), utils.GetUint64Bytes(chainID))
 }
