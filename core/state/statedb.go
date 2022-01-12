@@ -25,7 +25,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state/snapshot"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -476,12 +475,9 @@ func (s *StateDB) updateStateObject(obj *stateObject) {
 		panic(fmt.Errorf("can't encode object at %x: %v", addr[:], err))
 	}
 
-	log.Trace("UpdateStateObject", "address", obj.address.Hex(), "root", obj.data.Root.Hex(), "balance", obj.data.Balance.String(), "nonce", obj.data.Nonce, "code hash", hexutil.Encode(obj.data.CodeHash))
-	log.Trace("Compare before update", "address", addr.Hex(), "root", obj.data.Root.Hex(), "trie hash", s.trie.Hash().Hex())
 	if err = s.trie.TryUpdate(addr[:], data); err != nil {
 		s.setError(fmt.Errorf("updateStateObject (%x) error: %v", addr[:], err))
 	}
-	log.Trace("Compare after update", "address", addr.Hex(), "root", obj.data.Root.Hex(), "trie hash", s.trie.Hash().Hex())
 
 	// If state snapshotting is active, cache the data til commit. Note, this
 	// update mechanism is not symmetric to the deletion, because whereas it is

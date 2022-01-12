@@ -252,7 +252,6 @@ func (valSet *defaultSet) CheckQuorum(committers []common.Address) error {
 			validSeal++
 			continue
 		}
-		return ErrInvalidParticipant
 	}
 
 	// The length of validSeal should be larger than number of faulty node + 1

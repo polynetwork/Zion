@@ -26,7 +26,7 @@ import (
 )
 
 func TestStorageEpoch(t *testing.T) {
-	expect := generateTestEpochInfo(1, 12, 100)
+	expect := GenerateTestEpochInfo(1, 12, 100)
 
 	assert.NoError(t, storeEpoch(testEmptyCtx, expect))
 	got, err := getEpoch(testEmptyCtx, expect.Hash())
@@ -49,7 +49,7 @@ func TestStorageEpochProof(t *testing.T) {
 	t.Logf("start epoch proof hash is %s", startEpochProofHash.Hex())
 
 	epochID := uint64(13)
-	expect := generateTestHash(15732478)
+	expect := GenerateTestHash(15732478)
 
 	storeEpochProof(testEmptyCtx, epochID, expect)
 	got, err := getEpochProof(testEmptyCtx, epochID)
@@ -60,7 +60,7 @@ func TestStorageEpochProof(t *testing.T) {
 
 func TestStorageProposal(t *testing.T) {
 	expectSize := int(100)
-	expectHashList := generateTestHashList(expectSize).List
+	expectHashList := GenerateTestHashList(expectSize).List
 	expectEpochID := uint64(2)
 	expect := make([]common.Hash, 0)
 
@@ -92,12 +92,12 @@ func TestStorageProposal(t *testing.T) {
 func TestProposalsNum(t *testing.T) {
 	s := testEmptyCtx
 	epochID := uint64(2)
-	proposer := generateTestAddress(12334)
+	proposer := GenerateTestAddress(12334)
 	list := []*EpochInfo{
-		&EpochInfo{ID: epochID, Proposer: proposer, Peers: generateTestPeers(11), StartHeight: 13},
-		&EpochInfo{ID: epochID, Proposer: proposer, Peers: generateTestPeers(9), StartHeight: 14},
-		&EpochInfo{ID: epochID, Proposer: proposer, Peers: generateTestPeers(8), StartHeight: 15},
-		&EpochInfo{ID: epochID, Proposer: proposer, Peers: generateTestPeers(18), StartHeight: 13},
+		&EpochInfo{ID: epochID, Proposer: proposer, Peers: GenerateTestPeers(11), StartHeight: 13},
+		&EpochInfo{ID: epochID, Proposer: proposer, Peers: GenerateTestPeers(9), StartHeight: 14},
+		&EpochInfo{ID: epochID, Proposer: proposer, Peers: GenerateTestPeers(8), StartHeight: 15},
+		&EpochInfo{ID: epochID, Proposer: proposer, Peers: GenerateTestPeers(18), StartHeight: 13},
 	}
 	for _, v := range list {
 		assert.NoError(t, storeProposal(s, v.ID, v.Hash()))
@@ -107,9 +107,9 @@ func TestProposalsNum(t *testing.T) {
 }
 
 func TestStorageVote(t *testing.T) {
-	epochHash := generateTestHash(13)
+	epochHash := GenerateTestHash(13)
 	expectSize := int(200)
-	expect := generateTestAddressList(expectSize).List
+	expect := GenerateTestAddressList(expectSize).List
 	expectDelVoter := expect[0]
 	expectSizeAfterDel := expectSize - 1
 
@@ -150,7 +150,7 @@ func TestSigns(t *testing.T) {
 	expectVoteNum := 10
 	expectSigners := make([]common.Address, expectVoteNum)
 	for i := 0; i < expectVoteNum; i++ {
-		expectSigners[i] = generateTestAddress(i + 10)
+		expectSigners[i] = GenerateTestAddress(i + 10)
 		assert.NoError(t, storeSigner(testEmptyCtx, expectSign.Hash(), expectSigners[i]))
 	}
 	gotVoteNum := getSignerSize(testEmptyCtx, expectSign.Hash())

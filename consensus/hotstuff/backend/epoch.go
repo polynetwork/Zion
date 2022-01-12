@@ -40,7 +40,7 @@ func init() {
 		}
 		epoch := &Epoch{
 			StartHeight:          0,
-			ValSet:               newValSet(extra.Validators),
+			ValSet:               NewDefaultValSet(extra.Validators),
 			LastEpochStartHeight: 0,
 		}
 		return storeCurEpoch(db, epoch)
@@ -128,7 +128,7 @@ func (s *backend) saveEpoch(height uint64, list []common.Address) error {
 
 	epoch := &Epoch{
 		StartHeight:          height,
-		ValSet:               newValSet(list),
+		ValSet:               NewDefaultValSet(list),
 		LastEpochStartHeight: s.maxEpochStartHeight,
 	}
 	if err := storeCurEpoch(s.db, epoch); err != nil {
@@ -227,7 +227,7 @@ func (e *Epoch) UnmarshalJSON(b []byte) error {
 	}
 
 	e.StartHeight = j.StartHeight
-	e.ValSet = newValSet(j.Validators)
+	e.ValSet = NewDefaultValSet(j.Validators)
 	e.LastEpochStartHeight = j.LastEpochStartHeight
 	return nil
 }
@@ -238,6 +238,6 @@ func (e *Epoch) MarshalJSON() ([]byte, error) {
 	return json.Marshal(j)
 }
 
-func newValSet(list []common.Address) hotstuff.ValidatorSet {
+func NewDefaultValSet(list []common.Address) hotstuff.ValidatorSet {
 	return validator.NewSet(list, hotstuff.RoundRobin)
 }

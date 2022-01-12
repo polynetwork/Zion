@@ -33,6 +33,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -55,7 +56,7 @@ func NewBorHandler() *BorHandler {
 
 // HeaderWithOptionalSnap ...
 type HeaderWithOptionalSnap struct {
-	Header   types.Header
+	Header   eth.Header
 	Snapshot *Snapshot
 }
 
@@ -198,7 +199,7 @@ type HeaderWithDifficultySum struct {
 }
 
 type HeaderWithOptionalProof struct {
-	Header types.Header
+	Header eth.Header
 	Proof  []byte
 }
 
@@ -357,7 +358,7 @@ func putCanonicalHeight(native *native.NativeContract, chainID uint64, height ui
 		cstates.GenRawStorageItem(utils.GetUint64Bytes(uint64(height))))
 }
 
-func addHeader(native *native.NativeContract, header *types.Header, snap *Snapshot, ctx *Context) (err error) {
+func addHeader(native *native.NativeContract, header *eth.Header, snap *Snapshot, ctx *Context) (err error) {
 
 	parentHeader, err := getHeader(native, header.ParentHash, ctx.ChainID)
 	if err != nil {
@@ -641,7 +642,7 @@ func validateHeaderExtraField(native *native.NativeContract, headerWOP *HeaderWi
 	return
 }
 
-func verifyCascadingFields(native *native.NativeContract, header *types.Header, ctx *Context) (snap *Snapshot, err error) {
+func verifyCascadingFields(native *native.NativeContract, header *eth.Header, ctx *Context) (snap *Snapshot, err error) {
 
 	number := header.Number.Uint64()
 
@@ -761,7 +762,7 @@ func isSprintStart(number, sprint uint64) bool {
 // for test
 var mockSigner ecommon.Address
 
-func verifySeal(native *native.NativeContract, header *types.Header, ctx *Context, parent *HeaderWithDifficultySum, snap *Snapshot) (signer ecommon.Address, err error) {
+func verifySeal(native *native.NativeContract, header *eth.Header, ctx *Context, parent *HeaderWithDifficultySum, snap *Snapshot) (signer ecommon.Address, err error) {
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -814,7 +815,7 @@ func CalcProducerDelay(number uint64, succession int, ctx *Context) uint64 {
 }
 
 // ecrecover extracts the Ethereum account address from a signed header.
-func ecrecover(header *types.Header) (ecommon.Address, error) {
+func ecrecover(header *eth.Header) (ecommon.Address, error) {
 	// Retrieve the signature from the header extra-data
 	if len(header.Extra) < extraSeal {
 		return ecommon.Address{}, errors.New("extra-data 65 byte signature suffix missing")
@@ -833,15 +834,15 @@ func ecrecover(header *types.Header) (ecommon.Address, error) {
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
-func SealHash(header *types.Header) (hash ecommon.Hash) {
+func SealHash(header *eth.Header) (hash ecommon.Hash) {
 	hasher := sha3.NewLegacyKeccak256()
 	encodeSigHeader(hasher, header)
 	hasher.Sum(hash[:0])
 	return hash
 }
 
-func encodeSigHeader(w io.Writer, header *types.Header) {
-	err := rlp.Encode(w, []interface{}{
+func encodeSigHeader(w io.Writer, header *eth.Header) {
+	enc := []interface{}{
 		header.ParentHash,
 		header.UncleHash,
 		header.Coinbase,
@@ -857,8 +858,11 @@ func encodeSigHeader(w io.Writer, header *types.Header) {
 		header.Extra[:len(header.Extra)-65], // this will panic if extra is too short, should check before calling encodeSigHeader
 		header.MixDigest,
 		header.Nonce,
-	})
-	if err != nil {
+	}
+	if header.BaseFee != nil {
+		enc = append(enc, header.BaseFee)
+	}
+	if err := rlp.Encode(w, enc); err != nil {
 		panic("can't encode: " + err.Error())
 	}
 }

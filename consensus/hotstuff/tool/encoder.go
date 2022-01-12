@@ -27,8 +27,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -69,7 +68,7 @@ func SortNodes(src []*Node) []*Node {
 	}
 
 	// sort address
-	valset := validator.NewSet(oriAddrs, hotstuff.RoundRobin)
+	valset := backend.NewDefaultValSet(oriAddrs)
 
 	list := make([]*Node, 0)
 	for _, val := range valset.AddressList() {

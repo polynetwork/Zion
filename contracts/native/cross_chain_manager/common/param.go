@@ -23,6 +23,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/rlp"
 	polycomm "github.com/polynetwork/poly/common"
@@ -64,7 +65,7 @@ type EntranceParam struct {
 	SourceChainID         uint64 `json:"sourceChainId"`
 	Height                uint32 `json:"height"`
 	Proof                 []byte `json:"proof"`
-	RelayerAddress        []byte `json:"relayerAddress"`
+	RelayerAddress        []byte `json:"relayerAddress"` //in zion can be empty because caller can get through ctx
 	Extra                 []byte `json:"extra"`
 	HeaderOrCrossChainMsg []byte `json:"headerOrCrossChainMsg"`
 }
@@ -113,6 +114,26 @@ func (this *EntranceParam) Deserialization(source *polycomm.ZeroCopySource) erro
 	return nil
 }
 
+func (this *EntranceParam) String() string {
+	str := "{"
+	str += fmt.Sprintf("source chain id: %d,", this.SourceChainID)
+	str += fmt.Sprintf("height: %d,", this.Height)
+	if this.Proof != nil && len(this.Proof) > 0 {
+		str += fmt.Sprintf("proof: %s,", hexutil.Encode(this.Proof))
+	}
+	if this.RelayerAddress != nil && len(this.RelayerAddress) > 0 {
+		str += fmt.Sprintf("relayer address: %s,", hexutil.Encode(this.RelayerAddress))
+	}
+	if this.Extra != nil && len(this.Extra) > 0 {
+		str += fmt.Sprintf("extra: %s,", hexutil.Encode(this.Extra))
+	}
+	if this.HeaderOrCrossChainMsg != nil && len(this.HeaderOrCrossChainMsg) > 0 {
+		str += fmt.Sprintf("header or cross chain msg: %s", hexutil.Encode(this.HeaderOrCrossChainMsg))
+	}
+	str += "}"
+	return str
+}
+
 type MakeTxParam struct {
 	TxHash              []byte
 	CrossChainID        []byte
@@ -146,6 +167,7 @@ func (m *MakeTxParam) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+//used for param from evm contract
 type MakeTxParamShim struct {
 	TxHash              []byte
 	CrossChainID        []byte
@@ -184,12 +206,40 @@ func DecodeTxParam(data []byte) (param *MakeTxParam, err error) {
 	param = &MakeTxParam{
 		TxHash:              shim.TxHash,
 		CrossChainID:        shim.CrossChainID,
-		ToChainID:           shim.ToChainID.Uint64(),
 		FromContractAddress: shim.FromContractAddress,
+		ToChainID:           shim.ToChainID.Uint64(),
 		ToContractAddress:   shim.ToContractAddress,
 		Method:              string(shim.Method),
 		Args:                shim.Args,
 	}
+	return
+}
+
+func EncodeTxParam(param *MakeTxParam) (data []byte, err error) {
+	BytesTy, _ := abi.NewType("bytes", "", nil)
+	IntTy, _ := abi.NewType("int", "", nil)
+
+	TxParam := abi.Arguments{
+		{Type: BytesTy, Name: "txHash"},
+		{Type: BytesTy, Name: "crossChainID"},
+		{Type: BytesTy, Name: "fromContractAddress"},
+		{Type: IntTy, Name: "toChainID"},
+		{Type: BytesTy, Name: "toContractAddress"},
+		{Type: BytesTy, Name: "method"},
+		{Type: BytesTy, Name: "args"},
+	}
+
+	shim := &MakeTxParamShim{
+		TxHash:              param.TxHash,
+		CrossChainID:        param.CrossChainID,
+		FromContractAddress: param.FromContractAddress,
+		ToChainID:           new(big.Int).SetUint64(param.ToChainID),
+		ToContractAddress:   param.ToContractAddress,
+		Method:              []byte(param.Method),
+		Args:                param.Args,
+	}
+
+	data, err = TxParam.Pack(shim.TxHash, shim.CrossChainID, shim.FromContractAddress, shim.ToChainID, shim.ToContractAddress, shim.Method, shim.Args)
 	return
 }
 
@@ -271,5 +321,29 @@ func (this *MultiSignParam) Deserialization(source *polycomm.ZeroCopySource) err
 	this.TxHash = txHash
 	this.Address = address
 	this.Signs = signs
+	return nil
+}
+
+type TxArgs struct {
+	ToAssetHash []byte
+	ToAddress   []byte
+	Amount      *big.Int
+}
+
+func (tx *TxArgs) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{tx.ToAssetHash, tx.ToAddress, tx.Amount})
+}
+
+func (tx *TxArgs) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ToAssetHash []byte
+		ToAddress   []byte
+		Amount      *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	tx.ToAssetHash, tx.ToAddress, tx.Amount = data.ToAssetHash, data.ToAddress, data.Amount
 	return nil
 }

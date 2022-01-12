@@ -102,7 +102,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		log.Trace("checkConsensusSign", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
-	if err := checkAuthority(proposer, caller, curEpoch); err != nil {
+	if err := CheckAuthority(proposer, caller, curEpoch); err != nil {
 		log.Trace("propose", "check authority failed", err, "tx origin", proposer.Hex())
 		return utils.ByteFailed, ErrInvalidAuthority
 	}
@@ -214,7 +214,7 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 		log.Trace("vote", "get current epoch failed", err)
 		return utils.ByteFailed, ErrEpochNotExist
 	}
-	if err := checkAuthority(voter, caller, curEpoch); err != nil {
+	if err := CheckAuthority(voter, caller, curEpoch); err != nil {
 		log.Trace("vote", "check authority failed", err, "voter", voter.Hex())
 		return utils.ByteFailed, ErrInvalidAuthority
 	}
@@ -377,6 +377,22 @@ func GetEpochWithStateDB(db *state.StateDB) (*EpochInfo, error) {
 	return getCurrentEpoch(ctx)
 }
 
+func GetEpochByHeight(db *state.StateDB, height uint64) (*EpochInfo, error) {
+	ctx := generateEmptyContext(db)
+	epoch, err := getCurrentEpoch(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	for height < epoch.StartHeight {
+		if epoch, err = getEffectiveEpochByID(ctx, epoch.ID-1); err != nil {
+			return nil, err
+		}
+	}
+
+	return epoch, nil
+}
+
 func GetChangingEpoch(s *native.NativeContract) ([]byte, error) {
 	curEpochHash, err := getCurrentEpochHash(s)
 	if err != nil {
@@ -449,7 +465,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	}
 
 	// check authority
-	if err := checkAuthority(signer, caller, epoch); err != nil {
+	if err := CheckAuthority(signer, caller, epoch); err != nil {
 		log.Trace("checkConsensusSign", "check authority failed", err)
 		return false, ErrInvalidAuthority
 	}
@@ -483,7 +499,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	sizeBeforeSign := getSignerSize(s, sign.Hash())
 	log.Trace("checkConsensusSign", "sign hash", sign.Hash().Hex(), "size before sign", sizeBeforeSign)
 	if sizeBeforeSign >= epoch.QuorumSize() {
-		return true, nil
+		return false, nil
 	}
 
 	// store signer address and emit event log

@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -273,14 +274,10 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	if err != nil {
 		panic(err)
 	}
-	for addr, account := range g.Alloc {
-		statedb.AddBalance(addr, account.Balance)
-		statedb.SetCode(addr, account.Code)
-		statedb.SetNonce(addr, account.Nonce)
-		for key, value := range account.Storage {
-			statedb.SetState(addr, key, value[:])
-		}
-	}
+
+	// mint native token for genesis validators
+	g.mintNativeToken(statedb)
+
 	// create native contracts
 	for _, v := range native.NativeContractAddrMap {
 		g.createNativeContract(statedb, v)
@@ -317,11 +314,26 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 }
 
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
-	db.CreateAccount(addr)
-	db.SetCode(addr, addr[:])
-	initBlockNumber := big.NewInt(0)
-	if g.Config.IsEIP158(initBlockNumber) {
-		db.SetNonce(addr, 1)
+	if params.IsMainChain(g.Config.ChainID.Uint64()) || addr == utils.LockProxyContractAddress || addr == utils.NodeManagerContractAddress {
+		db.CreateAccount(addr)
+		db.SetCode(addr, addr[:])
+		initBlockNumber := big.NewInt(0)
+		if g.Config.IsEIP158(initBlockNumber) {
+			db.SetNonce(addr, 1)
+		}
+	}
+}
+
+func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
+	if params.IsMainChain(g.Config.ChainID.Uint64()) {
+		for addr, account := range g.Alloc {
+			statedb.AddBalance(addr, account.Balance)
+			statedb.SetCode(addr, account.Code)
+			statedb.SetNonce(addr, account.Nonce)
+			for key, value := range account.Storage {
+				statedb.SetState(addr, key, value)
+			}
+		}
 	}
 }
 

@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/clique"
+	"github.com/ethereum/go-ethereum/contracts/native/boot"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/bloombits"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -134,6 +135,13 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	chainConfig, genesisHash, genesisErr := core.SetupGenesisBlockWithOverride(chainDb, config.Genesis, config.OverrideLondon)
 	if _, ok := genesisErr.(*params.ConfigCompatError); genesisErr != nil && !ok {
 		return nil, genesisErr
+	}
+
+	// init different native contracts
+	if params.IsMainChain(config.NetworkId) {
+		boot.InitMainChainNativeContracts()
+	} else {
+		boot.InitSideChainNativeContracts()
 	}
 	log.Info("Initialised chain configuration", "config", chainConfig)
 

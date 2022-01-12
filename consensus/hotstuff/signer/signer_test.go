@@ -21,7 +21,6 @@ package signer
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	"sort"
 	"strings"
 	"testing"
@@ -61,7 +60,7 @@ func TestCheckValidatorSignature(t *testing.T) {
 		assert.NoError(t, err, "error mismatch: have %v, want nil", err)
 
 		// CheckValidatorSignature should succeed
-		signer := NewSigner(k, 3)
+		signer := NewSigner(k)
 		addr, err := signer.CheckSignature(vset, data, sig)
 		assert.NoError(t, err, "error mismatch: have %v, want nil", err)
 
@@ -78,7 +77,7 @@ func TestCheckValidatorSignature(t *testing.T) {
 	assert.NoError(t, err, "error mismatch: have %v, want nil", err)
 
 	// CheckValidatorSignature should return ErrUnauthorizedAddress
-	signer := NewSigner(key, byte(core.MsgTypePrepareVote))
+	signer := NewSigner(key)
 	addr, err := signer.CheckSignature(vset, data, sig)
 	assert.Equal(t, err, errUnauthorizedAddress, "error mismatch: have %v, want %v", err, errUnauthorizedAddress)
 
@@ -87,21 +86,18 @@ func TestCheckValidatorSignature(t *testing.T) {
 }
 
 func TestFillExtraAfterCommit(t *testing.T) {
-	vanity := bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity)
-	istRawData := hexutil.MustDecode("0xf858f8549444add0ec310f115a0e603b2d7db9f067778eaf8a94294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212946beaaed781d2d2ab6350f5c4566a2c6eaac407a6948be76812f765c24641ec63dc2852b378aba2b44080c0")
+	istRawData := hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f90197c0b841964b5c6cd21696b9ce7dbc3d7d38b07ac50b341eb18f37c7fbf6d5a91e77c0e0138f471f77b5d1046d963f32ab9a7a2c9e28cc7bda97919421d3dc0b78f6267401f9014fb841d1c3f7987e8b114c7a8a13c0daae880a601f2d66d905f75a3964e9ebb8f353726108715e7639dd75ef6881a54c8d711ac75a876be1515d8805d8e99fdc83934701b84136fbe9504ae80b1dd591a2bbf8d8410bb66da71c19fab5d619cd68ce2f7d1ab66eae46da15c971177e8c0a856b8072775ad536f05522b7a9e056d8ed4cf5402200b841964b5c6cd21696b9ce7dbc3d7d38b07ac50b341eb18f37c7fbf6d5a91e77c0e0138f471f77b5d1046d963f32ab9a7a2c9e28cc7bda97919421d3dc0b78f6267401b8416c07659d165179a3b96d31bed33f3331e11188c12ffdafbcd8f7583b3aaa5ee25dce4ca928cef9d2a348f25d3a53715ea91b1f8d5dc0ed6956a2d7df6756f02f00b84196e6c7c76c28e72daa88ed2d379f220350bde45a2a946a9993692ccd9f7065f7618938d9f18f12e32041e0e5f393947609a278acda17e256b232a3e3270f60fe0180")
+	extra, _ := types.ExtractHotstuffExtraPayload(istRawData)
+
 	expectedCommittedSeal := append([]byte{1, 2, 3}, bytes.Repeat([]byte{0x00}, types.HotstuffExtraSeal-3)...)
 	expectedIstExtra := &types.HotstuffExtra{
-		Validators: []common.Address{
-			common.BytesToAddress(hexutil.MustDecode("0x44add0ec310f115a0e603b2d7db9f067778eaf8a")),
-			common.BytesToAddress(hexutil.MustDecode("0x294fc7e8f22b3bcdcf955dd7ff3ba2ed833f8212")),
-			common.BytesToAddress(hexutil.MustDecode("0x6beaaed781d2d2ab6350f5c4566a2c6eaac407a6")),
-			common.BytesToAddress(hexutil.MustDecode("0x8be76812f765c24641ec63dc2852b378aba2b440")),
-		},
-		Seal:          []byte{},
+		Validators:    extra.Validators,
+		Seal:          extra.Seal,
 		CommittedSeal: [][]byte{expectedCommittedSeal},
+		Salt:          extra.Salt,
 	}
 	h := &types.Header{
-		Extra: append(vanity, istRawData...),
+		Extra: istRawData,
 	}
 
 	// normal case
@@ -162,5 +158,5 @@ func generatePrivateKey() (*ecdsa.PrivateKey, error) {
 
 func newTestSigner() hotstuff.Signer {
 	key, _ := generatePrivateKey()
-	return NewSigner(key, 3)
+	return NewSigner(key)
 }
