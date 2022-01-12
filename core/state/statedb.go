@@ -303,12 +303,12 @@ func (s *StateDB) GetCodeHash(addr common.Address) common.Hash {
 }
 
 // GetState retrieves a value from the given account's storage trie.
-func (s *StateDB) GetState(addr common.Address, hash common.Hash) common.Hash {
+func (s *StateDB) GetState(addr common.Address, hash common.Hash) []byte {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.GetState(s.db, hash)
 	}
-	return common.Hash{}
+	return nil
 }
 
 // GetProof returns the Merkle proof for a given account.
@@ -346,12 +346,12 @@ func (s *StateDB) GetStorageProofByHash(a common.Address, key common.Hash) ([][]
 }
 
 // GetCommittedState retrieves a value from the given account's committed storage trie.
-func (s *StateDB) GetCommittedState(addr common.Address, hash common.Hash) common.Hash {
+func (s *StateDB) GetCommittedState(addr common.Address, hash common.Hash) []byte {
 	stateObject := s.getStateObject(addr)
 	if stateObject != nil {
 		return stateObject.GetCommittedState(s.db, hash)
 	}
-	return common.Hash{}
+	return nil
 }
 
 // Database retrieves the low level database supporting the lower level trie ops.
@@ -420,7 +420,7 @@ func (s *StateDB) SetCode(addr common.Address, code []byte) {
 	}
 }
 
-func (s *StateDB) SetState(addr common.Address, key, value common.Hash) {
+func (s *StateDB) SetState(addr common.Address, key common.Hash, value []byte) {
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetState(s.db, key, value)
@@ -429,7 +429,7 @@ func (s *StateDB) SetState(addr common.Address, key, value common.Hash) {
 
 // SetStorage replaces the entire storage for the specified account with given
 // storage. This function should only be used for debugging.
-func (s *StateDB) SetStorage(addr common.Address, storage map[common.Hash]common.Hash) {
+func (s *StateDB) SetStorage(addr common.Address, storage map[common.Hash][]byte) {
 	stateObject := s.GetOrNewStateObject(addr)
 	if stateObject != nil {
 		stateObject.SetStorage(storage)
@@ -629,7 +629,7 @@ func (s *StateDB) CreateAccount(addr common.Address) {
 	}
 }
 
-func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common.Hash) bool) error {
+func (db *StateDB) ForEachStorage(addr common.Address, cb func(key common.Hash, value []byte) bool) error {
 	so := db.getStateObject(addr)
 	if so == nil {
 		return nil
@@ -650,7 +650,7 @@ func (db *StateDB) ForEachStorage(addr common.Address, cb func(key, value common
 			if err != nil {
 				return err
 			}
-			if !cb(key, common.BytesToHash(content)) {
+			if !cb(key, content) {
 				return nil
 			}
 		}
