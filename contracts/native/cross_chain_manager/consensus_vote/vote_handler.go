@@ -20,11 +20,11 @@ package consensus_vote
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	polycomm "github.com/polynetwork/poly/common"
 )
 
 type VoteHandler struct {
@@ -42,15 +42,17 @@ func (this *VoteHandler) MakeDepositProposal(service *native.NativeContract) (*s
 	}
 
 	//use sourcechainid, height, extra as unique id
-	unique := &scom.EntranceParam{
+	unique := &Deposit{
 		SourceChainID: params.SourceChainID,
 		Height:        params.Height,
 		Extra:         params.Extra,
 	}
-	sink := polycomm.NewZeroCopySink(nil)
-	unique.Serialization(sink)
-
-	ok, err := CheckConsensusSigns(service, sink.Bytes())
+	blob, err := rlp.EncodeToBytes(unique)
+	if err != nil {
+		return nil, err
+	}
+	
+	ok, err := CheckConsensusSigns(service, blob)
 	if err != nil {
 		return nil, fmt.Errorf("vote MakeDepositProposal, CheckConsensusSigns error: %v", err)
 	}

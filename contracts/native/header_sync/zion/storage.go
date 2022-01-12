@@ -19,13 +19,14 @@
 package zion
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
-	cstates "github.com/polynetwork/poly/core/states"
 )
 
 func storeEpoch(s *native.NativeContract, chainID, height uint64, validators []common.Address) error {
@@ -48,8 +49,7 @@ func storeValSet(s *native.NativeContract, chainID uint64, validators []common.A
 	}
 
 	key := valsetKey(chainID)
-	value := cstates.GenRawStorageItem(blob)
-	s.GetCacheDB().Put(key, value)
+	s.GetCacheDB().Put(key, blob)
 	return nil
 }
 
@@ -59,15 +59,14 @@ func getValSet(s *native.NativeContract, chainID uint64) ([]common.Address, erro
 	if err != nil {
 		return nil, err
 	}
-	enc, err := cstates.GetValueFromRawStorageItem(blob)
-	if err != nil {
-		return nil, err
+	if blob == nil {
+		return nil, fmt.Errorf("storage data is nil")
 	}
 
 	var valset struct {
 		List []common.Address
 	}
-	if err := rlp.DecodeBytes(enc, &valset); err != nil {
+	if err := rlp.DecodeBytes(blob, &valset); err != nil {
 		return nil, err
 	}
 	return valset.List, nil
@@ -75,8 +74,7 @@ func getValSet(s *native.NativeContract, chainID uint64) ([]common.Address, erro
 
 func storeHeight(s *native.NativeContract, chainID uint64, height uint64) {
 	key := heightKey(chainID)
-	value := cstates.GenRawStorageItem(utils.GetUint64Bytes(height))
-	s.GetCacheDB().Put(key, value)
+	s.GetCacheDB().Put(key, utils.GetUint64Bytes(height))
 }
 
 func getHeight(s *native.NativeContract, chainID uint64) (uint64, error) {
@@ -85,15 +83,11 @@ func getHeight(s *native.NativeContract, chainID uint64) (uint64, error) {
 	if err != nil {
 		return 0, err
 	}
-	value, err := cstates.GetValueFromRawStorageItem(blob)
-	if err != nil {
-		return 0, err
-	}
-	return utils.GetBytesUint64(value), nil
+	return utils.GetBytesUint64(blob), nil
 }
 
 func isGenesisStored(s *native.NativeContract, chainID uint64) bool {
-	blob, err := s.GetCacheDB().Get(genesisHeaderKey(chainID))
+	blob, err := scom.GetGenesisHeader(s, chainID)
 	if blob != nil && len(blob) > 0 && err == nil {
 		return true
 	}
@@ -106,23 +100,17 @@ func storeGenesis(s *native.NativeContract, chainID uint64, genesisHeader *types
 		return err
 	}
 
-	key := genesisHeaderKey(chainID)
-	value := cstates.GenRawStorageItem(blob)
-	s.GetCacheDB().Put(key, value)
+	scom.SetGenesisHeader(s, chainID, blob)
 	return nil
 }
 
 func getGenesisHeader(s *native.NativeContract, chainID uint64) (*types.Header, error) {
-	blob, err := s.GetCacheDB().Get(genesisHeaderKey(chainID))
-	if err != nil {
-		return nil, err
-	}
-	enc, err := cstates.GetValueFromRawStorageItem(blob)
+	blob, err := scom.GetGenesisHeader(s, chainID)
 	if err != nil {
 		return nil, err
 	}
 	header := new(types.Header)
-	if err := header.UnmarshalJSON(enc); err != nil {
+	if err := header.UnmarshalJSON(blob); err != nil {
 		return nil, err
 	}
 	return header, nil
@@ -143,10 +131,6 @@ func emitEpochChangeEvent(s *native.NativeContract, chainID, height uint64, hash
 // storage keys
 //
 ////////////////////////////////////////////////////////////////////////////////////
-func genesisHeaderKey(chainID uint64) []byte {
-	return utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.GENESIS_HEADER), utils.GetUint64Bytes(chainID))
-}
-
 func valsetKey(chainID uint64) []byte {
 	return utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.CONSENSUS_PEER), utils.GetUint64Bytes(chainID))
 }

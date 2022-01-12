@@ -16,7 +16,7 @@
  */
 package types
 
-import "github.com/polynetwork/poly/native/service/header_sync/polygon/types/common"
+import "github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon/types/common"
 
 // cdcEncode returns nil if the input is nil, otherwise returns
 // cdc.MustMarshalBinaryBare(item)

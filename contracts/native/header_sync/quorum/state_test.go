@@ -15,43 +15,29 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
-package utils
+
+package quorum
 
 import (
-	"encoding/binary"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
 )
 
-func ConcatKey(contract common.Address, args ...[]byte) []byte {
-	temp := contract[:]
-	for _, arg := range args {
-		temp = append(temp, arg...)
-	}
-	return temp
-}
+func TestQuorumValSet(t *testing.T) {
+	expect := QuorumValSet([]common.Address{
+		common.HexToAddress("0x1"),
+		common.HexToAddress("0x2"),
+		common.HexToAddress("0x3"),
+		common.HexToAddress("0x4"),
+	})
 
-func GetUint32Bytes(num uint32) []byte {
-	var p [4]byte
-	binary.LittleEndian.PutUint32(p[:], num)
-	return p[:]
-}
+	blob, err := EncodeQuorumValSet(expect)
+	assert.NoError(t, err)
 
-func GetBytesUint32(b []byte) uint32 {
-	if len(b) != 4 {
-		return 0
-	}
-	return binary.LittleEndian.Uint32(b[:])
-}
+	got, err := DecodeQuorumValSet(blob)
+	assert.NoError(t, err)
 
-func GetBytesUint64(b []byte) uint64 {
-	if len(b) != 8 {
-		return 0
-	}
-	return binary.LittleEndian.Uint64(b[:])
-}
-
-func GetUint64Bytes(num uint64) []byte {
-	var p [8]byte
-	binary.LittleEndian.PutUint64(p[:], num)
-	return p[:]
+	assert.Equal(t, expect, got)
 }

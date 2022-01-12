@@ -20,38 +20,49 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+	"io"
 	"math"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
-	pcom "github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type QuorumValSet []common.Address
 
-func (vs QuorumValSet) Serialize(sink *pcom.ZeroCopySink) {
-	for _, v := range vs {
-		sink.WriteBytes(v.Bytes())
-	}
+type quorumInnerValSet struct {
+	List []common.Address
 }
 
-func (vs *QuorumValSet) Deserialize(source *pcom.ZeroCopySource) error {
-	if source.Size()%common.AddressLength != 0 {
-		return fmt.Errorf("wrong size of raw addresses: %d", source.Size())
-	}
-	l := source.Size() / common.AddressLength
-	nvs := QuorumValSet(make([]common.Address, l))
+func (m *quorumInnerValSet) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.List})
+}
 
-	for i := uint64(0); i < l; i++ {
-		raw, eof := source.NextBytes(common.AddressLength)
-		if eof {
-			return fmt.Errorf("failed to get next %d bytes for the No.%d address", common.AddressLength, i)
-		}
-		nvs[i] = common.BytesToAddress(raw)
+func (m *quorumInnerValSet) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		List []common.Address
 	}
-	*vs = nvs
 
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.List = data.List
 	return nil
+}
+
+func EncodeQuorumValSet(vs QuorumValSet) ([]byte, error) {
+	data := new(quorumInnerValSet)
+	data.List = vs
+	return rlp.EncodeToBytes(data)
+}
+
+func DecodeQuorumValSet(payload []byte) (QuorumValSet, error) {
+	data := new(quorumInnerValSet)
+	if err := rlp.DecodeBytes(payload, data); err != nil {
+		return nil, err
+	}
+
+	return QuorumValSet(data.List), nil
 }
 
 func (vs QuorumValSet) String() (res string) {

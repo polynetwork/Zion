@@ -23,8 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	pcom "github.com/polynetwork/poly/common"
-	"github.com/polynetwork/poly/core/states"
 )
 
 var (
@@ -32,16 +30,19 @@ var (
 	IstanbulDigest      = ecom.HexToHash("0x63746963616c2062797a616e74696e65206661756c7420746f6c6572616e6365")
 )
 
-func putValSet(ns *native.NativeContract, chainID, height uint64, vals []ecom.Address) {
+func putValSet(ns *native.NativeContract, chainID, height uint64, vals []ecom.Address) error {
 	vs := QuorumValSet(vals)
-	sink := pcom.NewZeroCopySink(nil)
-	vs.Serialize(sink)
+	blob, err := EncodeQuorumValSet(vs)
+	if err != nil {
+		return err
+	}
 
 	rawChainID := utils.GetUint64Bytes(chainID)
 	rawHeight := utils.GetUint64Bytes(height)
-	ns.GetCacheDB().Put(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(common.CONSENSUS_PEER), rawChainID), states.GenRawStorageItem(sink.Bytes()))
-	ns.GetCacheDB().Put(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(common.CONSENSUS_PEER_BLOCK_HEIGHT), rawChainID),
-		states.GenRawStorageItem(rawHeight))
+	ns.GetCacheDB().Put(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(common.CONSENSUS_PEER), rawChainID), blob)
+	ns.GetCacheDB().Put(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(common.CONSENSUS_PEER_BLOCK_HEIGHT), rawChainID), rawHeight)
+
+	return nil
 }
 
 func GetValSet(ns *native.NativeContract, chainID uint64) (QuorumValSet, error) {
@@ -53,15 +54,8 @@ func GetValSet(ns *native.NativeContract, chainID uint64) (QuorumValSet, error) 
 	if store == nil {
 		return nil, fmt.Errorf("GetValSet, can not find any records")
 	}
-	raw, err := states.GetValueFromRawStorageItem(store)
-	if err != nil {
-		return nil, fmt.Errorf("GetValSet, deserialize from raw storage item err: %v", err)
-	}
-	vs := QuorumValSet(make([]ecom.Address, 0))
-	if err = vs.Deserialize(pcom.NewZeroCopySource(raw)); err != nil {
-		return nil, err
-	}
-	return vs, nil
+
+	return DecodeQuorumValSet(store)
 }
 
 func GetCurrentValHeight(ns *native.NativeContract, chainID uint64) (uint64, error) {
@@ -73,12 +67,8 @@ func GetCurrentValHeight(ns *native.NativeContract, chainID uint64) (uint64, err
 	if store == nil {
 		return 0, fmt.Errorf("getCurrentValHeight, can not find any records")
 	}
-	raw, err := states.GetValueFromRawStorageItem(store)
-	if err != nil {
-		return 0, fmt.Errorf("getCurrentValHeight, deserialize from raw storage item err: %v", err)
-	}
 
-	return utils.GetBytesUint64(raw), nil
+	return utils.GetBytesUint64(store), nil
 }
 
 func GetSigners(hash ecom.Hash, sealArr [][]byte) ([]ecom.Address, error) {

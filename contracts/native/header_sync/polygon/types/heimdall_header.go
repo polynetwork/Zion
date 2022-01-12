@@ -20,7 +20,7 @@ import (
 	"bytes"
 	"time"
 
-	"github.com/polynetwork/poly/native/service/header_sync/polygon/types/common"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon/types/common"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/merkle"
 	"github.com/tendermint/tendermint/version"

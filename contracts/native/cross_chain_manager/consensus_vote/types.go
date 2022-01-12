@@ -86,7 +86,7 @@ func (m *VoteMessage) EncodeRLP(w io.Writer) error {
 }
 func (m *VoteMessage) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Input  []byte
+		Input []byte
 	}
 
 	if err := s.Decode(&data); err != nil {
@@ -107,6 +107,31 @@ func (m *VoteMessage) Hash() common.Hash {
 	v := RLPHash(inf)
 	m.hash.Store(v)
 	return v
+}
+
+type Deposit struct {
+	SourceChainID uint64
+	Height        uint32
+	Extra         []byte
+}
+
+func (d *Deposit) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{d.SourceChainID, d.Height, d.Extra})
+}
+
+func (d *Deposit) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		SourceChainID uint64
+		Height        uint32
+		Extra         []byte
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+
+	d.SourceChainID, d.Height, d.Extra = data.SourceChainID, data.Height, data.Extra
+	return nil
 }
 
 func RLPHash(v interface{}) (h common.Hash) {

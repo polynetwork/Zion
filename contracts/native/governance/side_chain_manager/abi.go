@@ -19,12 +19,14 @@ package side_chain_manager
 
 import (
 	"fmt"
+	"io"
 	"strings"
+
+	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
-	polycomm "github.com/polynetwork/poly/common"
 )
 
 var (
@@ -82,25 +84,19 @@ type BtcTxParamDetial struct {
 	MinChange uint64
 }
 
-func (this *BtcTxParamDetial) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteVarUint(this.PVersion)
-	sink.WriteVarUint(this.FeeRate)
-	sink.WriteVarUint(this.MinChange)
+func (m *BtcTxParamDetial) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.PVersion, m.FeeRate, m.MinChange})
 }
+func (m *BtcTxParamDetial) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		PVersion  uint64
+		FeeRate   uint64
+		MinChange uint64
+	}
 
-func (this *BtcTxParamDetial) Deserialization(source *polycomm.ZeroCopySource) error {
-	var eof bool
-	this.PVersion, eof = source.NextVarUint()
-	if eof {
-		return fmt.Errorf("BtcTxParamDetial deserialize version error")
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-	this.FeeRate, eof = source.NextVarUint()
-	if eof {
-		return fmt.Errorf("BtcTxParamDetial deserialize fee rate error")
-	}
-	this.MinChange, eof = source.NextVarUint()
-	if eof {
-		return fmt.Errorf("BtcTxParamDetial deserialize min-change error")
-	}
+	m.PVersion, m.FeeRate, m.MinChange = data.PVersion, data.FeeRate, data.MinChange
 	return nil
 }

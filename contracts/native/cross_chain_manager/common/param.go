@@ -26,7 +26,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/rlp"
-	polycomm "github.com/polynetwork/poly/common"
 )
 
 const (
@@ -47,20 +46,6 @@ type InitRedeemScriptParam struct {
 	RedeemScript string
 }
 
-func (this *InitRedeemScriptParam) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteString(this.RedeemScript)
-}
-
-func (this *InitRedeemScriptParam) Deserialization(source *polycomm.ZeroCopySource) error {
-	redeemScript, eof := source.NextString()
-	if eof {
-		return fmt.Errorf("MultiSignParam deserialize redeemScript error")
-	}
-
-	this.RedeemScript = redeemScript
-	return nil
-}
-
 type EntranceParam struct {
 	SourceChainID         uint64 `json:"sourceChainId"`
 	Height                uint32 `json:"height"`
@@ -68,50 +53,6 @@ type EntranceParam struct {
 	RelayerAddress        []byte `json:"relayerAddress"` //in zion can be empty because caller can get through ctx
 	Extra                 []byte `json:"extra"`
 	HeaderOrCrossChainMsg []byte `json:"headerOrCrossChainMsg"`
-}
-
-func (this *EntranceParam) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteUint64(this.SourceChainID)
-	sink.WriteUint32(this.Height)
-	sink.WriteVarBytes(this.Proof)
-	sink.WriteVarBytes(this.RelayerAddress)
-	sink.WriteVarBytes(this.Extra)
-	sink.WriteVarBytes(this.HeaderOrCrossChainMsg)
-}
-
-func (this *EntranceParam) Deserialization(source *polycomm.ZeroCopySource) error {
-	sourceChainID, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("EntranceParam deserialize sourcechainid error")
-	}
-
-	height, eof := source.NextUint32()
-	if eof {
-		return fmt.Errorf("EntranceParam deserialize height error")
-	}
-	proof, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("EntranceParam deserialize proof error")
-	}
-	relayerAddr, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("EntranceParam deserialize relayerAddr error")
-	}
-	extra, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("EntranceParam deserialize txdata error")
-	}
-	headerOrCrossChainMsg, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("EntranceParam deserialize headerOrCrossChainMsg error")
-	}
-	this.SourceChainID = sourceChainID
-	this.Height = height
-	this.Proof = proof
-	this.RelayerAddress = relayerAddr
-	this.Extra = extra
-	this.HeaderOrCrossChainMsg = headerOrCrossChainMsg
-	return nil
 }
 
 func (this *EntranceParam) String() string {
@@ -273,55 +214,6 @@ type MultiSignParam struct {
 	TxHash    []byte
 	Address   string
 	Signs     [][]byte
-}
-
-func (this *MultiSignParam) Serialization(sink *polycomm.ZeroCopySink) {
-	sink.WriteUint64(this.ChainID)
-	sink.WriteString(this.RedeemKey)
-	sink.WriteVarBytes(this.TxHash)
-	sink.WriteVarBytes([]byte(this.Address))
-	sink.WriteUint64(uint64(len(this.Signs)))
-	for _, v := range this.Signs {
-		sink.WriteVarBytes(v)
-	}
-}
-
-func (this *MultiSignParam) Deserialization(source *polycomm.ZeroCopySource) error {
-	chainID, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("MultiSignParam deserialize txHash error")
-	}
-	redeemKey, eof := source.NextString()
-	if eof {
-		return fmt.Errorf("MultiSignParam deserialize redeemKey error")
-	}
-	txHash, eof := source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("MultiSignParam deserialize txHash error")
-	}
-	address, eof := source.NextString()
-	if eof {
-		return fmt.Errorf("MultiSignParam deserialize address error")
-	}
-	n, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("MultiSignParam deserialize signs length error")
-	}
-	signs := make([][]byte, 0)
-	for i := 0; uint64(i) < n; i++ {
-		v, eof := source.NextVarBytes()
-		if eof {
-			return fmt.Errorf("deserialize Signs error")
-		}
-		signs = append(signs, v)
-	}
-
-	this.ChainID = chainID
-	this.RedeemKey = redeemKey
-	this.TxHash = txHash
-	this.Address = address
-	this.Signs = signs
-	return nil
 }
 
 type TxArgs struct {

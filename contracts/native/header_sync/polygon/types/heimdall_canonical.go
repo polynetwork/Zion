@@ -19,7 +19,7 @@ package types
 import (
 	"time"
 
-	"github.com/polynetwork/poly/native/service/header_sync/polygon/types/common"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon/types/common"
 )
 
 type CanonicalVote struct {

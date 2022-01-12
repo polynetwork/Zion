@@ -67,7 +67,7 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 	if err != nil {
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, failed to get epoch switching height: %v", err)
 	}
-	if info.Height > int64(params.Height) {
+	if info.Height > uint64(params.Height) {
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, the height %d of header is lower than epoch "+
 			"switching height %d", params.Height, info.Height)
 	}
@@ -88,13 +88,15 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, failed to verify cosmos header: %v", err)
 	}
 	if !bytes.Equal(myHeader.Header.ValidatorsHash, myHeader.Header.NextValidatorsHash) &&
-		myHeader.Header.Height > info.Height {
-		cosmos.PutEpochSwitchInfo(service, params.SourceChainID, &cosmos.CosmosEpochSwitchInfo{
-			Height:             myHeader.Header.Height,
+		uint64(myHeader.Header.Height) > info.Height {
+		if err := cosmos.PutEpochSwitchInfo(service, params.SourceChainID, &cosmos.CosmosEpochSwitchInfo{
+			Height:             uint64(myHeader.Header.Height),
 			BlockHash:          myHeader.Header.Hash(),
 			NextValidatorsHash: myHeader.Header.NextValidatorsHash,
 			ChainID:            myHeader.Header.ChainID,
-		})
+		}); err != nil {
+			return nil, fmt.Errorf("Cosmos MakeDepositProposal, failed to PutEpochSwitchInfo: %v", err)
+		}
 	}
 
 	var proofValue CosmosProofValue

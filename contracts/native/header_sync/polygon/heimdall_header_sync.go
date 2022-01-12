@@ -17,21 +17,20 @@
 package polygon
 
 import (
+	"bytes"
 	"encoding/hex"
 	"fmt"
-
-	"bytes"
+	"io"
 
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	hscommon "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	polygonTypes "github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon/types"
+	polygonCmn "github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon/types/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/polynetwork/poly/common"
-	cstates "github.com/polynetwork/poly/core/states"
-	polygonCmn "github.com/polynetwork/poly/native/service/header_sync/polygon/types/common"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type HeimdallHandler struct {
@@ -76,12 +75,14 @@ func (h *HeimdallHandler) SyncGenesisHeader(native *native.NativeContract) (err 
 	if err == nil && info != nil {
 		return fmt.Errorf("HeimdallHandler SyncGenesisHeader, genesis header had been initialized")
 	}
-	PutEpochSwitchInfo(native, param.ChainID, &CosmosEpochSwitchInfo{
+	if err := PutEpochSwitchInfo(native, param.ChainID, &CosmosEpochSwitchInfo{
 		Height:             header.Header.Height,
 		NextValidatorsHash: header.Header.NextValidatorsHash,
 		ChainID:            header.Header.ChainID,
 		BlockHash:          header.Header.Hash(),
-	})
+	}); err != nil {
+		return fmt.Errorf("HeimdallHandler SyncGenesisHeader, PutEpochSwitchInfo: %s", err)
+	}
 	return nil
 }
 
@@ -125,7 +126,9 @@ func (h *HeimdallHandler) SyncBlockHeader(native *native.NativeContract) error {
 	if cnt == 0 {
 		return fmt.Errorf("no header you commited is useful")
 	}
-	PutEpochSwitchInfo(native, params.ChainID, info)
+	if err := PutEpochSwitchInfo(native, params.ChainID, info); err != nil {
+		return fmt.Errorf("SyncBlockHeader, failed to PutEpochSwitchInfo: %v", err)
+	}
 	return nil
 }
 
@@ -135,28 +138,28 @@ func (h *HeimdallHandler) SyncCrossChainMsg(native *native.NativeContract) error
 }
 
 func GetEpochSwitchInfo(service *native.NativeContract, chainId uint64) (*CosmosEpochSwitchInfo, error) {
-	val, err := service.GetCacheDB().Get(
+	raw, err := service.GetCacheDB().Get(
 		utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(hscommon.EPOCH_SWITCH), utils.GetUint64Bytes(chainId)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get epoch switching height: %v", err)
 	}
-	raw, err := cstates.GetValueFromRawStorageItem(val)
-	if err != nil {
-		return nil, fmt.Errorf("deserialize bytes from raw storage item err: %v", err)
-	}
-	info := &CosmosEpochSwitchInfo{}
-	if err = info.Deserialization(common.NewZeroCopySource(raw)); err != nil {
+
+	info := new(CosmosEpochSwitchInfo)
+	if err = rlp.DecodeBytes(raw, info); err != nil {
 		return nil, fmt.Errorf("failed to deserialize CosmosEpochSwitchInfo: %v", err)
 	}
 	return info, nil
 }
 
-func PutEpochSwitchInfo(service *native.NativeContract, chainId uint64, info *CosmosEpochSwitchInfo) {
-	sink := common.NewZeroCopySink(nil)
-	info.Serialization(sink)
+func PutEpochSwitchInfo(service *native.NativeContract, chainId uint64, info *CosmosEpochSwitchInfo) error {
+	blob, err := rlp.EncodeToBytes(info)
+	if err != nil {
+		return err
+	}
 	service.GetCacheDB().Put(
 		utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(hscommon.EPOCH_SWITCH), utils.GetUint64Bytes(chainId)),
-		cstates.GenRawStorageItem(sink.Bytes()))
+		blob)
+	return nil
 }
 
 type CosmosEpochSwitchInfo struct {
@@ -177,31 +180,22 @@ type CosmosEpochSwitchInfo struct {
 	ChainID string
 }
 
-func (info *CosmosEpochSwitchInfo) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteInt64(info.Height)
-	sink.WriteVarBytes(info.BlockHash)
-	sink.WriteVarBytes(info.NextValidatorsHash)
-	sink.WriteString(info.ChainID)
+func (m *CosmosEpochSwitchInfo) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Height, m.BlockHash, m.NextValidatorsHash, m.ChainID})
 }
 
-func (info *CosmosEpochSwitchInfo) Deserialization(source *common.ZeroCopySource) error {
-	var eof bool
-	info.Height, eof = source.NextInt64()
-	if eof {
-		return fmt.Errorf("deserialize height of CosmosEpochSwitchInfo failed")
+func (m *CosmosEpochSwitchInfo) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Height             int64
+		BlockHash          polygonCmn.HexBytes
+		NextValidatorsHash polygonCmn.HexBytes
+		ChainID            string
 	}
-	info.BlockHash, eof = source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("deserialize BlockHash of CosmosEpochSwitchInfo failed")
+
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-	info.NextValidatorsHash, eof = source.NextVarBytes()
-	if eof {
-		return fmt.Errorf("deserialize NextValidatorsHash of CosmosEpochSwitchInfo failed")
-	}
-	info.ChainID, eof = source.NextString()
-	if eof {
-		return fmt.Errorf("deserialize ChainID of CosmosEpochSwitchInfo failed")
-	}
+	m.Height, m.BlockHash, m.NextValidatorsHash, m.ChainID = data.Height, data.BlockHash, data.NextValidatorsHash, data.ChainID
 	return nil
 }
 

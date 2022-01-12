@@ -18,7 +18,6 @@ package polygon
 
 import (
 	"bytes"
-	// "encoding/json"
 	"errors"
 	"fmt"
 	"math/big"

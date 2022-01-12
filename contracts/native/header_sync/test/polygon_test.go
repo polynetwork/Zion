@@ -28,9 +28,9 @@ import (
 	scom "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
 	ethTypes "github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon"
+	polygonTypes "github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon/types"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
-	polygonTypes "github.com/polynetwork/poly/native/service/header_sync/polygon/types"
 	"github.com/stretchr/testify/assert"
 )
 

@@ -20,6 +20,7 @@ package side_chain_manager
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
@@ -28,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/polynetwork/poly/common"
 )
 
 const contractName = "side chain manager"
@@ -463,9 +463,12 @@ func SetBtcTxParam(native *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("SetBtcTxParam, previous version is %d and your version should "+
 			"be %d not %d", prev.PVersion, prev.PVersion+1, params.Detial.PVersion)
 	}
-	sink := common.NewZeroCopySink(nil)
-	params.Detial.Serialization(sink)
-	key := append(append(rk, utils.GetUint64Bytes(params.RedeemChainId)...), sink.Bytes()...)
+
+	blob, err := rlp.EncodeToBytes(params.Detial)
+	if err != nil {
+		return nil, fmt.Errorf("SetBtcTxParam, EncodeToBytes error: %v", err)
+	}
+	key := append(append(rk, utils.GetUint64Bytes(params.RedeemChainId)...), blob...)
 	info, err := getBindSignInfo(native, key)
 	if err != nil {
 		return nil, fmt.Errorf("SetBtcTxParam, getBindSignInfo error: %v", err)
