@@ -331,7 +331,7 @@ func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
 			statedb.SetCode(addr, account.Code)
 			statedb.SetNonce(addr, account.Nonce)
 			for key, value := range account.Storage {
-				statedb.SetState(addr, key, value)
+				statedb.SetState(addr, key, value[:])
 			}
 		}
 	}
