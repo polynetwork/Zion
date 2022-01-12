@@ -55,8 +55,8 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 // cross chain related params
 var (
 	MainnetMainChainID uint64 = 1
-	DevnetMainChainID  uint64 = 2
-	TestnetMainChainID uint64 = 3
+	TestnetMainChainID uint64 = 2
+	DevnetMainChainID  uint64 = 3
 
 	OneEth, _ = new(big.Int).SetString("1000000000000000000", 10)
 	// mint some native token for side chain genesis validators, because genesis validators will spent
