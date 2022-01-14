@@ -280,7 +280,7 @@ func NewTxPool(config TxPoolConfig, chainconfig *params.ChainConfig, chain block
 		queueTxEventCh:  make(chan *types.Transaction),
 		reorgDoneCh:     make(chan chan struct{}),
 		reorgShutdownCh: make(chan struct{}),
-		gasPrice:        new(big.Int).SetUint64(DefaultTxPoolConfig.PriceLimit),
+		gasPrice:        new(big.Int).SetUint64(config.PriceLimit),
 	}
 	pool.locals = newAccountSet(pool.signer)
 	for _, addr := range config.Locals {
@@ -539,8 +539,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if err != nil {
 		return ErrInvalidSender
 	}
-	// `pool.gasPrice` is a personalized attribute of `POW` miners, zion allows
-	// that txs of different nodes and prices to be spread freely, and do not to drop it.
+	// Drop non-local transactions under our own minimal accepted gas price or tip
+	log.Trace("### Txpool gas limit", "local", local, "tx gasPrice", tx.GasPrice(), "pool gasPrice", pool.gasPrice)
+	// if !local && tx.GasTipCapIntCmp(pool.gasPrice) < 0 {
+	if tx.GasTipCapIntCmp(pool.gasPrice) < 0 {
+		return ErrUnderpriced
+	}
 	// Ensure the transaction adheres to nonce ordering
 	if pool.currentState.GetNonce(from) > tx.Nonce() {
 		return ErrNonceTooLow

@@ -301,6 +301,16 @@ func (tx *Transaction) GasPriceIntCmp(other *big.Int) int {
 	return tx.inner.gasPrice().Cmp(other)
 }
 
+// GasTipCapCmp compares the gasTipCap of two transactions.
+func (tx *Transaction) GasTipCapCmp(other *Transaction) int {
+	return tx.GasPrice().Cmp(other.GasPrice())
+}
+
+// GasTipCapIntCmp compares the gasTipCap of the transaction against the given gasTipCap.
+func (tx *Transaction) GasTipCapIntCmp(other *big.Int) int {
+	return tx.GasPrice().Cmp(other)
+}
+
 // Hash returns the transaction hash.
 func (tx *Transaction) Hash() common.Hash {
 	if hash := tx.hash.Load(); hash != nil {
