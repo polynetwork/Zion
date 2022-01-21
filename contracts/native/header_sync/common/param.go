@@ -127,3 +127,11 @@ func NotifyPutHeader(native *native.NativeContract, chainID uint64, height uint6
 		panic(fmt.Sprintf("NotifyPutHeader failed: %v", err))
 	}
 }
+
+func NotifyPutCrossChainMsg(native *native.NativeContract, chainID uint64, height uint32, hash string) {
+
+	err := native.AddNotify(ABI, []string{SYNC_HEADER_NAME_EVENT}, chainID, height, hash, native.ContractRef().BlockHeight())
+	if err != nil {
+		panic(fmt.Sprintf("NotifyPutHeader failed: %v", err))
+	}
+}
