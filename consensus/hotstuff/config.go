@@ -35,8 +35,8 @@ type Config struct {
 }
 
 var DefaultBasicConfig = &Config{
-	RequestTimeout: 4000,
-	BlockPeriod:    1,
+	RequestTimeout: 6000,
+	BlockPeriod:    3,
 	LeaderPolicy:   RoundRobin,
 	Epoch:          30000,
 	Test:           false,

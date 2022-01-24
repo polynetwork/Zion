@@ -42,15 +42,8 @@ const (
 	// resultQueueSize is the size of channel listening to sealing result.
 	resultQueueSize = 10
 
-	// txChanSize is the size of channel listening to NewTxsEvent.
-	// The number is referenced from the size of tx pool.
-	txChanSize = 4096
-
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
-
-	// epochChangeChanSize is the size of channel listening to EpochChangeEvent.
-	epochChangeChanSize = 10
 
 	// miningLogAtDepth is the number of confirmations before logging successful mining.
 	// this value is 7 in POW and 0 in hotstuff-basic.
@@ -103,18 +96,14 @@ type worker struct {
 	pendingLogsFeed event.Feed
 
 	// Subscriptions
-	mux            *event.TypeMux
-	txsCh          chan core.NewTxsEvent
-	txsSub         event.Subscription
-	chainHeadCh    chan core.ChainHeadEvent
-	chainHeadSub   event.Subscription
-	epochChangeCh  chan types.EpochChangeEvent
-	epochChangeSub event.Subscription
-	requestCh      chan types.Block
-	requestSub     event.Subscription
+	mux          *event.TypeMux
+	chainHeadCh  chan core.ChainHeadEvent
+	chainHeadSub event.Subscription
+	requestCh    chan types.Block
+	requestSub   event.Subscription
 
-	nextEpoch *types.EpochChangeEvent
-	epochMu   sync.Mutex
+	epochMu sync.RWMutex
+	epoch   *nm.EpochInfo
 
 	// Channels
 	newWorkCh chan *newWorkReq
@@ -151,36 +140,28 @@ type worker struct {
 
 func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus.Engine, eth Backend, mux *event.TypeMux, isLocalBlock func(*types.Block) bool, init bool) *worker {
 	worker := &worker{
-		config:        config,
-		chainConfig:   chainConfig,
-		engine:        engine,
-		eth:           eth,
-		mux:           mux,
-		chain:         eth.BlockChain(),
-		isLocalBlock:  isLocalBlock,
-		unconfirmed:   newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
-		pendingTasks:  make(map[common.Hash]*task),
-		txsCh:         make(chan core.NewTxsEvent, txChanSize),
-		chainHeadCh:   make(chan core.ChainHeadEvent, chainHeadChanSize),
-		epochChangeCh: make(chan types.EpochChangeEvent, epochChangeChanSize),
-		newWorkCh:     make(chan *newWorkReq),
-		taskCh:        make(chan *task),
-		requestCh:     make(chan types.Block),
-		resultCh:      make(chan *types.Block, resultQueueSize),
-		exitCh:        make(chan struct{}),
+		config:       config,
+		chainConfig:  chainConfig,
+		engine:       engine,
+		eth:          eth,
+		mux:          mux,
+		chain:        eth.BlockChain(),
+		isLocalBlock: isLocalBlock,
+		unconfirmed:  newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
+		pendingTasks: make(map[common.Hash]*task),
+		chainHeadCh:  make(chan core.ChainHeadEvent, chainHeadChanSize),
+		newWorkCh:    make(chan *newWorkReq),
+		taskCh:       make(chan *task),
+		requestCh:    make(chan types.Block),
+		resultCh:     make(chan *types.Block, resultQueueSize),
+		exitCh:       make(chan struct{}),
 	}
-	// Subscribe NewTxsEvent for tx pool
-	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
-	// Subscribe events for epoch change
-	worker.epochChangeSub = nm.SubscribeEpochChange(worker.epochChangeCh)
 	// Subscribe events for consensus request
 	if handler, ok := worker.engine.(consensus.Handler); ok {
 		worker.requestSub = handler.SubscribeRequest(worker.requestCh)
 	}
-
-	worker.initChangingEpoch()
 
 	go worker.mainLoop()
 	go worker.newWorkLoop()
@@ -316,10 +297,8 @@ func (w *worker) newWorkLoop() {
 				h.NewChainHead(head.Block.Header())
 			}
 			clearPending(head.Block.NumberU64())
-
-		case change := <-w.epochChangeCh:
-			log.Debug("[miner worker]", "receive epoch change event", change.Hash.Hex(), "ID", change.EpochID)
-			w.processEpochChange(&change)
+			w.fetchEpoch()
+			w.changeEpoch(head.Block.NumberU64())
 
 		case <-w.exitCh:
 			return
@@ -329,8 +308,8 @@ func (w *worker) newWorkLoop() {
 
 // mainLoop is a standalone goroutine to regenerate the sealing task based on the received event.
 func (w *worker) mainLoop() {
-	defer w.txsSub.Unsubscribe()
 	defer w.chainHeadSub.Unsubscribe()
+	defer w.requestSub.Unsubscribe()
 
 	for {
 		select {
@@ -339,9 +318,9 @@ func (w *worker) mainLoop() {
 		// System stopped
 		case <-w.exitCh:
 			return
-		case <-w.txsSub.Err():
-			return
 		case <-w.chainHeadSub.Err():
+			return
+		case <-w.requestSub.Err():
 			return
 		}
 	}
@@ -639,14 +618,6 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 	}
 	types.HotstuffHeaderFillWithValidators(header, nil)
 
-	// check epoch and prepare to restart consensus engine
-	if w.current != nil && w.current.state != nil {
-		rs := w.current.state.Copy()
-		w.checkEpoch(rs, num.Uint64())
-		w.beforeEpochChange(header)
-		w.handleEpochChange(rs, header.Number.Uint64())
-	}
-
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
 	if w.IsRunning() {
 		if w.coinbase == (common.Address{}) {
@@ -739,20 +710,22 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
 }
 
-func (w *worker) initChangingEpoch() {
-	caller := w.coinbase
-	parent := w.chain.CurrentBlock()
-	statedb, err := w.chain.StateAt(parent.Root())
-	if err != nil {
-		log.Errorf("[miner worker]", "initChangingEpoch failed", err)
-		return
-	}
-	// wont changing epoch at the first block
-	if parent.NumberU64() < 1 {
+func (w *worker) fetchEpoch() {
+	w.epochMu.Lock()
+	defer w.epochMu.Unlock()
+
+	if w.epoch != nil {
 		return
 	}
 
-	log.Debug("init changing epoch...")
+	parent := w.chain.CurrentBlock()
+	statedb, err := w.chain.StateAt(parent.Root())
+	if err != nil {
+		log.Debug("[miner worker]", "get statedb failed", err)
+		return
+	}
+
+	caller := w.coinbase
 	ref := native.NewContractRef(statedb, caller, caller, parent.Number(), common.EmptyHash, 0, nil)
 	payload, err := new(nm.MethodGetChangingEpochInput).Encode()
 	if err != nil {
@@ -773,69 +746,26 @@ func (w *worker) initChangingEpoch() {
 		return
 	}
 
-	epoch := output.Epoch
-	w.nextEpoch = &types.EpochChangeEvent{
-		EpochID:     epoch.ID,
-		StartHeight: epoch.StartHeight,
-		Validators:  epoch.MemberList(),
-		Hash:        epoch.Hash(),
+	if output.Epoch.StartHeight > 1 && output.Epoch.StartHeight > parent.NumberU64() {
+		w.epoch = output.Epoch
+		log.Debug("[miner worker]", "fetch new epoch", w.epoch.ID, "member list", w.epoch.MemberList(), "size", len(w.epoch.MemberList()))
 	}
-	log.Info("[miner worker]", "miner will changing epoch", epoch.String())
 }
 
-func (w *worker) processEpochChange(event *types.EpochChangeEvent) {
+func (w *worker) changeEpoch(reachedBlockHeight uint64) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
 
-	w.nextEpoch = event
-}
-
-func (w *worker) checkEpoch(st *state.StateDB, blockNum uint64) {
-	w.epochMu.Lock()
-	defer w.epochMu.Unlock()
-
-	if w.nextEpoch == nil || !nm.EpochChangeAtNextBlock(blockNum, w.nextEpoch.StartHeight) {
+	if w.epoch == nil || w.epoch.MemberList() == nil || w.epoch.StartHeight <= 1 {
+		log.Debug("[miner worker], epoch invalid")
 		return
 	}
 
-	log.Debug("[miner worker]", "start check epoch", blockNum)
-	epoch, err := nm.GetEpochWithStateDB(st)
-	if err != nil {
-		log.Error("[miner worker]", "get epoch with statedb failed", err)
-		return
-	}
-	if epoch == nil || epoch.Hash() != w.nextEpoch.Hash {
-		log.Error("[miner worker]", "check epoch failed", "epoch may be nil or hash not match")
+	if reachedBlockHeight+1 != w.epoch.StartHeight {
 		return
 	}
 
-	log.Debug("[miner worker]", "check epoch", "success")
-	return
-}
-
-func (w *worker) beforeEpochChange(h *types.Header) {
-	height := h.Number.Uint64()
-
-	if w.nextEpoch != nil && w.nextEpoch.Validators != nil && nm.EpochChangeAtNextBlock(height, w.nextEpoch.StartHeight) {
-		types.HotstuffHeaderFillWithValidators(h, w.nextEpoch.Validators)
-	}
-}
-
-func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
-	w.epochMu.Lock()
-	defer w.epochMu.Unlock()
-
-	if w.nextEpoch == nil || height != w.nextEpoch.StartHeight {
-		return
-	}
-
-	defer w.clearEpoch()
-
-	log.Debug("[miner worker]", "handle epoch change, height", height)
-	if w.nextEpoch == nil || w.nextEpoch.Validators == nil || len(w.nextEpoch.Validators) == 0 {
-		log.Warn("Failed to change epoch", "err", "epoch validators should not be empty")
-		return
-	}
+	log.Debug("[miner worker]", "handle epoch change", w.epoch.ID)
 
 	engine, ok := w.engine.(consensus.HotStuff)
 	if !ok {
@@ -843,16 +773,14 @@ func (w *worker) handleEpochChange(st *state.StateDB, height uint64) {
 		return
 	}
 
-	log.Debug("Restart consensus engine", "next epoch validators", w.nextEpoch.Validators)
+	log.Debug("Restart consensus engine")
 	w.Stop()
-	if err := engine.ChangeEpoch(w.nextEpoch.StartHeight, w.nextEpoch.Validators); err != nil {
+	if err := engine.ChangeEpoch(w.epoch.StartHeight, w.epoch.MemberList()); err != nil {
 		log.Error("Change Epoch", "change failed", err)
 		return
 	}
 	time.Sleep(30 * time.Second)
 	w.Start()
-}
 
-func (w *worker) clearEpoch() {
-	w.nextEpoch = nil
+	w.epoch = nil
 }
