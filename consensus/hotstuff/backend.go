@@ -74,6 +74,9 @@ type Backend interface {
 	// ValidateBlock execute block which contained in prepare message, and validate block state
 	ValidateBlock(block *types.Block) error
 
+	// AskMiningProposalWithParent ask for mining proposal with parent block as parameters.
+	AskMiningProposalWithParent(parent *types.Block)
+
 	Close() error
 }
 

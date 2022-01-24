@@ -29,6 +29,22 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
+func (c *core) hasValidPendingRequest() bool {
+	if c.current.PendingRequest() == nil {
+		return false
+	}
+	exist := c.current.PendingRequest()
+	switch height := exist.Proposal.Number(); height.Cmp(c.current.Height()) {
+	case 0:
+		return true
+	case 1:
+		c.logger.Trace("check request height", "expect", c.current.Height(), "got", height)
+		return false
+	default:
+		return false
+	}
+}
+
 func (c *core) checkMsgFromProposer(src hotstuff.Validator) error {
 	if !c.valSet.IsProposer(src.Address()) {
 		return errNotFromProposer
