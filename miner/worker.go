@@ -267,7 +267,7 @@ func (w *worker) newWorkLoop() {
 	<-timer.C // discard the initial tick
 
 	// commit aborts in-flight transaction execution with given signal and resubmits a new one.
-	commit := func(parent *types.Block, noempty bool) {
+	commit := func(parent *types.Block) {
 		select {
 		case w.newWorkCh <- &newWorkReq{timestamp: timestamp, parent: parent}:
 		case <-w.exitCh:
@@ -290,7 +290,7 @@ func (w *worker) newWorkLoop() {
 		case req := <-w.requestCh:
 			clearPending(w.chain.CurrentBlock().NumberU64())
 			timestamp = time.Now().Unix()
-			commit(&req, false)
+			commit(&req)
 
 		case head := <-w.chainHeadCh:
 			if h, ok := w.engine.(consensus.Handler); ok {

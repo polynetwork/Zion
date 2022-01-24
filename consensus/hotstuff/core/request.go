@@ -26,7 +26,8 @@ import (
 func (c *core) sendRequest() {
 	logger := c.newLogger()
 
-	if c.hasValidPendingRequest() {
+	if c.hasValidPendingRequest() ||
+		c.current.IsProposalLocked() && c.current.Proposal() != nil {
 		c.sendPrepare()
 		return
 	}
@@ -48,12 +49,20 @@ func (c *core) sendRequest() {
 func (c *core) handleRequest(req *hotstuff.Request) error {
 	logger := c.newLogger()
 
+	if req == nil || req.Proposal == nil {
+		logger.Trace("Invalid request")
+		return nil
+	}
+	if req.Proposal.Number().Cmp(c.current.Height()) != 0 {
+		logger.Trace("Invalid request", "expect height", c.current.Height(), "got", req.Proposal.Number())
+		return nil
+	}
 	if c.currentState() != StateHighQC {
-		logger.Trace("handleRequest state invalid")
+		logger.Trace("Failed to process request", "err", "state invalid")
 		return nil
 	}
 	if c.current.highQC == nil {
-		logger.Trace("handleRequest current highQC is nil")
+		logger.Trace("Failed to process request", "err",  "current highQC is nil")
 		return nil
 	}
 
