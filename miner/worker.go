@@ -42,10 +42,6 @@ const (
 	// resultQueueSize is the size of channel listening to sealing result.
 	resultQueueSize = 10
 
-	// txChanSize is the size of channel listening to NewTxsEvent.
-	// The number is referenced from the size of tx pool.
-	txChanSize = 4096
-
 	// chainHeadChanSize is the size of channel listening to ChainHeadEvent.
 	chainHeadChanSize = 10
 
@@ -104,8 +100,6 @@ type worker struct {
 
 	// Subscriptions
 	mux            *event.TypeMux
-	txsCh          chan core.NewTxsEvent
-	txsSub         event.Subscription
 	chainHeadCh    chan core.ChainHeadEvent
 	chainHeadSub   event.Subscription
 	epochChangeCh  chan types.EpochChangeEvent
@@ -160,7 +154,6 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		isLocalBlock:  isLocalBlock,
 		unconfirmed:   newUnconfirmedBlocks(eth.BlockChain(), miningLogAtDepth),
 		pendingTasks:  make(map[common.Hash]*task),
-		txsCh:         make(chan core.NewTxsEvent, txChanSize),
 		chainHeadCh:   make(chan core.ChainHeadEvent, chainHeadChanSize),
 		epochChangeCh: make(chan types.EpochChangeEvent, epochChangeChanSize),
 		newWorkCh:     make(chan *newWorkReq),
@@ -169,8 +162,6 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		resultCh:      make(chan *types.Block, resultQueueSize),
 		exitCh:        make(chan struct{}),
 	}
-	// Subscribe NewTxsEvent for tx pool
-	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	// Subscribe events for blockchain
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 	// Subscribe events for epoch change
@@ -286,7 +277,7 @@ func (w *worker) newWorkLoop() {
 	<-timer.C // discard the initial tick
 
 	// commit aborts in-flight transaction execution with given signal and resubmits a new one.
-	commit := func(parent *types.Block, noempty bool) {
+	commit := func(parent *types.Block) {
 		select {
 		case w.newWorkCh <- &newWorkReq{timestamp: timestamp, parent: parent}:
 		case <-w.exitCh:
@@ -309,7 +300,7 @@ func (w *worker) newWorkLoop() {
 		case req := <-w.requestCh:
 			clearPending(w.chain.CurrentBlock().NumberU64())
 			timestamp = time.Now().Unix()
-			commit(&req, false)
+			commit(&req)
 
 		case head := <-w.chainHeadCh:
 			if h, ok := w.engine.(consensus.Handler); ok {
@@ -329,8 +320,9 @@ func (w *worker) newWorkLoop() {
 
 // mainLoop is a standalone goroutine to regenerate the sealing task based on the received event.
 func (w *worker) mainLoop() {
-	defer w.txsSub.Unsubscribe()
 	defer w.chainHeadSub.Unsubscribe()
+	defer w.epochChangeSub.Unsubscribe()
+	defer w.requestSub.Unsubscribe()
 
 	for {
 		select {
@@ -339,9 +331,11 @@ func (w *worker) mainLoop() {
 		// System stopped
 		case <-w.exitCh:
 			return
-		case <-w.txsSub.Err():
-			return
 		case <-w.chainHeadSub.Err():
+			return
+		case <-w.requestSub.Err():
+			return
+		case <-w.epochChangeSub.Err():
 			return
 		}
 	}
