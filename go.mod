@@ -3,6 +3,7 @@ module github.com/ethereum/go-ethereum
 go 1.16
 
 require (
+	github.com/ontio/ontology v1.11.0
 	github.com/Azure/azure-storage-blob-go v0.7.0
 	github.com/VictoriaMetrics/fastcache v1.6.0
 	github.com/Zilliqa/gozilliqa-sdk v1.2.1-0.20210329093354-1b8e0a7a2e25
