@@ -28,16 +28,8 @@ import (
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 )
-
-var epochChangeFeed event.Feed
-
-func SubscribeEpochChange(ch chan<- types.EpochChangeEvent) event.Subscription {
-	return epochChangeFeed.Subscribe(ch)
-}
 
 var (
 	gasTable = map[string]uint64{
@@ -317,14 +309,6 @@ func Vote(s *native.NativeContract) ([]byte, error) {
 		}
 
 		dirtyJob(s, curEpoch, epoch)
-
-		epochChangeFeed.Send(types.EpochChangeEvent{
-			EpochID:     epoch.StartHeight,
-			StartHeight: epoch.StartHeight,
-			Validators:  epoch.MemberList(),
-			Hash:        epoch.Hash(),
-		})
-
 		log.Debug("vote", "proposal passed", epoch.Hash())
 	}
 
@@ -405,7 +389,6 @@ func GetChangingEpoch(s *native.NativeContract) ([]byte, error) {
 
 	height := s.ContractRef().BlockHeight().Uint64()
 	if height > epoch.StartHeight {
-		log.Warn("getChangingEpoch", "epoch changing invalidation, start height", epoch.StartHeight, "current height", height)
 		return utils.ByteFailed, fmt.Errorf("epoch invalid")
 	}
 	output := &MethodEpochOutput{Epoch: epoch}

@@ -55,6 +55,8 @@ var (
 	errInvalidSigner          = errors.New("Message not signed by the sender")
 	errState                  = errors.New("error state")
 	errNoRequest              = errors.New("no valid request")
+	errRequestAlreadyExist    = errors.New("request already exist")
+	errLockProposalNotExist   = errors.New("lock proposal is nil")
 	errInvalidProposal        = errors.New("invalid proposal")
 	errVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
 	errExtend                 = errors.New("proposal extend relationship error")

@@ -156,7 +156,7 @@ func (m *EpochInfo) String() string {
 	pstr := ""
 	if m.Peers != nil && m.Peers.List != nil {
 		for _, v := range m.Peers.List {
-			pstr += fmt.Sprintf("peer: %s, pubkey: %s\r\n", v.Address.Hex(), v.PubKey)
+			pstr += fmt.Sprintf("peer: %s\r\n", v.Address.Hex())
 		}
 	}
 	return fmt.Sprintf("epochHash:%s\r\nepochId: %d\r\n%sstartHeight: %d\r\nproposer:%s\r\nstatus:%s",

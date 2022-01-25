@@ -37,7 +37,6 @@ type core struct {
 	backend  hotstuff.Backend
 	signer   hotstuff.Signer
 	valSet   hotstuff.ValidatorSet
-	requests *requestSet
 	backlogs *backlog
 
 	events            *event.TypeMuxSubscription

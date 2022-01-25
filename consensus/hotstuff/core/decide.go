@@ -63,13 +63,74 @@ func (c *core) handleCommitVote(data *hotstuff.Message, src hotstuff.Validator) 
 		c.current.SetState(StateCommitted)
 		c.current.SetCommittedQC(c.current.PreCommittedQC())
 		logger.Trace("acceptCommit", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest, "msgSize", size)
+
+		c.sendDecide()
+	}
+
+	return nil
+}
+
+func (c *core) sendDecide() {
+	logger := c.newLogger()
+
+	msgTyp := MsgTypeDecide
+	sub := c.current.CommittedQC()
+	payload, err := Encode(sub)
+	if err != nil {
+		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
+		return
+	}
+	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	logger.Trace("sendDecide", "msg view", sub.View, "proposal", sub.Hash)
+}
+
+func (c *core) handleDecide(data *hotstuff.Message, src hotstuff.Validator) error {
+	logger := c.newLogger()
+
+	var (
+		msg    *hotstuff.QuorumCert
+		msgTyp = MsgTypeDecide
+	)
+	if err := data.Decode(&msg); err != nil {
+		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
+		return errFailedDecodeCommit
+	}
+	if err := c.checkView(msgTyp, msg.View); err != nil {
+		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
+		return err
+	}
+	if err := c.checkMsgFromProposer(src); err != nil {
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
+		return err
+	}
+	if err := c.checkPreCommittedQC(msg); err != nil {
+		logger.Trace("Failed to check prepareQC", "msg", msgTyp, "err", err)
+		return err
+	}
+	if err := c.signer.VerifyQC(msg, c.valSet); err != nil {
+		logger.Trace("Failed to check verify qc", "msg", msgTyp, "err", err)
+		return err
+	}
+
+	logger.Trace("handleDecide", "msg", msgTyp, "address", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
+
+	if c.IsProposer() && c.currentState() == StateCommitted {
 		if err := c.backend.Commit(c.current.Proposal()); err != nil {
 			logger.Trace("Failed to commit proposal", "err", err)
 			return err
 		}
-		c.startNewRound(common.Big0)
 	}
 
+	if !c.IsProposer() && c.currentState() >= StatePreCommitted && c.currentState() < StateCommitted {
+		c.current.SetState(StateCommitted)
+		c.current.SetCommittedQC(c.current.PreCommittedQC())
+		if err := c.backend.Commit(c.current.Proposal()); err != nil {
+			logger.Trace("Failed to commit proposal", "err", err)
+			return err
+		}
+	}
+
+	c.startNewRound(common.Big0)
 	return nil
 }
 
