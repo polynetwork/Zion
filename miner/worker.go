@@ -742,7 +742,6 @@ func (w *worker) fetchEpoch() {
 		return
 	}
 	if output.Epoch == nil {
-		log.Error("[miner worker]", "`getChangingEpoch` check epoch failed", "epoch is nil")
 		return
 	}
 
@@ -757,7 +756,6 @@ func (w *worker) changeEpoch(reachedBlockHeight uint64) {
 	defer w.epochMu.Unlock()
 
 	if w.epoch == nil || w.epoch.MemberList() == nil || w.epoch.StartHeight <= 1 {
-		log.Debug("[miner worker], epoch invalid")
 		return
 	}
 
