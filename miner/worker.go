@@ -607,7 +607,7 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 
 	tstart := time.Now()
 	if parent.Time() >= uint64(timestamp) {
-		timestamp = int64(parent.Time() + 1) // todo: update it to be 3 seconds
+		timestamp = int64(parent.Time() + 3)
 	}
 	num := parent.Number()
 	header := &types.Header{
