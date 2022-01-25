@@ -616,7 +616,11 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 		GasLimit:   core.CalcGasLimit(parent, w.config.GasFloor, w.config.GasCeil),
 		Time:       uint64(timestamp),
 	}
-	types.HotstuffHeaderFillWithValidators(header, nil)
+	if w.epoch != nil && w.epoch.MemberList() != nil && nm.EpochChangeAtNextBlock(header.Number.Uint64(), w.epoch.StartHeight) {
+		types.HotstuffHeaderFillWithValidators(header, w.epoch.MemberList())
+	} else {
+		types.HotstuffHeaderFillWithValidators(header, nil)
+	}
 
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
 	if w.IsRunning() {
