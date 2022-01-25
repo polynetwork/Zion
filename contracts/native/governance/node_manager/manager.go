@@ -389,7 +389,6 @@ func GetChangingEpoch(s *native.NativeContract) ([]byte, error) {
 
 	height := s.ContractRef().BlockHeight().Uint64()
 	if height > epoch.StartHeight {
-		log.Warn("getChangingEpoch", "epoch changing invalidation, start height", epoch.StartHeight, "current height", height)
 		return utils.ByteFailed, fmt.Errorf("epoch invalid")
 	}
 	output := &MethodEpochOutput{Epoch: epoch}
