@@ -29,8 +29,6 @@ func (c *CacheDB) Put(key []byte, value []byte) {
 		panic("CacheDB should only be used for native contract storage")
 	}
 
-	c.Delete(key)
-
 	s := (*StateDB)(c)
 	so := s.GetOrNewStateObject(common.BytesToAddress(key[:common.AddressLength]))
 	if so != nil {
@@ -43,18 +41,6 @@ func (c *CacheDB) Put(key []byte, value []byte) {
 func Key2Slot(key []byte) common.Hash {
 	key = crypto.Keccak256(key)
 	return common.BytesToHash(key)
-}
-
-func (c *CacheDB) nextSlot(slot common.Hash) common.Hash {
-	slotBytes := slot.Bytes()
-	for offset := common.HashLength - 1; offset >= 0; offset-- {
-		slotBytes[offset] = slotBytes[offset] + 1
-		if slotBytes[offset] != 0 {
-			break
-		}
-	}
-
-	return Key2Slot(slotBytes)
 }
 
 func (c *CacheDB) Get(key []byte) ([]byte, error) {
