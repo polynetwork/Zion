@@ -959,7 +959,7 @@ func (p *Pending) Call(ctx context.Context, args struct {
 func (p *Pending) EstimateGas(ctx context.Context, args struct {
 	Data ethapi.CallArgs
 }) (Long, error) {
-	latestBlockNr := rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
+	latestBlockNr := rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 	gas, err := ethapi.DoEstimateGas(ctx, p.backend, args.Data, latestBlockNr, p.backend.RPCGasCap())
 	return Long(gas), err
 }
