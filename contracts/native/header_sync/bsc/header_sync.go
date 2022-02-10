@@ -222,6 +222,10 @@ func (h *Handler) SyncBlockHeader(native *native.NativeContract) error {
 		if diffWithLastEpoch <= int64(len(pphv.Validators)/2) {
 			// pphv is in effect
 			inTurnHV = pphv
+
+			if len(header.Extra) > extraVanity+extraSeal {
+				return fmt.Errorf("bsc Handler SyncBlockHeader: can not change epoch continuously")
+			}
 		} else {
 			// phv is in effect
 			inTurnHV = phv
