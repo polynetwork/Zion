@@ -19,107 +19,88 @@
 package core
 
 import (
-	"sync"
-	"time"
-
-	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
 )
+
+func (c *core) sendRequest() {
+	logger := c.newLogger()
+
+	if c.hasValidPendingRequest() ||
+		c.current.IsProposalLocked() && c.current.Proposal() != nil {
+		c.sendPrepare()
+		return
+	}
+
+	proposal, _ := c.backend.LastProposal()
+	if proposal == nil {
+		logger.Trace("sendRequest", "err", "last proposal is nil")
+		return
+	}
+	parent, ok := proposal.(*types.Block)
+	if !ok {
+		logger.Trace("sendRequest", "err", "convert proposal to block failed")
+		return
+	}
+
+	c.backend.AskMiningProposalWithParent(parent)
+}
 
 func (c *core) handleRequest(req *hotstuff.Request) error {
 	logger := c.newLogger()
 
-	if err := c.requests.checkRequest(c.currentView(), req); err != nil {
-		if err == errFutureMessage {
-			c.requests.StoreRequest(req)
-			return nil
-		} else {
-			logger.Warn("receive request", "err", err)
-			return err
-		}
+	if req == nil || req.Proposal == nil {
+		logger.Trace("Invalid request")
+		return nil
+	}
+	if req.Proposal.Number().Cmp(c.current.Height()) != 0 {
+		logger.Trace("Invalid request", "expect height", c.current.Height(), "got", req.Proposal.Number())
+		return nil
+	}
+	if c.currentState() != StateHighQC {
+		logger.Trace("Failed to process request", "err", "state invalid")
+		return nil
+	}
+	if c.current.highQC == nil {
+		logger.Trace("Failed to process request", "err",  "current highQC is nil")
+		return nil
+	}
+
+	if !c.hasValidPendingRequest() {
+		c.current.SetPendingRequest(req)
 	} else {
-		c.requests.StoreRequest(req)
+		logger.Trace("handleRequest", "err", "already has valid pending request")
+		return errRequestAlreadyExist
 	}
 
-	if c.currentState() == StateAcceptRequest &&
-		c.current.highQC != nil &&
-		c.current.highQC.View.Cmp(c.currentView()) == 0 {
-		c.sendPrepare()
-	}
-
+	c.sendPrepare()
 	logger.Trace("handleRequest", "height", req.Proposal.Number(), "proposal", req.Proposal.Hash())
 	return nil
 }
 
-type requestSet struct {
-	mtx *sync.RWMutex
-
-	pendingRequest *prque.Prque
-}
-
-func newRequestSet() *requestSet {
-	return &requestSet{
-		mtx:            new(sync.RWMutex),
-		pendingRequest: prque.New(nil),
-	}
-}
-
-func (s *requestSet) checkRequest(view *hotstuff.View, req *hotstuff.Request) error {
-	if req == nil || req.Proposal == nil {
-		return errInvalidMessage
+func (c *core) createNewProposal() error {
+	if c.current.IsProposalLocked() {
+		if c.current.Proposal() == nil {
+			return errLockProposalNotExist
+		} else {
+			return nil
+		}
 	}
 
-	// todo(fuk): how to process future block, store or throw?
-	if c := view.Height.Cmp(req.Proposal.Number()); c < 0 {
-		return errFutureMessage
-	} else if c > 0 {
-		return errOldMessage
-	} else {
+	if cur := c.current.Proposal(); cur != nil && cur.Number().Cmp(c.current.Height()) == 0 {
 		return nil
 	}
-}
 
-func (s *requestSet) StoreRequest(req *hotstuff.Request) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
-	priority := -req.Proposal.Number().Int64()
-	s.pendingRequest.Push(req, priority)
-}
-
-func (s *requestSet) GetRequest(view *hotstuff.View) *hotstuff.Request {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
-
-	maxRetry := 20
-retry:
-	for !s.pendingRequest.Empty() {
-		m, prior := s.pendingRequest.Pop()
-		req, ok := m.(*hotstuff.Request)
-		if !ok {
-			continue
-		}
-
-		// push back if it's future message
-		if err := s.checkRequest(view, req); err != nil {
-			if err == errFutureMessage {
-				s.pendingRequest.Push(m, prior)
-				// todo: 是否为continue
-				break
-			}
-			continue
-		}
-		return req
+	req := c.current.PendingRequest()
+	if req == nil || req.Proposal == nil {
+		return errNoRequest
 	}
-	if maxRetry -= 1; maxRetry > 0 {
-		time.Sleep(500 * time.Millisecond)
-		goto retry
+
+	pending := req.Proposal
+	if pending == nil || pending.Number().Cmp(c.current.Height()) != 0 {
+		return errInvalidProposal
 	}
+
+	c.current.SetProposal(pending)
 	return nil
-}
-
-func (s *requestSet) Size() int {
-	s.mtx.RLock()
-	defer s.mtx.RUnlock()
-	return s.pendingRequest.Size()
 }

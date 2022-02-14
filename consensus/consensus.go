@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -168,6 +169,9 @@ type Handler interface {
 
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster)
+
+	// SubscribeRequest event subscribe for mining proposal with parent block
+	SubscribeRequest(ch chan<- types.Block) event.Subscription
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -176,9 +180,4 @@ type PoW interface {
 
 	// Hashrate returns the current mining hashrate of a PoW consensus engine.
 	Hashrate() float64
-}
-
-type AskRequest struct {
-	Parent *types.Block
-	Number *big.Int
 }

@@ -1,20 +1,35 @@
+/*
+ * Copyright (C) 2021 The poly network Authors
+ * This file is part of The poly network library.
+ *
+ * The  poly network  is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The  poly network  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The poly network .  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package ont
 
 import (
 	"encoding/json"
 	"fmt"
 
-	"github.com/ontio/ontology-crypto/keypair"
-
 	"github.com/ethereum/go-ethereum/contracts/native"
 	hscommon "github.com/ethereum/go-ethereum/contracts/native/header_sync/common"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ontio/ontology-crypto/keypair"
 	ocommon "github.com/ontio/ontology/common"
+	vconfig "github.com/ontio/ontology/consensus/vbft/config"
 	"github.com/ontio/ontology/core/signature"
 	otypes "github.com/ontio/ontology/core/types"
-	"github.com/polynetwork/poly/common"
-	vconfig "github.com/polynetwork/poly/consensus/vbft/config"
-	cstates "github.com/polynetwork/poly/core/states"
-	"github.com/polynetwork/poly/native/service/utils"
 )
 
 func PutCrossChainMsg(native *native.NativeContract, chainID uint64, crossChainMsg *otypes.CrossChainMsg) error {
@@ -25,10 +40,11 @@ func PutCrossChainMsg(native *native.NativeContract, chainID uint64, crossChainM
 	heightBytes := utils.GetUint32Bytes(crossChainMsg.Height)
 
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(hscommon.CROSS_CHAIN_MSG), chainIDBytes, heightBytes),
-		cstates.GenRawStorageItem(sink.Bytes()))
+		sink.Bytes())
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(hscommon.CURRENT_MSG_HEIGHT), chainIDBytes),
-		cstates.GenRawStorageItem(heightBytes))
-	hscommon.NotifyPutCrossChainMsg(native, chainID, crossChainMsg.Height)
+		heightBytes)
+	hash := crossChainMsg.Hash()
+	hscommon.NotifyPutCrossChainMsg(native, chainID, crossChainMsg.Height, hash.ToHexString())
 	return nil
 }
 
@@ -45,12 +61,8 @@ func GetCrossChainMsg(native *native.NativeContract, chainID uint64, height uint
 	if crossChainMsgStore == nil {
 		return nil, fmt.Errorf("GetCrossChainMsg, can not find any header records")
 	}
-	crossChainMsgBytes, err := cstates.GetValueFromRawStorageItem(crossChainMsgStore)
-	if err != nil {
-		return nil, fmt.Errorf("GetCrossChainMsg, deserialize headerBytes from raw storage item err:%v", err)
-	}
 	crossChainMsg := new(otypes.CrossChainMsg)
-	if err := crossChainMsg.Deserialization(ocommon.NewZeroCopySource(crossChainMsgBytes)); err != nil {
+	if err := crossChainMsg.Deserialization(ocommon.NewZeroCopySource(crossChainMsgStore)); err != nil {
 		return nil, fmt.Errorf("GetCrossChainMsg, deserialize header error: %v", err)
 	}
 	return crossChainMsg, nil
@@ -65,11 +77,11 @@ func PutBlockHeader(native *native.NativeContract, chainID uint64, blockHeader *
 
 	blockHash := blockHeader.Hash()
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(hscommon.BLOCK_HEADER), chainIDBytes, blockHash.ToArray()),
-		cstates.GenRawStorageItem(sink.Bytes()))
+		sink.Bytes())
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(hscommon.HEADER_INDEX), chainIDBytes, heightBytes),
-		cstates.GenRawStorageItem(blockHash.ToArray()))
+		blockHash.ToArray())
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(hscommon.CURRENT_HEADER_HEIGHT), chainIDBytes),
-		cstates.GenRawStorageItem(heightBytes))
+		heightBytes)
 	hscommon.NotifyPutHeader(native, chainID, uint64(blockHeader.Height), blockHash.ToHexString())
 	return nil
 }
@@ -87,47 +99,17 @@ func GetHeaderByHeight(native *native.NativeContract, chainID uint64, height uin
 	if blockHashStore == nil {
 		return nil, fmt.Errorf("GetHeaderByHeight, can not find any index records")
 	}
-	blockHashBytes, err := cstates.GetValueFromRawStorageItem(blockHashStore)
-	if err != nil {
-		return nil, fmt.Errorf("GetHeaderByHeight, deserialize blockHashBytes from raw storage item err:%v", err)
-	}
 	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(hscommon.BLOCK_HEADER),
-		chainIDBytes, blockHashBytes))
+		chainIDBytes, blockHashStore))
 	if err != nil {
 		return nil, fmt.Errorf("GetHeaderByHeight, get headerStore error: %v", err)
 	}
 	if headerStore == nil {
 		return nil, fmt.Errorf("GetHeaderByHeight, can not find any header records")
 	}
-	headerBytes, err := cstates.GetValueFromRawStorageItem(headerStore)
-	if err != nil {
-		return nil, fmt.Errorf("GetHeaderByHeight, deserialize headerBytes from raw storage item err:%v", err)
-	}
 	header := new(otypes.Header)
-	if err := header.Deserialization(ocommon.NewZeroCopySource(headerBytes)); err != nil {
+	if err := header.Deserialization(ocommon.NewZeroCopySource(headerStore)); err != nil {
 		return nil, fmt.Errorf("GetHeaderByHeight, deserialize header error: %v", err)
-	}
-	return header, nil
-}
-
-func GetHeaderByHash(native *native.NativeContract, chainID uint64, hash common.Uint256) (*otypes.Header, error) {
-	contract := utils.HeaderSyncContractAddress
-
-	headerStore, err := native.GetCacheDB().Get(utils.ConcatKey(contract, []byte(hscommon.BLOCK_HEADER),
-		utils.GetUint64Bytes(chainID), hash.ToArray()))
-	if err != nil {
-		return nil, fmt.Errorf("GetHeaderByHash, get headerStore error: %v", err)
-	}
-	if headerStore == nil {
-		return nil, fmt.Errorf("GetHeaderByHash, can not find any records")
-	}
-	headerBytes, err := cstates.GetValueFromRawStorageItem(headerStore)
-	if err != nil {
-		return nil, fmt.Errorf("GetHeaderByHash, deserialize from raw storage item err:%v", err)
-	}
-	header := new(otypes.Header)
-	if err := header.Deserialization(ocommon.NewZeroCopySource(headerBytes)); err != nil {
-		return nil, fmt.Errorf("GetHeaderByHash, deserialize header error: %v", err)
 	}
 	return header, nil
 }
@@ -206,13 +188,8 @@ func GetKeyHeights(native *native.NativeContract, chainID uint64) (*KeyHeights, 
 	}
 	keyHeights := new(KeyHeights)
 	if value != nil {
-		keyHeightsBytes, err := cstates.GetValueFromRawStorageItem(value)
-		if err != nil {
-			return nil, fmt.Errorf("GetKeyHeights, deserialize from raw storage item err:%v", err)
-		}
-		err = keyHeights.Deserialization(common.NewZeroCopySource(keyHeightsBytes))
-		if err != nil {
-			return nil, fmt.Errorf("GetKeyHeights, deserialize keyHeights err:%v", err)
+		if err := rlp.DecodeBytes(value, keyHeights); err != nil {
+			return nil, err
 		}
 	}
 	return keyHeights, nil
@@ -220,9 +197,11 @@ func GetKeyHeights(native *native.NativeContract, chainID uint64) (*KeyHeights, 
 
 func PutKeyHeights(native *native.NativeContract, chainID uint64, keyHeights *KeyHeights) error {
 	contract := utils.HeaderSyncContractAddress
-	sink := common.NewZeroCopySink(nil)
-	keyHeights.Serialization(sink)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(hscommon.KEY_HEIGHTS), utils.GetUint64Bytes(chainID)), cstates.GenRawStorageItem(sink.Bytes()))
+	value, err := rlp.EncodeToBytes(keyHeights)
+	if err != nil {
+		return err
+	}
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(hscommon.KEY_HEIGHTS), utils.GetUint64Bytes(chainID)), value)
 	return nil
 }
 
@@ -238,28 +217,26 @@ func getConsensusPeersByHeight(native *native.NativeContract, chainID uint64, he
 	if consensusPeerStore == nil {
 		return nil, fmt.Errorf("getConsensusPeerByHeight, can not find any record")
 	}
-	consensusPeerBytes, err := cstates.GetValueFromRawStorageItem(consensusPeerStore)
-	if err != nil {
-		return nil, fmt.Errorf("getConsensusPeerByHeight, deserialize from raw storage item err:%v", err)
-	}
 	consensusPeers := new(ConsensusPeers)
-	if err := consensusPeers.Deserialization(common.NewZeroCopySource(consensusPeerBytes)); err != nil {
-		return nil, fmt.Errorf("getConsensusPeerByHeight, deserialize consensusPeer error: %v", err)
+	if err := rlp.DecodeBytes(consensusPeerStore, consensusPeers); err != nil {
+		return nil, err
 	}
 	return consensusPeers, nil
 }
 
 func putConsensusPeers(native *native.NativeContract, consensusPeers *ConsensusPeers) error {
 	contract := utils.HeaderSyncContractAddress
-	sink := common.NewZeroCopySink(nil)
-	consensusPeers.Serialization(sink)
+	value, err := rlp.EncodeToBytes(consensusPeers)
+	if err != nil {
+		return err
+	}
 	chainIDBytes := utils.GetUint64Bytes(consensusPeers.ChainID)
 	heightBytes := utils.GetUint32Bytes(consensusPeers.Height)
 	blockHeightBytes := native.ContractRef().BlockHeight().Bytes()
 
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(hscommon.CONSENSUS_PEER), chainIDBytes, heightBytes), cstates.GenRawStorageItem(sink.Bytes()))
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(hscommon.CONSENSUS_PEER), chainIDBytes, heightBytes), value)
 	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(hscommon.CONSENSUS_PEER_BLOCK_HEIGHT), chainIDBytes, heightBytes),
-		cstates.GenRawStorageItem(blockHeightBytes))
+		blockHeightBytes)
 
 	//update key heights
 	keyHeights, err := GetKeyHeights(native, consensusPeers.ChainID)

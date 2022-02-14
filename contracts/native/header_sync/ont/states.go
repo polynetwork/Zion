@@ -1,11 +1,27 @@
+/*
+ * Copyright (C) 2021 The poly network Authors
+ * This file is part of The poly network library.
+ *
+ * The  poly network  is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The  poly network  is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The poly network .  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package ont
 
 import (
-	"fmt"
-	"math"
+	"io"
 	"sort"
 
-	"github.com/polynetwork/poly/common"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type Peer struct {
@@ -13,25 +29,21 @@ type Peer struct {
 	PeerPubkey string
 }
 
-func (this *Peer) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteUint32(this.Index)
-	sink.WriteVarBytes([]byte(this.PeerPubkey))
+func (this *Peer) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{this.Index, this.PeerPubkey})
 }
 
-func (this *Peer) Deserialization(source *common.ZeroCopySource) error {
-	index, eof := source.NextUint32()
-	if eof {
-		return fmt.Errorf("utils.DecodeVarUint, deserialize index error")
+func (this *Peer) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Index      uint32
+		PeerPubkey string
 	}
-	if index > math.MaxUint32 {
-		return fmt.Errorf("deserialize index error: index more than max uint32")
+
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-	peerPubkey, eof := source.NextString()
-	if eof {
-		return fmt.Errorf("utils.DecodeString, deserialize peerPubkey error")
-	}
-	this.Index = uint32(index)
-	this.PeerPubkey = peerPubkey
+	this.Index = data.Index
+	this.PeerPubkey = data.PeerPubkey
 	return nil
 }
 
@@ -39,34 +51,23 @@ type KeyHeights struct {
 	HeightList []uint32
 }
 
-func (this *KeyHeights) Serialization(sink *common.ZeroCopySink) {
+func (this *KeyHeights) EncodeRLP(w io.Writer) error {
 	//first sort the list  (big -> small)
 	sort.SliceStable(this.HeightList, func(i, j int) bool {
 		return this.HeightList[i] > this.HeightList[j]
 	})
-	sink.WriteVarUint(uint64(len(this.HeightList)))
-	for _, v := range this.HeightList {
-		sink.WriteUint32(v)
-	}
+	return rlp.Encode(w, []interface{}{this.HeightList})
 }
 
-func (this *KeyHeights) Deserialization(source *common.ZeroCopySource) error {
-	n, eof := source.NextVarUint()
-	if eof {
-		return fmt.Errorf("utils.DecodeVarUint, deserialize HeightList length error")
+func (this *KeyHeights) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		HeightList []uint32
 	}
-	heightList := make([]uint32, 0)
-	for i := 0; uint64(i) < n; i++ {
-		height, eof := source.NextUint32()
-		if eof {
-			return fmt.Errorf("utils.DecodeVarUint, deserialize height error")
-		}
-		if height > math.MaxUint32 {
-			return fmt.Errorf("deserialize height error: height more than max uint32")
-		}
-		heightList = append(heightList, uint32(height))
+
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-	this.HeightList = heightList
+	this.HeightList = data.HeightList
 	return nil
 }
 
@@ -76,10 +77,7 @@ type ConsensusPeers struct {
 	PeerMap map[string]*Peer
 }
 
-func (this *ConsensusPeers) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteUint64(this.ChainID)
-	sink.WriteUint32(this.Height)
-	sink.WriteVarUint(uint64(len(this.PeerMap)))
+func (this *ConsensusPeers) EncodeRLP(w io.Writer) error {
 	var peerList []*Peer
 	for _, v := range this.PeerMap {
 		peerList = append(peerList, v)
@@ -87,34 +85,27 @@ func (this *ConsensusPeers) Serialization(sink *common.ZeroCopySink) {
 	sort.SliceStable(peerList, func(i, j int) bool {
 		return peerList[i].PeerPubkey > peerList[j].PeerPubkey
 	})
-	for _, v := range peerList {
-		v.Serialization(sink)
-	}
+
+	return rlp.Encode(w, []interface{}{this.ChainID, this.Height, peerList})
 }
 
-func (this *ConsensusPeers) Deserialization(source *common.ZeroCopySource) error {
-	chainID, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("utils.DecodeVarUint, deserialize chainID error")
+func (this *ConsensusPeers) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ChainID  uint64
+		Height   uint32
+		PeerList []*Peer
 	}
-	height, eof := source.NextUint32()
-	if eof {
-		return fmt.Errorf("utils.DecodeVarUint, deserialize height error")
-	}
-	n, eof := source.NextVarUint()
-	if eof {
-		return fmt.Errorf("utils.DecodeVarUint, deserialize HeightList length error")
+
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
 	peerMap := make(map[string]*Peer)
-	for i := 0; uint64(i) < n; i++ {
-		peer := new(Peer)
-		if err := peer.Deserialization(source); err != nil {
-			return fmt.Errorf("deserialize peer error: %v", err)
-		}
+	for _, peer := range data.PeerList {
 		peerMap[peer.PeerPubkey] = peer
 	}
-	this.ChainID = chainID
-	this.Height = uint32(height)
+
+	this.ChainID = data.ChainID
+	this.Height = data.Height
 	this.PeerMap = peerMap
 	return nil
 }

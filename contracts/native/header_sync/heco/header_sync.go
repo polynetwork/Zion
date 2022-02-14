@@ -256,6 +256,13 @@ func (h *Handler) SyncBlockHeader(native *native.NativeContract) error {
 			return fmt.Errorf("heco Handler SyncBlockHeader, getPrevHeightAndValidators err: %v", err)
 		}
 
+		if len(header.Extra) > extraVanity+extraSeal {
+			diffWithLastEpoch := big.NewInt(0).Sub(header.Number, phv.Height).Int64()
+			if diffWithLastEpoch <= int64(len(phv.Validators)/2) {
+				return fmt.Errorf("heco Handler SyncBlockHeader: can not change epoch continuously")
+			}
+		}
+
 		inTurnHV := phv
 
 		if lastSeenHeight > 0 {
@@ -314,8 +321,7 @@ func verifySignature(native *native.NativeContract, header *eth.Header, ctx *Con
 
 // GetCanonicalHeight ...
 func GetCanonicalHeight(native *native.NativeContract, chainID uint64) (height uint64, err error) {
-	heightStore, err := native.GetCacheDB().Get(
-		utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.CURRENT_HEADER_HEIGHT), utils.GetUint64Bytes(chainID)))
+	heightStore, err := scom.GetCurrentHeight(native, chainID)
 	if err != nil {
 		err = fmt.Errorf("heco Handler GetCanonicalHeight err:%v", err)
 		return
@@ -345,7 +351,7 @@ func deleteCanonicalHash(native *native.NativeContract, chainID uint64, height u
 }
 
 func getCanonicalHash(native *native.NativeContract, chainID uint64, height uint64) (hash ecommon.Hash, err error) {
-	hashBytesStore, err := native.GetCacheDB().Get(utils.ConcatKey(utils.HeaderSyncContractAddress, []byte(scom.MAIN_CHAIN), utils.GetUint64Bytes(chainID), utils.GetUint64Bytes(height)))
+	hashBytesStore, err := scom.GetMainChain(native, chainID, height)
 	if err != nil {
 		return
 	}

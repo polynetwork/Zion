@@ -22,9 +22,9 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	cmath "github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -50,6 +50,8 @@ type StateTransition struct {
 	msg        Message
 	gas        uint64
 	gasPrice   *big.Int
+	feeCap     *big.Int
+	tip        *big.Int
 	initialGas uint64
 	value      *big.Int
 	data       []byte
@@ -63,6 +65,8 @@ type Message interface {
 	To() *common.Address
 
 	GasPrice() *big.Int
+	FeeCap() *big.Int
+	Tip() *big.Int
 	Gas() uint64
 	Value() *big.Int
 
@@ -156,6 +160,8 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		evm:      evm,
 		msg:      msg,
 		gasPrice: msg.GasPrice(),
+		feeCap:   msg.FeeCap(),
+		tip:      msg.Tip(),
 		value:    msg.Value(),
 		data:     msg.Data(),
 		state:    evm.StateDB,
@@ -182,8 +188,14 @@ func (st *StateTransition) to() common.Address {
 }
 
 func (st *StateTransition) buyGas() error {
-	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
-	if have, want := st.state.GetBalance(st.msg.From()), mgval; have.Cmp(want) < 0 {
+	mgval := new(big.Int).SetUint64(st.msg.Gas())
+	mgval = mgval.Mul(mgval, st.gasPrice)
+	balanceCheck := mgval
+	if st.feeCap != nil {
+		balanceCheck = new(big.Int).SetUint64(st.msg.Gas())
+		balanceCheck = balanceCheck.Mul(balanceCheck, st.feeCap)
+	}
+	if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
 		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 	}
 	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
@@ -206,6 +218,27 @@ func (st *StateTransition) preCheck() error {
 		} else if stNonce > msgNonce {
 			return fmt.Errorf("%w: address %v, tx: %d state: %d", ErrNonceTooLow,
 				st.msg.From().Hex(), msgNonce, stNonce)
+		}
+	}
+	// Make sure that transaction feeCap is greater than the baseFee (post london)
+	if st.evm.ChainConfig().IsLondon(st.evm.Context.BlockNumber) {
+		if l := st.feeCap.BitLen(); l > 256 {
+			return fmt.Errorf("%w: address %v, feeCap bit length: %d", ErrFeeCapVeryHigh,
+				st.msg.From().Hex(), l)
+		}
+		if l := st.tip.BitLen(); l > 256 {
+			return fmt.Errorf("%w: address %v, tip bit length: %d", ErrTipVeryHigh,
+				st.msg.From().Hex(), l)
+		}
+		if st.feeCap.Cmp(st.tip) < 0 {
+			return fmt.Errorf("%w: address %v, tip: %s, feeCap: %s", ErrTipAboveFeeCap,
+				st.msg.From().Hex(), st.feeCap, st.tip)
+		}
+		// This will panic if baseFee is nil, but basefee presence is verified
+		// as part of header validation.
+		if st.feeCap.Cmp(st.evm.Context.BaseFee) < 0 {
+			return fmt.Errorf("%w: address %v, feeCap: %s baseFee: %s", ErrFeeCapTooLow,
+				st.msg.From().Hex(), st.feeCap, st.evm.Context.BaseFee)
 		}
 	}
 	return st.buyGas()
@@ -243,7 +276,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	sender := vm.AccountRef(msg.From())
 	homestead := st.evm.ChainConfig().IsHomestead(st.evm.Context.BlockNumber)
 	istanbul := st.evm.ChainConfig().IsIstanbul(st.evm.Context.BlockNumber)
-	//eip3529 := st.evm.ChainConfig().IsLondon(st.evm.Context.BlockNumber)
+	eip3529 := st.evm.ChainConfig().IsLondon(st.evm.Context.BlockNumber)
 	contractCreation := msg.To() == nil
 
 	// Check clauses 4-5, subtract intrinsic gas if everything is correct
@@ -276,16 +309,19 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
-	//if !eip3529 {
-	//	// Before EIP-3529: refunds were capped to gasUsed / 2
-	//	st.refundGas(params.RefundQuotient)
-	//} else {
-	//	// After EIP-3529: refunds are capped to gasUsed / 5
-	//	st.refundGas(params.RefundQuotientEIP3529)
-	//}
-	st.refundGas(params.RefundQuotientEIP3529)
-	log.Trace("Refund Gas", "gas price", st.gasPrice.String(), "gas used", st.gasUsed())
-	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+
+	if !eip3529 {
+		// Before EIP-3529: refunds were capped to gasUsed / 2
+		st.refundGas(params.RefundQuotient)
+	} else {
+		// After EIP-3529: refunds are capped to gasUsed / 5
+		st.refundGas(params.RefundQuotientEIP3529)
+	}
+	effectiveTip := st.gasPrice
+	if st.evm.ChainConfig().IsLondon(st.evm.Context.BlockNumber) {
+		effectiveTip = cmath.BigMin(st.tip, new(big.Int).Sub(st.feeCap, st.evm.Context.BaseFee))
+	}
+	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), effectiveTip))
 
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),

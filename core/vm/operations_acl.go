@@ -17,6 +17,7 @@
 package vm
 
 import (
+	"bytes"
 	"errors"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -32,11 +33,15 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 		}
 		// Gas sentry honoured, do the actual gas calculation based on the stored value
 		var (
-			y, x    = stack.Back(1), stack.peek()
-			slot    = common.Hash(x.Bytes32())
-			current = evm.StateDB.GetState(contract.Address(), slot)
-			cost    = uint64(0)
+			y, x         = stack.Back(1), stack.peek()
+			slot         = common.Hash(x.Bytes32())
+			currentBytes = evm.StateDB.GetState(contract.Address(), slot)
+			current      common.Hash
+			cost         = uint64(0)
 		)
+		if !bytes.Equal(currentBytes, nil) {
+			current.SetBytes(currentBytes)
+		}
 		// Check slot presence in the access list
 		if addrPresent, slotPresent := evm.StateDB.SlotInAccessList(contract.Address(), slot); !slotPresent {
 			cost = params.ColdSloadCostEIP2929
@@ -56,7 +61,11 @@ func makeGasSStoreFunc(clearingRefund uint64) gasFunc {
 			//		return params.SloadGasEIP2200, nil
 			return cost + params.WarmStorageReadCostEIP2929, nil // SLOAD_GAS
 		}
-		original := evm.StateDB.GetCommittedState(contract.Address(), x.Bytes32())
+		originalBytes := evm.StateDB.GetCommittedState(contract.Address(), x.Bytes32())
+		var original common.Hash
+		if !bytes.Equal(originalBytes, nil) {
+			original.SetBytes(originalBytes)
+		}
 		if original == current {
 			if original == (common.Hash{}) { // create slot (2.1.1)
 				return cost + params.SstoreSetGasEIP2200, nil

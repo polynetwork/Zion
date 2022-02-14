@@ -117,7 +117,7 @@ func (a *Account) Storage(ctx context.Context, args struct{ Slot common.Hash }) 
 	if err != nil {
 		return common.Hash{}, err
 	}
-	return state.GetState(a.address, args.Slot), nil
+	return common.BytesToHash(state.GetState(a.address, args.Slot)), nil
 }
 
 // Log represents an individual log message. All arguments are mandatory.
@@ -959,8 +959,8 @@ func (p *Pending) Call(ctx context.Context, args struct {
 func (p *Pending) EstimateGas(ctx context.Context, args struct {
 	Data ethapi.CallArgs
 }) (Long, error) {
-	pendingBlockNr := rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
-	gas, err := ethapi.DoEstimateGas(ctx, p.backend, args.Data, pendingBlockNr, p.backend.RPCGasCap())
+	latestBlockNr := rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
+	gas, err := ethapi.DoEstimateGas(ctx, p.backend, args.Data, latestBlockNr, p.backend.RPCGasCap())
 	return Long(gas), err
 }
 

@@ -39,7 +39,6 @@ func (c *core) Start(chain consensus.ChainReader) error {
 	})
 
 	c.isRunning = true
-	c.requests = newRequestSet()
 	c.backlogs = newBackLog()
 	c.current = nil
 
@@ -175,6 +174,8 @@ func (c *core) handleCheckedMsg(msg *hotstuff.Message, src hotstuff.Validator) (
 		err = c.handleCommit(msg, src)
 	case MsgTypeCommitVote:
 		err = c.handleCommitVote(msg, src)
+	case MsgTypeDecide:
+		err = c.handleDecide(msg, src)
 	default:
 		err = errInvalidMessage
 		c.logger.Error("msg type invalid", "unknown type", msg.Code)

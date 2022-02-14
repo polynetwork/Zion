@@ -34,10 +34,9 @@ type Config struct {
 	Epoch          uint64               `toml:",omitempty"` // The number of blocks after which to checkpoint and reset the pending votes
 }
 
-// todo: modify request timeout, and miner recommit default value is 3s. recommit time should be > blockPeriod
 var DefaultBasicConfig = &Config{
-	RequestTimeout: 4000,
-	BlockPeriod:    1,
+	RequestTimeout: 6000,
+	BlockPeriod:    3,
 	LeaderPolicy:   RoundRobin,
 	Epoch:          30000,
 	Test:           false,

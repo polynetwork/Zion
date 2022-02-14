@@ -43,16 +43,8 @@ func (c *core) sendPrepare() {
 	}
 
 	msgTyp := MsgTypePrepare
-	if !c.current.IsProposalLocked() {
-		proposal, err := c.createNewProposal()
-		if err != nil {
-			logger.Trace("Failed to create proposal", "err", err, "request set size", c.requests.Size(),
-				"pendingRequest", c.current.PendingRequest(), "view", c.currentView())
-			return
-		}
-		c.current.SetProposal(proposal)
-	} else if c.current.Proposal() == nil {
-		logger.Error("Failed to get locked proposal", "err", "locked proposal is nil")
+	if err := c.createNewProposal(); err != nil {
+		logger.Trace("Failed to create proposal", "view", c.currentView(), "err", err)
 		return
 	}
 
@@ -150,20 +142,6 @@ func (c *core) sendPrepareVote() {
 	}
 	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendPrepareVote", "vote view", vote.View, "vote", vote.Digest)
-}
-
-func (c *core) createNewProposal() (hotstuff.Proposal, error) {
-	var req *hotstuff.Request
-	if c.current.PendingRequest() != nil && c.current.PendingRequest().Proposal.Number().Cmp(c.current.Height()) == 0 {
-		req = c.current.PendingRequest()
-	} else {
-		if req = c.requests.GetRequest(c.currentView()); req != nil {
-			c.current.SetPendingRequest(req)
-		} else {
-			return nil, errNoRequest
-		}
-	}
-	return req.Proposal, nil
 }
 
 func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {

@@ -307,6 +307,9 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	if g.Difficulty == nil {
 		head.Difficulty = params.GenesisDifficulty
 	}
+	if g.Config != nil && g.Config.IsLondon(common.Big0) {
+		head.BaseFee = new(big.Int).SetUint64(params.InitialBaseFee)
+	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true, nil)
 	StoreGenesis(db, head)
@@ -331,7 +334,7 @@ func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
 			statedb.SetCode(addr, account.Code)
 			statedb.SetNonce(addr, account.Nonce)
 			for key, value := range account.Storage {
-				statedb.SetState(addr, key, value)
+				statedb.SetState(addr, key, value[:])
 			}
 		}
 	}

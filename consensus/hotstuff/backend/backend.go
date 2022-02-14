@@ -73,6 +73,8 @@ type backend struct {
 
 	// event subscription for ChainHeadEvent event
 	broadcaster consensus.Broadcaster
+	// event subscription for request new block from miner/worker.
+	reqFeed event.Feed
 
 	eventMux *event.TypeMux
 
@@ -377,4 +379,8 @@ func (s *backend) HasBadProposal(hash common.Hash) bool {
 		return false
 	}
 	return s.hasBadBlock(hash)
+}
+
+func (s *backend) AskMiningProposalWithParent(parent *types.Block) {
+	s.reqFeed.Send(*parent)
 }

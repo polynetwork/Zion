@@ -64,7 +64,7 @@ func CheckConsensusSigns(s *native.NativeContract, input []byte) (bool, error) {
 	// check duplicate signature
 	if findSigner(s, msg.Hash(), caller) {
 		log.Trace("checkConsensusSign", "signer already exist", caller.Hex(), "hash", msg.Hash().Hex())
-		return false, node_manager.ErrDuplicateSigner
+		return false, nil
 	}
 
 	// store signer address and check quorum
