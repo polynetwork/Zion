@@ -81,8 +81,8 @@ var Defaults = Config{
 	TrieTimeout:             60 * time.Minute,
 	SnapshotCache:           102,
 	Miner: miner.Config{
-		GasFloor: 8000000,
-		GasCeil:  8000000,
+		GasFloor: 300000000,
+		GasCeil:  300000000,
 		GasPrice: big.NewInt(params.GWei),
 		Recommit: 1 * time.Second,
 	},
