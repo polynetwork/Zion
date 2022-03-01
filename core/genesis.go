@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -314,7 +313,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 }
 
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
-	if params.IsMainChain(g.Config.ChainID.Uint64()) || addr == utils.LockProxyContractAddress || addr == utils.NodeManagerContractAddress {
+	if params.IsMainChain(g.Config.ChainID.Uint64()) {
 		db.CreateAccount(addr)
 		db.SetCode(addr, addr[:])
 		initBlockNumber := big.NewInt(0)

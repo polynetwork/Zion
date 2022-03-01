@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zilliqa"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zion"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
@@ -66,11 +65,8 @@ func SyncGenesisHeader(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(hscommon.ABI, hscommon.MethodSyncGenesisHeader, params, ctx.Payload); err != nil {
 		return nil, err
 	}
-	chainID := params.ChainID
 
-	if native.IsMainChain(chainID) {
-		return nil, fmt.Errorf("SyncGenesisHeader, sync relay chain's genesis header is NOT allowed!")
-	}
+	chainID := params.ChainID
 
 	//check if chainid exist
 	sideChain, err := side_chain_manager.GetSideChain(s, chainID)
@@ -102,9 +98,6 @@ func SyncBlockHeader(s *native.NativeContract) ([]byte, error) {
 	}
 
 	chainID := params.ChainID
-	if native.IsMainChain(chainID) {
-		return nil, fmt.Errorf("SyncBlockHeader, sync relay chain's header is NOT allowed!")
-	}
 
 	//check if chainid exist
 	sideChain, err := side_chain_manager.GetSideChain(s, chainID)
@@ -136,9 +129,6 @@ func SyncCrossChainMsg(s *native.NativeContract) ([]byte, error) {
 	}
 
 	chainID := params.ChainID
-	if native.IsMainChain(chainID) {
-		return nil, fmt.Errorf("SyncCrossChainMsg, sync relay chain's cross chain message is NOT allowed")
-	}
 
 	//check if chainid exist
 	sideChain, err := side_chain_manager.GetSideChain(s, chainID)
@@ -183,8 +173,6 @@ func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
 		return cosmos.NewCosmosHandler(), nil
 	case utils.ZILLIQA_ROUTER:
 		return zilliqa.NewHandler(), nil
-	case utils.ZION_ROUTER:
-		return zion.NewHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}
