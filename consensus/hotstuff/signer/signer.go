@@ -336,11 +336,10 @@ func checkValidatorQuorum(committers []common.Address, valSet hotstuff.Validator
 			validSeal++
 			continue
 		}
-		return errInvalidCommittedSeals
 	}
 
 	// The length of validSeal should be larger than number of faulty node + 1
-	if validSeal <= validators.Q() {
+	if validSeal < validators.Q() {
 		return errInvalidCommittedSeals
 	}
 	return nil
