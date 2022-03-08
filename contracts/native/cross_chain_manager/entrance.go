@@ -33,8 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/mainchain/lock_proxy"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/sidechain"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -92,8 +90,6 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return cosmos.NewCosmosHandler(), nil
 	case utils.ZILLIQA_ROUTER:
 		return zilliqa.NewHandler(), nil
-	case utils.ZION_ROUTER:
-		return sidechain.NewHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}
@@ -111,10 +107,6 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	}
 
 	srcChainID := params.SourceChainID
-	if native.IsMainChain(srcChainID) {
-		return nil, fmt.Errorf("ImportExTransfer, source chain CAN'T be main chain")
-	}
-
 	blacked, err := CheckIfChainBlacked(s, srcChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ImportExTransfer, CheckIfChainBlacked err: %v", err)
@@ -146,17 +138,8 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 		return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
 	}
 
-	// transfer outcome for main chain
-	dstChainID := txParam.ToChainID
-	if srcChain.Router == utils.ZION_ROUTER && native.IsMainChain(dstChainID) {
-		if err := lock_proxy.Unlock(s, params.SourceChainID, txParam); err != nil {
-			return nil, err
-		} else {
-			return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
-		}
-	}
-
 	//check target chain
+	dstChainID := txParam.ToChainID
 	if blacked, err = CheckIfChainBlacked(s, dstChainID); err != nil {
 		return nil, fmt.Errorf("ImportExTransfer, CheckIfChainBlacked error: %v", err)
 	}
@@ -190,10 +173,6 @@ func BlackChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsMainChain(params.ChainID) {
-		return nil, fmt.Errorf("BlackChain, zion relay chain not supported")
-	}
-
 	// Get current epoch operator
 	ok, err := node_manager.CheckConsensusSigns(s, scom.MethodBlackChain, utils.GetUint64Bytes(params.ChainID), s.ContractRef().MsgSender())
 	if err != nil {
@@ -212,10 +191,6 @@ func WhiteChain(s *native.NativeContract) ([]byte, error) {
 	params := &scom.BlackChainParam{}
 	if err := utils.UnpackMethod(scom.ABI, scom.MethodWhiteChain, params, ctx.Payload); err != nil {
 		return nil, err
-	}
-
-	if native.IsMainChain(params.ChainID) {
-		return nil, fmt.Errorf("WhiteChain, zion relay chain not supported")
 	}
 
 	// Get current epoch operator

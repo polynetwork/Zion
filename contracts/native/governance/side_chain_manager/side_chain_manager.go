@@ -20,7 +20,6 @@ package side_chain_manager
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/btcsuite/btcd/txscript"
 	"github.com/btcsuite/btcutil"
@@ -29,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const contractName = "side chain manager"
@@ -103,10 +103,6 @@ func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsMainChain(params.ChainId) {
-		return nil, fmt.Errorf("RegisterSideChain, relay chain `register` is forbidden")
-	}
-
 	//check witness
 	err := contract.ValidateOwner(s, params.Address)
 	if err != nil {
@@ -155,10 +151,6 @@ func ApproveRegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsMainChain(params.Chainid) {
-		return nil, fmt.Errorf("ApproveRegisterSideChain, relay chain `register approve` is forbidden")
-	}
-
 	//check witness
 	err := contract.ValidateOwner(s, params.Address)
 	if err != nil {
@@ -200,10 +192,6 @@ func UpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	params := &RegisterSideChainParam{}
 	if err := utils.UnpackMethod(ABI, MethodUpdateSideChain, params, ctx.Payload); err != nil {
 		return nil, err
-	}
-
-	if native.IsMainChain(params.ChainId) {
-		return nil, fmt.Errorf("ApproveRegisterSideChain, relay chain `update` is forbidden")
 	}
 
 	//check witness
@@ -248,10 +236,6 @@ func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	params := &ChainidParam{}
 	if err := utils.UnpackMethod(ABI, MethodApproveUpdateSideChain, params, ctx.Payload); err != nil {
 		return nil, err
-	}
-
-	if native.IsMainChain(params.Chainid) {
-		return nil, fmt.Errorf("ApproveUpdateSideChain, relay chain `update approve` is forbidden")
 	}
 
 	//check witness
@@ -300,10 +284,6 @@ func QuitSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 
-	if native.IsMainChain(params.Chainid) {
-		return nil, fmt.Errorf("QuitSideChain, relay chain `quit` is forbidden")
-	}
-
 	//check witness
 	err := contract.ValidateOwner(s, params.Address)
 	if err != nil {
@@ -337,10 +317,6 @@ func ApproveQuitSideChain(s *native.NativeContract) ([]byte, error) {
 	params := &ChainidParam{}
 	if err := utils.UnpackMethod(ABI, MethodApproveQuitSideChain, params, ctx.Payload); err != nil {
 		return nil, err
-	}
-
-	if native.IsMainChain(params.Chainid) {
-		return nil, fmt.Errorf("ApproveQuitSideChain, relay chain `quit approve` is forbidden")
 	}
 
 	//check witness

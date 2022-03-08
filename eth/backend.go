@@ -138,11 +138,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	}
 
 	// init different native contracts
-	if params.IsMainChain(config.NetworkId) {
-		boot.InitMainChainNativeContracts()
-	} else {
-		boot.InitSideChainNativeContracts()
-	}
+	boot.InitNativeContracts()
 	log.Info("Initialised chain configuration", "config", chainConfig)
 
 	if err := pruner.RecoverPruning(stack.ResolvePath(""), chainDb, stack.ResolvePath(config.TrieCleanCacheJournal)); err != nil {
