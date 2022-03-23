@@ -181,7 +181,7 @@ func PutEpochSwitchInfo(service *native.NativeContract, chainId uint64, info *Co
 
 func notifyEpochSwitchInfo(native *native.NativeContract, chainID uint64, info *CosmosEpochSwitchInfo) error {
 	return native.AddNotify(hscommon.ABI, []string{"OKEpochSwitchInfoEvent"}, chainID, info.BlockHash.String(), info.Height,
-		info.NextValidatorsHash.String(), info.ChainID, native.ContractRef().BlockHeight())
+		info.NextValidatorsHash.String(), info.ChainID, native.ContractRef().BlockHeight().Uint64())
 }
 
 type CosmosEpochSwitchInfo struct {
