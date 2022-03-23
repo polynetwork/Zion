@@ -56,7 +56,7 @@ func (this *OKHandler) MakeDepositProposal(service *native.NativeContract) (*sco
 	if err != nil {
 		return nil, fmt.Errorf("okex MakeDepositProposal, failed to get epoch switching height: %v", err)
 	}
-	if info.Height > int64(params.Height) {
+	if info.Height > uint64(params.Height) {
 		return nil, fmt.Errorf("okex MakeDepositProposal, the height %d of header is lower than epoch "+
 			"switching height %d", params.Height, info.Height)
 	}
@@ -77,13 +77,15 @@ func (this *OKHandler) MakeDepositProposal(service *native.NativeContract) (*sco
 		return nil, fmt.Errorf("okex MakeDepositProposal, failed to verify okex header: %v", err)
 	}
 	if !bytes.Equal(myHeader.Header.ValidatorsHash, myHeader.Header.NextValidatorsHash) &&
-		myHeader.Header.Height > info.Height {
-		okex.PutEpochSwitchInfo(service, params.SourceChainID, &okex.CosmosEpochSwitchInfo{
-			Height:             myHeader.Header.Height,
+		myHeader.Header.Height > 0 && uint64(myHeader.Header.Height) > info.Height {
+		if err := okex.PutEpochSwitchInfo(service, params.SourceChainID, &okex.CosmosEpochSwitchInfo{
+			Height:             uint64(myHeader.Header.Height),
 			BlockHash:          myHeader.Header.Hash(),
 			NextValidatorsHash: myHeader.Header.NextValidatorsHash,
 			ChainID:            myHeader.Header.ChainID,
-		})
+		}); err != nil {
+			return nil, fmt.Errorf("okex MakeDepositProposal, failed to PutEpochSwitchInfo: %v", err)
+		}
 	}
 
 	var proofValue CosmosProofValue

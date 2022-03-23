@@ -19,6 +19,7 @@ package cosmos
 import (
 	"bytes"
 	"fmt"
+
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -88,7 +89,7 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, failed to verify cosmos header: %v", err)
 	}
 	if !bytes.Equal(myHeader.Header.ValidatorsHash, myHeader.Header.NextValidatorsHash) &&
-		uint64(myHeader.Header.Height) > info.Height {
+		myHeader.Header.Height > 0 && uint64(myHeader.Header.Height) > info.Height {
 		if err := cosmos.PutEpochSwitchInfo(service, params.SourceChainID, &cosmos.CosmosEpochSwitchInfo{
 			Height:             uint64(myHeader.Header.Height),
 			BlockHash:          myHeader.Header.Hash(),
