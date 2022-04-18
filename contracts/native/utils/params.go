@@ -40,6 +40,7 @@ var (
 	NodeManagerContractAddress       = common.HexToAddress("0xA4Bf827047a08510722B2d62e668a72FCCFa232C")
 	RelayerManagerContractAddress    = common.HexToAddress("0xA22f301D7Cb5b50dcA4a015b12EC0cc5f3971412")
 	Neo3StateManagerContractAddress  = common.HexToAddress("0x5E839898821dB2A2F0eC9F8aAE7D7053744DB051")
+	MaasConfigContractAddress        = common.HexToAddress("0xD62B67170A6bb645f1c59601FbC6766940ee12e5")
 
 	VOTE_ROUTER             = uint64(0)
 	BTC_ROUTER              = uint64(1)

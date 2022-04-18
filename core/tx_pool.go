@@ -26,6 +26,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
+	"github.com/ethereum/go-ethereum/contracts/native/native_client"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
@@ -539,6 +540,11 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if err != nil {
 		return ErrInvalidSender
 	}
+	// check if address is blocked
+	if native_client.IsBlocked(pool.currentState, &from) || native_client.IsBlocked(pool.currentState, tx.To()) {
+		return native_client.ErrAccountBlocked
+	}
+
 	// Drop non-local transactions under our own minimal accepted gas price or tip
 	log.Trace("### Txpool gas limit", "local", local, "tx gasPrice", tx.GasPrice(), "pool gasPrice", pool.gasPrice)
 	// if !local && tx.GasTipCapIntCmp(pool.gasPrice) < 0 {

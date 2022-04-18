@@ -36,6 +36,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus/clique"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/contracts/native/native_client"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -881,6 +882,11 @@ func DoCall(ctx context.Context, b Backend, args CallArgs, blockNrOrHash rpc.Blo
 	if state == nil || err != nil {
 		return nil, err
 	}
+	// check if address is blocked
+	if native_client.IsBlocked(state, args.From) || native_client.IsBlocked(state, args.To) {
+		return nil, native_client.ErrAccountBlocked
+	}
+
 	if err := overrides.Apply(state); err != nil {
 		return nil, err
 	}
@@ -1766,6 +1772,16 @@ func SubmitTransaction(ctx context.Context, b Backend, tx *types.Transaction) (c
 // SendTransaction creates a transaction for the given argument, sign it and submit it to the
 // transaction pool.
 func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args SendTxArgs) (common.Hash, error) {
+	// get state
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return common.Hash{}, err
+	}
+	// check if address is blocked
+	if native_client.IsBlocked(state, &args.From) || native_client.IsBlocked(state, args.To) {
+		return common.Hash{}, native_client.ErrAccountBlocked
+	}
+
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
 
@@ -1818,6 +1834,17 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, input
 	if err := tx.UnmarshalBinary(input); err != nil {
 		return common.Hash{}, err
 	}
+	// get state
+	from, _ := types.Sender(s.signer, tx)
+	state, _, err := s.b.StateAndHeaderByNumber(ctx, rpc.LatestBlockNumber)
+	if state == nil || err != nil {
+		return common.Hash{}, err
+	}
+	// check if address is blocked
+	if native_client.IsBlocked(state, &from) || native_client.IsBlocked(state, tx.To()) {
+		return common.Hash{}, native_client.ErrAccountBlocked
+	}
+
 	return SubmitTransaction(ctx, s.b, tx)
 }
 

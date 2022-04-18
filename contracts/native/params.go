@@ -33,14 +33,15 @@ const (
 	NativeNodeManager      = "node_manager"
 	NativeRelayerManager   = "relayer_manager"
 	NativeSideChainManager = "side_chain_manager"
+	NativeMaasConfig       = "maas_config"
 	// native backup contracts
-	NativeExtra4  = "extra4"
-	NativeExtra5  = "extra5"
-	NativeExtra6  = "extra6"
-	NativeExtra7  = "extra7"
-	NativeExtra8  = "extra8"
-	NativeExtra9  = "extra9"
-	NativeExtra10 = "extra10"
+	NativeExtra4 = "extra4"
+	NativeExtra5 = "extra5"
+	NativeExtra6 = "extra6"
+	NativeExtra7 = "extra7"
+	NativeExtra8 = "extra8"
+	NativeExtra9 = "extra9"
+	// NativeExtra10 = "extra10"
 	NativeExtra11 = "extra11"
 	NativeExtra12 = "extra12"
 	NativeExtra13 = "extra13"
@@ -66,7 +67,7 @@ var NativeContractAddrMap = map[string]common.Address{
 	NativeExtra7:           common.HexToAddress("0x0F257CD338Fa8F1Af3D31b16C1fBddae2Dc96D41"),
 	NativeExtra8:           common.HexToAddress("0x4479AcbCeA458Badf21dbEC7Db6fC236Bf08fbb9"),
 	NativeExtra9:           common.HexToAddress("0xc204aDF052C52F74863d76c94a311b82D98d87AE"),
-	NativeExtra10:          common.HexToAddress("0xD62B67170A6bb645f1c59601FbC6766940ee12e5"),
+	NativeMaasConfig:       utils.MaasConfigContractAddress,
 	NativeExtra11:          common.HexToAddress("0xf7EBd79DB6240b9A85571f61b543425e2A7045Fb"),
 	NativeExtra12:          common.HexToAddress("0x20B019ea369923eF1971A30f1974003051f1863C"),
 	NativeExtra13:          common.HexToAddress("0x2951b823F25344797D9294634F44e867490B86c9"),
