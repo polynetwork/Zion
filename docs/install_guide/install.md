@@ -6,6 +6,17 @@ ubuntu 16或18
 centOS 7
 golang版本1.14及以上，同时需要C编译器
 
+## 1.2. 目录结构
+
++ install_guide.md 安装说明
++ setup 
+    - node0 - node6 7节点的私钥和公钥文件
+    - genesis.json  创世区块配置
+    - static-node.json 静态节点通讯配置
++ init.sh 创世区块初始化脚本
++ start.sh 节点启动脚本
++ stop.sh  节点停机脚本
+
 ## 1.3. 生成节点初始配置信息
 
 运行代码目录中 src/consensus/hotstuff/tool/encoder_test.go 的TestGenerateAndEncode(), 修改节点数，生成所需配置，并记录拷贝
