@@ -325,6 +325,10 @@ proceedings to the account specified by `--miner.etherbase`. You can further tun
 by changing the default gas limit blocks converge to (`--miner.targetgaslimit`) and the price
 transactions are accepted at (`--miner.gasprice`).
 
+## JSON-RPC API Documentation
+
+[Go to Zion JSON-RPC Specification](docs/jsonrpc/jsonrpc.md)
+
 ## Contribution
 
 Thank you for considering to help out with the source code! We welcome contributions
