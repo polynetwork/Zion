@@ -99,10 +99,6 @@ APIs!**
 
 [Go to Zion JSON-RPC Specification](docs/jsonrpc/jsonrpc.md)
 
-## JSON-RPC API Documentation
-
-[Go to Zion JSON-RPC Specification](docs/jsonrpc/jsonrpc.md)
-
 ## Contribution
 
 Thank you for considering to help out with the source code! We welcome contributions
