@@ -113,7 +113,17 @@ func PackEvents(ab *abi.ABI, event string, args ...interface{}) ([]byte, error) 
 	if !exist {
 		return nil, fmt.Errorf("event '%s' not found", event)
 	}
-	return evt.Inputs.Pack(args...)
+	// only pack not indexed args
+	var arguments abi.Arguments
+	var notIndexed []interface{}
+	for i, v := range evt.Inputs {
+		if !v.Indexed {
+			arguments = append(arguments, v)
+			notIndexed = append(notIndexed, args[i])
+		}
+	}
+
+	return arguments.Pack(notIndexed...)
 }
 
 func UnpackEvent(ab abi.ABI, event string, payload []byte) ([]interface{}, error) {

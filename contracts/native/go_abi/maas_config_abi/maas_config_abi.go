@@ -45,7 +45,7 @@ var (
 )
 
 // MaasConfigABI is the input ABI used to generate the binding from.
-const MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"ChangeOwner\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBlacklist\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+const MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"ChangeOwner\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBlacklist\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
 
 // MaasConfig is an auto generated Go binding around an Ethereum contract.
 type MaasConfig struct {
@@ -431,10 +431,15 @@ type MaasConfigBlockAccount struct {
 
 // FilterBlockAccount is a free log retrieval operation binding the contract event 0x977826a31e63a99f714f2677060d8f5d42a578272b31da3a8088f758ca915fdf.
 //
-// Solidity: event BlockAccount(address addr, bool doBlock)
-func (_MaasConfig *MaasConfigFilterer) FilterBlockAccount(opts *bind.FilterOpts) (*MaasConfigBlockAccountIterator, error) {
+// Solidity: event BlockAccount(address indexed addr, bool doBlock)
+func (_MaasConfig *MaasConfigFilterer) FilterBlockAccount(opts *bind.FilterOpts, addr []common.Address) (*MaasConfigBlockAccountIterator, error) {
 
-	logs, sub, err := _MaasConfig.contract.FilterLogs(opts, "BlockAccount")
+	var addrRule []interface{}
+	for _, addrItem := range addr {
+		addrRule = append(addrRule, addrItem)
+	}
+
+	logs, sub, err := _MaasConfig.contract.FilterLogs(opts, "BlockAccount", addrRule)
 	if err != nil {
 		return nil, err
 	}
@@ -443,10 +448,15 @@ func (_MaasConfig *MaasConfigFilterer) FilterBlockAccount(opts *bind.FilterOpts)
 
 // WatchBlockAccount is a free log subscription operation binding the contract event 0x977826a31e63a99f714f2677060d8f5d42a578272b31da3a8088f758ca915fdf.
 //
-// Solidity: event BlockAccount(address addr, bool doBlock)
-func (_MaasConfig *MaasConfigFilterer) WatchBlockAccount(opts *bind.WatchOpts, sink chan<- *MaasConfigBlockAccount) (event.Subscription, error) {
+// Solidity: event BlockAccount(address indexed addr, bool doBlock)
+func (_MaasConfig *MaasConfigFilterer) WatchBlockAccount(opts *bind.WatchOpts, sink chan<- *MaasConfigBlockAccount, addr []common.Address) (event.Subscription, error) {
 
-	logs, sub, err := _MaasConfig.contract.WatchLogs(opts, "BlockAccount")
+	var addrRule []interface{}
+	for _, addrItem := range addr {
+		addrRule = append(addrRule, addrItem)
+	}
+
+	logs, sub, err := _MaasConfig.contract.WatchLogs(opts, "BlockAccount", addrRule)
 	if err != nil {
 		return nil, err
 	}
@@ -480,7 +490,7 @@ func (_MaasConfig *MaasConfigFilterer) WatchBlockAccount(opts *bind.WatchOpts, s
 
 // ParseBlockAccount is a log parse operation binding the contract event 0x977826a31e63a99f714f2677060d8f5d42a578272b31da3a8088f758ca915fdf.
 //
-// Solidity: event BlockAccount(address addr, bool doBlock)
+// Solidity: event BlockAccount(address indexed addr, bool doBlock)
 func (_MaasConfig *MaasConfigFilterer) ParseBlockAccount(log types.Log) (*MaasConfigBlockAccount, error) {
 	event := new(MaasConfigBlockAccount)
 	if err := _MaasConfig.contract.UnpackLog(event, "BlockAccount", log); err != nil {
@@ -566,10 +576,19 @@ type MaasConfigChangeOwner struct {
 
 // FilterChangeOwner is a free log retrieval operation binding the contract event 0x9aecf86140d81442289f667eb72e1202a8fbb3478a686659952e145e85319656.
 //
-// Solidity: event ChangeOwner(address oldOwner, address newOwner)
-func (_MaasConfig *MaasConfigFilterer) FilterChangeOwner(opts *bind.FilterOpts) (*MaasConfigChangeOwnerIterator, error) {
+// Solidity: event ChangeOwner(address indexed oldOwner, address indexed newOwner)
+func (_MaasConfig *MaasConfigFilterer) FilterChangeOwner(opts *bind.FilterOpts, oldOwner []common.Address, newOwner []common.Address) (*MaasConfigChangeOwnerIterator, error) {
 
-	logs, sub, err := _MaasConfig.contract.FilterLogs(opts, "ChangeOwner")
+	var oldOwnerRule []interface{}
+	for _, oldOwnerItem := range oldOwner {
+		oldOwnerRule = append(oldOwnerRule, oldOwnerItem)
+	}
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	}
+
+	logs, sub, err := _MaasConfig.contract.FilterLogs(opts, "ChangeOwner", oldOwnerRule, newOwnerRule)
 	if err != nil {
 		return nil, err
 	}
@@ -578,10 +597,19 @@ func (_MaasConfig *MaasConfigFilterer) FilterChangeOwner(opts *bind.FilterOpts) 
 
 // WatchChangeOwner is a free log subscription operation binding the contract event 0x9aecf86140d81442289f667eb72e1202a8fbb3478a686659952e145e85319656.
 //
-// Solidity: event ChangeOwner(address oldOwner, address newOwner)
-func (_MaasConfig *MaasConfigFilterer) WatchChangeOwner(opts *bind.WatchOpts, sink chan<- *MaasConfigChangeOwner) (event.Subscription, error) {
+// Solidity: event ChangeOwner(address indexed oldOwner, address indexed newOwner)
+func (_MaasConfig *MaasConfigFilterer) WatchChangeOwner(opts *bind.WatchOpts, sink chan<- *MaasConfigChangeOwner, oldOwner []common.Address, newOwner []common.Address) (event.Subscription, error) {
 
-	logs, sub, err := _MaasConfig.contract.WatchLogs(opts, "ChangeOwner")
+	var oldOwnerRule []interface{}
+	for _, oldOwnerItem := range oldOwner {
+		oldOwnerRule = append(oldOwnerRule, oldOwnerItem)
+	}
+	var newOwnerRule []interface{}
+	for _, newOwnerItem := range newOwner {
+		newOwnerRule = append(newOwnerRule, newOwnerItem)
+	}
+
+	logs, sub, err := _MaasConfig.contract.WatchLogs(opts, "ChangeOwner", oldOwnerRule, newOwnerRule)
 	if err != nil {
 		return nil, err
 	}
@@ -615,7 +643,7 @@ func (_MaasConfig *MaasConfigFilterer) WatchChangeOwner(opts *bind.WatchOpts, si
 
 // ParseChangeOwner is a log parse operation binding the contract event 0x9aecf86140d81442289f667eb72e1202a8fbb3478a686659952e145e85319656.
 //
-// Solidity: event ChangeOwner(address oldOwner, address newOwner)
+// Solidity: event ChangeOwner(address indexed oldOwner, address indexed newOwner)
 func (_MaasConfig *MaasConfigFilterer) ParseChangeOwner(log types.Log) (*MaasConfigChangeOwner, error) {
 	event := new(MaasConfigChangeOwner)
 	if err := _MaasConfig.contract.UnpackLog(event, "ChangeOwner", log); err != nil {

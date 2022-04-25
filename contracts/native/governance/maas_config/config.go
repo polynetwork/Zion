@@ -67,14 +67,14 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 
 	// check authority
 	if err := contract.ValidateOwner(s, caller); err != nil {
-		log.Trace("blockAccount", "ValidateOwner caller failed", err)
+		log.Trace("ChangeOwner", "ValidateOwner caller failed", err)
 		return utils.ByteFailed, errors.New("invalid authority for caller")
 	}
 
 	currentOwner := getOwner(s)
 	if currentOwner != common.EmptyAddress {
 		if err := contract.ValidateOwner(s, currentOwner); err != nil {
-			log.Trace("blockAccount", "ValidateOwner owner failed", err)
+			log.Trace("ChangeOwner", "ValidateOwner owner failed", err)
 			return utils.ByteFailed, errors.New("invalid authority for owner")
 		}
 	}
@@ -86,12 +86,21 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, errors.New("invalid input")
 	}
 
-	// store blacklist
+	// verify new owner address
+	m := getBlacklistMap(s)
+	_, ok := m[input.Addr]
+	if ok {
+		err := errors.New("new owner address in blacklist")
+		log.Trace("ChangeOwner", "invalid new owner", err)
+		return utils.ByteFailed, err
+	}
+
+	// store owner
 	key := getOwnerKey()
 	set(s, key, input.Addr.Bytes())
 
 	// emit event log
-	if err := s.AddNotify(ABI, []string{EventChangeOwner}, currentOwner, input.Addr); err != nil {
+	if err := s.AddNotify(ABI, []string{EventChangeOwner}, common.BytesToHash(currentOwner.Bytes()), common.BytesToHash(input.Addr.Bytes())); err != nil {
 		log.Trace("propose", "emit event log failed", err)
 		return utils.ByteFailed, errors.New("emit EventChangeOwner error")
 	}
@@ -140,6 +149,12 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, errors.New("invalid input")
 	}
 
+	if input.Addr == currentOwner {
+		err := errors.New("block owner is forbidden")
+		log.Trace("blockAccount", "block owner is forbidden", err)
+		return utils.ByteFailed, err
+	}
+
 	key := blacklistKey()
 	m := getBlacklistMap(s)
 	if input.DoBlock {
@@ -157,7 +172,7 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 	set(s, key, value)
 
 	// emit event log
-	if err := s.AddNotify(ABI, []string{EventBlockAccount}, input.Addr, input.DoBlock); err != nil {
+	if err := s.AddNotify(ABI, []string{EventBlockAccount}, common.BytesToHash(input.Addr.Bytes()), input.DoBlock); err != nil {
 		log.Trace("propose", "emit event log failed", err)
 		return utils.ByteFailed, errors.New("emitBlockAccount error")
 	}
