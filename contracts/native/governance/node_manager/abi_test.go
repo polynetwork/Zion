@@ -180,3 +180,30 @@ func TestABIMethodProofOutput(t *testing.T) {
 
 	assert.Equal(t, expect, got)
 }
+
+func TestABIMethodGetEpochListJsonInput(t *testing.T) {
+	expect := new(MethodGetEpochListJsonInput)
+	expect.EpochID = uint64(9932)
+	enc, err := expect.Encode()
+	assert.NoError(t, err)
+
+	got := new(MethodGetEpochListJsonInput)
+	assert.NoError(t, got.Decode(enc))
+
+	assert.Equal(t, expect, got)
+}
+
+func TestABIMethodGetJsonOutput(t *testing.T) {
+	expect := new(MethodGetJsonOutput)
+	epochID := uint64(2)
+	peers := generateTestPeers(7)
+	epoch := &EpochInfo{ID: epochID, Proposer: peers.List[0].Address, Peers: peers, StartHeight: 60}
+	expect.Result = epoch.Json()
+	enc, err := expect.Encode(MethodGetEpochListJson)
+	assert.NoError(t, err)
+
+	got := new(MethodGetJsonOutput)
+	assert.NoError(t, got.Decode(enc, MethodGetEpochListJson))
+
+	assert.Equal(t, expect, got)
+}

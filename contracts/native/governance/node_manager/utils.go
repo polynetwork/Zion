@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 func getCurrentEpoch(s *native.NativeContract) (*EpochInfo, error) {
@@ -70,6 +71,47 @@ func getEffectiveEpochByID(s *native.NativeContract, epochID uint64) (*EpochInfo
 	}
 	lastEpochHash := list[0]
 	return getEpoch(s, lastEpochHash)
+}
+
+func getEpochListByID(s *native.NativeContract, epochID uint64) ([]*EpochInfo, error) {
+	if epochID < StartEpochID {
+		return nil, fmt.Errorf("epoch %d not exist", epochID)
+	}
+	list, err := getProposals(s, epochID)
+	if err != nil {
+		return nil, fmt.Errorf("epoch %d has no proposal, err: %v", epochID, err)
+	}
+	if len(list) == 0 {
+		return nil, fmt.Errorf("epoch %d has no proposal", epochID)
+	}
+	var epochList []*EpochInfo
+	for _, v := range list {
+		item, err := getEpoch(s, v)
+		if err != nil {
+			return nil, fmt.Errorf("proposal %d not exists, err: %v", v, err)
+		}
+		epochList = append(epochList, item)
+	}
+
+	return epochList, nil
+}
+
+func getChangingEpoch(s *native.NativeContract) (*EpochInfo, error) {
+	curEpochHash, err := getCurrentEpochHash(s)
+	if err != nil {
+		return nil, err
+	}
+	epoch, err := getEpoch(s, curEpochHash)
+	if err != nil {
+		return nil, err
+	}
+
+	height := s.ContractRef().BlockHeight().Uint64()
+	if height > epoch.StartHeight {
+		log.Warn("getChangingEpoch", "epoch changing invalidation, start height", epoch.StartHeight, "current height", height)
+		return nil, fmt.Errorf("epoch invalid")
+	}
+	return epoch, nil
 }
 
 func CheckAuthority(origin, caller common.Address, epoch *EpochInfo) error {

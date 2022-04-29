@@ -21,6 +21,7 @@ package node_manager
 import (
 	"fmt"
 	"sort"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -48,6 +49,10 @@ var (
 		MethodGetEpochByID:     0,
 		MethodProof:            0,
 		MethodGetChangingEpoch: 0,
+
+		MethodGetChangingEpochJson: 0,
+		MethodGetCurrentEpochJson:  0,
+		MethodGetEpochListJson:     0,
 	}
 )
 
@@ -83,6 +88,10 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Register(MethodGetEpochByID, GetEpochByID)
 	s.Register(MethodProof, GetEpochProof)
 	s.Register(MethodGetChangingEpoch, GetChangingEpoch)
+
+	s.Register(MethodGetChangingEpochJson, GetChangingEpochJson)
+	s.Register(MethodGetCurrentEpochJson, GetCurrentEpochJson)
+	s.Register(MethodGetEpochListJson, GetEpochListJson)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -378,19 +387,9 @@ func GetEpochWithStateDB(db *state.StateDB) (*EpochInfo, error) {
 }
 
 func GetChangingEpoch(s *native.NativeContract) ([]byte, error) {
-	curEpochHash, err := getCurrentEpochHash(s)
+	epoch, err := getChangingEpoch(s)
 	if err != nil {
 		return utils.ByteFailed, err
-	}
-	epoch, err := getEpoch(s, curEpochHash)
-	if err != nil {
-		return utils.ByteFailed, err
-	}
-
-	height := s.ContractRef().BlockHeight().Uint64()
-	if height > epoch.StartHeight {
-		log.Warn("getChangingEpoch", "epoch changing invalidation, start height", epoch.StartHeight, "current height", height)
-		return utils.ByteFailed, fmt.Errorf("epoch invalid")
 	}
 	output := &MethodEpochOutput{Epoch: epoch}
 	return output.Encode()
@@ -414,6 +413,53 @@ func GetEpochByID(s *native.NativeContract) ([]byte, error) {
 	}
 	output := MethodEpochOutput{Epoch: epoch}
 	return output.Encode()
+}
+
+func GetEpochListJson(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// decode input
+	input := new(MethodGetEpochListJsonInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("GetEpochListJson", "decode input failed", err)
+		return utils.ByteFailed, ErrInvalidInput
+	}
+
+	epochList, err := getEpochListByID(s, input.EpochID)
+	if err != nil {
+		log.Trace("GetEpochListJson", "get history epoch failed", err)
+		return utils.ByteFailed, ErrEpochNotExist
+	}
+	var str strings.Builder
+	str.WriteString("[")
+	for i, v := range epochList {
+		str.WriteString(v.Json())
+		if i != len(epochList)-1 {
+			str.WriteString(",")
+		}
+	}
+	str.WriteString("]")
+	output := MethodGetJsonOutput{Result: str.String()}
+	return output.Encode(MethodGetEpochListJson)
+}
+
+func GetCurrentEpochJson(s *native.NativeContract) ([]byte, error) {
+	epoch, err := getCurrentEpoch(s)
+	if err != nil {
+		log.Trace("epoch", "get current epoch failed", err)
+		return utils.ByteFailed, ErrEpochNotExist
+	}
+	output := &MethodGetJsonOutput{Result: epoch.Json()}
+	return output.Encode(MethodGetCurrentEpochJson)
+}
+
+func GetChangingEpochJson(s *native.NativeContract) ([]byte, error) {
+	epoch, err := getChangingEpoch(s)
+	if err != nil {
+		return utils.ByteFailed, err
+	}
+	output := &MethodGetJsonOutput{Result: epoch.Json()}
+	return output.Encode(MethodGetChangingEpochJson)
 }
 
 func GetEpochProof(s *native.NativeContract) ([]byte, error) {

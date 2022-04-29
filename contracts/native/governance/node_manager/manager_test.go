@@ -20,6 +20,7 @@ package node_manager
 
 import (
 	"crypto/rand"
+	"encoding/json"
 	"math/big"
 	"os"
 	"sort"
@@ -28,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -528,6 +530,17 @@ func TestProposalPassed(t *testing.T) {
 	curEpoch, err = getEpoch(ctx, epoch.Hash())
 	assert.NoError(t, err)
 	assert.Equal(t, ProposalStatusPassed, curEpoch.Status)
+
+	// get changing epoch
+	changingInput := &MethodGetChangingEpochInput{}
+	changingEpochPayload, err := changingInput.Encode()
+	assert.Nil(t, err)
+	ctx = generateNativeContract(common.EmptyAddress, int(proposalStartHeight-1))
+	enc, _, err := ctx.ContractRef().NativeCall(common.EmptyAddress, this, changingEpochPayload)
+	changingOutPut := &MethodEpochOutput{}
+	changingOutPut.Decode(enc)
+	assert.NoError(t, err)
+	assert.Equal(t, curEpoch.Hash(), changingOutPut.Epoch.Hash())
 }
 
 func TestDirtyJob(t *testing.T) {
@@ -606,6 +619,48 @@ func TestGetEpochByID(t *testing.T) {
 	output := new(MethodEpochOutput)
 	assert.NoError(t, output.Decode(enc))
 	assert.Equal(t, epoch.Hash(), output.Epoch.Hash())
+}
+
+func TestGetEpochListJson(t *testing.T) {
+	resetTestContext()
+
+	s := testEmptyCtx
+	epochID := uint64(2)
+	peers := generateTestPeers(12)
+	voters := []common.Address{peers.List[2].Address, peers.List[3].Address}
+
+	// store last epoch
+	lastEpoch := &EpochInfo{ID: epochID - 1, Proposer: peers.List[0].Address, Peers: peers, StartHeight: 60}
+	assert.NoError(t, storeEpoch(s, lastEpoch))
+	assert.NoError(t, storeProposal(s, lastEpoch.ID, lastEpoch.Hash()))
+
+	// store current useless epoch and votes
+	eps := []*EpochInfo{
+		{ID: epochID, Proposer: peers.List[0].Address, Peers: &Peers{List: peers.List[:5]}, StartHeight: 270},
+		{ID: epochID, Proposer: peers.List[1].Address, Peers: &Peers{List: peers.List[:6]}, StartHeight: 290},
+	}
+	for i, v := range eps {
+		assert.NoError(t, storeEpoch(s, v))
+		assert.NoError(t, storeProposal(s, v.ID, v.Hash()))
+		assert.NoError(t, storeVote(s, v.Hash(), voters[i]))
+		storeVoteTo(s, v.ID, voters[i], v.Hash())
+	}
+
+	input := new(MethodGetEpochListJsonInput)
+	input.EpochID = epochID
+	payload, err := input.Encode()
+	assert.NoError(t, err)
+	ctx := generateNativeContract(common.EmptyAddress, int(61))
+	enc, _, err := ctx.ContractRef().NativeCall(common.EmptyAddress, this, payload)
+	assert.NoError(t, err)
+
+	output := new(MethodGetJsonOutput)
+	assert.NoError(t, output.Decode(enc, node_manager_abi.MethodGetEpochListJson))
+	var outputEpochs []*EpochInfo
+	assert.NoError(t, json.Unmarshal([]byte(output.Result), &outputEpochs))
+	assert.Equal(t, eps[0].Hash(), outputEpochs[0].Hash())
+	assert.Equal(t, eps[1].Hash(), outputEpochs[1].Hash())
+	assert.Equal(t, 2, len(outputEpochs))
 }
 
 func TestGetProofByID(t *testing.T) {

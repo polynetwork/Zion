@@ -9,6 +9,10 @@ interface INodeManager {
     function getChangingEpoch() external view returns (bytes memory);
     function getEpochByID(uint64 epochID) external view returns (bytes memory);
     function proof(uint64 epochID) external view returns (bytes memory);
+
+    function getEpochListJson(uint64 epochID) external view returns (string memory);
+    function getCurrentEpochJson() external view returns (string memory);
+    function getChangingEpochJson() external view returns (string memory);
     
     event Proposed(bytes epoch);
     event Voted(uint64 epochID, bytes epochHash, uint64 votedNumber, uint64 groupSize);

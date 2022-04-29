@@ -19,6 +19,7 @@
 package node_manager
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"math"
@@ -161,6 +162,26 @@ func (m *EpochInfo) String() string {
 	}
 	return fmt.Sprintf("epochHash:%s\r\nepochId: %d\r\n%sstartHeight: %d\r\nproposer:%s\r\nstatus:%s",
 		m.Hash().Hex(), m.ID, pstr, m.StartHeight, m.Proposer.Hex(), m.Status.String())
+}
+
+func (m *EpochInfo) Json() string {
+	var epoch = struct {
+		ID          uint64
+		Peers       *Peers
+		StartHeight uint64
+		Proposer    common.Address
+		Status      ProposalStatusType
+		Hash        common.Hash
+	}{
+		ID:          m.ID,
+		Peers:       m.Peers,
+		StartHeight: m.StartHeight,
+		Proposer:    m.Proposer,
+		Status:      m.Status,
+		Hash:        m.Hash(),
+	}
+	bytes, _ := json.Marshal(epoch)
+	return string(bytes)
 }
 
 func (m *EpochInfo) Hash() common.Hash {

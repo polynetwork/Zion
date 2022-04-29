@@ -248,3 +248,33 @@ func emitEpochChange(s *native.NativeContract, curEpoch, nextEpoch *EpochInfo) e
 func emitConsensusSign(s *native.NativeContract, sign *ConsensusSign, signer common.Address, num int) error {
 	return s.AddNotify(ABI, []string{EventConsensusSigned}, sign.Method, sign.Input, signer, uint64(num))
 }
+
+type MethodGetEpochListJsonInput struct {
+	EpochID uint64
+}
+
+func (m *MethodGetEpochListJsonInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetEpochListJson, m.EpochID)
+}
+func (m *MethodGetEpochListJsonInput) Decode(payload []byte) error {
+	var data struct {
+		EpochID uint64
+	}
+	if err := utils.UnpackMethod(ABI, MethodGetEpochListJson, &data, payload); err != nil {
+		return err
+	}
+	m.EpochID = data.EpochID
+	return nil
+}
+
+type MethodGetJsonOutput struct {
+	Result string
+}
+
+func (m *MethodGetJsonOutput) Encode(methodName string) ([]byte, error) {
+	return utils.PackOutputs(ABI, methodName, m.Result)
+}
+
+func (m *MethodGetJsonOutput) Decode(payload []byte, methodName string) error {
+	return utils.UnpackOutputs(ABI, methodName, m, payload)
+}

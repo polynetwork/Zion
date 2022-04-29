@@ -35,7 +35,13 @@ var (
 
 	MethodGetChangingEpoch = "getChangingEpoch"
 
+	MethodGetChangingEpochJson = "getChangingEpochJson"
+
+	MethodGetCurrentEpochJson = "getCurrentEpochJson"
+
 	MethodGetEpochByID = "getEpochByID"
+
+	MethodGetEpochListJson = "getEpochListJson"
 
 	MethodName = "name"
 
@@ -51,18 +57,7 @@ var (
 )
 
 // INodeManagerABI is the input ABI used to generate the binding from.
-const INodeManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"method\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"input\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"signer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"size\",\"type\":\"uint64\"}],\"name\":\"ConsensusSigned\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"epoch\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"nextEpoch\",\"type\":\"bytes\"}],\"name\":\"EpochChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"epoch\",\"type\":\"bytes\"}],\"name\":\"Proposed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"epochID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"epochHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"votedNumber\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"groupSize\",\"type\":\"uint64\"}],\"name\":\"Voted\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"epoch\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getChangingEpoch\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"epochID\",\"type\":\"uint64\"}],\"name\":\"getEpochByID\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"epochID\",\"type\":\"uint64\"}],\"name\":\"proof\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"startHeight\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"peers\",\"type\":\"bytes\"}],\"name\":\"propose\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"epochID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"epochHash\",\"type\":\"bytes\"}],\"name\":\"vote\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
-
-// INodeManagerFuncSigs maps the 4-byte function signature to its string representation.
-var INodeManagerFuncSigs = map[string]string{
-	"900cf0cf": "epoch()",
-	"76b85cd9": "getChangingEpoch()",
-	"b9dda35e": "getEpochByID(uint64)",
-	"06fdde03": "name()",
-	"418f9899": "proof(uint64)",
-	"bcc12328": "propose(uint64,bytes)",
-	"08c16dbb": "vote(uint64,bytes)",
-}
+const INodeManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"method\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"input\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"address\",\"name\":\"signer\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"size\",\"type\":\"uint64\"}],\"name\":\"ConsensusSigned\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"epoch\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"nextEpoch\",\"type\":\"bytes\"}],\"name\":\"EpochChanged\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"epoch\",\"type\":\"bytes\"}],\"name\":\"Proposed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"epochID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"epochHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"votedNumber\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"groupSize\",\"type\":\"uint64\"}],\"name\":\"Voted\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"epoch\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getChangingEpoch\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getChangingEpochJson\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentEpochJson\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"epochID\",\"type\":\"uint64\"}],\"name\":\"getEpochByID\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"epochID\",\"type\":\"uint64\"}],\"name\":\"getEpochListJson\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"epochID\",\"type\":\"uint64\"}],\"name\":\"proof\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"startHeight\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"peers\",\"type\":\"bytes\"}],\"name\":\"propose\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"epochID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"epochHash\",\"type\":\"bytes\"}],\"name\":\"vote\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // INodeManager is an auto generated Go binding around an Ethereum contract.
 type INodeManager struct {
@@ -268,6 +263,68 @@ func (_INodeManager *INodeManagerCallerSession) GetChangingEpoch() ([]byte, erro
 	return _INodeManager.Contract.GetChangingEpoch(&_INodeManager.CallOpts)
 }
 
+// GetChangingEpochJson is a free data retrieval call binding the contract method 0x47167d41.
+//
+// Solidity: function getChangingEpochJson() view returns(string)
+func (_INodeManager *INodeManagerCaller) GetChangingEpochJson(opts *bind.CallOpts) (string, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getChangingEpochJson")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
+}
+
+// GetChangingEpochJson is a free data retrieval call binding the contract method 0x47167d41.
+//
+// Solidity: function getChangingEpochJson() view returns(string)
+func (_INodeManager *INodeManagerSession) GetChangingEpochJson() (string, error) {
+	return _INodeManager.Contract.GetChangingEpochJson(&_INodeManager.CallOpts)
+}
+
+// GetChangingEpochJson is a free data retrieval call binding the contract method 0x47167d41.
+//
+// Solidity: function getChangingEpochJson() view returns(string)
+func (_INodeManager *INodeManagerCallerSession) GetChangingEpochJson() (string, error) {
+	return _INodeManager.Contract.GetChangingEpochJson(&_INodeManager.CallOpts)
+}
+
+// GetCurrentEpochJson is a free data retrieval call binding the contract method 0x7d3d75d7.
+//
+// Solidity: function getCurrentEpochJson() view returns(string)
+func (_INodeManager *INodeManagerCaller) GetCurrentEpochJson(opts *bind.CallOpts) (string, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getCurrentEpochJson")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
+}
+
+// GetCurrentEpochJson is a free data retrieval call binding the contract method 0x7d3d75d7.
+//
+// Solidity: function getCurrentEpochJson() view returns(string)
+func (_INodeManager *INodeManagerSession) GetCurrentEpochJson() (string, error) {
+	return _INodeManager.Contract.GetCurrentEpochJson(&_INodeManager.CallOpts)
+}
+
+// GetCurrentEpochJson is a free data retrieval call binding the contract method 0x7d3d75d7.
+//
+// Solidity: function getCurrentEpochJson() view returns(string)
+func (_INodeManager *INodeManagerCallerSession) GetCurrentEpochJson() (string, error) {
+	return _INodeManager.Contract.GetCurrentEpochJson(&_INodeManager.CallOpts)
+}
+
 // GetEpochByID is a free data retrieval call binding the contract method 0xb9dda35e.
 //
 // Solidity: function getEpochByID(uint64 epochID) view returns(bytes)
@@ -297,6 +354,37 @@ func (_INodeManager *INodeManagerSession) GetEpochByID(epochID uint64) ([]byte, 
 // Solidity: function getEpochByID(uint64 epochID) view returns(bytes)
 func (_INodeManager *INodeManagerCallerSession) GetEpochByID(epochID uint64) ([]byte, error) {
 	return _INodeManager.Contract.GetEpochByID(&_INodeManager.CallOpts, epochID)
+}
+
+// GetEpochListJson is a free data retrieval call binding the contract method 0x73d9f136.
+//
+// Solidity: function getEpochListJson(uint64 epochID) view returns(string)
+func (_INodeManager *INodeManagerCaller) GetEpochListJson(opts *bind.CallOpts, epochID uint64) (string, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getEpochListJson", epochID)
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
+}
+
+// GetEpochListJson is a free data retrieval call binding the contract method 0x73d9f136.
+//
+// Solidity: function getEpochListJson(uint64 epochID) view returns(string)
+func (_INodeManager *INodeManagerSession) GetEpochListJson(epochID uint64) (string, error) {
+	return _INodeManager.Contract.GetEpochListJson(&_INodeManager.CallOpts, epochID)
+}
+
+// GetEpochListJson is a free data retrieval call binding the contract method 0x73d9f136.
+//
+// Solidity: function getEpochListJson(uint64 epochID) view returns(string)
+func (_INodeManager *INodeManagerCallerSession) GetEpochListJson(epochID uint64) (string, error) {
+	return _INodeManager.Contract.GetEpochListJson(&_INodeManager.CallOpts, epochID)
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
