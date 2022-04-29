@@ -238,6 +238,7 @@ func init() {
 		utils.ShowDeprecated,
 		// See snapshot.go
 		snapshotCommand,
+		genesisToolCommand,
 	}
 	sort.Sort(cli.CommandsByName(app.Commands))
 
