@@ -75,8 +75,11 @@ func (h *HeimdallHandler) SyncGenesisHeader(native *native.NativeContract) (err 
 	if err == nil && info != nil {
 		return fmt.Errorf("HeimdallHandler SyncGenesisHeader, genesis header had been initialized")
 	}
+	if header.Header.Height < 0 {
+		return fmt.Errorf("HeidallHandler SyncGenesisHeader, header height invalid")
+	}
 	if err := PutEpochSwitchInfo(native, param.ChainID, &CosmosEpochSwitchInfo{
-		Height:             header.Header.Height,
+		Height:             uint64(header.Header.Height),
 		NextValidatorsHash: header.Header.NextValidatorsHash,
 		ChainID:            header.Header.ChainID,
 		BlockHash:          header.Header.Hash(),
@@ -110,7 +113,10 @@ func (h *HeimdallHandler) SyncBlockHeader(native *native.NativeContract) error {
 		if bytes.Equal(myHeader.Header.NextValidatorsHash, myHeader.Header.ValidatorsHash) {
 			continue
 		}
-		if info.Height >= myHeader.Header.Height {
+		if myHeader.Header.Height < 0 {
+			return fmt.Errorf("SyncBlockHeader, header height invalid")
+		}
+		if info.Height >= uint64(myHeader.Header.Height) {
 			log.Debugf("SyncBlockHeader, height %d is lower or equal than epoch switching height %d",
 				myHeader.Header.Height, info.Height)
 			continue
@@ -119,7 +125,7 @@ func (h *HeimdallHandler) SyncBlockHeader(native *native.NativeContract) error {
 			return fmt.Errorf("SyncBlockHeader, failed to verify header: %v", err)
 		}
 		info.NextValidatorsHash = myHeader.Header.NextValidatorsHash
-		info.Height = myHeader.Header.Height
+		info.Height = uint64(myHeader.Header.Height)
 		info.BlockHash = myHeader.Header.Hash()
 		cnt++
 	}
@@ -166,7 +172,7 @@ type CosmosEpochSwitchInfo struct {
 	// The height where validators set changed last time. Poly only accept
 	// header and proof signed by new validators. That means the header
 	// can not be lower than this height.
-	Height int64
+	Height uint64
 
 	// Hash of the block at `Height`. Poly don't save the whole header.
 	// So we can identify the content of this block by `BlockHash`.
@@ -186,7 +192,7 @@ func (m *CosmosEpochSwitchInfo) EncodeRLP(w io.Writer) error {
 
 func (m *CosmosEpochSwitchInfo) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Height             int64
+		Height             uint64
 		BlockHash          polygonCmn.HexBytes
 		NextValidatorsHash polygonCmn.HexBytes
 		ChainID            string

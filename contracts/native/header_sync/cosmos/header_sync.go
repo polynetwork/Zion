@@ -81,6 +81,10 @@ func (this *CosmosHandler) SyncGenesisHeader(native *native.NativeContract) erro
 	if err == nil && info != nil {
 		return fmt.Errorf("CosmosHandler SyncGenesisHeader, genesis header had been initialized")
 	}
+	// prevent that header height will be converted from negative to positive
+	if header.Header.Height < 0 {
+		return fmt.Errorf("CosmosHandler SyncGenesisHeader: %s", "header height invalid")
+	}
 	if err := PutEpochSwitchInfo(native, param.ChainID, &CosmosEpochSwitchInfo{
 		Height:             uint64(header.Header.Height),
 		NextValidatorsHash: header.Header.NextValidatorsHash,
@@ -114,6 +118,10 @@ func (this *CosmosHandler) SyncBlockHeader(native *native.NativeContract) error 
 		}
 		if bytes.Equal(myHeader.Header.NextValidatorsHash, myHeader.Header.ValidatorsHash) {
 			continue
+		}
+		// prevent that header height will be converted from negative to positive
+		if myHeader.Header.Height < 0 {
+			return fmt.Errorf("SyncBlockHeader, header height invalid")
 		}
 		if info.Height >= uint64(myHeader.Header.Height) {
 			log.Debugf("SyncBlockHeader, height %d is lower or equal than epoch switching height %d",
