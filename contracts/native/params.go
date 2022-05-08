@@ -27,6 +27,7 @@ const FailedTxGasUsage = uint64(100)
 
 const (
 	NativeGovernance       = "governance"
+	NativeEconomic         = "economic"
 	NativeSyncHeader       = "sync_header"
 	NativeCrossChain       = "cross_chain"
 	NativeNeo3StateManager = "neo3_state_manager"
@@ -55,13 +56,13 @@ const (
 
 var NativeContractAddrMap = map[string]common.Address{
 	NativeGovernance:       utils.GovernanceContractAddress,
+	NativeEconomic:         utils.EconomicContractAddress,
 	NativeSyncHeader:       utils.HeaderSyncContractAddress,
 	NativeCrossChain:       utils.CrossChainManagerContractAddress,
 	NativeSideChainManager: utils.SideChainManagerContractAddress,
 	NativeNodeManager:      utils.NodeManagerContractAddress,
 	NativeRelayerManager:   utils.RelayerManagerContractAddress,
 	NativeNeo3StateManager: utils.Neo3StateManagerContractAddress,
-	NativeExtra4:           common.HexToAddress("0x0000000000000000000000000000000000001007"),
 	NativeExtra5:           common.HexToAddress("0x0000000000000000000000000000000000001008"),
 	NativeExtra6:           common.HexToAddress("0x0000000000000000000000000000000000001009"),
 	NativeExtra7:           common.HexToAddress("0x000000000000000000000000000000000000100a"),
