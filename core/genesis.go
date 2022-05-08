@@ -325,6 +325,15 @@ func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
 	if params.IsMainChain(g.Config.ChainID.Uint64()) {
+		// check total balance
+		total := new(big.Int)
+		for _, account := range g.Alloc {
+			total = new(big.Int).Add(total, account.Balance)
+		}
+		if total.Cmp(params.GenesisSupply) > 0 {
+			panic("alloc amount greater than genesis supply")
+		}
+
 		for addr, account := range g.Alloc {
 			statedb.AddBalance(addr, account.Balance)
 			statedb.SetCode(addr, account.Code)

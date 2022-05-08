@@ -37,8 +37,8 @@ var (
 )
 
 var (
-	RewardPerBlock = params.OneEth // new(big.Int).SetString("1000000000000000000", 0)
-	GenesisSupply  = new(big.Int).Mul(big.NewInt(1e8), RewardPerBlock)
+	RewardPerBlock = params.OneEth
+	GenesisSupply  = params.GenesisSupply
 
 	// rewardPoolFactor default value should be 0.2 = 2000/10000
 	defaultPoolRewardFactor = big.NewInt(2000)

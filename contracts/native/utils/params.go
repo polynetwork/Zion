@@ -35,7 +35,7 @@ var (
 
 var (
 	GovernanceContractAddress        = common.HexToAddress("0x0000000000000000000000000000000000001000")
-	EconomicContractAddress 		 = common.HexToAddress("0x0000000000000000000000000000000000001001")
+	EconomicContractAddress          = common.HexToAddress("0x0000000000000000000000000000000000001001")
 	HeaderSyncContractAddress        = common.HexToAddress("0x0000000000000000000000000000000000001002")
 	CrossChainManagerContractAddress = common.HexToAddress("0x0000000000000000000000000000000000001003")
 	SideChainManagerContractAddress  = common.HexToAddress("0x0000000000000000000000000000000000001004")

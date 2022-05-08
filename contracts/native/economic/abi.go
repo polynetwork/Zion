@@ -20,18 +20,18 @@ package economic
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/rlp"
 	"io"
 	"math/big"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/economic_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
-const contractName = "node manager"
+const contractName = "economic"
 
 func InitABI() {
 	ab, err := abi.JSON(strings.NewReader(IEconomicABI))
@@ -47,6 +47,7 @@ var (
 )
 
 type MethodContractNameInput struct{}
+
 func (m *MethodContractNameInput) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodName)
 }
@@ -55,6 +56,7 @@ func (m *MethodContractNameInput) Decode(payload []byte) error { return nil }
 type MethodContractNameOutput struct {
 	Name string
 }
+
 func (m *MethodContractNameOutput) Encode() ([]byte, error) {
 	m.Name = contractName
 	return utils.PackOutputs(ABI, MethodName, m.Name)
@@ -64,12 +66,14 @@ func (m *MethodContractNameOutput) Decode(payload []byte) error {
 }
 
 type MethodTotalSupplyInput struct{}
+
 func (m *MethodTotalSupplyInput) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodTotalSupply)
 }
 func (m *MethodTotalSupplyInput) Decode(payload []byte) error { return nil }
 
 type MethodRewardInput struct{}
+
 func (m *MethodRewardInput) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodReward)
 }
@@ -78,6 +82,7 @@ func (m *MethodRewardInput) Decode(payload []byte) error { return nil }
 type MethodRewardOutput struct {
 	List []*RewardAmount
 }
+
 func (m *MethodRewardOutput) Encode() ([]byte, error) {
 	enc, err := rlp.EncodeToBytes(m.List)
 	if err != nil {
@@ -86,7 +91,7 @@ func (m *MethodRewardOutput) Encode() ([]byte, error) {
 	return utils.PackOutputs(ABI, MethodReward, enc)
 }
 func (m *MethodRewardOutput) Decode(payload []byte) error {
-	var data struct{
+	var data struct {
 		List []byte
 	}
 	if err := utils.UnpackOutputs(ABI, MethodReward, &data, payload); err != nil {
@@ -94,6 +99,7 @@ func (m *MethodRewardOutput) Decode(payload []byte) error {
 	}
 	return rlp.DecodeBytes(data.List, &m.List)
 }
+
 //
 //type RewardAmountList struct {
 //	List []*RewardAmount
@@ -117,7 +123,7 @@ func (m *MethodRewardOutput) Decode(payload []byte) error {
 
 type RewardAmount struct {
 	Address common.Address
-	Amount *big.Int
+	Amount  *big.Int
 }
 
 func (m *RewardAmount) EncodeRLP(w io.Writer) error {
@@ -127,7 +133,7 @@ func (m *RewardAmount) EncodeRLP(w io.Writer) error {
 func (m *RewardAmount) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		Address common.Address
-		Amount *big.Int
+		Amount  *big.Int
 	}
 
 	if err := s.Decode(&data); err != nil {
