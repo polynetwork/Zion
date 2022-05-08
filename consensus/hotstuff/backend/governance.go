@@ -55,32 +55,31 @@ func (m callmsg) Value() *big.Int      { return m.CallMsg.Value }
 func (m callmsg) Data() []byte         { return m.CallMsg.Data }
 
 // reward token to governance contract, todo(read amount)
-func (s *backend) reward(state *state.StateDB, header *types.Header) {
+func (s *backend) reward(state *state.StateDB, header *types.Header) error {
 	if header.Number.Uint64() == 0 {
-		return
+		return nil
 	}
 
 	caller := s.signer.Address()
 	ref := native.NewContractRef(state, caller, caller, header.Number, common.EmptyHash, 0, nil)
 	payload, err := new(economic.MethodRewardInput).Encode()
 	if err != nil {
-		log.Error("reward", "pack `getChangingEpoch` input failed", err)
-		return
+		return fmt.Errorf("encode reward input failed", err)
 	}
 	enc, _, err := ref.NativeCall(caller, utils.EconomicContractAddress, payload)
 	if err != nil {
-		return
+		return fmt.Errorf("reward native call failed", err)
 	}
 	output := new(economic.MethodRewardOutput)
 	if err := output.Decode(enc); err != nil {
-		log.Error("reward", "decode failed", err)
-		return
+		return fmt.Errorf("reward output decode failed", err)
 	}
 
 	for _, v := range output.List {
 		state.AddBalance(v.Address, v.Amount)
 		log.Info("reward", "address", v.Address, "amount", v.Amount)
 	}
+	return nil
 }
 
 // prepare for slashing...
