@@ -23,6 +23,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -106,6 +107,48 @@ func (m *MakeTxParam) DecodeRLP(s *rlp.Stream) error {
 	m.TxHash, m.CrossChainID, m.FromContractAddress, m.ToChainID, m.ToContractAddress, m.Method, m.Args =
 		data.TxHash, data.CrossChainID, data.FromContractAddress, data.ToChainID, data.ToContractAddress, data.Method, data.Args
 	return nil
+}
+
+type MakeTxParamWithSender struct {
+	Sender common.Address
+	MakeTxParam
+}
+
+//used for param from evm contract
+type MakeTxParamWithSenderShim struct {
+	Sender      common.Address
+	MakeTxParam []byte
+}
+
+func (this *MakeTxParamWithSender) Deserialization(data []byte) (err error) {
+
+	BytesTy, _ := abi.NewType("bytes", "", nil)
+	AddrTy, _ := abi.NewType("address", "", nil)
+	// StringTy, _ := abi.NewType("string", "", nil)
+
+	TxParam := abi.Arguments{
+		{Type: AddrTy, Name: "sender"},
+		{Type: BytesTy, Name: "makeTxParam"},
+	}
+
+	args, err := TxParam.Unpack(data)
+	if err != nil {
+		return
+	}
+
+	shim := new(MakeTxParamWithSenderShim)
+	err = TxParam.Copy(shim, args)
+	if err != nil {
+		return
+	}
+
+	this.Sender = shim.Sender
+	makeTxParam, err := DecodeTxParam(shim.MakeTxParam)
+	if err != nil {
+		return
+	}
+	this.MakeTxParam = *makeTxParam
+	return
 }
 
 //used for param from evm contract
