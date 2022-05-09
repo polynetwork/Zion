@@ -100,27 +100,6 @@ func (m *MethodRewardOutput) Decode(payload []byte) error {
 	return rlp.DecodeBytes(data.List, &m.List)
 }
 
-//
-//type RewardAmountList struct {
-//	List []*RewardAmount
-//}
-//
-//func (m *RewardAmountList) EncodeRLP(w io.Writer) error {
-//	return rlp.Encode(w, []interface{}{m.List})
-//}
-//
-//func (m *RewardAmountList) DecodeRLP(s *rlp.Stream) error {
-//	var data struct {
-//		List []*RewardAmount
-//	}
-//
-//	if err := s.Decode(&data); err != nil {
-//		return err
-//	}
-//	m.List = data.List
-//	return nil
-//}
-
 type RewardAmount struct {
 	Address common.Address
 	Amount  *big.Int
