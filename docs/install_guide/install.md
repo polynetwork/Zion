@@ -1,100 +1,169 @@
-# 1. 安装指导
+# 1. 私链环境搭建
 
 ## 1.1. 安装环境
 
-ubuntu 16或18
-centOS 7
+Ubuntu 16或18
+CentOS 7
+MacOS
 golang版本1.14及以上，同时需要C编译器
 
-## 1.2. 目录结构
+## 1.2. 获取源代码
 
-+ install_guide.md 安装说明
-+ setup 
-    - node0 - node6 7节点的私钥和公钥文件
-    - genesis.json  创世区块配置
-    - static-node.json 静态节点通讯配置
-+ init.sh 创世区块初始化脚本
-+ start.sh 节点启动脚本
-+ stop.sh  节点停机脚本
-
-## 1.3. 生成节点初始配置信息
-
-运行代码目录中 src/consensus/hotstuff/tool/encoder_test.go 的TestGenerateAndEncode(), 修改节点数，生成所需配置，并记录拷贝
-
+```shell
+$ git clone https://github.com/DNAProject/Zion
 ```
-cd src/consensus/hotstuff/tool
-go test -v -run TestGenerateAndEncode
+## 1.3. 编译源代码
+
+* 编译geth
+
+```shell
+$ make geth
 ```
 
-得到打印数据，保存到一个备份文件中，例如保存到`data.inf`文件中
+* 全部编译
 
-```
- encoder_test.go:156: addr: 0x4994c8b1e38df4366708129556F74B9378D90bA6, pubKey: 0x02d9e015df9c0879c0a76b840b639f19d711870fd35476499183308a02807d845e, nodeKey: 0xd275abc4ef28f37d7c7ca986b08b702c96925c5b8d32d99f522d16a0ff8ae5cc, static-node-info:d9e015df9c0879c0a76b840b639f19d711870fd35476499183308a02807d845e44222d35fd5449336df7c70aaba9b7d48ad830497c7859e136551e8f9aa77b06
-    encoder_test.go:156: addr: 0x793005337B82e2B10888275fe89819704C990514, pubKey: 0x03e3f944c6de95b50f8a050612353b3e9216dd4473e756eee0874b487866879116, nodeKey: 0x0224592e69eda26d752770ffc0c4eca6a25c6cf25d20b2bdd630b6b798f287bc, static-node-info:e3f944c6de95b50f8a050612353b3e9216dd4473e756eee0874b4878668791166e07b6f4643ad50f1ec0d75fd38a9d244e124dcf76fa2f364e7d6a1ce159eb71
-    encoder_test.go:156: addr: 0x95749ABe9fD1Db548ad1ae6430f67B503903A620, pubKey: 0x02dd2063081e184165796c767dfa8beb1a40c1c0fafeba0b612a519af2de200cdf, nodeKey: 0x10e8ce765fe72c4f126305c785795272ebc6224f2a9e8c3d7304983546b40e66, static-node-info:dd2063081e184165796c767dfa8beb1a40c1c0fafeba0b612a519af2de200cdf730e7aeedeb763639f4ec892e846cf1d40a10eca061b67a8289cdd7195886046
-    encoder_test.go:156: addr: 0xB2FE1032cCcDCA900Cb5C9172035CBAc3EE1D3b1, pubKey: 0x0263b58bc4033eecbe92264c7639da0c076e22cf0b0d0e52dbf429c8af5488f18f, nodeKey: 0x81c8c46dc777339a0b014c2dadd48cb49a04a16940971d278bde1693e859c043, static-node-info:63b58bc4033eecbe92264c7639da0c076e22cf0b0d0e52dbf429c8af5488f18f486c3c65f049d128a48f3d5b1a147172e038c98c2a7aef2a0513be0227616676
-    encoder_test.go:156: addr: 0xE392b8ADB88ed03Cb8AFC4F96Ae3A216bEaa4A78, pubKey: 0x03b886df0dc4aef11a15cb714afc48bf50aa7150af327389d7cf117cabc246f8d4, nodeKey: 0x804c8603b7212a567ffb7e80ecbab74a8251e57f0d04f41f4c94871d4276470a, static-node-info:b886df0dc4aef11a15cb714afc48bf50aa7150af327389d7cf117cabc246f8d4c2fa0b4cbe53fe8f52abba3927a98e267cd2611366c5598d798e1dc64cea1d9f
-    encoder_test.go:156: addr: 0xa0671B1Eb57A99f517c8a2Fbc6f32809f4aA1199, pubKey: 0x021e29df009fb1ee4c97121d6dfd884a8533dd7a17d069e437e6ce4160ab2bb7aa, nodeKey: 0xf769ea72d4d0322edb69eccf66173846d511614bd12b2ce35ad32b9162db3e88, static-node-info:1e29df009fb1ee4c97121d6dfd884a8533dd7a17d069e437e6ce4160ab2bb7aab33b4a0867ef2a9bbd859390040237bbc3f4dbe34e1033a2fe60e50b045d3fd8
-    encoder_test.go:156: addr: 0xb91fD222A217f334b6D478F72296F46e4A486dB7, pubKey: 0x02ca68c41c27bbbbe5bc9d6d458062ea3c910cf27116445ef8833dac5b16fd0e1e, nodeKey: 0xe29f41fdda43413c0caebfb0003c7c9d018799b0bd27e412839faad381ff5358, static-node-info:ca68c41c27bbbbe5bc9d6d458062ea3c910cf27116445ef8833dac5b16fd0e1ef98b487881710ef3b12597dcd25ee8688520d52b834a2a94f5c182dc1cbdc9f0
-    encoder_test.go:159: ==================================================================
-    encoder_test.go:165: genesis extra 0x0000000000000000000000000000000000000000000000000000000000000000f8daf893944994c8b1e38df4366708129556f74b9378d90ba694793005337b82e2b10888275fe89819704c9905149495749abe9fd1db548ad1ae6430f67b503903a62094b2fe1032cccdca900cb5c9172035cbac3ee1d3b194e392b8adb88ed03cb8afc4f96ae3a216beaa4a7894a0671b1eb57a99f517c8a2fbc6f32809f4aa119994b91fd222a217f334b6d478f72296f46e4a486db7b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c080
-    encoder_test.go:167: ==================================================================
-    encoder_test.go:170: [
-        	"enode://d9e015df9c0879c0a76b840b639f19d711870fd35476499183308a02807d845e44222d35fd5449336df7c70aaba9b7d48ad830497c7859e136551e8f9aa77b06@127.0.0.1:30300?discport=0",
-        	"enode://e3f944c6de95b50f8a050612353b3e9216dd4473e756eee0874b4878668791166e07b6f4643ad50f1ec0d75fd38a9d244e124dcf76fa2f364e7d6a1ce159eb71@127.0.0.1:30300?discport=0",
-        	"enode://dd2063081e184165796c767dfa8beb1a40c1c0fafeba0b612a519af2de200cdf730e7aeedeb763639f4ec892e846cf1d40a10eca061b67a8289cdd7195886046@127.0.0.1:30300?discport=0",
-        	"enode://63b58bc4033eecbe92264c7639da0c076e22cf0b0d0e52dbf429c8af5488f18f486c3c65f049d128a48f3d5b1a147172e038c98c2a7aef2a0513be0227616676@127.0.0.1:30300?discport=0",
-        	"enode://b886df0dc4aef11a15cb714afc48bf50aa7150af327389d7cf117cabc246f8d4c2fa0b4cbe53fe8f52abba3927a98e267cd2611366c5598d798e1dc64cea1d9f@127.0.0.1:30300?discport=0",
-        	"enode://1e29df009fb1ee4c97121d6dfd884a8533dd7a17d069e437e6ce4160ab2bb7aab33b4a0867ef2a9bbd859390040237bbc3f4dbe34e1033a2fe60e50b045d3fd8@127.0.0.1:30300?discport=0",
-        	"enode://ca68c41c27bbbbe5bc9d6d458062ea3c910cf27116445ef8833dac5b16fd0e1ef98b487881710ef3b12597dcd25ee8688520d52b834a2a94f5c182dc1cbdc9f0@127.0.0.1:30300?discport=0"
-        ]
+```shell
+$ make all
 ```
 
-## 1.4. 拷贝setup文件夹, init.sh, start.sh, stop.sh, geth二进制文件到链的安装目录根目录下
+编译后可在build/bin目录中生成二进制可执行文件
+
+## 1.4. 环境搭建
+
+环境搭建以单机搭建4节点私链网络为例。
+
+### 1.4.1. 生成节点初始配置信息
+
+利用 genesisTool 生成节点初始化配置文件
+```
+./geth genesisTool generate <nodeNumber> --basePath <outputPath>
+```
+
+以下是生成4节点配置文件示例：
 
 ```
-cp setup /to/your/installpath
-cp init.sh /to/your/installpath
-cp start.sh /to/your/installpath
-cp stop.sh /to/your/installpath
+./geth genesisTool generate 4 --basePath ./genesisOutput
 ```
 
-## 1.5. 将setup/node i的目录中的nodekey和pubkey改成data.inf对应的key
+生成三份文件：
+* genesis.json
 
+```json
+{
+	"config": {
+		"chainId": 10898,
+		"homesteadBlock": 0,
+		"eip150Block": 0,
+		"eip155Block": 0,
+		"eip158Block": 0,
+		"byzantiumBlock": 0,
+		"constantinopleBlock": 0,
+		"petersburgBlock": 0,
+		"istanbulBlock": 0,
+		"hotstuff": {
+			"protocol": "basic"
+		}
+	},
+	"alloc": {
+		"0x49525E980345C81498fE0e30a9ACC7f4dC9E237B": {
+			"publicKey": "0x0213db218e3638d64ae0cb440482c5cfda460ad02759c51a0b53a42f4954e40137",
+			"balance": "100000000000000000000000000000"
+		},
+		"0xA29cfe2827fFf2d38e300be374c8a89214fa5C95": {
+			"publicKey": "0x033b2d6b8db288cffe1b10de45e3c920942b069dc6db2a4110a63194fa147352f9",
+			"balance": "100000000000000000000000000000"
+		},
+		"0xAD048c8a4Fc1002B8414F23e4a0105799e9A232D": {
+			"publicKey": "0x037595cdec137c1c81fffc70a9bdd77af3add53e91e28cce4675e856de79128cf6",
+			"balance": "100000000000000000000000000000"
+		},
+		"0xeffc0210C58fFE4c523309F0e0918b89911C0985": {
+			"publicKey": "0x023bfcaab2a46272bbc5fa5a1fe8c8e19af32120e6299ad7006b6038dd892510ed",
+			"balance": "100000000000000000000000000000"
+		}
+	},
+	"coinbase": "0x0000000000000000000000000000000000000000",
+	"difficulty": "0x1",
+	"extraData": "0x0000000000000000000000000000000000000000000000000000000000000000f89bf8549449525e980345c81498fe0e30a9acc7f4dc9e237b94a29cfe2827fff2d38e300be374c8a89214fa5c9594ad048c8a4fc1002b8414f23e4a0105799e9a232d94effc0210c58ffe4c523309f0e0918b89911c0985b8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c080",
+	"gasLimit": "0xffffffff",
+	"nonce": "0x4510809143055965",
+	"mixhash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	"parentHash": "0x0000000000000000000000000000000000000000000000000000000000000000",
+	"timestamp": "0x00"
+}
 ```
+* nodes.json 节点的私钥、公钥、地址、静态通讯地址
+
+```json
+[
+	{
+		"address": "0x3cb93deC5106917488cfFbfd2c074A661bb60892",
+		"nodeKey": "0xff2a67681b7cf0560db2fd045f0c063ea3a03a7953f98ac43aae82d41fce3ae7",
+		"pubKey": "0x02f460929ebaf0ec94f872246c653a5e47c137ca9c8bddb2c872c6cd96d209311e",
+		"static": "enode://f460929ebaf0ec94f872246c653a5e47c137ca9c8bddb2c872c6cd96d209311ec2380242061e0f5cc6015d137a51430877167c4442099d86a608d2af8b857004@127.0.0.1:30300?discport=0"
+	},
+	{
+		"address": "0x772C06cE1532C1e0D2E5650B7EF043fCc804002A",
+		"nodeKey": "0x46f4d08455704060e27ad398ea3a382d22144cf823363ab13365bc8cd6a7bd01",
+		"pubKey": "0x0293a5568672fa325a1c36b0a73c974489c36d6658f71bf56da7b3aa6cc46a3397",
+		"static": "enode://93a5568672fa325a1c36b0a73c974489c36d6658f71bf56da7b3aa6cc46a3397688a6ae289f7cde8c585c6368aa5a92e0eeedc62888f9cb16c274681e1f040c2@127.0.0.1:30300?discport=0"
+	},
+    ........
+```
+* static-nodes.json 静态节点通讯配置
+
+```json
+[
+	"enode://f460929ebaf0ec94f872246c653a5e47c137ca9c8bddb2c872c6cd96d209311ec2380242061e0f5cc6015d137a51430877167c4442099d86a608d2af8b857004@127.0.0.1:30300?discport=0",
+	"enode://93a5568672fa325a1c36b0a73c974489c36d6658f71bf56da7b3aa6cc46a3397688a6ae289f7cde8c585c6368aa5a92e0eeedc62888f9cb16c274681e1f040c2@127.0.0.1:30300?discport=0",
+	"enode://fdacbff85c9544af0c4dd072d5c570e4854fd9ee7d1677384a1bd6e2d13b245491109e1c2a50b3625fa5ea59dd1682ad7a67f6a340fce3d896f270d92bd1778a@127.0.0.1:30300?discport=0",
+	"enode://999ae3f263795e025fb89f96a177287fe620e0509c0c511f2c0c144bbd77b5c52c43bd681d888f1a39a295b7d655e142eac4456c3c1bfcb72b6a602a200047e6@127.0.0.1:30300?discport=0"
+]
+```
+
+### 1.4.2. 拷贝安装辅助文件目录到安装文件夹
+
+```shell
+$ cd zion/docs/install_guide/install_file
+$ ls
+init.sh setup start.sh stop.sh
+$ cp -r setup /your/install/folder/.
+$ cp *.sh /your/install/folder/.
+
+$ cd zion/build/bin
+$ cp geth /your/install/folder/.
+
+$ cd /path/to/genesisOutput
+$ ls genesis.json nodes.json static-nodes.json
+$ cp *.json /your/instal/folder/setup/.
+```
+
+### 1.4.3. 将setup/node i的目录中的nodekey和pubkey改成setup/nodes.json对应的key
+
+```shell
 cd setup
 ```
-顺序修改node0-node6中的nodekey和pubkey，将data.inf中的nodeKey和pubKey按顺序填入七节点
-其中nodeKey的填入要删除0x前缀
 
-## 1.6. 配置genesis.json和static-nodes.json,替换chainId，alloc，extraData，和ecode url
+顺序修改node0-node3中的nodekey和pubkey，nodekey需要去除0x前缀
 
-```
-vim setup/genesis.json
-```
+### 1.4.4. 修改setup/static-nodes.json的ip和端口
 
-将alloc的每行的key替换成data.inf的address，publicKey的内容替换成data.inf的pubKey
-将extraData的内容替换成data.inf的genesis extra
-如果需要修改chainId，则可以将自定义chainId填入
+将各节点的和端口改为不同的数字
 
-```
-vim setup/static-nodes.json
-```
-将data.inf的encode url信息替换到文件中，注意要根据机器节点情况修改对应ip和port
+### 1.4.5. 修改start.sh
 
-## 1.8. 执行init.sh
+顺序修改start.sh中的coinbase为setup/nodes.json中的各节点address
 
-按顺序执行7遍init.sh, 在console的交互中输入0-6的节点号
+### 1.4.6. 执行init.sh，初始化各个节点
 
-## 1.9. 修改start.sh
+按顺序执行4遍init.sh, 在console的交互中输入0-3的节点号
 
-修改start.sh的coinbase，填入七个节点的私钥地址
-如果修改了genesis.json文件的chainId的话，要修改启动参数的chainid
+### 1.4.7. 启动节点
 
-## 1.10. 启动节点
+执行4遍start.sh, 在console的交互中顺序输入0-3的节点号
 
-执行7遍start.sh, 在console的交互中顺序输入0-6的节点号
+### 1.4.8. 停止节点
 
-## 1.11. 停止节点
+执行4遍stop.sh，在console的交互中顺序输入0-3的节点号
 
-执行7遍stop.sh，在console的交互中顺序输入0-6的节点号
+

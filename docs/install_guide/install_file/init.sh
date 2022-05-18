@@ -20,9 +20,4 @@ then
 	cp setup/$node/nodekey $node/geth/
 fi
 
-if [ ! -f $node/bsn.json ]
-then
-	cp setup/bsn.json $node/bsn.json
-fi
-
 ./geth init $node/genesis.json --datadir $node
