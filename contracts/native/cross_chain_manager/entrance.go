@@ -20,17 +20,15 @@ package cross_chain_manager
 
 import (
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/consensus_vote"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/no_proof"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -70,8 +68,8 @@ func RegisterCrossChainManagerContract(s *native.NativeContract) {
 
 func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 	switch router {
-	case utils.VOTE_ROUTER:
-		return consensus_vote.NewVoteHandler(), nil
+	case utils.NO_PROOF_ROUTER:
+		return no_proof.NewNoProofHandler(), nil
 	case utils.BSC_ROUTER:
 		return bsc.NewHandler(), nil
 	case utils.ETH_ROUTER:
@@ -84,8 +82,6 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return okex.NewHandler(), nil
 	case utils.QUORUM_ROUTER:
 		return quorum.NewQuorumHandler(), nil
-	case utils.POLYGON_BOR_ROUTER:
-		return polygon.NewHandler(), nil
 	case utils.COSMOS_ROUTER:
 		return cosmos.NewCosmosHandler(), nil
 	case utils.ZILLIQA_ROUTER:
@@ -133,9 +129,6 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	txParam, err := handler.MakeDepositProposal(s)
 	if err != nil {
 		return nil, err
-	}
-	if txParam == nil && srcChain.Router == utils.VOTE_ROUTER {
-		return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
 	}
 
 	//check target chain

@@ -14,17 +14,16 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The poly network .  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package cosmos
 
 import (
-	"bytes"
 	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/cosmos"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
@@ -64,40 +63,14 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 		return nil, err
 	}
 
-	info, err := cosmos.GetEpochSwitchInfo(service, params.SourceChainID)
+	value, err := common2.GetCrossChainInfo(service, params.SourceChainID, params.Key)
 	if err != nil {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, failed to get epoch switching height: %v", err)
-	}
-	if info.Height > uint64(params.Height) {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, the height %d of header is lower than epoch "+
-			"switching height %d", params.Height, info.Height)
-	}
-
-	if len(params.HeaderOrCrossChainMsg) == 0 {
-		return nil, fmt.Errorf("you must commit the header used to verify transaction's proof and get none")
+		return nil, fmt.Errorf("Cosmos MakeDepositProposal, GetCrossChainInfo error:%s", err)
 	}
 	cdc := newCDC()
-	var myHeader cosmos.CosmosHeader
-	if err := cdc.UnmarshalBinaryBare(params.HeaderOrCrossChainMsg, &myHeader); err != nil {
+	var header CosmosHeader
+	if err := cdc.UnmarshalBinaryBare(value, &header); err != nil {
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, unmarshal cosmos header failed: %v", err)
-	}
-	if myHeader.Header.Height != int64(params.Height) {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, "+
-			"height of your header is %d not equal to %d in parameter", myHeader.Header.Height, params.Height)
-	}
-	if err = cosmos.VerifyCosmosHeader(&myHeader, info); err != nil {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, failed to verify cosmos header: %v", err)
-	}
-	if !bytes.Equal(myHeader.Header.ValidatorsHash, myHeader.Header.NextValidatorsHash) &&
-		myHeader.Header.Height > 0 && uint64(myHeader.Header.Height) > info.Height {
-		if err := cosmos.PutEpochSwitchInfo(service, params.SourceChainID, &cosmos.CosmosEpochSwitchInfo{
-			Height:             uint64(myHeader.Header.Height),
-			BlockHash:          myHeader.Header.Hash(),
-			NextValidatorsHash: myHeader.Header.NextValidatorsHash,
-			ChainID:            myHeader.Header.ChainID,
-		}); err != nil {
-			return nil, fmt.Errorf("Cosmos MakeDepositProposal, failed to PutEpochSwitchInfo: %v", err)
-		}
 	}
 
 	var proofValue CosmosProofValue
@@ -111,13 +84,13 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 	}
 	if len(proofValue.Kp) != 0 {
 		prt := rootmulti.DefaultProofRuntime()
-		err = prt.VerifyValue(&proof, myHeader.Header.AppHash, proofValue.Kp, proofValue.Value)
+		err = prt.VerifyValue(&proof, header.Header.AppHash, proofValue.Kp, proofValue.Value)
 		if err != nil {
 			return nil, fmt.Errorf("Cosmos MakeDepositProposal, proof error: %s", err)
 		}
 	} else {
 		prt := rootmulti.DefaultProofRuntime()
-		err = prt.VerifyAbsence(&proof, myHeader.Header.AppHash, string(proofValue.Value))
+		err = prt.VerifyAbsence(&proof, header.Header.AppHash, string(proofValue.Value))
 		if err != nil {
 			return nil, fmt.Errorf("Cosmos MakeDepositProposal, proof error: %s", err)
 		}

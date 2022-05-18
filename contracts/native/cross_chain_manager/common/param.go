@@ -29,9 +29,6 @@ import (
 )
 
 const (
-	KEY_PREFIX_BTC = "btc"
-
-	KEY_PREFIX_BTC_VOTE = "btcVote"
 	REQUEST             = "request"
 	DONE_TX             = "doneTx"
 
@@ -47,29 +44,21 @@ type InitRedeemScriptParam struct {
 }
 
 type EntranceParam struct {
-	SourceChainID         uint64 `json:"sourceChainId"`
-	Height                uint32 `json:"height"`
-	Proof                 []byte `json:"proof"`
-	RelayerAddress        []byte `json:"relayerAddress"` //in zion can be empty because caller can get through ctx
-	Extra                 []byte `json:"extra"`
-	HeaderOrCrossChainMsg []byte `json:"headerOrCrossChainMsg"`
+	SourceChainID  uint64 `json:"sourceChainId"`
+	Key            []byte `json:"key"`
+	Proof          []byte `json:"proof"`
+	Extra          []byte `json:"extra"`
 }
 
 func (this *EntranceParam) String() string {
 	str := "{"
 	str += fmt.Sprintf("source chain id: %d,", this.SourceChainID)
-	str += fmt.Sprintf("height: %d,", this.Height)
+	str += fmt.Sprintf("key: %x,", this.Key)
 	if this.Proof != nil && len(this.Proof) > 0 {
 		str += fmt.Sprintf("proof: %s,", hexutil.Encode(this.Proof))
 	}
-	if this.RelayerAddress != nil && len(this.RelayerAddress) > 0 {
-		str += fmt.Sprintf("relayer address: %s,", hexutil.Encode(this.RelayerAddress))
-	}
 	if this.Extra != nil && len(this.Extra) > 0 {
 		str += fmt.Sprintf("extra: %s,", hexutil.Encode(this.Extra))
-	}
-	if this.HeaderOrCrossChainMsg != nil && len(this.HeaderOrCrossChainMsg) > 0 {
-		str += fmt.Sprintf("header or cross chain msg: %s", hexutil.Encode(this.HeaderOrCrossChainMsg))
 	}
 	str += "}"
 	return str

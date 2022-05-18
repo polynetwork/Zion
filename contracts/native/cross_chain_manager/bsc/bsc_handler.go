@@ -15,6 +15,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package bsc
 
 import (
@@ -22,20 +23,19 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth/types"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/bsc"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"math/big"
 )
 
 // Handler ...
@@ -60,7 +60,7 @@ func (h *Handler) MakeDepositProposal(service *native.NativeContract) (*scom.Mak
 		return nil, fmt.Errorf("eth MakeDepositProposal, side_chain_manager.GetSideChain error: %v", err)
 	}
 
-	value, err := verifyFromTx(service, params.Proof, params.Extra, params.SourceChainID, params.Height, sideChain)
+	value, err := verifyFromTx(service, params.Proof, params.Extra, params.SourceChainID, params.Key, sideChain)
 	if err != nil {
 		return nil, fmt.Errorf("eth MakeDepositProposal, verifyFromEthTx error: %s", err)
 	}
@@ -74,21 +74,16 @@ func (h *Handler) MakeDepositProposal(service *native.NativeContract) (*scom.Mak
 	return value, nil
 }
 
-func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32, sideChain *side_chain_manager.SideChain) (param *scom.MakeTxParam, err error) {
-	cheight, err := bsc.GetCanonicalHeight(native, fromChainID)
+func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, key []byte,
+	sideChain *side_chain_manager.SideChain) (param *scom.MakeTxParam, err error) {
+	value, err := common2.GetCrossChainInfo(native, fromChainID, key)
 	if err != nil {
-		return
+		return nil, fmt.Errorf("verifyFromTx, GetCrossChainInfo error:%s", err)
 	}
-
-	cheight32 := uint32(cheight)
-
-	if cheight32 < height || cheight32-height < uint32(sideChain.BlocksToWait-1) {
-		return nil, fmt.Errorf("verifyFromTx, transaction is not confirmed, current height: %d, input height: %d", cheight, height)
-	}
-
-	headerWithSum, err := bsc.GetCanonicalHeader(native, fromChainID, uint64(height))
+	header := &types.Header{}
+	err = json.Unmarshal(value, header)
 	if err != nil {
-		return nil, fmt.Errorf("verifyFromTx, GetCanonicalHeader height:%d, error:%s", height, err)
+		return nil, fmt.Errorf("verifyFromTx, json unmarshal header error:%s", err)
 	}
 
 	bscProof := new(Proof)
@@ -101,7 +96,7 @@ func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainI
 		return nil, fmt.Errorf("verifyFromTx, incorrect proof format")
 	}
 
-	proofResult, err := verifyMerkleProof(bscProof, headerWithSum.Header, sideChain.CCMCAddress)
+	proofResult, err := verifyMerkleProof(bscProof, header, sideChain.CCMCAddress)
 	if err != nil {
 		return nil, fmt.Errorf("verifyFromTx, verifyMerkleProof error:%v", err)
 	}

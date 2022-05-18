@@ -19,10 +19,9 @@ package quorum
 import (
 	"encoding/json"
 	"fmt"
-
 	eth2 "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth/types"
 	cmanager "github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
 )
 
 func verifyFromQuorumTx(proof, extra []byte, hdr *types.Header, sideChain *cmanager.SideChain) error {

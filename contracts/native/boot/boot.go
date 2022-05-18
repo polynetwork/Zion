@@ -23,13 +23,13 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/relayer_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync"
+	"github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/log"
 )
 
 func InitNativeContracts() {
-	header_sync.InitHeaderSync()
+	info_sync.InitHeaderSync()
 	cross_chain_manager.InitCrossChainManager()
 	neo3_state_manager.InitNeo3StateManager()
 	node_manager.InitNodeManager()
@@ -37,7 +37,7 @@ func InitNativeContracts() {
 	side_chain_manager.InitSideChainManager()
 
 	log.Info("Initialize main chain native contracts",
-		"header sync", utils.HeaderSyncContractAddress.Hex(),
+		"header sync", utils.InfoSyncContractAddress.Hex(),
 		"cross chain manager", utils.CrossChainManagerContractAddress.Hex(),
 		"neo3 state manager", utils.Neo3StateManagerContractAddress.Hex(),
 		"node manager", utils.NodeManagerContractAddress.Hex(),
