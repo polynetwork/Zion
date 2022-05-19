@@ -60,7 +60,7 @@ func (h *Handler) MakeDepositProposal(service *native.NativeContract) (*scom.Mak
 		return nil, fmt.Errorf("eth MakeDepositProposal, side_chain_manager.GetSideChain error: %v", err)
 	}
 
-	value, err := verifyFromTx(service, params.Proof, params.Extra, params.SourceChainID, params.Key, sideChain)
+	value, err := verifyFromTx(service, params.Proof, params.Extra, params.SourceChainID, params.Height, sideChain)
 	if err != nil {
 		return nil, fmt.Errorf("eth MakeDepositProposal, verifyFromEthTx error: %s", err)
 	}
@@ -74,9 +74,9 @@ func (h *Handler) MakeDepositProposal(service *native.NativeContract) (*scom.Mak
 	return value, nil
 }
 
-func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, key []byte,
+func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32,
 	sideChain *side_chain_manager.SideChain) (param *scom.MakeTxParam, err error) {
-	value, err := common2.GetCrossChainInfo(native, fromChainID, key)
+	value, err := common2.GetRootInfo(native, fromChainID, height)
 	if err != nil {
 		return nil, fmt.Errorf("verifyFromTx, GetCrossChainInfo error:%s", err)
 	}

@@ -36,9 +36,9 @@ import (
 	"math/big"
 )
 
-func verifyFromEthTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, key []byte,
+func verifyFromEthTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32,
 	sideChain *side_chain_manager.SideChain) (*scom.MakeTxParam, error) {
-	value, err := common2.GetCrossChainInfo(native, fromChainID, key)
+	value, err := common2.GetRootInfo(native, fromChainID, height)
 	if err != nil {
 		return nil, fmt.Errorf("verifyFromEthTx, GetCrossChainInfo error:%s", err)
 	}

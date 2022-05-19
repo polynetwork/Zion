@@ -29,8 +29,8 @@ import (
 )
 
 const (
-	REQUEST             = "request"
-	DONE_TX             = "doneTx"
+	REQUEST = "request"
+	DONE_TX = "doneTx"
 
 	NOTIFY_MAKE_PROOF_EVENT = "makeProof"
 )
@@ -44,16 +44,16 @@ type InitRedeemScriptParam struct {
 }
 
 type EntranceParam struct {
-	SourceChainID  uint64 `json:"sourceChainId"`
-	Key            []byte `json:"key"`
-	Proof          []byte `json:"proof"`
-	Extra          []byte `json:"extra"`
+	SourceChainID uint64 `json:"sourceChainId"`
+	Height        uint32 `json:"key"`
+	Proof         []byte `json:"proof"`
+	Extra         []byte `json:"extra"`
 }
 
 func (this *EntranceParam) String() string {
 	str := "{"
 	str += fmt.Sprintf("source chain id: %d,", this.SourceChainID)
-	str += fmt.Sprintf("key: %x,", this.Key)
+	str += fmt.Sprintf("height: %d,", this.Height)
 	if this.Proof != nil && len(this.Proof) > 0 {
 		str += fmt.Sprintf("proof: %s,", hexutil.Encode(this.Proof))
 	}

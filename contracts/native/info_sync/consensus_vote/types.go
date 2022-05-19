@@ -109,28 +109,28 @@ func (m *VoteMessage) Hash() common.Hash {
 	return v
 }
 
-type Unique struct {
+type RootInfoUnique struct {
 	ChainID uint64
-	Key     []byte
-	Value   []byte
+	Height  uint32
+	Info    []byte
 }
 
-func (d *Unique) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{d.ChainID, d.Key, d.Value})
+func (d *RootInfoUnique) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{d.ChainID, d.Height, d.Info})
 }
 
-func (d *Unique) DecodeRLP(s *rlp.Stream) error {
+func (d *RootInfoUnique) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		ChainID uint64
-		Key     []byte
-		Value   []byte
+		Height  uint32
+		Info    []byte
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	d.ChainID, d.Key, d.Value = data.ChainID, data.Key, data.Value
+	d.ChainID, d.Height, d.Info = data.ChainID, data.Height, data.Info
 	return nil
 }
 

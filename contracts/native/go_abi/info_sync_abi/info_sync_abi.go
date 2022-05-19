@@ -27,18 +27,18 @@ var (
 )
 
 var (
-	MethodSyncCrossChainInfo = "syncCrossChainInfo"
+	MethodSyncRootInfo = "syncRootInfo"
 
 	MethodName = "name"
 )
 
 // InfoSyncABI is the input ABI used to generate the binding from.
-const InfoSyncABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"syncCrossChainInfo\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const InfoSyncABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"syncRootInfo\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // InfoSyncFuncSigs maps the 4-byte function signature to its string representation.
 var InfoSyncFuncSigs = map[string]string{
 	"06fdde03": "name()",
-	"e1099291": "syncCrossChainInfo(uint64,bytes[])",
+	"48c8f119": "syncRootInfo(uint64,bytes[])",
 }
 
 // InfoSync is an auto generated Go binding around an Ethereum contract.
@@ -214,24 +214,24 @@ func (_InfoSync *InfoSyncCallerSession) Name() (string, error) {
 	return _InfoSync.Contract.Name(&_InfoSync.CallOpts)
 }
 
-// SyncCrossChainInfo is a paid mutator transaction binding the contract method 0xe1099291.
+// SyncRootInfo is a paid mutator transaction binding the contract method 0x48c8f119.
 //
-// Solidity: function syncCrossChainInfo(uint64 chainID, bytes[] data) returns()
-func (_InfoSync *InfoSyncTransactor) SyncCrossChainInfo(opts *bind.TransactOpts, chainID uint64, data [][]byte) (*types.Transaction, error) {
-	return _InfoSync.contract.Transact(opts, "syncCrossChainInfo", chainID, data)
+// Solidity: function syncRootInfo(uint64 chainID, bytes[] data) returns()
+func (_InfoSync *InfoSyncTransactor) SyncRootInfo(opts *bind.TransactOpts, chainID uint64, data [][]byte) (*types.Transaction, error) {
+	return _InfoSync.contract.Transact(opts, "syncRootInfo", chainID, data)
 }
 
-// SyncCrossChainInfo is a paid mutator transaction binding the contract method 0xe1099291.
+// SyncRootInfo is a paid mutator transaction binding the contract method 0x48c8f119.
 //
-// Solidity: function syncCrossChainInfo(uint64 chainID, bytes[] data) returns()
-func (_InfoSync *InfoSyncSession) SyncCrossChainInfo(chainID uint64, data [][]byte) (*types.Transaction, error) {
-	return _InfoSync.Contract.SyncCrossChainInfo(&_InfoSync.TransactOpts, chainID, data)
+// Solidity: function syncRootInfo(uint64 chainID, bytes[] data) returns()
+func (_InfoSync *InfoSyncSession) SyncRootInfo(chainID uint64, data [][]byte) (*types.Transaction, error) {
+	return _InfoSync.Contract.SyncRootInfo(&_InfoSync.TransactOpts, chainID, data)
 }
 
-// SyncCrossChainInfo is a paid mutator transaction binding the contract method 0xe1099291.
+// SyncRootInfo is a paid mutator transaction binding the contract method 0x48c8f119.
 //
-// Solidity: function syncCrossChainInfo(uint64 chainID, bytes[] data) returns()
-func (_InfoSync *InfoSyncTransactorSession) SyncCrossChainInfo(chainID uint64, data [][]byte) (*types.Transaction, error) {
-	return _InfoSync.Contract.SyncCrossChainInfo(&_InfoSync.TransactOpts, chainID, data)
+// Solidity: function syncRootInfo(uint64 chainID, bytes[] data) returns()
+func (_InfoSync *InfoSyncTransactorSession) SyncRootInfo(chainID uint64, data [][]byte) (*types.Transaction, error) {
+	return _InfoSync.Contract.SyncRootInfo(&_InfoSync.TransactOpts, chainID, data)
 }
 

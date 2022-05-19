@@ -26,13 +26,13 @@ import (
 )
 
 var (
-	MethodContractName       = info_sync_abi.MethodName
-	MethodSyncCrossChainInfo = info_sync_abi.MethodSyncCrossChainInfo
+	MethodContractName = info_sync_abi.MethodName
+	MethodSyncRootInfo = info_sync_abi.MethodSyncRootInfo
 )
 
 var GasTable = map[string]uint64{
-	MethodContractName:       0,
-	MethodSyncCrossChainInfo: 1000,
+	MethodContractName: 0,
+	MethodSyncRootInfo: 1000,
 }
 
 func GetABI() *abi.ABI {

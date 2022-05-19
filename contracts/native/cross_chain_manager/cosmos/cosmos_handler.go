@@ -63,7 +63,7 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 		return nil, err
 	}
 
-	value, err := common2.GetCrossChainInfo(service, params.SourceChainID, params.Key)
+	value, err := common2.GetRootInfo(service, params.SourceChainID, params.Height)
 	if err != nil {
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, GetCrossChainInfo error:%s", err)
 	}

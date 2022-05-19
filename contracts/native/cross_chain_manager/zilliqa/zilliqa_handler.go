@@ -54,7 +54,7 @@ func (h *Handler) MakeDepositProposal(service *native.NativeContract) (*scom.Mak
 		return nil, fmt.Errorf("zilliqa MakeDepositProposal, side_chain_manager.GetSideChain error: %v", err)
 	}
 
-	value, err := verifyFromTx(service, params.Proof, params.Extra, params.SourceChainID, params.Key, sideChain)
+	value, err := verifyFromTx(service, params.Proof, params.Extra, params.SourceChainID, params.Height, sideChain)
 	if err != nil {
 		return nil, fmt.Errorf("zil MakeDepositProposal, verifyFromZILTx error: %s", err)
 	}
@@ -81,10 +81,10 @@ type StorageProof struct {
 	Proof []string `json:"proof"`
 }
 
-func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, key []byte,
+func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32,
 	sideChain *side_chain_manager.SideChain) (param *scom.MakeTxParam, err error) {
 
-	value, err := common2.GetCrossChainInfo(native, fromChainID, key)
+	value, err := common2.GetRootInfo(native, fromChainID, height)
 	if err != nil {
 		return nil, fmt.Errorf("verifyFromTx, GetCrossChainInfo error:%s", err)
 	}
@@ -115,7 +115,7 @@ func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainI
 	k := strings.TrimPrefix(util.EncodeHex(sideChain.CCMCAddress), "0x")
 	accountBaseBytes, err := mpt.Verify([]byte(k), db, root)
 	if err != nil {
-		return nil, fmt.Errorf("verifyMerkleProof, verify account proof error:%s, key is %s proof is: %+v, root is %s", err, key, zilProof.AccountProof, util.EncodeHex(root))
+		return nil, fmt.Errorf("verifyMerkleProof, verify account proof error:%s, key is %s proof is: %+v, root is %s", err, k, zilProof.AccountProof, util.EncodeHex(root))
 	}
 
 	accountBase, err := core.AccountBaseFromBytes(accountBaseBytes)

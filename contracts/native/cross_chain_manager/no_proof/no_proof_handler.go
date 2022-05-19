@@ -40,7 +40,7 @@ func (this *NoProofHandler) MakeDepositProposal(service *native.NativeContract) 
 		return nil, err
 	}
 
-	value, err := iscommon.GetCrossChainInfo(service, params.SourceChainID, params.Key)
+	value, err := iscommon.GetRootInfo(service, params.SourceChainID, params.Height)
 	if err != nil {
 		return nil, fmt.Errorf("no proof MakeDepositProposal, verifyFromEthTx error: %s", err)
 	}

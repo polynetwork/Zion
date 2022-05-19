@@ -43,17 +43,17 @@ func RegisterInfoSyncContract(s *native.NativeContract) {
 	s.Prepare(iscommon.ABI, iscommon.GasTable)
 
 	s.Register(iscommon.MethodContractName, Name)
-	s.Register(iscommon.MethodSyncCrossChainInfo, SyncCrossChainInfo)
+	s.Register(iscommon.MethodSyncRootInfo, SyncRootInfo)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(iscommon.ABI, iscommon.MethodContractName, contractName)
 }
 
-func SyncCrossChainInfo(s *native.NativeContract) ([]byte, error) {
+func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &iscommon.SyncCrossChainInfoParam{}
-	if err := utils.UnpackMethod(iscommon.ABI, iscommon.MethodSyncCrossChainInfo, params, ctx.Payload); err != nil {
+	params := &iscommon.SyncRootInfoParam{}
+	if err := utils.UnpackMethod(iscommon.ABI, iscommon.MethodSyncRootInfo, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
@@ -62,19 +62,24 @@ func SyncCrossChainInfo(s *native.NativeContract) ([]byte, error) {
 	//check if chainid exist
 	sideChain, err := side_chain_manager.GetSideChain(s, chainID)
 	if err != nil {
-		return nil, fmt.Errorf("SyncCrossChainInfo, side_chain_manager.GetSideChain error: %v", err)
+		return nil, fmt.Errorf("SyncRootInfo, side_chain_manager.GetSideChain error: %v", err)
 	}
 	if sideChain == nil {
-		return nil, fmt.Errorf("SyncCrossChainInfo, side chain is not registered")
+		return nil, fmt.Errorf("SyncRootInfo, side chain is not registered")
 	}
 
 	//sync root infos
-	for _, v := range params.CrossChainInfos {
+	for _, v := range params.RootInfos {
+		var rootInfo *iscommon.RootInfo
+		err := rlp.DecodeBytes(v, &rootInfo)
+		if err != nil {
+			return nil, fmt.Errorf("SyncRootInfo, decode root info error")
+		}
 		//use chain id, info key and value as unique id
-		unique := &consensus_vote.Unique{
+		unique := &consensus_vote.RootInfoUnique{
 			ChainID: params.ChainID,
-			Key:     v.Key,
-			Value:   v.Value,
+			Height:  rootInfo.Height,
+			Info:    rootInfo.Info,
 		}
 		blob, err := rlp.EncodeToBytes(unique)
 		if err != nil {
@@ -86,12 +91,12 @@ func SyncCrossChainInfo(s *native.NativeContract) ([]byte, error) {
 			return nil, fmt.Errorf("SyncCrossChainInfo, CheckConsensusSigns error: %v", err)
 		}
 		if ok {
-			err := iscommon.PutCrossChainInfo(s, chainID, v.Key, v.Value)
+			err := iscommon.PutRootInfo(s, chainID, rootInfo.Height, rootInfo.Info)
 			if err != nil {
 				return nil, fmt.Errorf("SyncCrossChainInfo, PutCrossChainInfo error: %v", err)
 			}
 		}
 	}
 
-	return utils.PackOutputs(iscommon.ABI, iscommon.MethodSyncCrossChainInfo, true)
+	return utils.PackOutputs(iscommon.ABI, iscommon.MethodSyncRootInfo, true)
 }

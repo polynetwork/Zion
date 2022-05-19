@@ -62,7 +62,7 @@ func (this *QuorumHandler) MakeDepositProposal(ns *native.NativeContract) (*comm
 		return nil, fmt.Errorf("Quorum MakeDepositProposal, PutDoneTx error: %v", err)
 	}
 
-	value, err := common2.GetCrossChainInfo(ns, params.SourceChainID, params.Key)
+	value, err := common2.GetRootInfo(ns, params.SourceChainID, params.Height)
 	if err != nil {
 		return nil, fmt.Errorf("Quorum MakeDepositProposal, GetCrossChainInfo error:%s", err)
 	}

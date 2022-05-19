@@ -19,6 +19,7 @@
 package common
 
 import (
+	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
@@ -28,56 +29,57 @@ import (
 
 const (
 	//key prefix
-	CROSS_CHAIN_INFO            = "crossChainInfo"
-	SYNC_CROSS_CHAIN_INFO_EVENT = "syncCrossChainInfo"
+	ROOT_INFO            = "rootInfo"
+	CURRENT_HEIGHT       = "currentHeight"
+	SYNC_ROOT_INFO_EVENT = "syncRootInfo"
 )
 
-type SyncCrossChainInfoParam struct {
-	ChainID         uint64
-	CrossChainInfos []*CrossChainInfo
+type SyncRootInfoParam struct {
+	ChainID   uint64
+	RootInfos [][]byte
 }
 
-func (m *SyncCrossChainInfoParam) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ChainID, m.CrossChainInfos})
+func (m *SyncRootInfoParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ChainID, m.RootInfos})
 }
-func (m *SyncCrossChainInfoParam) DecodeRLP(s *rlp.Stream) error {
+func (m *SyncRootInfoParam) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		ChainID         uint64
-		CrossChainInfos []*CrossChainInfo
+		ChainID   uint64
+		RootInfos [][]byte
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	m.ChainID, m.CrossChainInfos = data.ChainID, data.CrossChainInfos
+	m.ChainID, m.RootInfos = data.ChainID, data.RootInfos
 	return nil
 }
 
-type CrossChainInfo struct {
-	Key   []byte
-	Value []byte
+type RootInfo struct {
+	Height uint32
+	Info   []byte
 }
 
-func (m *CrossChainInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Key, m.Value})
+func (m *RootInfo) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Height, m.Info})
 }
-func (m *CrossChainInfo) DecodeRLP(s *rlp.Stream) error {
+func (m *RootInfo) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Key   []byte
-		Value []byte
+		Height uint32
+		Info   []byte
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	m.Key, m.Value = data.Key, data.Value
+	m.Height, m.Info = data.Height, data.Info
 	return nil
 }
 
-func NotifyPutCrossChainInfo(native *native.NativeContract, chainID uint64, key, value []byte) {
-	err := native.AddNotify(ABI, []string{SYNC_CROSS_CHAIN_INFO_EVENT}, chainID, key, value, native.ContractRef().BlockHeight())
+func NotifyPutRootInfo(native *native.NativeContract, chainID uint64, height uint32, info []byte) {
+	err := native.AddNotify(ABI, []string{SYNC_ROOT_INFO_EVENT}, chainID, height, hex.EncodeToString(info), native.ContractRef().BlockHeight())
 	if err != nil {
 		panic(fmt.Sprintf("NotifyPutCrossChainInfo failed: %v", err))
 	}
