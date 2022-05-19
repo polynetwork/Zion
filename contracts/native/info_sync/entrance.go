@@ -88,12 +88,12 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 
 		ok, err := consensus_vote.CheckConsensusSigns(s, blob)
 		if err != nil {
-			return nil, fmt.Errorf("SyncCrossChainInfo, CheckConsensusSigns error: %v", err)
+			return nil, fmt.Errorf("SyncRootInfo, CheckConsensusSigns error: %v", err)
 		}
 		if ok {
 			err := iscommon.PutRootInfo(s, chainID, rootInfo.Height, rootInfo.Info)
 			if err != nil {
-				return nil, fmt.Errorf("SyncCrossChainInfo, PutCrossChainInfo error: %v", err)
+				return nil, fmt.Errorf("SyncRootInfo, PutCrossChainInfo error: %v", err)
 			}
 		}
 	}
