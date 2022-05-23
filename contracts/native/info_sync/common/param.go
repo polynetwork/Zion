@@ -19,7 +19,6 @@
 package common
 
 import (
-	"encoding/hex"
 	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
@@ -31,7 +30,7 @@ const (
 	//key prefix
 	ROOT_INFO            = "rootInfo"
 	CURRENT_HEIGHT       = "currentHeight"
-	SYNC_ROOT_INFO_EVENT = "syncRootInfo"
+	SYNC_ROOT_INFO_EVENT = "SyncRootInfoEvent"
 )
 
 type SyncRootInfoParam struct {
@@ -78,9 +77,9 @@ func (m *RootInfo) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-func NotifyPutRootInfo(native *native.NativeContract, chainID uint64, height uint32, info []byte) {
-	err := native.AddNotify(ABI, []string{SYNC_ROOT_INFO_EVENT}, chainID, height, hex.EncodeToString(info), native.ContractRef().BlockHeight())
+func NotifyPutRootInfo(native *native.NativeContract, chainID uint64, height uint32) {
+	err := native.AddNotify(ABI, []string{SYNC_ROOT_INFO_EVENT}, chainID, height, native.ContractRef().BlockHeight())
 	if err != nil {
-		panic(fmt.Sprintf("NotifyPutCrossChainInfo failed: %v", err))
+		panic(fmt.Sprintf("NotifyPutRootInfo failed: %v", err))
 	}
 }

@@ -34,7 +34,7 @@ var (
 	this = native.NativeContractAddrMap[native.NativeSyncCrossChainInfo]
 )
 
-func InitHeaderSync() {
+func InitInfoSync() {
 	native.Contracts[this] = RegisterInfoSyncContract
 	iscommon.ABI = iscommon.GetABI()
 }

@@ -30,10 +30,12 @@ var (
 	MethodSyncRootInfo = "syncRootInfo"
 
 	MethodName = "name"
+
+	EventSyncRootInfoEvent = "SyncRootInfoEvent"
 )
 
 // InfoSyncABI is the input ABI used to generate the binding from.
-const InfoSyncABI = "[{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"data\",\"type\":\"bytes[]\"}],\"name\":\"syncRootInfo\",\"outputs\":[],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const InfoSyncABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"height\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"BlockHeight\",\"type\":\"uint256\"}],\"name\":\"SyncRootInfoEvent\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"rootInfos\",\"type\":\"bytes[]\"}],\"name\":\"syncRootInfo\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // InfoSyncFuncSigs maps the 4-byte function signature to its string representation.
 var InfoSyncFuncSigs = map[string]string{
@@ -216,22 +218,158 @@ func (_InfoSync *InfoSyncCallerSession) Name() (string, error) {
 
 // SyncRootInfo is a paid mutator transaction binding the contract method 0x48c8f119.
 //
-// Solidity: function syncRootInfo(uint64 chainID, bytes[] data) returns()
-func (_InfoSync *InfoSyncTransactor) SyncRootInfo(opts *bind.TransactOpts, chainID uint64, data [][]byte) (*types.Transaction, error) {
-	return _InfoSync.contract.Transact(opts, "syncRootInfo", chainID, data)
+// Solidity: function syncRootInfo(uint64 chainID, bytes[] rootInfos) returns(bool success)
+func (_InfoSync *InfoSyncTransactor) SyncRootInfo(opts *bind.TransactOpts, chainID uint64, rootInfos [][]byte) (*types.Transaction, error) {
+	return _InfoSync.contract.Transact(opts, "syncRootInfo", chainID, rootInfos)
 }
 
 // SyncRootInfo is a paid mutator transaction binding the contract method 0x48c8f119.
 //
-// Solidity: function syncRootInfo(uint64 chainID, bytes[] data) returns()
-func (_InfoSync *InfoSyncSession) SyncRootInfo(chainID uint64, data [][]byte) (*types.Transaction, error) {
-	return _InfoSync.Contract.SyncRootInfo(&_InfoSync.TransactOpts, chainID, data)
+// Solidity: function syncRootInfo(uint64 chainID, bytes[] rootInfos) returns(bool success)
+func (_InfoSync *InfoSyncSession) SyncRootInfo(chainID uint64, rootInfos [][]byte) (*types.Transaction, error) {
+	return _InfoSync.Contract.SyncRootInfo(&_InfoSync.TransactOpts, chainID, rootInfos)
 }
 
 // SyncRootInfo is a paid mutator transaction binding the contract method 0x48c8f119.
 //
-// Solidity: function syncRootInfo(uint64 chainID, bytes[] data) returns()
-func (_InfoSync *InfoSyncTransactorSession) SyncRootInfo(chainID uint64, data [][]byte) (*types.Transaction, error) {
-	return _InfoSync.Contract.SyncRootInfo(&_InfoSync.TransactOpts, chainID, data)
+// Solidity: function syncRootInfo(uint64 chainID, bytes[] rootInfos) returns(bool success)
+func (_InfoSync *InfoSyncTransactorSession) SyncRootInfo(chainID uint64, rootInfos [][]byte) (*types.Transaction, error) {
+	return _InfoSync.Contract.SyncRootInfo(&_InfoSync.TransactOpts, chainID, rootInfos)
+}
+
+// InfoSyncSyncRootInfoEventIterator is returned from FilterSyncRootInfoEvent and is used to iterate over the raw logs and unpacked data for SyncRootInfoEvent events raised by the InfoSync contract.
+type InfoSyncSyncRootInfoEventIterator struct {
+	Event *InfoSyncSyncRootInfoEvent // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *InfoSyncSyncRootInfoEventIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(InfoSyncSyncRootInfoEvent)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(InfoSyncSyncRootInfoEvent)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *InfoSyncSyncRootInfoEventIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *InfoSyncSyncRootInfoEventIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// InfoSyncSyncRootInfoEvent represents a SyncRootInfoEvent event raised by the InfoSync contract.
+type InfoSyncSyncRootInfoEvent struct {
+	ChainID     uint64
+	Height      uint32
+	BlockHeight *big.Int
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterSyncRootInfoEvent is a free log retrieval operation binding the contract event 0x24cd873c72270d09dcf64a7c56ff70129c04f398e38116d7ad773d43340509e2.
+//
+// Solidity: event SyncRootInfoEvent(uint64 chainID, uint32 height, uint256 BlockHeight)
+func (_InfoSync *InfoSyncFilterer) FilterSyncRootInfoEvent(opts *bind.FilterOpts) (*InfoSyncSyncRootInfoEventIterator, error) {
+
+	logs, sub, err := _InfoSync.contract.FilterLogs(opts, "SyncRootInfoEvent")
+	if err != nil {
+		return nil, err
+	}
+	return &InfoSyncSyncRootInfoEventIterator{contract: _InfoSync.contract, event: "SyncRootInfoEvent", logs: logs, sub: sub}, nil
+}
+
+// WatchSyncRootInfoEvent is a free log subscription operation binding the contract event 0x24cd873c72270d09dcf64a7c56ff70129c04f398e38116d7ad773d43340509e2.
+//
+// Solidity: event SyncRootInfoEvent(uint64 chainID, uint32 height, uint256 BlockHeight)
+func (_InfoSync *InfoSyncFilterer) WatchSyncRootInfoEvent(opts *bind.WatchOpts, sink chan<- *InfoSyncSyncRootInfoEvent) (event.Subscription, error) {
+
+	logs, sub, err := _InfoSync.contract.WatchLogs(opts, "SyncRootInfoEvent")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(InfoSyncSyncRootInfoEvent)
+				if err := _InfoSync.contract.UnpackLog(event, "SyncRootInfoEvent", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseSyncRootInfoEvent is a log parse operation binding the contract event 0x24cd873c72270d09dcf64a7c56ff70129c04f398e38116d7ad773d43340509e2.
+//
+// Solidity: event SyncRootInfoEvent(uint64 chainID, uint32 height, uint256 BlockHeight)
+func (_InfoSync *InfoSyncFilterer) ParseSyncRootInfoEvent(log types.Log) (*InfoSyncSyncRootInfoEvent, error) {
+	event := new(InfoSyncSyncRootInfoEvent)
+	if err := _InfoSync.contract.UnpackLog(event, "SyncRootInfoEvent", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 

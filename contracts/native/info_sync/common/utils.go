@@ -20,7 +20,7 @@ func PutRootInfo(native *native.NativeContract, chainID uint64, height uint32, i
 	if currentHeight < height {
 		native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(CURRENT_HEIGHT), chainIDBytes), heightBytes)
 	}
-	NotifyPutRootInfo(native, chainID, height, info)
+	NotifyPutRootInfo(native, chainID, height)
 	return nil
 }
 

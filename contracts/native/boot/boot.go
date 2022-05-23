@@ -29,7 +29,7 @@ import (
 )
 
 func InitNativeContracts() {
-	info_sync.InitHeaderSync()
+	info_sync.InitInfoSync()
 	cross_chain_manager.InitCrossChainManager()
 	neo3_state_manager.InitNeo3StateManager()
 	node_manager.InitNodeManager()
