@@ -122,7 +122,7 @@ Executes a new message call immediately without creating a transaction on the bl
 
 #### Parameters
 
-0. `Object` - [Transaction object](./JSONRPC.md#transactions) where `from` field is optional and `nonce` field is ommited.
+0. `Object` - [Transaction object](https://github.com/openethereum/openethereum.github.io/blob/master/JSONRPC.md#transactions) where `from` field is optional and `nonce` field is ommited.
 
 0. `Quantity` or `Tag` - Integer block number, or the string `'latest'`, `'earliest'` or `'pending'`, see the [default block parameter](#the-default-block-parameter).
 
@@ -223,7 +223,7 @@ Makes a call or transaction, which won't be added to the blockchain and returns 
 
 #### Parameters
 
-0. `Object` - [Transaction object](./JSONRPC.md#transactions) where `from` field is optional and `nonce` field is ommited.
+0. `Object` - [Transaction object](https://github.com/openethereum/openethereum.github.io/blob/master/JSONRPC.md#transactions) where `from` field is optional and `nonce` field is ommited.
 0. `Quantity` or `Tag` - Integer block number, or the string `'latest'`, `'earliest'` or `'pending'`, see the [default block parameter](#the-default-block-parameter).
 
 #### Returns
@@ -749,7 +749,7 @@ params: [
 
 #### Returns
 
-- `Object` - [Transaction Response Object](./JSONRPC.md#transaction-responses), or `null` when no transaction
+- `Object` - [Transaction Response Object](https://github.com/openethereum/openethereum.github.io/blob/master/JSONRPC.md#transaction-responses), or `null` when no transaction
 
 #### Example
 
@@ -879,7 +879,7 @@ params: ["0xb903239f8543d04b5dc1ba6579132b143087c68db1b2168786408fcbce568238"]
 
 #### Returns
 
-- `Object` - [Transaction Response Object](./JSONRPC.md#transaction-responses), or `null` when no transaction was found.
+- `Object` - [Transaction Response Object](https://github.com/openethereum/openethereum.github.io/blob/master/JSONRPC.md#transaction-responses), or `null` when no transaction was found.
 
 #### Example
 
