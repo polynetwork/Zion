@@ -18,6 +18,7 @@
 package cosmos
 
 import (
+	"encoding/json"
 	"fmt"
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
@@ -25,6 +26,7 @@ import (
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	tm34types "github.com/switcheo/tendermint/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/merkle"
@@ -65,14 +67,15 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 
 	value, err := common2.GetRootInfo(service, params.SourceChainID, params.Height)
 	if err != nil {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, GetCrossChainInfo error:%s", err)
+		return nil, fmt.Errorf("Cosmos MakeDepositProposal, GetRootInfo error:%s", err)
 	}
-	cdc := newCDC()
-	var header CosmosHeader
-	if err := cdc.UnmarshalBinaryBare(value, &header); err != nil {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, unmarshal cosmos header failed: %v", err)
+	header := &tm34types.Header{}
+	err = json.Unmarshal(value, header)
+	if err != nil {
+		return nil, fmt.Errorf("verifyFromEthTx, json unmarshal header error:%s", err)
 	}
 
+	cdc := newCDC()
 	var proofValue CosmosProofValue
 	if err = cdc.UnmarshalBinaryBare(params.Extra, &proofValue); err != nil {
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, unmarshal proof value err: %v", err)
@@ -84,13 +87,13 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 	}
 	if len(proofValue.Kp) != 0 {
 		prt := rootmulti.DefaultProofRuntime()
-		err = prt.VerifyValue(&proof, header.Header.AppHash, proofValue.Kp, proofValue.Value)
+		err = prt.VerifyValue(&proof, header.AppHash, proofValue.Kp, proofValue.Value)
 		if err != nil {
 			return nil, fmt.Errorf("Cosmos MakeDepositProposal, proof error: %s", err)
 		}
 	} else {
 		prt := rootmulti.DefaultProofRuntime()
-		err = prt.VerifyAbsence(&proof, header.Header.AppHash, string(proofValue.Value))
+		err = prt.VerifyAbsence(&proof, header.AppHash, string(proofValue.Value))
 		if err != nil {
 			return nil, fmt.Errorf("Cosmos MakeDepositProposal, proof error: %s", err)
 		}
