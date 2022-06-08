@@ -52,7 +52,6 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 	GoerliGenesisHash:  GoerliCheckpointOracle,
 }
 
-// cross chain related params
 var (
 	// The chain id should avoid other side chain ids of Ethereum to be compatible with apps such as metamask,
 	// e.g: eth mainnet at 1, ropsten at 3, bsc at 76, heco at 7. ref: https://chainlist.org/
@@ -61,9 +60,8 @@ var (
 	DevnetMainChainID  uint64 = 60803
 
 	OneEth, _ = new(big.Int).SetString("1000000000000000000", 10)
-	// mint some native token for side chain genesis validators, because genesis validators will spent
-	// gas while deploy cross chain contracts, and the default value is 100 eth
-	SideChainInitAlloc = new(big.Int).Mul(OneEth, big.NewInt(100))
+	uGenesisSupply = new(big.Int).SetUint64(1e8)
+	GenesisSupply = new(big.Int).Mul(OneEth, uGenesisSupply)
 )
 
 func IsMainChain(chainID uint64) bool {
