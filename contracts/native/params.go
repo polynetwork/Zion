@@ -34,6 +34,7 @@ const (
 	NativeNodeManager      = "node_manager"
 	NativeRelayerManager   = "relayer_manager"
 	NativeSideChainManager = "side_chain_manager"
+	NativeSignatureManager = "signature_manager"
 
 	// native backup contracts
 	NativeExtra4  = "extra4"
@@ -63,6 +64,7 @@ var NativeContractAddrMap = map[string]common.Address{
 	NativeNodeManager:      utils.NodeManagerContractAddress,
 	NativeRelayerManager:   utils.RelayerManagerContractAddress,
 	NativeNeo3StateManager: utils.Neo3StateManagerContractAddress,
+	NativeSignatureManager: utils.SignatureManagerContractAddress,
 	NativeExtra5:           common.HexToAddress("0x0000000000000000000000000000000000001008"),
 	NativeExtra6:           common.HexToAddress("0x0000000000000000000000000000000000001009"),
 	NativeExtra7:           common.HexToAddress("0x000000000000000000000000000000000000100a"),
