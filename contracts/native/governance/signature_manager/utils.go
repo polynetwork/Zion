@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const (
@@ -61,20 +62,20 @@ func CheckSigns(native *native.NativeContract, id, sig []byte, address common.Ad
 	flag := false
 	for _, v := range epoch.Peers.List {
 		address := v.Address
-		_, ok := sigInfo.SigInfo[address.Hex()]
+		_, ok := sigInfo.m[address.Hex()]
 		if ok {
 			num = num + 1
 		}
 		sum = sum + 1
 
 		//check if voted
-		_, ok = sigInfo.SigInfo[address.Hex()]
+		_, ok = sigInfo.m[address.Hex()]
 		if !ok {
 			flag = true
 		}
 	}
 	if flag {
-		sigInfo.SigInfo[address.Hex()] = sig
+		sigInfo.m[address.Hex()] = sig
 		num = num + 1
 		if num < (2*sum+2)/3 {
 			putSigInfo(native, id, sigInfo)
@@ -92,16 +93,14 @@ func CheckSigns(native *native.NativeContract, id, sig []byte, address common.Ad
 
 func getSigInfo(native *native.NativeContract, id []byte) (*SigInfo, error) {
 	key := utils.ConcatKey(utils.SignatureManagerContractAddress, []byte(SIG_INFO), id)
-	sigInfoStore, err := native.GetCacheDB().Get(key)
+	sigInfoBytes, err := native.GetCacheDB().Get(key)
 	if err != nil {
 		return nil, fmt.Errorf("getSigInfo, get getSigInfoStore error: %v", err)
 	}
 
-	sigInfo := &SigInfo{
-		SigInfo: make(map[string][]byte),
-	}
-	if sigInfoStore != nil {
-		err = sigInfo.Deserialization(common.NewZeroCopySource(sigInfoStore))
+	sigInfo := &SigInfo{}
+	if sigInfoBytes != nil {
+		err = rlp.DecodeBytes(sigInfoBytes, sigInfo)
 		if err != nil {
 			return nil, fmt.Errorf("getSigInfo, deserialize SigInfo err:%v", err)
 		}
@@ -111,7 +110,8 @@ func getSigInfo(native *native.NativeContract, id []byte) (*SigInfo, error) {
 
 func putSigInfo(native *native.NativeContract, id []byte, sigInfo *SigInfo) {
 	contract := utils.SignatureManagerContractAddress
-	sink := common.NewZeroCopySink(nil)
-	sigInfo.Serialization(sink)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(SIG_INFO), id), sink.Bytes())
+
+	sigInfoBytes, _ := rlp.EncodeToBytes(sigInfo)
+
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(SIG_INFO), id), sigInfoBytes)
 }

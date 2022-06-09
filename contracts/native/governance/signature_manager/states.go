@@ -17,56 +17,68 @@
 package signature_manager
 
 import (
-	"fmt"
+	"io"
 	"sort"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type SigInfo struct {
 	Status  bool
-	SigInfo map[string][]byte
+	SigInfo []Signature
+	m       map[string][]byte
 }
 
-func (this *SigInfo) Serialization(sink *common.ZeroCopySink) {
-	sink.WriteBool(this.Status)
-	sink.WriteUint64(uint64(len(this.SigInfo)))
-	sigInfoList := make([]string, 0, len(this.SigInfo))
-	for k := range this.SigInfo {
-		sigInfoList = append(sigInfoList, k)
+type Signature struct {
+	Addr    string
+	Content []byte
+}
+
+func (this *SigInfo) init(full bool) {
+	this.m = make(map[string][]byte)
+	for _, sig := range this.SigInfo {
+		this.m[sig.Addr] = sig.Content
+	}
+
+	if !full {
+		return
+	}
+
+	sigInfoList := make([]Signature, 0, len(this.m))
+	for k, v := range this.m {
+		sigInfoList = append(sigInfoList, Signature{Addr: k, Content: v})
 	}
 	sort.SliceStable(sigInfoList, func(i, j int) bool {
-		return sigInfoList[i] > sigInfoList[j]
+		return sigInfoList[i].Addr > sigInfoList[j].Addr
 	})
-	for _, k := range sigInfoList {
-		sink.WriteString(k)
-		v := this.SigInfo[k]
-		sink.WriteVarBytes(v)
-	}
+
+	this.SigInfo = sigInfoList
 }
 
-func (this *SigInfo) Deserialization(source *common.ZeroCopySource) error {
-	status, eof := source.NextBool()
-	if eof {
-		return fmt.Errorf("SigInfo deserialize status length error")
+func (this *SigInfo) EncodeRLP(w io.Writer) error {
+
+	sigInfoList := make([]Signature, 0, len(this.m))
+	for k, v := range this.m {
+		sigInfoList = append(sigInfoList, Signature{Addr: k, Content: v})
 	}
-	n, eof := source.NextUint64()
-	if eof {
-		return fmt.Errorf("SigInfo deserialize SigInfo length error")
+	sort.SliceStable(sigInfoList, func(i, j int) bool {
+		return sigInfoList[i].Addr > sigInfoList[j].Addr
+	})
+	return rlp.Encode(w, []interface{}{this.Status, sigInfoList})
+}
+
+func (this *SigInfo) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Status  bool
+		SigInfo []Signature
 	}
-	sigInfo := make(map[string][]byte)
-	for i := 0; uint64(i) < n; i++ {
-		k, eof := source.NextString()
-		if eof {
-			return fmt.Errorf("SigInfo deserialize key error")
-		}
-		v, eof := source.NextVarBytes()
-		if eof {
-			return fmt.Errorf("SigInfo deserialize value error")
-		}
-		sigInfo[k] = v
+
+	if err := s.Decode(&data); err != nil {
+		return err
 	}
-	this.Status = status
-	this.SigInfo = sigInfo
+	this.Status, this.SigInfo = data.Status, data.SigInfo
+
+	this.init(false)
+
 	return nil
 }
