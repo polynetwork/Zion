@@ -20,102 +20,24 @@ package node_manager
 
 import (
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/crypto"
+	"math/big"
 )
-
-func getCurrentEpoch(s *native.NativeContract) (*EpochInfo, error) {
-	// current epoch taking effective
-	curEpochHash, err := getCurrentEpochHash(s)
-	if err != nil {
-		return nil, err
-	}
-	cur, err := getEpoch(s, curEpochHash)
-	if err != nil {
-		return nil, err
-	}
-	if cur.ID == StartEpochID {
-		return cur, nil
-	}
-
-	height := s.ContractRef().BlockHeight().Uint64()
-	if height >= cur.StartHeight {
-		return cur, nil
-	}
-
-	if cur.ID-1 < StartEpochID {
-		return nil, fmt.Errorf("epoch id should greater than %d", StartEpochID)
-	} else {
-		return getEffectiveEpochByID(s, cur.ID-1)
-	}
-}
-
-func getEffectiveEpochByID(s *native.NativeContract, epochID uint64) (*EpochInfo, error) {
-	if epochID < StartEpochID {
-		return nil, fmt.Errorf("epoch %d not exist", epochID)
-	}
-	list, err := getProposals(s, epochID)
-	if err != nil {
-		return nil, fmt.Errorf("epoch %d has no proposal, err: %v", epochID, err)
-	}
-	if list == nil || len(list) == 0 {
-		return nil, fmt.Errorf("epoch %d has no proposal", epochID)
-	}
-	if len(list) > 1 {
-		return nil, fmt.Errorf("epoch %d has multi proposal", epochID)
-	}
-	lastEpochHash := list[0]
-	return getEpoch(s, lastEpochHash)
-}
-
-func CheckAuthority(origin, caller common.Address, epoch *EpochInfo) error {
-	if epoch == nil || epoch.Peers == nil || epoch.Peers.List == nil {
-		return fmt.Errorf("invalid epoch")
-	}
-	if origin == common.EmptyAddress || caller == common.EmptyAddress {
-		return fmt.Errorf("origin/caller is empty address")
-	}
-	if origin != caller {
-		return fmt.Errorf("origin must be caller")
-	}
-	for _, v := range epoch.Peers.List {
-		if v.Address == origin {
-			return nil
-		}
-	}
-	return fmt.Errorf("tx origin %s is not valid validator", origin.Hex())
-}
-
-func checkPeer(peer *PeerInfo) error {
-	if peer == nil || peer.Address == common.EmptyAddress || peer.PubKey == "" {
-		return fmt.Errorf("invalid peer")
-	}
-
-	dec, err := hexutil.Decode(peer.PubKey)
-	if err != nil {
-		return err
-	}
-	pubkey, err := crypto.DecompressPubkey(dec)
-	if err != nil {
-		return err
-	}
-	addr := crypto.PubkeyToAddress(*pubkey)
-	if addr == common.EmptyAddress {
-		return fmt.Errorf("invalid pubkey")
-	}
-	if addr != peer.Address {
-		return fmt.Errorf("pubkey not match address")
-	}
-	return nil
-}
 
 func generateEmptyContext(db *state.StateDB) *native.NativeContract {
 	caller := common.EmptyAddress
 	ref := native.NewContractRef(db, caller, caller, common.Big0, common.EmptyHash, 0, nil)
 	ctx := native.NewNativeContract(db, ref)
 	return ctx
+}
+
+func nativeTransfer(s *native.NativeContract, from, to common.Address, amount *big.Int) error {
+	if !core.CanTransfer(s.StateDB(), from, amount) {
+		return fmt.Errorf("%s insufficient balance", from.Hex())
+	}
+	core.Transfer(s.StateDB(), from, to, amount)
+	return nil
 }

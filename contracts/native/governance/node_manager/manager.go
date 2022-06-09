@@ -20,6 +20,7 @@ package node_manager
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/crypto"
 	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -68,19 +69,87 @@ func InitNodeManager() {
 func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
-	s.Register(MethodName, Name)
-	s.Register(MethodPropose, Propose)
-	s.Register(MethodVote, Vote)
-	s.Register(MethodEpoch, GetCurrentEpoch)
-	s.Register(MethodGetEpochByID, GetEpochByID)
-	s.Register(MethodProof, GetEpochProof)
-	s.Register(MethodGetChangingEpoch, GetChangingEpoch)
+	s.Register(MethodCreateValidator, CreateValidator)
+	s.Register(MethodStake, Stake)
 }
 
-func Name(s *native.NativeContract) ([]byte, error) {
-	return new(MethodContractNameOutput).Encode()
+func CreateValidator(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	caller := ctx.Caller
+
+	params := &CreateValidatorParam{}
+	if err := utils.UnpackMethod(ABI, MethodCreateValidator, params, ctx.Payload); err != nil {
+		return nil, err
+	}
+
+	// check pub key
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, err
+	}
+	pubkey, err := crypto.DecompressPubkey(dec)
+	if err != nil {
+		return nil, err
+	}
+	addr := crypto.PubkeyToAddress(*pubkey)
+	if addr == common.EmptyAddress {
+		return nil, fmt.Errorf("invalid pubkey")
+	}
+	if addr == caller || addr == params.ProposalAddress {
+		return nil, fmt.Errorf("stake, consensus and proposal address can not be duplicate")
+	}
+
+	// check commission
+	globalConfig, err := GetGlobalConfig(s)
+	if err != nil {
+		return nil, fmt.Errorf("CreateValidator, GetGlobalConfig error: %v", err)
+	}
+	if params.Commission.Sign() == -1 {
+		return nil, fmt.Errorf("CreateValidator, commission must be positive")
+	}
+	if params.Commission.Cmp(globalConfig.MaxCommission) == 1 {
+		return nil, fmt.Errorf("CreateValidator, commission can not greater than globalConfig.MaxCommission: %s",
+			globalConfig.MaxCommission.String())
+	}
+
+	// check desc
+	if uint64(len(params.Desc)) > globalConfig.MaxDescLength {
+		return nil, fmt.Errorf("CreateValidator, desc length more than limit %d", globalConfig.MaxDescLength)
+	}
+
+	// check to see if the pubkey or sender has been registered before
+	_, found, err := GetValidator(s, dec)
+	if err != nil {
+		return nil, fmt.Errorf("CreateValidator, GetValidator error: %v", err)
+	}
+	if found {
+		return nil, fmt.Errorf("CreateValidator, validator already exist")
+	}
+
+	// check initial stake
+	if globalConfig.MinInitialStake.Cmp(params.InitStake) == 1 {
+		return nil, fmt.Errorf("CreateValidator, initial stake %s is less than min initial stake %s",
+			params.InitStake.String(), globalConfig.MinInitialStake.String())
+	}
+	// transfer native token
+	err = nativeTransfer(s, caller, this, params.InitStake)
+	if err != nil {
+		return nil, fmt.Errorf("CreateValidator, nativeTransfer errpr: %v", err)
+	}
+
+	validator := &Validator{
+		StakeAddress: caller,
+
+	}
+
 }
 
+func Stake(s *native.NativeContract) ([]byte, error) {
+
+}
+
+
+///////////////////
 // Propose participant propose new `epoch change` schema
 func Propose(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()

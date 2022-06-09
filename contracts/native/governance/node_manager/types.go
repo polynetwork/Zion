@@ -22,14 +22,112 @@ import (
 	"fmt"
 	"io"
 	"math"
+	"math/big"
 	"strings"
 	"sync/atomic"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+type LockStatus uint8
+
+const (
+	Unspecified LockStatus = 0
+	Unlocked    LockStatus = 1
+	Unlocking   LockStatus = 2
+	Locked      LockStatus = 3
+)
+
+type Validator struct {
+	StakeAddress    common.Address
+	ConsensusPubkey string
+	ProposalAddress common.Address
+	Commission      Commission
+	Status          LockStatus
+	Jailed          bool
+	UnlockTime      time.Time
+	TotalStake      *big.Int
+	Desc            string
+}
+
+func (m *Validator) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.StakeAddress, m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.Status, m.Jailed, m.UnlockTime,
+		m.TotalStake, m.Desc})
+}
+
+func (m *Validator) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		StakeAddress    common.Address
+		ConsensusPubkey string
+		ProposalAddress common.Address
+		Commission      Commission
+		Status          LockStatus
+		Jailed          bool
+		UnlockTime      time.Time
+		TotalStake      *big.Int
+		Desc            string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.StakeAddress, m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.Status, m.Jailed, m.UnlockTime, m.TotalStake,
+		m.Desc = data.StakeAddress, data.ConsensusPubkey, data.ProposalAddress, data.Commission, data.Status, data.Jailed,
+		data.UnlockTime, data.TotalStake, data.Desc
+	return nil
+}
+
+type Commission struct {
+	Rate       *big.Int
+	UpdateTime time.Time
+}
+
+func (m *Commission) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Rate, m.UpdateTime})
+}
+
+func (m *Commission) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Rate       *big.Int
+		UpdateTime time.Time
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.Rate, m.UpdateTime = data.Rate, data.UpdateTime
+	return nil
+}
+
+type GlobalConfig struct {
+	MaxCommission   *big.Int
+	MinInitialStake *big.Int
+	MaxDescLength   uint64
+}
+
+func (m *GlobalConfig) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.MaxCommission, m.MinInitialStake, m.MaxDescLength})
+}
+
+func (m *GlobalConfig) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		MaxCommission   *big.Int
+		MinInitialStake *big.Int
+		MaxDescLength   uint64
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.MaxCommission, m.MinInitialStake, m.MaxDescLength = data.MaxCommission, data.MinInitialStake, data.MaxDescLength
+	return nil
+}
+
+
+////////////////////////
 type PeerInfo struct {
 	PubKey  string
 	Address common.Address
