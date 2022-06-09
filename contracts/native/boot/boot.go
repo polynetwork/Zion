@@ -19,6 +19,7 @@ package boot
 
 import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/economic"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/neo3_state_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/relayer_manager"
@@ -36,7 +37,10 @@ func InitNativeContracts() {
 	node_manager.InitNodeManager()
 	relayer_manager.InitRelayerManager()
 	side_chain_manager.InitSideChainManager()
+
 	signature_manager.InitSignatureManager()
+
+	economic.InitEconomic()
 
 	log.Info("Initialize main chain native contracts",
 		"header sync", utils.HeaderSyncContractAddress.Hex(),
@@ -44,5 +48,7 @@ func InitNativeContracts() {
 		"neo3 state manager", utils.Neo3StateManagerContractAddress.Hex(),
 		"node manager", utils.NodeManagerContractAddress.Hex(),
 		"relayer manager", utils.RelayerManagerContractAddress.Hex(),
-		"side chain manager", utils.SideChainManagerContractAddress.Hex())
+		"side chain manager", utils.SideChainManagerContractAddress.Hex(),
+		"signature manager", utils.SignatureManagerContractAddress.Hex(),
+		"economic", utils.EconomicContractAddress.Hex())
 }
