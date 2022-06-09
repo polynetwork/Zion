@@ -67,13 +67,13 @@ func CheckSigns(native *native.NativeContract, id, sig []byte, address common.Ad
 			num = num + 1
 		}
 		sum = sum + 1
-
-		//check if voted
-		_, ok = sigInfo.m[address.Hex()]
-		if !ok {
-			flag = true
-		}
 	}
+	//check if voted
+	_, ok := sigInfo.m[address.Hex()]
+	if !ok {
+		flag = true
+	}
+
 	if flag {
 		sigInfo.m[address.Hex()] = sig
 		num = num + 1
