@@ -33,7 +33,7 @@ var (
 )
 
 // SignatureManagerABI is the input ABI used to generate the binding from.
-const SignatureManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"id\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"subject\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"sideChainI\",\"type\":\"uint256\"}],\"name\":\"AddSignatureQuorumEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"sideChainID\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"subject\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"addSignature\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const SignatureManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"id\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"subject\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"sideChainID\",\"type\":\"uint256\"}],\"name\":\"AddSignatureQuorumEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"sideChainID\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"subject\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"addSignature\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // SignatureManagerFuncSigs maps the 4-byte function signature to its string representation.
 var SignatureManagerFuncSigs = map[string]string{
@@ -291,13 +291,13 @@ func (it *SignatureManagerAddSignatureQuorumEventIterator) Close() error {
 type SignatureManagerAddSignatureQuorumEvent struct {
 	Id         []byte
 	Subject    []byte
-	SideChainI *big.Int
+	SideChainID *big.Int
 	Raw        types.Log // Blockchain specific contextual infos
 }
 
 // FilterAddSignatureQuorumEvent is a free log retrieval operation binding the contract event 0xc347f5ccf7997409d4ef282db7e4c041bde177c835151101af49171c43651d42.
 //
-// Solidity: event AddSignatureQuorumEvent(bytes id, bytes subject, uint256 sideChainI)
+// Solidity: event AddSignatureQuorumEvent(bytes id, bytes subject, uint256 sideChainID)
 func (_SignatureManager *SignatureManagerFilterer) FilterAddSignatureQuorumEvent(opts *bind.FilterOpts) (*SignatureManagerAddSignatureQuorumEventIterator, error) {
 
 	logs, sub, err := _SignatureManager.contract.FilterLogs(opts, "AddSignatureQuorumEvent")
@@ -309,7 +309,7 @@ func (_SignatureManager *SignatureManagerFilterer) FilterAddSignatureQuorumEvent
 
 // WatchAddSignatureQuorumEvent is a free log subscription operation binding the contract event 0xc347f5ccf7997409d4ef282db7e4c041bde177c835151101af49171c43651d42.
 //
-// Solidity: event AddSignatureQuorumEvent(bytes id, bytes subject, uint256 sideChainI)
+// Solidity: event AddSignatureQuorumEvent(bytes id, bytes subject, uint256 sideChainID)
 func (_SignatureManager *SignatureManagerFilterer) WatchAddSignatureQuorumEvent(opts *bind.WatchOpts, sink chan<- *SignatureManagerAddSignatureQuorumEvent) (event.Subscription, error) {
 
 	logs, sub, err := _SignatureManager.contract.WatchLogs(opts, "AddSignatureQuorumEvent")
@@ -346,7 +346,7 @@ func (_SignatureManager *SignatureManagerFilterer) WatchAddSignatureQuorumEvent(
 
 // ParseAddSignatureQuorumEvent is a log parse operation binding the contract event 0xc347f5ccf7997409d4ef282db7e4c041bde177c835151101af49171c43651d42.
 //
-// Solidity: event AddSignatureQuorumEvent(bytes id, bytes subject, uint256 sideChainI)
+// Solidity: event AddSignatureQuorumEvent(bytes id, bytes subject, uint256 sideChainID)
 func (_SignatureManager *SignatureManagerFilterer) ParseAddSignatureQuorumEvent(log types.Log) (*SignatureManagerAddSignatureQuorumEvent, error) {
 	event := new(SignatureManagerAddSignatureQuorumEvent)
 	if err := _SignatureManager.contract.UnpackLog(event, "AddSignatureQuorumEvent", log); err != nil {
