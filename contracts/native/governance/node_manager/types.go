@@ -19,17 +19,10 @@
 package node_manager
 
 import (
-	"fmt"
-	"io"
-	"math"
-	"math/big"
-	"strings"
-	"sync/atomic"
-	"time"
-
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
+	"io"
+	"math/big"
 )
 
 type LockStatus uint8
@@ -41,21 +34,43 @@ const (
 	Locked      LockStatus = 3
 )
 
+type AllValidators struct {
+	AllValidators []string
+}
+
+func (m *AllValidators) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.AllValidators})
+}
+
+func (m *AllValidators) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		AllValidators []string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+
+	m.AllValidators = data.AllValidators
+	return nil
+}
+
 type Validator struct {
 	StakeAddress    common.Address
 	ConsensusPubkey string
 	ProposalAddress common.Address
-	Commission      Commission
+	Commission      *Commission
 	Status          LockStatus
 	Jailed          bool
-	UnlockTime      time.Time
+	UnlockTime      *big.Int
 	TotalStake      *big.Int
+	SelfStake       *big.Int
 	Desc            string
 }
 
 func (m *Validator) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.StakeAddress, m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.Status, m.Jailed, m.UnlockTime,
-		m.TotalStake, m.Desc})
+		m.TotalStake, m.SelfStake, m.Desc})
 }
 
 func (m *Validator) DecodeRLP(s *rlp.Stream) error {
@@ -63,11 +78,12 @@ func (m *Validator) DecodeRLP(s *rlp.Stream) error {
 		StakeAddress    common.Address
 		ConsensusPubkey string
 		ProposalAddress common.Address
-		Commission      Commission
+		Commission      *Commission
 		Status          LockStatus
 		Jailed          bool
-		UnlockTime      time.Time
+		UnlockTime      *big.Int
 		TotalStake      *big.Int
+		SelfStake       *big.Int
 		Desc            string
 	}
 
@@ -75,30 +91,45 @@ func (m *Validator) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 	m.StakeAddress, m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.Status, m.Jailed, m.UnlockTime, m.TotalStake,
-		m.Desc = data.StakeAddress, data.ConsensusPubkey, data.ProposalAddress, data.Commission, data.Status, data.Jailed,
-		data.UnlockTime, data.TotalStake, data.Desc
+		m.SelfStake, m.Desc = data.StakeAddress, data.ConsensusPubkey, data.ProposalAddress, data.Commission,
+		data.Status, data.Jailed, data.UnlockTime, data.TotalStake, data.SelfStake, data.Desc
 	return nil
 }
 
+// IsLocked checks if the validator status equals Locked
+func (m Validator) IsLocked() bool {
+	return m.Status == Locked
+}
+
+// IsUnlocked checks if the validator status equals Unlocked
+func (m Validator) IsUnlocked() bool {
+	return m.Status == Unlocked
+}
+
+// IsUnlocking checks if the validator status equals Unlocking
+func (m Validator) IsUnlocking() bool {
+	return m.Status == Unlocking
+}
+
 type Commission struct {
-	Rate       *big.Int
-	UpdateTime time.Time
+	Rate         *big.Int
+	UpdateHeight *big.Int
 }
 
 func (m *Commission) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Rate, m.UpdateTime})
+	return rlp.Encode(w, []interface{}{m.Rate, m.UpdateHeight})
 }
 
 func (m *Commission) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Rate       *big.Int
-		UpdateTime time.Time
+		Rate         *big.Int
+		UpdateHeight *big.Int
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.Rate, m.UpdateTime = data.Rate, data.UpdateTime
+	m.Rate, m.UpdateHeight = data.Rate, data.UpdateHeight
 	return nil
 }
 
@@ -126,288 +157,26 @@ func (m *GlobalConfig) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-
-////////////////////////
-type PeerInfo struct {
-	PubKey  string
-	Address common.Address
+type StakeInfo struct {
+	StakeAddress    common.Address
+	ConsensusPubkey string
+	Amount          *big.Int
 }
 
-func (m *PeerInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.PubKey, m.Address})
+func (m *StakeInfo) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.StakeAddress, m.ConsensusPubkey, m.Amount})
 }
 
-func (m *PeerInfo) DecodeRLP(s *rlp.Stream) error {
-	var peer struct {
-		PubKey  string
-		Address common.Address
-	}
-
-	if err := s.Decode(&peer); err != nil {
-		return err
-	}
-	m.PubKey, m.Address = peer.PubKey, peer.Address
-	return nil
-}
-
-func (m *PeerInfo) String() string {
-	return fmt.Sprintf("{Address: %s PubKey: %s}", m.Address.Hex(), m.PubKey)
-}
-
-type Peers struct {
-	List []*PeerInfo
-}
-
-func (m *Peers) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.List})
-}
-
-func (m *Peers) DecodeRLP(s *rlp.Stream) error {
-	var peers struct {
-		List []*PeerInfo
-	}
-
-	if err := s.Decode(&peers); err != nil {
-		return err
-	}
-	m.List = peers.List
-	return nil
-}
-
-func (m *Peers) Len() int {
-	if m == nil || m.List == nil {
-		return 0
-	}
-	return len(m.List)
-}
-
-func (m *Peers) Less(i, j int) bool {
-	return strings.Compare(m.List[i].Address.Hex(), m.List[j].Address.Hex()) < 0
-}
-
-func (m *Peers) Swap(i, j int) {
-	m.List[i], m.List[j] = m.List[j], m.List[i]
-}
-
-func (m *Peers) Copy() *Peers {
-	enc, err := rlp.EncodeToBytes(m)
-	if err != nil {
-		return nil
-	}
-	var cp *Peers
-	if err := rlp.DecodeBytes(enc, &cp); err != nil {
-		return nil
-	}
-	return cp
-}
-
-type ProposalStatusType uint8
-
-const (
-	ProposalStatusUnknown ProposalStatusType = 0
-	ProposalStatusPropose ProposalStatusType = 1
-	ProposalStatusPassed  ProposalStatusType = 2
-)
-
-func (p ProposalStatusType) String() string {
-	switch p {
-	case ProposalStatusPropose:
-		return "STATUS_PROPOSE"
-	case ProposalStatusPassed:
-		return "STATUS_PASSED"
-	default:
-		return "STATUS_UNKNOWN"
-	}
-}
-
-type EpochInfo struct {
-	ID          uint64
-	Peers       *Peers
-	StartHeight uint64
-	Proposer    common.Address // hash generating without fields of `Proposer` and `Status`
-	Status      ProposalStatusType
-
-	hash atomic.Value
-}
-
-func (m *EpochInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ID, m.Peers, m.StartHeight, m.Proposer, uint8(m.Status)})
-}
-
-func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
+func (m *StakeInfo) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		ID          uint64
-		Peers       *Peers
-		StartHeight uint64
-		Proposer    common.Address
-		Status      uint8
+		StakeAddress    common.Address
+		ConsensusPubkey string
+		Amount          *big.Int
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.ID, m.Peers, m.StartHeight, m.Proposer, m.Status = data.ID, data.Peers, data.StartHeight, data.Proposer, ProposalStatusType(data.Status)
+	m.StakeAddress, m.ConsensusPubkey, m.Amount = data.StakeAddress, data.ConsensusPubkey, data.Amount
 	return nil
-}
-
-func (m *EpochInfo) String() string {
-	pstr := ""
-	if m.Peers != nil && m.Peers.List != nil {
-		for _, v := range m.Peers.List {
-			pstr += fmt.Sprintf("peer: %s\r\n", v.Address.Hex())
-		}
-	}
-	return fmt.Sprintf("epochHash:%s\r\nepochId: %d\r\n%sstartHeight: %d\r\nproposer:%s\r\nstatus:%s",
-		m.Hash().Hex(), m.ID, pstr, m.StartHeight, m.Proposer.Hex(), m.Status.String())
-}
-
-func (m *EpochInfo) Hash() common.Hash {
-	if hash := m.hash.Load(); hash != nil {
-		return hash.(common.Hash)
-	}
-	var inf = struct {
-		ID          uint64
-		Peers       *Peers
-		StartHeight uint64
-	}{
-		ID:          m.ID,
-		Peers:       m.Peers,
-		StartHeight: m.StartHeight,
-	}
-	v := utils.RLPHash(inf)
-	m.hash.Store(v)
-	return v
-}
-
-func (m *EpochInfo) Members() map[common.Address]struct{} {
-	if m == nil || m.Peers == nil || m.Peers.List == nil || len(m.Peers.List) == 0 {
-		return nil
-	}
-	data := make(map[common.Address]struct{})
-	for _, v := range m.Peers.List {
-		data[v.Address] = struct{}{}
-	}
-	return data
-}
-
-func (m *EpochInfo) MemberList() []common.Address {
-	list := make([]common.Address, 0)
-	if m == nil || m.Peers == nil || m.Peers.List == nil || len(m.Peers.List) == 0 {
-		return list
-	}
-	for _, v := range m.Peers.List {
-		list = append(list, v.Address)
-	}
-	return list
-}
-
-func (m *EpochInfo) QuorumSize() int {
-	if m == nil || m.Peers == nil {
-		return 0
-	}
-	total := m.Peers.Len()
-	return int(math.Ceil(float64(2*total) / 3))
-}
-
-func (m *EpochInfo) OldMemberNum(peers *Peers) int {
-	if m == nil || m.Peers == nil || m.Peers.List == nil || len(m.Peers.List) == 0 {
-		return 0
-	}
-	if peers == nil || peers.List == nil || len(peers.List) == 0 {
-		return 0
-	}
-
-	isOldMember := func(addr common.Address) bool {
-		for _, v := range m.Peers.List {
-			if v.Address == addr {
-				return true
-			}
-		}
-		return false
-	}
-
-	num := 0
-	for _, v := range peers.List {
-		if isOldMember(v.Address) {
-			num += 1
-		}
-	}
-	return num
-}
-
-type HashList struct {
-	List []common.Hash
-}
-
-func (m *HashList) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.List})
-}
-
-func (m *HashList) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		List []common.Hash
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.List = data.List
-	return nil
-}
-
-type AddressList struct {
-	List []common.Address
-}
-
-func (m *AddressList) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.List})
-}
-
-func (m *AddressList) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		List []common.Address
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.List = data.List
-	return nil
-}
-
-type ConsensusSign struct {
-	Method string
-	Input  []byte
-	hash   atomic.Value
-}
-
-func (m *ConsensusSign) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Method, m.Input})
-}
-func (m *ConsensusSign) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Method string
-		Input  []byte
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Method, m.Input = data.Method, data.Input
-	return nil
-}
-func (m *ConsensusSign) Hash() common.Hash {
-	if hash := m.hash.Load(); hash != nil {
-		return hash.(common.Hash)
-	}
-	var inf = struct {
-		Method string
-		Input  []byte
-	}{
-		Method: m.Method,
-		Input:  m.Input,
-	}
-	v := utils.RLPHash(inf)
-	m.hash.Store(v)
-	return v
 }

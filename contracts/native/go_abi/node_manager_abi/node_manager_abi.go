@@ -945,4 +945,3 @@ func (_INodeManager *INodeManagerFilterer) ParseVoted(log types.Log) (*INodeMana
 	event.Raw = log
 	return event, nil
 }
-

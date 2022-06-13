@@ -109,7 +109,7 @@ func TestNoAuthSyncRootInfo(t *testing.T) {
 	extra := uint64(1000)
 	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, 0+extra, nil)
 	_, _, err = contractRef.NativeCall(caller, utils.InfoSyncContractAddress, input)
-	assert.Equal(t,"SyncRootInfo, CheckConsensusSigns error: invalid authority", err.Error())
+	assert.Equal(t, "SyncRootInfo, CheckConsensusSigns error: invalid authority", err.Error())
 }
 
 func TestNormalSyncRootInfo(t *testing.T) {

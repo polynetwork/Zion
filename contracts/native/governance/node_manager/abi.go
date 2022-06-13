@@ -54,12 +54,13 @@ type CreateValidatorParam struct {
 }
 
 func (m *CreateValidatorParam) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.Commission, m.InitStake, m.Desc})
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.InitStake, m.Desc})
 }
 
 func (m *CreateValidatorParam) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		ConsensusPubkey string
+		ProposalAddress common.Address
 		Commission      *big.Int
 		InitStake       *big.Int
 		Desc            string
@@ -68,6 +69,56 @@ func (m *CreateValidatorParam) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.ConsensusPubkey, m.Commission, m.InitStake, m.Desc = data.ConsensusPubkey, data.Commission, data.InitStake, data.Desc
+	m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.InitStake, m.Desc = data.ConsensusPubkey,
+		data.ProposalAddress, data.Commission, data.InitStake, data.Desc
+	return nil
+}
+
+type UpdateValidatorParam struct {
+	ConsensusPubkey string
+	ProposalAddress common.Address
+	Commission      *big.Int
+	Desc            string
+}
+
+func (m *UpdateValidatorParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.Desc})
+}
+
+func (m *UpdateValidatorParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+		ProposalAddress common.Address
+		Commission      *big.Int
+		Desc            string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.Desc = data.ConsensusPubkey, data.ProposalAddress,
+		data.Commission, data.Desc
+	return nil
+}
+
+type StakeParam struct {
+	ConsensusPubkey string
+	Amount          *big.Int
+}
+
+func (m *StakeParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.Amount})
+}
+
+func (m *StakeParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+		Amount          *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey, m.Amount = data.ConsensusPubkey, data.Amount
 	return nil
 }

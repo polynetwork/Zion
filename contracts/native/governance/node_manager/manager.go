@@ -70,26 +70,29 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
 	s.Register(MethodCreateValidator, CreateValidator)
+	s.Register(MethodUpdateValidator, UpdateValidator)
 	s.Register(MethodStake, Stake)
+	s.Register(MethodUnStake, UnStake)
 }
 
 func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
+	height := s.ContractRef().BlockHeight()
 	caller := ctx.Caller
 
 	params := &CreateValidatorParam{}
 	if err := utils.UnpackMethod(ABI, MethodCreateValidator, params, ctx.Payload); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("CreateValidator, unpack params error: %v", err)
 	}
 
 	// check pub key
 	dec, err := hexutil.Decode(params.ConsensusPubkey)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("CreateValidator, decode pubkey error: %v", err)
 	}
 	pubkey, err := crypto.DecompressPubkey(dec)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("CreateValidator, decompress pubkey error: %v", err)
 	}
 	addr := crypto.PubkeyToAddress(*pubkey)
 	if addr == common.EmptyAddress {
@@ -117,7 +120,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("CreateValidator, desc length more than limit %d", globalConfig.MaxDescLength)
 	}
 
-	// check to see if the pubkey or sender has been registered before
+	// check to see if the pubkey has been registered before
 	_, found, err := GetValidator(s, dec)
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, GetValidator error: %v", err)
@@ -131,23 +134,141 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("CreateValidator, initial stake %s is less than min initial stake %s",
 			params.InitStake.String(), globalConfig.MinInitialStake.String())
 	}
-	// transfer native token
-	err = nativeTransfer(s, caller, this, params.InitStake)
-	if err != nil {
-		return nil, fmt.Errorf("CreateValidator, nativeTransfer errpr: %v", err)
-	}
 
+	// store validator
 	validator := &Validator{
-		StakeAddress: caller,
-
+		StakeAddress:    caller,
+		ConsensusPubkey: params.ConsensusPubkey,
+		ProposalAddress: params.ProposalAddress,
+		Commission:      &Commission{Rate: params.Commission, UpdateHeight: height},
+		Status:          Unlocked,
+		Jailed:          false,
+		UnlockTime:      common.Big0,
+		TotalStake:      params.InitStake,
+		SelfStake:       params.InitStake,
+		Desc:            params.Desc,
+	}
+	err = setValidator(s, validator)
+	if err != nil {
+		return nil, fmt.Errorf("CreateValidator, setValidator error: %v", err)
+	}
+	// add validator to all validators pool
+	err = addToAllValidators(s, validator.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("CreateValidator, addToAllValidators error: %v", err)
 	}
 
+	// deposit native token
+	err = deposit(s, caller, params.InitStake, validator)
+	if err != nil {
+		return nil, fmt.Errorf("CreateValidator, deposit error: %v", err)
+	}
+
+	err = s.AddNotify(ABI, []string{MethodCreateValidator}, params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("CreateValidator, AddNotify error: %v", err)
+	}
+	return utils.ByteSuccess, nil
+}
+
+func UpdateValidator(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	height := s.ContractRef().BlockHeight()
+	caller := ctx.Caller
+
+	params := &UpdateValidatorParam{}
+	if err := utils.UnpackMethod(ABI, MethodUpdateValidator, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("UpdateValidator, unpack params error: %v", err)
+	}
+
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("UpdateValidator, decode pubkey error: %v", err)
+	}
+	validator, found, err := GetValidator(s, dec)
+	if err != nil {
+		return nil, fmt.Errorf("UpdateValidator, get validator error: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("UpdateValidator, can not found record")
+	}
+	if validator.StakeAddress != caller {
+		return nil, fmt.Errorf("UpdateValidator, stake address is not caller")
+	}
+	globalConfig, err := GetGlobalConfig(s)
+	if err != nil {
+		return nil, fmt.Errorf("UpdateValidator, GetGlobalConfig error: %v", err)
+	}
+
+	if params.ProposalAddress != common.EmptyAddress {
+		validator.ProposalAddress = params.ProposalAddress
+	}
+
+	if params.Commission != common.Big0 {
+		// check commission
+		if params.Commission.Sign() == -1 {
+			return nil, fmt.Errorf("UpdateValidator, commission must be positive")
+		}
+		if params.Commission.Cmp(globalConfig.MaxCommission) == 1 {
+			return nil, fmt.Errorf("UpdateValidator, commission can not greater than globalConfig.MaxCommission: %s",
+				globalConfig.MaxCommission.String())
+		}
+		validator.Commission = &Commission{Rate: params.Commission, UpdateHeight: height}
+	}
+
+	if params.Desc != "" {
+		// check desc
+		if uint64(len(params.Desc)) > globalConfig.MaxDescLength {
+			return nil, fmt.Errorf("UpdateValidator, desc length more than limit %d", globalConfig.MaxDescLength)
+		}
+		validator.Desc = params.Desc
+	}
+
+	err = setValidator(s, validator)
+	if err != nil {
+		return nil, fmt.Errorf("UpdateValidator, setValidator error: %v", err)
+	}
+
+	err = s.AddNotify(ABI, []string{MethodUpdateValidator}, params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("UpdateValidator, AddNotify error: %v", err)
+	}
+	return utils.ByteSuccess, nil
 }
 
 func Stake(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	caller := ctx.Caller
 
+	params := &StakeParam{}
+	if err := utils.UnpackMethod(ABI, MethodStake, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("Stake, unpack params error: %v", err)
+	}
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("Stake, decode pubkey error: %v", err)
+	}
+
+	// check to see if the pubkey has been registered
+	validator, found, err := GetValidator(s, dec)
+	if err != nil {
+		return nil, fmt.Errorf("Stake, GetValidator error: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("Stake, validator is not exist")
+	}
+
+	// deposit native token
+	err = deposit(s, caller, params.Amount, validator)
+	if err != nil {
+		return nil, fmt.Errorf("Stake, deposit error: %v", err)
+	}
+	return utils.ByteSuccess, nil
 }
 
+func UnStake(s *native.NativeContract) ([]byte, error) {
+
+}
 
 ///////////////////
 // Propose participant propose new `epoch change` schema

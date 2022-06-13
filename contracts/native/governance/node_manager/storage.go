@@ -21,8 +21,10 @@ package node_manager
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -40,6 +42,9 @@ const (
 	SKP_GLOBAL_CONFIG = "st_global_config"
 	SKP_VALIDATOR     = "st_validator"
 	SKP_ALL_VALIDATOR = "st_all_validator"
+	SKP_LOCK_POOL     = "st_lock_pool"
+	SKP_UNLOCK_POOL   = "st_unlock_pool"
+	SKP_STAKE_INFO    = "st_stake_info"
 )
 
 func setGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error {
@@ -65,6 +70,39 @@ func GetGlobalConfig(s *native.NativeContract) (*GlobalConfig, error) {
 	return globalConfig, nil
 }
 
+func addToAllValidators(s *native.NativeContract, consensusPk string) error {
+	allValidators, err := GetAllValidators(s)
+	if err != nil {
+		return fmt.Errorf("addToAllValidators, GetAllValidators error: %v", err)
+	}
+	allValidators.AllValidators = append(allValidators.AllValidators, consensusPk)
+	err = setAllValidators(s, allValidators)
+	if err != nil {
+		return fmt.Errorf("addToAllValidators, set all validators error: %v", err)
+	}
+	return nil
+}
+
+func removeFromAllValidators(s *native.NativeContract, consensusPk string) error {
+	allValidators, err := GetAllValidators(s)
+	if err != nil {
+		return fmt.Errorf("removeFromAllValidators, GetAllValidators error: %v", err)
+	}
+	j := 0
+	for _, validator := range allValidators.AllValidators {
+		if validator != consensusPk {
+			allValidators.AllValidators[j] = validator
+			j++
+		}
+	}
+	allValidators.AllValidators = allValidators.AllValidators[:j]
+	err = setAllValidators(s, allValidators)
+	if err != nil {
+		return fmt.Errorf("removeFromAllValidators, set all validators error: %v", err)
+	}
+	return nil
+}
+
 func setValidator(s *native.NativeContract, validator *Validator) error {
 	dec, err := hexutil.Decode(validator.ConsensusPubkey)
 	if err != nil {
@@ -76,6 +114,16 @@ func setValidator(s *native.NativeContract, validator *Validator) error {
 		return fmt.Errorf("setValidator, serialize validator error: %v", err)
 	}
 	set(s, key, store)
+	return nil
+}
+
+func delValidator(s *native.NativeContract, consensusPk string) error {
+	dec, err := hexutil.Decode(consensusPk)
+	if err != nil {
+		return err
+	}
+	key := validatorKey(dec)
+	del(s, key)
 	return nil
 }
 
@@ -93,6 +141,197 @@ func GetValidator(s *native.NativeContract, dec []byte) (*Validator, bool, error
 		return nil, false, fmt.Errorf("GetValidator, deserialize validator error: %v", err)
 	}
 	return validator, true, nil
+}
+
+func setAllValidators(s *native.NativeContract, allValidators *AllValidators) error {
+	key := allValidatorKey()
+	store, err := rlp.EncodeToBytes(allValidators)
+	if err != nil {
+		return fmt.Errorf("setAllValidators, serialize all validators error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func GetAllValidators(s *native.NativeContract) (*AllValidators, error) {
+	allValidators := &AllValidators{
+		AllValidators: make([]string, 0),
+	}
+	key := allValidatorKey()
+	store, err := get(s, key)
+	if err == ErrEof {
+		return allValidators, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("GetAllValidators, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, allValidators); err != nil {
+		return nil, fmt.Errorf("GetAllValidators, deserialize all validators error: %v", err)
+	}
+	return allValidators, nil
+}
+
+func depositLockPool(s *native.NativeContract, amount *big.Int) error {
+	lockPool, err := GetLockPool(s)
+	if err != nil {
+		return fmt.Errorf("depositLockPool, get lock pool error: %v", err)
+	}
+	lockPool = new(big.Int).Add(lockPool, amount)
+	setLockPool(s, lockPool)
+	return nil
+}
+
+func withdrawLockPool(s *native.NativeContract, amount *big.Int) error {
+	lockPool, err := GetLockPool(s)
+	if err != nil {
+		return fmt.Errorf("withdrawLockPool, get lock pool error: %v", err)
+	}
+	lockPool = new(big.Int).Sub(lockPool, amount)
+	if lockPool.Sign() < 0 {
+		return fmt.Errorf("withdrawLockPool, lock pool is less than amount, please check")
+	}
+	setLockPool(s, lockPool)
+	return nil
+}
+
+func depositUnlockPool(s *native.NativeContract, amount *big.Int) error {
+	unlockPool, err := GetUnlockPool(s)
+	if err != nil {
+		return fmt.Errorf("depositUnlockPool, get unlock pool error: %v", err)
+	}
+	unlockPool = new(big.Int).Add(unlockPool, amount)
+	setUnlockPool(s, unlockPool)
+	return nil
+}
+
+func withdrawUnlockPool(s *native.NativeContract, amount *big.Int) error {
+	unlockPool, err := GetUnlockPool(s)
+	if err != nil {
+		return fmt.Errorf("withdrawUnlockPool, get lock pool error: %v", err)
+	}
+	unlockPool = new(big.Int).Sub(unlockPool, amount)
+	if unlockPool.Sign() < 0 {
+		return fmt.Errorf("withdrawUnlockPool, unlock pool is less than amount, please check")
+	}
+	setUnlockPool(s, unlockPool)
+	return nil
+}
+
+func setLockPool(s *native.NativeContract, amount *big.Int) {
+	key := lockPoolKey()
+	set(s, key, amount.Bytes())
+}
+
+func GetLockPool(s *native.NativeContract) (*big.Int, error) {
+	key := lockPoolKey()
+	store, err := get(s, key)
+	if err == ErrEof {
+		return common.Big0, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("GetLockPool, get store error: %v", err)
+	}
+	return new(big.Int).SetBytes(store), nil
+}
+
+func setUnlockPool(s *native.NativeContract, amount *big.Int) {
+	key := unlockPoolKey()
+	set(s, key, amount.Bytes())
+}
+
+func GetUnlockPool(s *native.NativeContract) (*big.Int, error) {
+	key := unlockPoolKey()
+	store, err := get(s, key)
+	if err == ErrEof {
+		return common.Big0, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("GetUnlockPool, get store error: %v", err)
+	}
+	return new(big.Int).SetBytes(store), nil
+}
+
+func depositStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string, amount *big.Int) error {
+	stakeInfo, err := GetStakeInfo(s, stakeAddress, consensusPk)
+	if err != nil {
+		return fmt.Errorf("depositStakeInfo, get stake info error: %v", err)
+	}
+	stakeInfo.Amount = new(big.Int).Add(stakeInfo.Amount, amount)
+	err = setStakeInfo(s, stakeInfo)
+	if err != nil {
+		return fmt.Errorf("depositStakeInfo, set stake info error: %v", err)
+	}
+	return nil
+}
+
+func withdrawStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string, amount *big.Int) error {
+	stakeInfo, err := GetStakeInfo(s, stakeAddress, consensusPk)
+	if err != nil {
+		return fmt.Errorf("withdrawStakeInfo, get stake info error: %v", err)
+	}
+	if stakeInfo.Amount.Cmp(amount) == -1 {
+		return fmt.Errorf("withdrawStakeInfo, stake info is less than amount")
+	}
+	stakeInfo.Amount = new(big.Int).Sub(stakeInfo.Amount, amount)
+	if stakeInfo.Amount.Sign() == 0 {
+		err = delStakeInfo(s, stakeAddress, consensusPk)
+		if err != nil {
+			return fmt.Errorf("withdrawStakeInfo, delete stake info error: %v", err)
+		}
+	} else {
+		err = setStakeInfo(s, stakeInfo)
+		if err != nil {
+			return fmt.Errorf("withdrawStakeInfo, set stake info error: %v", err)
+		}
+	}
+	return nil
+}
+
+func setStakeInfo(s *native.NativeContract, stakeInfo *StakeInfo) error {
+	dec, err := hexutil.Decode(stakeInfo.ConsensusPubkey)
+	if err != nil {
+		return err
+	}
+	key := stakeInfoKey(stakeInfo.StakeAddress, dec)
+	store, err := rlp.EncodeToBytes(stakeInfo)
+	if err != nil {
+		return fmt.Errorf("setStakeInfo, serialize stake info error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func delStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string) error {
+	dec, err := hexutil.Decode(consensusPk)
+	if err != nil {
+		return err
+	}
+	key := stakeInfoKey(stakeAddress, dec)
+	del(s, key)
+	return nil
+}
+
+func GetStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string) (*StakeInfo, error) {
+	stakeInfo := &StakeInfo{
+		StakeAddress:    stakeAddress,
+		ConsensusPubkey: consensusPk,
+	}
+	dec, err := hexutil.Decode(stakeInfo.ConsensusPubkey)
+	if err != nil {
+		return nil, err
+	}
+	key := stakeInfoKey(stakeAddress, dec)
+	store, err := get(s, key)
+	if err == ErrEof {
+		return stakeInfo, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeInfo, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, stakeInfo); err != nil {
+		return nil, fmt.Errorf("GetStakeInfo, deserialize stakeInfo error: %v", err)
+	}
+	return stakeInfo, nil
 }
 
 // ====================================================================
@@ -148,4 +387,16 @@ func validatorKey(dec []byte) []byte {
 
 func allValidatorKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_ALL_VALIDATOR))
+}
+
+func lockPoolKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_LOCK_POOL))
+}
+
+func unlockPoolKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_UNLOCK_POOL))
+}
+
+func stakeInfoKey(stakeAddress common.Address, dec []byte) []byte {
+	return utils.ConcatKey(this, []byte(SKP_STAKE_INFO), stakeAddress[:], dec)
 }

@@ -64,7 +64,7 @@ func storeSignerAndCheckQuorum(s *native.NativeContract, hash common.Hash, signe
 		if err.Error() == ErrEof.Error() {
 			data = &SignerList{
 				StartHeight: height,
-				SignerList:   make([]*SignerInfo, 0),
+				SignerList:  make([]*SignerInfo, 0),
 			}
 		} else {
 			return false, err

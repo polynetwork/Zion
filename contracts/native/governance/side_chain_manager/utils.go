@@ -150,7 +150,7 @@ func putQuitSideChain(native *native.NativeContract, chainid uint64) error {
 	contract := utils.SideChainManagerContractAddress
 	chainidByte := utils.GetUint64Bytes(chainid)
 
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(QUIT_SIDE_CHAIN_REQUEST), chainidByte),chainidByte)
+	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(QUIT_SIDE_CHAIN_REQUEST), chainidByte), chainidByte)
 	return nil
 }
 

@@ -22,17 +22,37 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/core"
 	"math/big"
 )
 
-func nativeTransfer(s *native.NativeContract, from, to common.Address, amount *big.Int) error {
-	if amount.Sign() <= 0 {
-		return fmt.Errorf("amount must be positive")
+func deposit(s *native.NativeContract, from common.Address, amount *big.Int, validator *Validator) error {
+	// store deposit info
+	err := depositStakeInfo(s, from, validator.ConsensusPubkey, amount)
+	if err != nil {
+		return fmt.Errorf("deposit, depositStakeInfo error: %v", err)
 	}
-	if !core.CanTransfer(s.StateDB(), from, amount) {
-		return fmt.Errorf("%s insufficient balance", from.Hex())
+
+	// transfer native token
+	err = nativeTransfer(s, from, this, amount)
+	if err != nil {
+		return fmt.Errorf("deposit, nativeTransfer error: %v", err)
 	}
-	core.Transfer(s.StateDB(), from, to, amount)
+
+	// update lock and unlock token pool
+	switch {
+	case validator.IsLocked():
+		err := depositLockPool(s, amount)
+		if err != nil {
+			return fmt.Errorf("deposit, depositLockPool error: %v", err)
+		}
+	case validator.IsUnlocking(), validator.IsUnlocked():
+		err := depositUnlockPool(s, amount)
+		if err != nil {
+			return fmt.Errorf("deposit, depositUnlockPool error: %v", err)
+		}
+	default:
+		return fmt.Errorf("invalid status")
+	}
+
 	return nil
 }

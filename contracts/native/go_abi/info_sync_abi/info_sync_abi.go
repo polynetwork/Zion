@@ -372,4 +372,3 @@ func (_InfoSync *InfoSyncFilterer) ParseSyncRootInfoEvent(log types.Log) (*InfoS
 	event.Raw = log
 	return event, nil
 }
-
