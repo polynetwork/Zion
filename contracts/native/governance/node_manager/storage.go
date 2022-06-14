@@ -45,6 +45,9 @@ const (
 	SKP_LOCK_POOL     = "st_lock_pool"
 	SKP_UNLOCK_POOL   = "st_unlock_pool"
 	SKP_STAKE_INFO    = "st_stake_info"
+	SKP_UNLOCK_INFO   = "st_unlock_info"
+	SKP_CURRENT_EPOCH = "st_current_epoch"
+	SKP_EPOCH_INFO    = "st_epoch_info"
 )
 
 func setGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error {
@@ -334,6 +337,143 @@ func GetStakeInfo(s *native.NativeContract, stakeAddress common.Address, consens
 	return stakeInfo, nil
 }
 
+func addUnlockingInfo(s *native.NativeContract, stakeAddress common.Address, unlockingStake *UnlockingStake) error {
+	unlockingInfo, err := GetUnlockingInfo(s, stakeAddress)
+	if err != nil {
+		return fmt.Errorf("addUnlockingInfo, GetUnlockingInfo error: %v", err)
+	}
+	unlockingInfo.UnlockingStake = append(unlockingInfo.UnlockingStake, unlockingStake)
+	err = setUnlockingInfo(s, unlockingInfo)
+	if err != nil {
+		return fmt.Errorf("addUnlockingInfo, setUnlockingInfo error: %v", err)
+	}
+	return nil
+}
+
+func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (*big.Int, error) {
+	height := s.ContractRef().BlockHeight()
+	unlockingInfo, err := GetUnlockingInfo(s, stakeAddress)
+	if err != nil {
+		return nil, fmt.Errorf("filterExpiredUnlockingInfo, GetUnlockingInfo error: %v", err)
+	}
+	j := 0
+	var expiredSum *big.Int
+	for _, unlockingStake := range unlockingInfo.UnlockingStake {
+		if unlockingStake.CompleteHeight.Cmp(height) == 1 {
+			unlockingInfo.UnlockingStake[j] = unlockingStake
+			j++
+		} else {
+			expiredSum = new(big.Int).Add(expiredSum, unlockingStake.Amount)
+		}
+	}
+	unlockingInfo.UnlockingStake = unlockingInfo.UnlockingStake[:j]
+	if len(unlockingInfo.UnlockingStake) == 0 {
+		delUnlockingInfo(s, stakeAddress)
+	} else {
+		err = setUnlockingInfo(s, unlockingInfo)
+		if err != nil {
+			return nil, fmt.Errorf("filterExpiredUnlockingInfo, setUnlockingInfo error: %v", err)
+		}
+	}
+	return expiredSum, nil
+}
+
+func setUnlockingInfo(s *native.NativeContract, unlockingInfo *UnlockingInfo) error {
+	key := unlockingInfoKey(unlockingInfo.StakeAddress)
+	store, err := rlp.EncodeToBytes(unlockingInfo)
+	if err != nil {
+		return fmt.Errorf("setUnlockingInfo, serialize unlock info error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func delUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) {
+	key := unlockingInfoKey(stakeAddress)
+	del(s, key)
+}
+
+func GetUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (*UnlockingInfo, error) {
+	unlockingInfo := &UnlockingInfo{
+		StakeAddress:   stakeAddress,
+		UnlockingStake: make([]*UnlockingStake, 0),
+	}
+	key := unlockingInfoKey(stakeAddress)
+	store, err := get(s, key)
+	if err == ErrEof {
+		return unlockingInfo, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("GetUnlockingInfo, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, unlockingInfo); err != nil {
+		return nil, fmt.Errorf("GetUnlockingInfo, deserialize unlocking info error: %v", err)
+	}
+	return unlockingInfo, nil
+}
+
+func setCurrentEpoch(s *native.NativeContract, ID *big.Int) {
+	key := currentEpochKey()
+	set(s, key, ID.Bytes())
+}
+
+func GetCurrentEpoch(s *native.NativeContract) (*big.Int, error) {
+	key := currentEpochKey()
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpoch, get store error: %v", err)
+	}
+	return new(big.Int).SetBytes(store), nil
+}
+
+func setCurrentEpochInfo(s *native.NativeContract, epochInfo *EpochInfo) error {
+	// set current epoch
+	setCurrentEpoch(s, epochInfo.ID)
+	//set epoch info
+	err := setEpochInfo(s, epochInfo)
+	if err != nil {
+		return fmt.Errorf("setCurrentEpochInfo, setEpochInfo error: %v", err)
+	}
+	return nil
+}
+
+func GetCurrentEpochInfo(s *native.NativeContract) (*EpochInfo, error) {
+	ID, err := GetCurrentEpoch(s)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfo, GetCurrentEpochInfo error: %v", err)
+	}
+	epochInfo, err := GetEpochInfo(s, ID)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfo, GetEpochInfo error: %v", err)
+	}
+	return epochInfo, nil
+}
+
+func setEpochInfo(s *native.NativeContract, epochInfo *EpochInfo) error {
+	key := epochInfoKey(epochInfo.ID)
+	store, err := rlp.EncodeToBytes(epochInfo)
+	if err != nil {
+		return fmt.Errorf("setEpochInfo, serialize epoch info error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func GetEpochInfo(s *native.NativeContract, ID *big.Int) (*EpochInfo, error) {
+	epochInfo := &EpochInfo{
+		Validators: make([]*Validator, 0),
+	}
+	key := epochInfoKey(ID)
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetEpochInfo, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, epochInfo); err != nil {
+		return nil, fmt.Errorf("GetEpochInfo, deserialize epoch info error: %v", err)
+	}
+	return epochInfo, nil
+}
+
 // ====================================================================
 //
 // storage basic operations
@@ -399,4 +539,16 @@ func unlockPoolKey() []byte {
 
 func stakeInfoKey(stakeAddress common.Address, dec []byte) []byte {
 	return utils.ConcatKey(this, []byte(SKP_STAKE_INFO), stakeAddress[:], dec)
+}
+
+func unlockingInfoKey(stakeAddress common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_UNLOCK_INFO), stakeAddress[:])
+}
+
+func currentEpochKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_CURRENT_EPOCH))
+}
+
+func epochInfoKey(ID *big.Int) []byte {
+	return utils.ConcatKey(this, []byte(SKP_EPOCH_INFO), ID.Bytes())
 }

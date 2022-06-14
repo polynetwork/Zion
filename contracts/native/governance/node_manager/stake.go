@@ -56,3 +56,54 @@ func deposit(s *native.NativeContract, from common.Address, amount *big.Int, val
 
 	return nil
 }
+
+func unStake(s *native.NativeContract, from common.Address, amount *big.Int, validator *Validator) error {
+	height := s.ContractRef().BlockHeight()
+
+	// store deposit info
+	err := withdrawStakeInfo(s, from, validator.ConsensusPubkey, amount)
+	if err != nil {
+		return fmt.Errorf("unStake, depositStakeInfo error: %v", err)
+	}
+
+	// update lock and unlock token pool
+	if validator.IsLocked() {
+		err = withdrawLockPool(s, amount)
+		if err != nil {
+			return fmt.Errorf("unStake, withdrawLockPool error: %v", err)
+		}
+		err = depositUnlockPool(s, amount)
+		if err != nil {
+			return fmt.Errorf("unStake, depositUnlockPool error: %v", err)
+		}
+	}
+
+	globalConfig, err := GetGlobalConfig(s)
+	if err != nil {
+		return fmt.Errorf("unStake, GetGlobalConfig error: %v", err)
+	}
+
+	if validator.IsUnlocked() {
+		err = withdrawUnlockPool(s, amount)
+		if err != nil {
+			return fmt.Errorf("unStake, withdrawUnlockPool error: %v", err)
+		}
+		// transfer native token
+		err = nativeTransfer(s, this, from, amount)
+		if err != nil {
+			return fmt.Errorf("unStake, nativeTransfer error: %v", err)
+		}
+	} else {
+		unlockingStake := &UnlockingStake{
+			Height: height,
+			CompleteHeight: new(big.Int).Add(height, globalConfig.BlockPerEpoch),
+			Amount: amount,
+		}
+		err = addUnlockingInfo(s, from, unlockingStake)
+		if err != nil {
+			return fmt.Errorf("unStake, addUnlockingInfo error: %v", err)
+		}
+	}
+
+	return nil
+}

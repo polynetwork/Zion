@@ -122,3 +122,25 @@ func (m *StakeParam) DecodeRLP(s *rlp.Stream) error {
 	m.ConsensusPubkey, m.Amount = data.ConsensusPubkey, data.Amount
 	return nil
 }
+
+type UnStakeParam struct {
+	ConsensusPubkey string
+	Amount          *big.Int
+}
+
+func (m *UnStakeParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.Amount})
+}
+
+func (m *UnStakeParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+		Amount          *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey, m.Amount = data.ConsensusPubkey, data.Amount
+	return nil
+}
