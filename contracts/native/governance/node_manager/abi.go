@@ -144,3 +144,43 @@ func (m *UnStakeParam) DecodeRLP(s *rlp.Stream) error {
 	m.ConsensusPubkey, m.Amount = data.ConsensusPubkey, data.Amount
 	return nil
 }
+
+type CancelValidatorParam struct {
+	ConsensusPubkey string
+}
+
+func (m *CancelValidatorParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
+}
+
+func (m *CancelValidatorParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey = data.ConsensusPubkey
+	return nil
+}
+
+type WithdrawValidatorParam struct {
+	ConsensusPubkey string
+}
+
+func (m *WithdrawValidatorParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
+}
+
+func (m *WithdrawValidatorParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey = data.ConsensusPubkey
+	return nil
+}

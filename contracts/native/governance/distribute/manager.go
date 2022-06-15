@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node_manager
+package distribute
 
 import (
 	"fmt"
@@ -45,14 +45,16 @@ var (
 
 func InitNodeManager() {
 	InitABI()
-	native.Contracts[this] = RegisterNodeManagerContract
+	native.Contracts[this] = RegisterDistributeContract
 }
 
-func RegisterNodeManagerContract(s *native.NativeContract) {
+func RegisterDistributeContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
-	s.Register(MethodCreateValidator, CreateValidator)
-	s.Register(MethodUpdateValidator, UpdateValidator)
+	s.Register(MethodWithdrawStakeRewards, WithdrawStakeRewards)
+	s.Register(MethodWithdrawCommssion, WithdrawCommssion)
+
+	////////
 	s.Register(MethodStake, Stake)
 	s.Register(MethodUnStake, UnStake)
 	s.Register(MethodWithdraw, Withdraw)
@@ -61,13 +63,13 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Register(MethodChangeEpoch, ChangeEpoch)
 }
 
-func CreateValidator(s *native.NativeContract) ([]byte, error) {
+func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	height := s.ContractRef().BlockHeight()
 	caller := ctx.Caller
 
-	params := &CreateValidatorParam{}
-	if err := utils.UnpackMethod(ABI, MethodCreateValidator, params, ctx.Payload); err != nil {
+	params := &WithdrawStakeRewardsParam{}
+	if err := utils.UnpackMethod(ABI, MethodWithdrawStakeRewards, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("CreateValidator, unpack params error: %v", err)
 	}
 

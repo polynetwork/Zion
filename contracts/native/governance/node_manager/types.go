@@ -102,13 +102,13 @@ func (m Validator) IsLocked() bool {
 }
 
 // IsUnlocked checks if the validator status equals Unlocked
-func (m Validator) IsUnlocked() bool {
-	return m.Status == Unlocked
+func (m Validator) IsUnlocked(height *big.Int) bool {
+	return m.Status == Unlocking && m.UnlockHeight.Cmp(height) <= 0
 }
 
 // IsUnlocking checks if the validator status equals Unlocking
-func (m Validator) IsUnlocking() bool {
-	return m.Status == Unlocking
+func (m Validator) IsUnlocking(height *big.Int) bool {
+	return m.Status == Unlocking && m.UnlockHeight.Cmp(height) > 0
 }
 
 type Commission struct {
@@ -134,29 +134,32 @@ func (m *Commission) DecodeRLP(s *rlp.Stream) error {
 }
 
 type GlobalConfig struct {
-	MaxCommission   *big.Int
-	MinInitialStake *big.Int
-	MaxDescLength   uint64
-	BlockPerEpoch   *big.Int
+	MaxCommission         *big.Int
+	MinInitialStake       *big.Int
+	MaxDescLength         uint64
+	BlockPerEpoch         *big.Int
+	ConsensusValidatorNum uint64
 }
 
 func (m *GlobalConfig) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.MaxCommission, m.MinInitialStake, m.MaxDescLength, m.BlockPerEpoch})
+	return rlp.Encode(w, []interface{}{m.MaxCommission, m.MinInitialStake, m.MaxDescLength, m.BlockPerEpoch,
+		m.ConsensusValidatorNum})
 }
 
 func (m *GlobalConfig) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		MaxCommission   *big.Int
-		MinInitialStake *big.Int
-		MaxDescLength   uint64
-		BlockPerEpoch   *big.Int
+		MaxCommission         *big.Int
+		MinInitialStake       *big.Int
+		MaxDescLength         uint64
+		BlockPerEpoch         *big.Int
+		ConsensusValidatorNum uint64
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.MaxCommission, m.MinInitialStake, m.MaxDescLength, m.BlockPerEpoch = data.MaxCommission, data.MinInitialStake,
-		data.MaxDescLength, data.BlockPerEpoch
+	m.MaxCommission, m.MinInitialStake, m.MaxDescLength, m.BlockPerEpoch, m.ConsensusValidatorNum = data.MaxCommission,
+		data.MinInitialStake, data.MaxDescLength, data.BlockPerEpoch, data.ConsensusValidatorNum
 	return nil
 }
 

@@ -26,6 +26,7 @@ import (
 )
 
 func deposit(s *native.NativeContract, from common.Address, amount *big.Int, validator *Validator) error {
+	height := s.ContractRef().BlockHeight()
 	// store deposit info
 	err := depositStakeInfo(s, from, validator.ConsensusPubkey, amount)
 	if err != nil {
@@ -45,7 +46,7 @@ func deposit(s *native.NativeContract, from common.Address, amount *big.Int, val
 		if err != nil {
 			return fmt.Errorf("deposit, depositLockPool error: %v", err)
 		}
-	case validator.IsUnlocking(), validator.IsUnlocked():
+	case validator.IsUnlocking(height), validator.IsUnlocked(height):
 		err := depositUnlockPool(s, amount)
 		if err != nil {
 			return fmt.Errorf("deposit, depositUnlockPool error: %v", err)
@@ -59,9 +60,13 @@ func deposit(s *native.NativeContract, from common.Address, amount *big.Int, val
 
 func unStake(s *native.NativeContract, from common.Address, amount *big.Int, validator *Validator) error {
 	height := s.ContractRef().BlockHeight()
+	globalConfig, err := GetGlobalConfig(s)
+	if err != nil {
+		return fmt.Errorf("unStake, GetGlobalConfig error: %v", err)
+	}
 
 	// store deposit info
-	err := withdrawStakeInfo(s, from, validator.ConsensusPubkey, amount)
+	err = withdrawStakeInfo(s, from, validator.ConsensusPubkey, amount)
 	if err != nil {
 		return fmt.Errorf("unStake, depositStakeInfo error: %v", err)
 	}
@@ -76,14 +81,18 @@ func unStake(s *native.NativeContract, from common.Address, amount *big.Int, val
 		if err != nil {
 			return fmt.Errorf("unStake, depositUnlockPool error: %v", err)
 		}
+		unlockingStake := &UnlockingStake{
+			Height:         height,
+			CompleteHeight: new(big.Int).Add(height, globalConfig.BlockPerEpoch),
+			Amount:         amount,
+		}
+		err = addUnlockingInfo(s, from, unlockingStake)
+		if err != nil {
+			return fmt.Errorf("unStake, addUnlockingInfo error: %v", err)
+		}
 	}
 
-	globalConfig, err := GetGlobalConfig(s)
-	if err != nil {
-		return fmt.Errorf("unStake, GetGlobalConfig error: %v", err)
-	}
-
-	if validator.IsUnlocked() {
+	if validator.IsUnlocked(height) {
 		err = withdrawUnlockPool(s, amount)
 		if err != nil {
 			return fmt.Errorf("unStake, withdrawUnlockPool error: %v", err)
@@ -93,11 +102,13 @@ func unStake(s *native.NativeContract, from common.Address, amount *big.Int, val
 		if err != nil {
 			return fmt.Errorf("unStake, nativeTransfer error: %v", err)
 		}
-	} else {
+	}
+
+	if validator.IsUnlocking(height) {
 		unlockingStake := &UnlockingStake{
-			Height: height,
-			CompleteHeight: new(big.Int).Add(height, globalConfig.BlockPerEpoch),
-			Amount: amount,
+			Height:         height,
+			CompleteHeight: validator.UnlockHeight,
+			Amount:         amount,
 		}
 		err = addUnlockingInfo(s, from, unlockingStake)
 		if err != nil {
