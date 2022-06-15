@@ -127,7 +127,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		ConsensusPubkey: params.ConsensusPubkey,
 		ProposalAddress: params.ProposalAddress,
 		Commission:      &Commission{Rate: params.Commission, UpdateHeight: height},
-		Status:          Unlocked,
+		Status:          Unlock,
 		Jailed:          false,
 		UnlockHeight:    common.Big0,
 		TotalStake:      params.InitStake,
@@ -384,14 +384,16 @@ func CancelValidator(s *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("CancelValidator, depositUnlockPool error: %v", err)
 		}
-		validator.Status = Unlocking
+		validator.Status = Remove
 		validator.UnlockHeight = new(big.Int).Add(height, globalConfig.BlockPerEpoch)
 		err = setValidator(s, validator)
 		if err != nil {
 			return nil, fmt.Errorf("CancelValidator, setValidator error: %v", err)
 		}
 	case validator.IsUnlocking(height):
+		validator.Status = Remove
 	case validator.IsUnlocked(height):
+		validator.Status = Remove
 	default:
 		return nil, fmt.Errorf("CancelValidator, unsupported validator status")
 	}
@@ -430,8 +432,8 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	if validator.StakeAddress != caller {
 		return nil, fmt.Errorf("WithdrawValidator, stake address %s is not caller", validator.StakeAddress.Hex())
 	}
-	if !validator.IsUnlocked(height) {
-		return nil, fmt.Errorf("WithdrawValidator, validator is not unlocked")
+	if !validator.IsRemoved(height) {
+		return nil, fmt.Errorf("WithdrawValidator, validator is not removed")
 	}
 
 	err = withdrawUnlockPool(s, validator.SelfStake)
@@ -441,11 +443,6 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	err = nativeTransfer(s, this, caller, validator.SelfStake)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawValidator, nativeTransfer error: %v", err)
-	}
-
-	err = removeFromAllValidators(s, params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("CancelValidator, removeFromAllValidators error: %v", err)
 	}
 
 	err = s.AddNotify(ABI, []string{MethodWithdrawValidator}, params.ConsensusPubkey, validator.SelfStake.String())
@@ -506,7 +503,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		switch {
 		case validator.IsLocked():
 		case validator.IsUnlocking(height), validator.IsUnlocked(height):
-			validator.Status = Locked
+			validator.Status = Lock
 		}
 		epochInfo.Validators = append(epochInfo.Validators, validator)
 	}
@@ -514,7 +511,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		validator := validatorList[i]
 		switch {
 		case validator.IsLocked():
-			validator.Status = Unlocking
+			validator.Status = Unlock
 			validator.UnlockHeight = new(big.Int).Add(height, globalConfig.BlockPerEpoch)
 		case validator.IsUnlocking(height), validator.IsUnlocked(height):
 		}

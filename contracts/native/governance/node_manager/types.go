@@ -29,9 +29,9 @@ type LockStatus uint8
 
 const (
 	Unspecified LockStatus = 0
-	Unlocked    LockStatus = 1
-	Unlocking   LockStatus = 2
-	Locked      LockStatus = 3
+	Unlock      LockStatus = 1
+	Lock        LockStatus = 2
+	Remove      LockStatus = 3
 )
 
 type AllValidators struct {
@@ -98,17 +98,27 @@ func (m *Validator) DecodeRLP(s *rlp.Stream) error {
 
 // IsLocked checks if the validator status equals Locked
 func (m Validator) IsLocked() bool {
-	return m.Status == Locked
+	return m.Status == Lock
 }
 
 // IsUnlocked checks if the validator status equals Unlocked
 func (m Validator) IsUnlocked(height *big.Int) bool {
-	return m.Status == Unlocking && m.UnlockHeight.Cmp(height) <= 0
+	return m.Status == Unlock && m.UnlockHeight.Cmp(height) <= 0
 }
 
 // IsUnlocking checks if the validator status equals Unlocking
 func (m Validator) IsUnlocking(height *big.Int) bool {
-	return m.Status == Unlocking && m.UnlockHeight.Cmp(height) > 0
+	return m.Status == Unlock && m.UnlockHeight.Cmp(height) > 0
+}
+
+// IsRemoved checks if the validator status equals Unlocked
+func (m Validator) IsRemoved(height *big.Int) bool {
+	return m.Status == Remove && m.UnlockHeight.Cmp(height) <= 0
+}
+
+// IsRemoving checks if the validator status equals Unlocking
+func (m Validator) IsRemoving(height *big.Int) bool {
+	return m.Status == Remove && m.UnlockHeight.Cmp(height) > 0
 }
 
 type Commission struct {

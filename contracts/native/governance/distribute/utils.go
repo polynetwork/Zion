@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"math/big"
 )
 
 // IncreaseValidatorPeriod return the period just ended
@@ -33,10 +34,11 @@ func IncreaseValidatorPeriod(s *native.NativeContract, validator *node_manager.V
 	}
 
 	// fetch current rewards
-	rewards, err := GetValidatorAccumulatedRewards(s, dec)
+	validatorAccumulatedRewards, err := GetValidatorAccumulatedRewards(s, dec)
 	if err != nil {
 		return 0, fmt.Errorf("IncreaseValidatorPeriod, GetValidatorAccumulatedRewards error: %v", err)
 	}
 
-
+	// calculate current ratio
+	ratio := new(big.Int).Div(validatorAccumulatedRewards.Rewards, validator.TotalStake)
 }

@@ -92,7 +92,7 @@ func unStake(s *native.NativeContract, from common.Address, amount *big.Int, val
 		}
 	}
 
-	if validator.IsUnlocked(height) {
+	if validator.IsUnlocked(height) || validator.IsRemoved(height) {
 		err = withdrawUnlockPool(s, amount)
 		if err != nil {
 			return fmt.Errorf("unStake, withdrawUnlockPool error: %v", err)
@@ -104,7 +104,7 @@ func unStake(s *native.NativeContract, from common.Address, amount *big.Int, val
 		}
 	}
 
-	if validator.IsUnlocking(height) {
+	if validator.IsUnlocking(height) || validator.IsRemoving(height) {
 		unlockingStake := &UnlockingStake{
 			Height:         height,
 			CompleteHeight: validator.UnlockHeight,
