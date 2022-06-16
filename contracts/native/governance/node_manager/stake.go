@@ -27,10 +27,22 @@ import (
 
 func deposit(s *native.NativeContract, from common.Address, amount *big.Int, validator *Validator) error {
 	height := s.ContractRef().BlockHeight()
-	// store deposit info
-	err := depositStakeInfo(s, from, validator.ConsensusPubkey, amount)
+	// get deposit info
+	stakeInfo, found, err := GetStakeInfo(s, from, validator.ConsensusPubkey)
 	if err != nil {
-		return fmt.Errorf("deposit, depositStakeInfo error: %v", err)
+		return fmt.Errorf("deposit, GetStakeInfo error: %v", err)
+	}
+	// call the appropriate hook if present
+	if found {
+		err = BeforeStakeModified(s, from, validator)
+	} else {
+		err = BeforeStakeCreated(s, validator)
+	}
+	// update stake info
+	stakeInfo.Amount = new(big.Int).Add(stakeInfo.Amount, amount)
+	err = setStakeInfo(s, stakeInfo)
+	if err != nil {
+		return fmt.Errorf("deposit, setStakeInfo error: %v", err)
 	}
 
 	// transfer native token

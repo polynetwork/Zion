@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
-	"github.com/ethereum/go-ethereum/contracts/native/governance/distribute"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -60,6 +59,8 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Register(MethodCancelValidator, CancelValidator)
 	s.Register(MethodWithdrawValidator, WithdrawValidator)
 	s.Register(MethodChangeEpoch, ChangeEpoch)
+
+	s.Register(MethodWithdrawStakeRewards, WithdrawStakeRewards)
 }
 
 func CreateValidator(s *native.NativeContract) ([]byte, error) {
@@ -83,10 +84,10 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 	addr := crypto.PubkeyToAddress(*pubkey)
 	if addr == common.EmptyAddress {
-		return nil, fmt.Errorf("invalid pubkey")
+		return nil, fmt.Errorf("CreateValidator， invalid pubkey")
 	}
 	if addr == caller || addr == params.ProposalAddress {
-		return nil, fmt.Errorf("stake, consensus and proposal address can not be duplicate")
+		return nil, fmt.Errorf("CreateValidator，stake, consensus and proposal address can not be duplicate")
 	}
 
 	// check commission
@@ -152,7 +153,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// call distrubute hook
-	err = distribute.AfterValidatorCreated(s, validator)
+	err = AfterValidatorCreated(s, validator)
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, distribute.AfterValidatorCreated error: %v", err)
 	}
@@ -297,12 +298,6 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("UnStake, validator is not exist")
 	}
 
-	// unStake native token
-	err = unStake(s, caller, params.Amount, validator)
-	if err != nil {
-		return nil, fmt.Errorf("UnStake, deposit error: %v", err)
-	}
-
 	// update validator
 	if validator.StakeAddress == caller {
 		return nil, fmt.Errorf("UnStake, stake address can not unstake")
@@ -312,9 +307,26 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 		}
 		validator.TotalStake = new(big.Int).Sub(validator.TotalStake, params.Amount)
 	}
-	err = setValidator(s, validator)
+	if validator.TotalStake == common.Big0 && validator.SelfStake == common.Big0 {
+		err = delValidator(s, params.ConsensusPubkey)
+		if err != nil {
+			return nil, fmt.Errorf("UnStake, delValidator error: %v", err)
+		}
+		err = AfterValidatorRemoved(s, validator)
+		if err != nil {
+			return nil, fmt.Errorf("UnStake, AfterValidatorRemoved error: %v", err)
+		}
+	} else {
+		err = setValidator(s, validator)
+		if err != nil {
+			return nil, fmt.Errorf("UnStake, setValidator error: %v", err)
+		}
+	}
+
+	// unStake native token
+	err = unStake(s, caller, params.Amount, validator)
 	if err != nil {
-		return nil, fmt.Errorf("UnStake, setValidator error: %v", err)
+		return nil, fmt.Errorf("UnStake, unStake error: %v", err)
 	}
 
 	err = s.AddNotify(ABI, []string{MethodUnStake}, params.ConsensusPubkey, params.Amount.String())
@@ -443,13 +455,38 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawValidator, validator is not removed")
 	}
 
-	err = withdrawUnlockPool(s, validator.SelfStake)
+	// unStake native token
+	err = unStake(s, caller, validator.SelfStake, validator)
 	if err != nil {
-		return nil, fmt.Errorf("WithdrawValidator, withdrawUnlockPool error: %v", err)
+		return nil, fmt.Errorf("WithdrawValidator, unStake error: %v", err)
 	}
-	err = nativeTransfer(s, this, caller, validator.SelfStake)
+
+	// withdraw commission
+	accumulatedCommission, err := GetAccumulatedCommission(s, dec)
 	if err != nil {
-		return nil, fmt.Errorf("WithdrawValidator, nativeTransfer error: %v", err)
+		return nil, fmt.Errorf("WithdrawValidator, GetAccumulatedCommission error: %v", err)
+	}
+	err = nativeTransfer(s, this, caller, accumulatedCommission.Amount)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawValidator, nativeTransfer commission error: %v", err)
+	}
+	delAccumulatedCommission(s, dec)
+
+	validator.SelfStake = common.Big0
+	if validator.TotalStake == common.Big0 {
+		err = delValidator(s, params.ConsensusPubkey)
+		if err != nil {
+			return nil, fmt.Errorf("WithdrawValidator, delValidator error: %v", err)
+		}
+		err = AfterValidatorRemoved(s, validator)
+		if err != nil {
+			return nil, fmt.Errorf("WithdrawValidator, AfterValidatorRemoved error: %v", err)
+		}
+	} else {
+		err = setValidator(s, validator)
+		if err != nil {
+			return nil, fmt.Errorf("WithdrawValidator, setValidator error: %v", err)
+		}
 	}
 
 	err = s.AddNotify(ABI, []string{MethodWithdrawValidator}, params.ConsensusPubkey, validator.SelfStake.String())
@@ -535,4 +572,23 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ChangeEpoch, AddNotify error: %v", err)
 	}
 	return utils.ByteSuccess, nil
+}
+
+func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	caller := ctx.Caller
+
+	params := &WithdrawStakeRewardsParam{}
+	if err := utils.UnpackMethod(ABI, MethodWithdrawStakeRewards, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("CreateValidator, unpack params error: %v", err)
+	}
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawStakeRewards, decode pubkey error: %v", err)
+	}
+
+	validator, found, err := GetValidator(s, dec)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawStakeRewards, node_manager.GetValidator error: %v", err)
+	}
 }

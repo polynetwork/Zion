@@ -39,16 +39,200 @@ var ErrEof = errors.New("EOF")
 
 // storage key prefix
 const (
-	SKP_GLOBAL_CONFIG = "st_global_config"
-	SKP_VALIDATOR     = "st_validator"
-	SKP_ALL_VALIDATOR = "st_all_validator"
-	SKP_LOCK_POOL     = "st_lock_pool"
-	SKP_UNLOCK_POOL   = "st_unlock_pool"
-	SKP_STAKE_INFO    = "st_stake_info"
-	SKP_UNLOCK_INFO   = "st_unlock_info"
-	SKP_CURRENT_EPOCH = "st_current_epoch"
-	SKP_EPOCH_INFO    = "st_epoch_info"
+	SKP_GLOBAL_CONFIG                 = "st_global_config"
+	SKP_VALIDATOR                     = "st_validator"
+	SKP_ALL_VALIDATOR                 = "st_all_validator"
+	SKP_LOCK_POOL                     = "st_lock_pool"
+	SKP_UNLOCK_POOL                   = "st_unlock_pool"
+	SKP_STAKE_INFO                    = "st_stake_info"
+	SKP_UNLOCK_INFO                   = "st_unlock_info"
+	SKP_CURRENT_EPOCH                 = "st_current_epoch"
+	SKP_EPOCH_INFO                    = "st_epoch_info"
+	SKP_ACCUMULATED_COMMISSION        = "st_accumulated_commission"
+	SKP_VALIDATOR_ACCUMULATED_REWARDS = "st_validator_accumulated_rewards"
+	SKP_VALIDATOR_OUTSTANDING_REWARDS = "st_validator_outstanding_rewards"
+	SKP_VALIDATOR_SNAPSHOT_REWARDS    = "st_validator_snapshot_rewards"
+	SKP_STAKE_STARTING_INFO           = "st_stake_starting_info"
 )
+
+func setAccumulatedCommission(s *native.NativeContract, dec []byte, accumulatedCommission *AccumulatedCommission) error {
+	key := accumulatedCommissionKey(dec)
+	store, err := rlp.EncodeToBytes(accumulatedCommission)
+	if err != nil {
+		return fmt.Errorf("setAccumulatedCommission, serialize accumulatedCommission error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func GetAccumulatedCommission(s *native.NativeContract, dec []byte) (*AccumulatedCommission, error) {
+	accumulatedCommission := &AccumulatedCommission{}
+	key := accumulatedCommissionKey(dec)
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccumulatedCommission, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, accumulatedCommission); err != nil {
+		return nil, fmt.Errorf("GetAccumulatedCommission, deserialize accumulatedCommission error: %v", err)
+	}
+	return accumulatedCommission, nil
+}
+
+func delAccumulatedCommission(s *native.NativeContract, dec []byte) {
+	key := accumulatedCommissionKey(dec)
+	del(s, key)
+}
+
+func setValidatorAccumulatedRewards(s *native.NativeContract, dec []byte, validatorAccumulatedRewards *ValidatorAccumulatedRewards) error {
+	key := validatorAccumulatedRewardsKey(dec)
+	store, err := rlp.EncodeToBytes(validatorAccumulatedRewards)
+	if err != nil {
+		return fmt.Errorf("setValidatorAccumulatedRewards, serialize validatorAccumulatedRewards error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func GetValidatorAccumulatedRewards(s *native.NativeContract, dec []byte) (*ValidatorAccumulatedRewards, error) {
+	validatorAccumulatedRewards := &ValidatorAccumulatedRewards{}
+	key := validatorAccumulatedRewardsKey(dec)
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, validatorAccumulatedRewards); err != nil {
+		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, deserialize validatorAccumulatedRewards error: %v", err)
+	}
+	return validatorAccumulatedRewards, nil
+}
+
+func delValidatorAccumulatedRewards(s *native.NativeContract, dec []byte) {
+	key := validatorAccumulatedRewardsKey(dec)
+	del(s, key)
+}
+
+func setValidatorOutstandingRewards(s *native.NativeContract, dec []byte, validatorOutstandingRewards *ValidatorOutstandingRewards) error {
+	key := validatorOutstandingRewardsKey(dec)
+	store, err := rlp.EncodeToBytes(validatorOutstandingRewards)
+	if err != nil {
+		return fmt.Errorf("setValidatorOutstandingRewards, serialize validatorOutstandingRewards error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func GetValidatorOutstandingRewards(s *native.NativeContract, dec []byte) (*ValidatorOutstandingRewards, error) {
+	validatorOutstandingRewards := &ValidatorOutstandingRewards{}
+	key := validatorOutstandingRewardsKey(dec)
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorOutstandingRewards, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, validatorOutstandingRewards); err != nil {
+		return nil, fmt.Errorf("GetValidatorOutstandingRewards, deserialize validatorOutstandingRewards error: %v", err)
+	}
+	return validatorOutstandingRewards, nil
+}
+
+func delValidatorOutstandingRewards(s *native.NativeContract, dec []byte) {
+	key := validatorOutstandingRewardsKey(dec)
+	del(s, key)
+}
+
+func increaseReferenceCount(s *native.NativeContract, dec []byte, period uint64) error {
+	validatorSnapshotRewards, err := GetValidatorSnapshotRewards(s, dec, period)
+	if err != nil {
+		return fmt.Errorf("increaseReferenceCount, GetValidatorSnapshotRewards error: %v", err)
+	}
+	if validatorSnapshotRewards.ReferenceCount > 2 {
+		panic("reference count should never exceed 2")
+	}
+	validatorSnapshotRewards.ReferenceCount++
+	err = setValidatorSnapshotRewards(s, dec, period, validatorSnapshotRewards)
+	if err != nil {
+		return fmt.Errorf("increaseReferenceCount, setValidatorSnapshotRewards error: %v", err)
+	}
+	return nil
+}
+
+func decreaseReferenceCount(s *native.NativeContract, dec []byte, period uint64) error {
+	validatorSnapshotRewards, err := GetValidatorSnapshotRewards(s, dec, period)
+	if err != nil {
+		return fmt.Errorf("decreaseReferenceCount, GetValidatorSnapshotRewards error: %v", err)
+	}
+	if validatorSnapshotRewards.ReferenceCount == 0 {
+		panic("cannot set negative reference count")
+	}
+	validatorSnapshotRewards.ReferenceCount--
+	if validatorSnapshotRewards.ReferenceCount == 0 {
+		delValidatorSnapshotRewards(s, dec, period)
+	} else {
+		err = setValidatorSnapshotRewards(s, dec, period, validatorSnapshotRewards)
+		if err != nil {
+			return fmt.Errorf("decreaseReferenceCount, setValidatorSnapshotRewards error: %v", err)
+		}
+	}
+	return nil
+}
+
+func setValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period uint64, validatorSnapshotRewards *ValidatorSnapshotRewards) error {
+	key := validatorSnapshotRewardsKey(dec, period)
+	store, err := rlp.EncodeToBytes(validatorSnapshotRewards)
+	if err != nil {
+		return fmt.Errorf("setValidatorSnapshotRewards, serialize validatorSnapshotRewards error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func GetValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period uint64) (*ValidatorSnapshotRewards, error) {
+	validatorSnapshotRewards := &ValidatorSnapshotRewards{}
+	key := validatorSnapshotRewardsKey(dec, period)
+	store, err := get(s, key)
+	if err == ErrEof {
+		return validatorSnapshotRewards, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorSnapshotRewards, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, validatorSnapshotRewards); err != nil {
+		return nil, fmt.Errorf("GetValidatorSnapshotRewards, deserialize validatorSnapshotRewards error: %v", err)
+	}
+	return validatorSnapshotRewards, nil
+}
+
+func delValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period uint64) {
+	key := validatorSnapshotRewardsKey(dec, period)
+	del(s, key)
+}
+
+func setStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, stakeStartingInfo *StakeStartingInfo) error {
+	key := stakeStartingInfoKey(stakeAddress)
+	store, err := rlp.EncodeToBytes(stakeStartingInfo)
+	if err != nil {
+		return fmt.Errorf("setStakeStartingInfo, serialize stakeStartingInfo error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func GetStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address) (*StakeStartingInfo, error) {
+	stakeStartingInfo := &StakeStartingInfo{}
+	key := stakeStartingInfoKey(stakeAddress)
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeStartingInfo, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, stakeStartingInfo); err != nil {
+		return nil, fmt.Errorf("GetStakeStartingInfo, deserialize stakeStartingInfo error: %v", err)
+	}
+	return stakeStartingInfo, nil
+}
+
+func delStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address) {
+	key := stakeStartingInfoKey(stakeAddress)
+	del(s, key)
+}
 
 func setGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error {
 	key := globalConfigKey()
@@ -254,23 +438,13 @@ func GetUnlockPool(s *native.NativeContract) (*big.Int, error) {
 	return new(big.Int).SetBytes(store), nil
 }
 
-func depositStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string, amount *big.Int) error {
-	stakeInfo, err := GetStakeInfo(s, stakeAddress, consensusPk)
-	if err != nil {
-		return fmt.Errorf("depositStakeInfo, get stake info error: %v", err)
-	}
-	stakeInfo.Amount = new(big.Int).Add(stakeInfo.Amount, amount)
-	err = setStakeInfo(s, stakeInfo)
-	if err != nil {
-		return fmt.Errorf("depositStakeInfo, set stake info error: %v", err)
-	}
-	return nil
-}
-
 func withdrawStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string, amount *big.Int) error {
-	stakeInfo, err := GetStakeInfo(s, stakeAddress, consensusPk)
+	stakeInfo, found, err := GetStakeInfo(s, stakeAddress, consensusPk)
 	if err != nil {
 		return fmt.Errorf("withdrawStakeInfo, get stake info error: %v", err)
+	}
+	if !found {
+		return fmt.Errorf("withdrawStakeInfo, stake info nit exist")
 	}
 	if stakeInfo.Amount.Cmp(amount) == -1 {
 		return fmt.Errorf("withdrawStakeInfo, stake info is less than amount")
@@ -314,27 +488,27 @@ func delStakeInfo(s *native.NativeContract, stakeAddress common.Address, consens
 	return nil
 }
 
-func GetStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string) (*StakeInfo, error) {
+func GetStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string) (*StakeInfo, bool, error) {
 	stakeInfo := &StakeInfo{
 		StakeAddress:    stakeAddress,
 		ConsensusPubkey: consensusPk,
 	}
 	dec, err := hexutil.Decode(stakeInfo.ConsensusPubkey)
 	if err != nil {
-		return nil, err
+		return nil, false, err
 	}
 	key := stakeInfoKey(stakeAddress, dec)
 	store, err := get(s, key)
 	if err == ErrEof {
-		return stakeInfo, nil
+		return stakeInfo, false, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("GetStakeInfo, get store error: %v", err)
+		return nil, false, fmt.Errorf("GetStakeInfo, get store error: %v", err)
 	}
 	if err := rlp.DecodeBytes(store, stakeInfo); err != nil {
-		return nil, fmt.Errorf("GetStakeInfo, deserialize stakeInfo error: %v", err)
+		return nil, false, fmt.Errorf("GetStakeInfo, deserialize stakeInfo error: %v", err)
 	}
-	return stakeInfo, nil
+	return stakeInfo, true, nil
 }
 
 func addUnlockingInfo(s *native.NativeContract, stakeAddress common.Address, unlockingStake *UnlockingStake) error {
@@ -551,4 +725,24 @@ func currentEpochKey() []byte {
 
 func epochInfoKey(ID *big.Int) []byte {
 	return utils.ConcatKey(this, []byte(SKP_EPOCH_INFO), ID.Bytes())
+}
+
+func accumulatedCommissionKey(dec []byte) []byte {
+	return utils.ConcatKey(this, []byte(SKP_ACCUMULATED_COMMISSION), dec)
+}
+
+func validatorAccumulatedRewardsKey(dec []byte) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_ACCUMULATED_REWARDS), dec)
+}
+
+func validatorOutstandingRewardsKey(dec []byte) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_OUTSTANDING_REWARDS), dec)
+}
+
+func validatorSnapshotRewardsKey(dec []byte, period uint64) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_SNAPSHOT_REWARDS), dec, utils.Uint64Bytes(period))
+}
+
+func stakeStartingInfoKey(stakeAddress common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_STAKE_STARTING_INFO), stakeAddress[:])
 }

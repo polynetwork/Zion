@@ -184,3 +184,23 @@ func (m *WithdrawValidatorParam) DecodeRLP(s *rlp.Stream) error {
 	m.ConsensusPubkey = data.ConsensusPubkey
 	return nil
 }
+
+type WithdrawStakeRewardsParam struct {
+	ConsensusPubkey string
+}
+
+func (m *WithdrawStakeRewardsParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
+}
+
+func (m *WithdrawStakeRewardsParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey = data.ConsensusPubkey
+	return nil
+}

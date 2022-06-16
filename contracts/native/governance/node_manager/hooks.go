@@ -16,17 +16,17 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package distribute
+package node_manager
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"math/big"
 )
 
-func AfterValidatorCreated(s *native.NativeContract, validator *node_manager.Validator) error {
+func AfterValidatorCreated(s *native.NativeContract, validator *Validator) error {
 	dec, err := hexutil.Decode(validator.ConsensusPubkey)
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, decode pubkey error: %v", err)
@@ -58,11 +58,42 @@ func AfterValidatorCreated(s *native.NativeContract, validator *node_manager.Val
 	return nil
 }
 
-func BeforeStakeCreated(s *native.NativeContract, validator *node_manager.Validator) error {
+func AfterValidatorRemoved(s *native.NativeContract, validator *Validator) error {
+	dec, err := hexutil.Decode(validator.ConsensusPubkey)
+	if err != nil {
+		return fmt.Errorf("AfterValidatorRemoved, decode pubkey error: %v", err)
+	}
+
+	// fetch outstanding
+	//outstanding, err := GetValidatorOutstandingRewards(s, dec)
+	//if err != nil {
+	//	return fmt.Errorf("AfterValidatorRemoved, GetValidatorOutstandingRewards error: %v", err)
+	//}
+	//TODO: transfer outstanding dust to community pool
+
+	// delete outstanding
+	delValidatorOutstandingRewards(s, dec)
+
+	// remove commission record
+	delAccumulatedCommission(s, dec)
+
+	validatorAccumulatedRewards, err := GetValidatorAccumulatedRewards(s, dec)
+	if err != nil {
+		return fmt.Errorf("AfterValidatorRemoved, GetValidatorAccumulatedRewards error: %v", err)
+	}
+
+	// clear accumulate rewards
+	delValidatorAccumulatedRewards(s, dec)
+
+	// clear snapshot rewards
+	delValidatorSnapshotRewards(s, dec, validatorAccumulatedRewards.Period-1)
+}
+
+func BeforeStakeCreated(s *native.NativeContract, validator *Validator) error {
 	_, err := IncreaseValidatorPeriod(s, validator)
 	return err
 }
 
-func BeforeStakeModified(s *native.NativeContract, validator *node_manager.Validator) error {
+func BeforeStakeModified(s *native.NativeContract, stakeAddress common.Address, validator *Validator) error {
 
 }

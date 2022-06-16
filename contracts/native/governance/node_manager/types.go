@@ -266,3 +266,111 @@ func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
 	m.ID, m.Validators, m.StartHeight = data.ID, data.Validators, data.StartHeight
 	return nil
 }
+
+type AccumulatedCommission struct {
+	Amount *big.Int
+}
+
+func (m *AccumulatedCommission) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Amount})
+}
+
+func (m *AccumulatedCommission) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Amount *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.Amount = data.Amount
+	return nil
+}
+
+type ValidatorAccumulatedRewards struct {
+	Rewards *big.Int
+	Period  uint64
+}
+
+func (m *ValidatorAccumulatedRewards) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Rewards, m.Period})
+}
+
+func (m *ValidatorAccumulatedRewards) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Rewards *big.Int
+		Period  uint64
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.Rewards, m.Period = data.Rewards, data.Period
+	return nil
+}
+
+type ValidatorOutstandingRewards struct {
+	Rewards *big.Int
+}
+
+func (m *ValidatorOutstandingRewards) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Rewards})
+}
+
+func (m *ValidatorOutstandingRewards) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Rewards *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.Rewards = data.Rewards
+	return nil
+}
+
+type ValidatorSnapshotRewards struct {
+	AccumulatedRewardsRatio *big.Int // ratio already mul decimal
+	ReferenceCount          uint64
+}
+
+func (m *ValidatorSnapshotRewards) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.AccumulatedRewardsRatio, m.ReferenceCount})
+}
+
+func (m *ValidatorSnapshotRewards) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		AccumulatedRewardsRatio *big.Int
+		ReferenceCount          uint64
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.AccumulatedRewardsRatio, m.ReferenceCount = data.AccumulatedRewardsRatio, data.ReferenceCount
+	return nil
+}
+
+type StakeStartingInfo struct {
+	StartPeriod uint64
+	Stake       *big.Int
+	Height      *big.Int
+}
+
+func (m *StakeStartingInfo) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.StartPeriod, m.StartPeriod, m.Height})
+}
+
+func (m *StakeStartingInfo) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		StartPeriod uint64
+		Stake       *big.Int
+		Height      *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.StartPeriod, m.Stake, m.Height = data.StartPeriod, data.Stake, data.Height
+	return nil
+}
