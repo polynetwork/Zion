@@ -27,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/distribute"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 )
@@ -148,6 +149,12 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	err = deposit(s, caller, params.InitStake, validator)
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, deposit error: %v", err)
+	}
+
+	// call distrubute hook
+	err = distribute.AfterValidatorCreated(s, validator)
+	if err != nil {
+		return nil, fmt.Errorf("CreateValidator, distribute.AfterValidatorCreated error: %v", err)
 	}
 
 	err = s.AddNotify(ABI, []string{MethodCreateValidator}, params.ConsensusPubkey)

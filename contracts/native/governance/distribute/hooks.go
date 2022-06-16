@@ -19,10 +19,50 @@
 package distribute
 
 import (
+	"fmt"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"math/big"
 )
 
+func AfterValidatorCreated(s *native.NativeContract, validator *node_manager.Validator) error {
+	dec, err := hexutil.Decode(validator.ConsensusPubkey)
+	if err != nil {
+		return fmt.Errorf("AfterValidatorCreated, decode pubkey error: %v", err)
+	}
+
+	// set initial historical rewards (period 0) with reference count of 1
+	err = setValidatorSnapshotRewards(s, dec, 0, &ValidatorSnapshotRewards{new(big.Int), 1})
+	if err != nil {
+		return fmt.Errorf("AfterValidatorCreated, setValidatorSnapshotRewards error: %v", err)
+	}
+
+	// set accumulate rewards (starting at period 1)
+	err = setValidatorAccumulatedRewards(s, dec, &ValidatorAccumulatedRewards{new(big.Int), 1})
+	if err != nil {
+		return fmt.Errorf("AfterValidatorCreated, setValidatorAccumulatedRewards error: %v", err)
+	}
+
+	// set accumulated commission
+	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{new(big.Int)})
+	if err != nil {
+		return fmt.Errorf("AfterValidatorCreated, setAccumulatedCommission error: %v", err)
+	}
+
+	// set outstanding rewards
+	err = setValidatorOutstandingRewards(s, dec, &ValidatorOutstandingRewards{Rewards: new(big.Int)})
+	if err != nil {
+		return fmt.Errorf("AfterValidatorCreated, setValidatorOutstandingRewards error: %v", err)
+	}
+	return nil
+}
+
 func BeforeStakeCreated(s *native.NativeContract, validator *node_manager.Validator) error {
+	_, err := IncreaseValidatorPeriod(s, validator)
+	return err
+}
+
+func BeforeStakeModified(s *native.NativeContract, validator *node_manager.Validator) error {
 
 }

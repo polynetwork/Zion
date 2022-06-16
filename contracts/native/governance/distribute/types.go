@@ -24,6 +24,26 @@ import (
 	"math/big"
 )
 
+type AccumulatedCommission struct {
+	Amount *big.Int
+}
+
+func (m *AccumulatedCommission) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Amount})
+}
+
+func (m *AccumulatedCommission) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Amount *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.Amount = data.Amount
+	return nil
+}
+
 type ValidatorAccumulatedRewards struct {
 	Rewards *big.Int
 	Period  uint64
@@ -67,7 +87,7 @@ func (m *ValidatorOutstandingRewards) DecodeRLP(s *rlp.Stream) error {
 }
 
 type ValidatorSnapshotRewards struct {
-	AccumulatedRewardsRatio *big.Int
+	AccumulatedRewardsRatio *big.Int // ratio already mul decimal
 	ReferenceCount          uint64
 }
 

@@ -26,6 +26,8 @@ import (
 	"math/big"
 )
 
+var RatioDecimal = new(big.Int).SetUint64(1000000)
+
 // IncreaseValidatorPeriod return the period just ended
 func IncreaseValidatorPeriod(s *native.NativeContract, validator *node_manager.Validator) (uint64, error) {
 	dec, err := hexutil.Decode(validator.ConsensusPubkey)
@@ -40,5 +42,45 @@ func IncreaseValidatorPeriod(s *native.NativeContract, validator *node_manager.V
 	}
 
 	// calculate current ratio
-	ratio := new(big.Int).Div(validatorAccumulatedRewards.Rewards, validator.TotalStake)
+	// mul decimal
+	rewardsD := new(big.Int).Mul(validatorAccumulatedRewards.Rewards, RatioDecimal)
+	ratio := new(big.Int).Div(rewardsD, validator.TotalStake)
+
+	// fetch snapshot rewards for last period
+	validatorSnapshotRewards, err := GetValidatorSnapshotRewards(s, dec, validatorAccumulatedRewards.Period-1)
+	if err != nil {
+		return 0, fmt.Errorf("IncreaseValidatorPeriod, GetValidatorSnapshotRewards error: %v", err)
+	}
+
+	// decrement reference count
+	err = decreaseReferenceCount(s, dec, validatorAccumulatedRewards.Period-1)
+	if err != nil {
+		return 0, fmt.Errorf("IncreaseValidatorPeriod, decreaseReferenceCount error: %v", err)
+	}
+
+	// set new snapshot rewards with reference count of 1
+	newValidatorSnapshotRewards := &ValidatorSnapshotRewards{
+		AccumulatedRewardsRatio: new(big.Int).Add(validatorSnapshotRewards.AccumulatedRewardsRatio, ratio),
+		ReferenceCount:          1,
+	}
+	err = setValidatorSnapshotRewards(s, dec, validatorAccumulatedRewards.Period, newValidatorSnapshotRewards)
+	if err != nil {
+		return 0, fmt.Errorf("IncreaseValidatorPeriod, setValidatorSnapshotRewards error: %v", err)
+	}
+
+	// set accumulate rewards, incrementing period by 1
+	newValidatorAccumulatedRewards := &ValidatorAccumulatedRewards{
+		Rewards: new(big.Int),
+		Period:  validatorAccumulatedRewards.Period + 1,
+	}
+	err = setValidatorAccumulatedRewards(s, dec, newValidatorAccumulatedRewards)
+	if err != nil {
+		return 0, fmt.Errorf("IncreaseValidatorPeriod, setValidatorAccumulatedRewards error: %v", err)
+	}
+
+	return validatorAccumulatedRewards.Period, nil
+}
+
+func withdrawDelegationRewards(s *native.NativeContract, validator *node_manager.Validator) error {
+
 }

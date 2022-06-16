@@ -31,10 +31,39 @@ var ErrEof = errors.New("EOF")
 
 // storage key prefix
 const (
+	SKP_ACCUMULATED_COMMISSION        = "st_accumulated_commission"
 	SKP_VALIDATOR_ACCUMULATED_REWARDS = "st_validator_accumulated_rewards"
 	SKP_VALIDATOR_OUTSTANDING_REWARDS = "st_validator_outstanding_rewards"
 	SKP_VALIDATOR_SNAPSHOT_REWARDS    = "st_validator_snapshot_rewards"
 )
+
+func setAccumulatedCommission(s *native.NativeContract, dec []byte, accumulatedCommission *AccumulatedCommission) error {
+	key := accumulatedCommissionKey(dec)
+	store, err := rlp.EncodeToBytes(accumulatedCommission)
+	if err != nil {
+		return fmt.Errorf("setAccumulatedCommission, serialize accumulatedCommission error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func GetAccumulatedCommission(s *native.NativeContract, dec []byte) (*AccumulatedCommission, error) {
+	accumulatedCommission := &AccumulatedCommission{}
+	key := accumulatedCommissionKey(dec)
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccumulatedCommission, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, accumulatedCommission); err != nil {
+		return nil, fmt.Errorf("GetAccumulatedCommission, deserialize accumulatedCommission error: %v", err)
+	}
+	return accumulatedCommission, nil
+}
+
+func delAccumulatedCommission(s *native.NativeContract, dec []byte) {
+	key := accumulatedCommissionKey(dec)
+	del(s, key)
+}
 
 func setValidatorAccumulatedRewards(s *native.NativeContract, dec []byte, validatorAccumulatedRewards *ValidatorAccumulatedRewards) error {
 	key := validatorAccumulatedRewardsKey(dec)
@@ -50,9 +79,6 @@ func GetValidatorAccumulatedRewards(s *native.NativeContract, dec []byte) (*Vali
 	validatorAccumulatedRewards := &ValidatorAccumulatedRewards{}
 	key := validatorAccumulatedRewardsKey(dec)
 	store, err := get(s, key)
-	if err == ErrEof {
-		return validatorAccumulatedRewards, nil
-	}
 	if err != nil {
 		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, get store error: %v", err)
 	}
@@ -81,9 +107,6 @@ func GetValidatorOutstandingRewards(s *native.NativeContract, dec []byte) (*Vali
 	validatorOutstandingRewards := &ValidatorOutstandingRewards{}
 	key := validatorOutstandingRewardsKey(dec)
 	store, err := get(s, key)
-	if err == ErrEof {
-		return validatorOutstandingRewards, nil
-	}
 	if err != nil {
 		return nil, fmt.Errorf("GetValidatorOutstandingRewards, get store error: %v", err)
 	}
@@ -96,6 +119,42 @@ func GetValidatorOutstandingRewards(s *native.NativeContract, dec []byte) (*Vali
 func delValidatorOutstandingRewards(s *native.NativeContract, dec []byte) {
 	key := validatorOutstandingRewardsKey(dec)
 	del(s, key)
+}
+
+func increaseReferenceCount(s *native.NativeContract, dec []byte, period uint64) error {
+	validatorSnapshotRewards, err := GetValidatorSnapshotRewards(s, dec, period)
+	if err != nil {
+		return fmt.Errorf("increaseReferenceCount, GetValidatorSnapshotRewards error: %v", err)
+	}
+	if validatorSnapshotRewards.ReferenceCount > 2 {
+		panic("reference count should never exceed 2")
+	}
+	validatorSnapshotRewards.ReferenceCount++
+	err = setValidatorSnapshotRewards(s, dec, period, validatorSnapshotRewards)
+	if err != nil {
+		return fmt.Errorf("increaseReferenceCount, setValidatorSnapshotRewards error: %v", err)
+	}
+	return nil
+}
+
+func decreaseReferenceCount(s *native.NativeContract, dec []byte, period uint64) error {
+	validatorSnapshotRewards, err := GetValidatorSnapshotRewards(s, dec, period)
+	if err != nil {
+		return fmt.Errorf("decreaseReferenceCount, GetValidatorSnapshotRewards error: %v", err)
+	}
+	if validatorSnapshotRewards.ReferenceCount == 0 {
+		panic("cannot set negative reference count")
+	}
+	validatorSnapshotRewards.ReferenceCount--
+	if validatorSnapshotRewards.ReferenceCount == 0 {
+		delValidatorSnapshotRewards(s, dec, period)
+	} else {
+		err = setValidatorSnapshotRewards(s, dec, period, validatorSnapshotRewards)
+		if err != nil {
+			return fmt.Errorf("decreaseReferenceCount, setValidatorSnapshotRewards error: %v", err)
+		}
+	}
+	return nil
 }
 
 func setValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period uint64, validatorSnapshotRewards *ValidatorSnapshotRewards) error {
@@ -171,6 +230,10 @@ func customDel(db *state.CacheDB, key []byte) {
 // storage keys
 //
 // ====================================================================
+
+func accumulatedCommissionKey(dec []byte) []byte {
+	return utils.ConcatKey(this, []byte(SKP_ACCUMULATED_COMMISSION), dec)
+}
 
 func validatorAccumulatedRewardsKey(dec []byte) []byte {
 	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_ACCUMULATED_REWARDS), dec)
