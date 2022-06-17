@@ -84,12 +84,73 @@ func IncreaseValidatorPeriod(s *native.NativeContract, validator *Validator) (ui
 }
 
 func withdrawDelegationRewards(s *native.NativeContract, validator *Validator, stakeInfo *StakeInfo) error {
+	dec, err := hexutil.Decode(validator.ConsensusPubkey)
+	if err != nil {
+		return fmt.Errorf("withdrawDelegationRewards, decode pubkey error: %v", err)
+	}
+
 	// get stake starting info
 	stakeStaringInfo, err := GetStakeStartingInfo(s, stakeInfo.StakeAddress)
 	if err != nil {
 		return fmt.Errorf("withdrawDelegationRewards, GetStakeStartingInfo error: %v", err)
 	}
 
+	// end current period and calculate rewards
+	endingPeriod, err := IncreaseValidatorPeriod(s, validator)
+	if err != nil {
+		return fmt.Errorf("withdrawDelegationRewards, IncreaseValidatorPeriod error: %v", err)
+	}
+	rewardsRaw, err := CalculateStakeRewards(s, stakeInfo.StakeAddress, dec, endingPeriod)
+	if err != nil {
+		return fmt.Errorf("withdrawDelegationRewards, CalculateStakeRewards error: %v", err)
+	}
+	outstanding, err := GetValidatorOutstandingRewards(s, dec)
+	if err != nil {
+		return fmt.Errorf("withdrawDelegationRewards, GetValidatorOutstandingRewards error: %v", err)
+	}
+
+}
+
+func CalculateStakeRewards(s *native.NativeContract, stakeAddress common.Address, dec []byte, endPeriod uint64) (*big.Int, error) {
+	height := s.ContractRef().BlockHeight()
+	// fetch starting info for delegation
+	startingInfo, err := GetStakeStartingInfo(s, stakeAddress)
+	if err != nil {
+		return nil, fmt.Errorf("CalculateStakeRewards, GetStakeStartingInfo error: %v", err)
+	}
+
+	if startingInfo.Height.Cmp(height) == 0 {
+		// started this height, no rewards yet
+		return common.Big0, nil
+	}
+
+	startPeriod := startingInfo.StartPeriod
+	stake := startingInfo.Stake
+
+	// sanity check
+	if startPeriod > endPeriod {
+		panic("startPeriod cannot be greater than endPeriod")
+	}
+	if stake.Sign() < 0 {
+		panic("stake should not be negative")
+	}
+
+	// return staking * (ending - starting)
+	starting, err := GetValidatorSnapshotRewards(s, dec, startPeriod)
+	if err != nil {
+		return nil, fmt.Errorf("CalculateStakeRewards, GetValidatorSnapshotRewards start error: %v", err)
+	}
+	ending, err := GetValidatorSnapshotRewards(s, dec, endPeriod)
+	if err != nil {
+		return nil, fmt.Errorf("CalculateStakeRewards, GetValidatorSnapshotRewards end error: %v", err)
+	}
+	difference := new(big.Int).Sub(ending.AccumulatedRewardsRatio, starting.AccumulatedRewardsRatio)
+	if difference.Sign() < 0 {
+		panic("negative rewards should not be possible")
+	}
+	rewardsD := new(big.Int).Mul(difference, stake)
+	rewards := new(big.Int).Div(rewardsD, RatioDecimal)
+	return rewards, nil
 }
 
 func nativeTransfer(s *native.NativeContract, from, to common.Address, amount *big.Int) error {
