@@ -126,15 +126,13 @@ func CalcGasLimit(parent *types.Block, gasFloor, gasCeil uint64) uint64 {
 	}
 	// If we're outside our allowed gas range, we try to hone towards them
 	if limit < gasFloor {
-		limit = parent.GasLimit() + decay
-		if limit > gasFloor {
-			limit = gasFloor
-		}
+		limit = gasFloor
 	} else if limit > gasCeil {
-		limit = parent.GasLimit() - decay
-		if limit < gasCeil {
-			limit = gasCeil
-		}
+		limit = gasCeil
+		// limit = parent.GasLimit() - decay
+		// if limit < gasCeil {
+		// 	limit = gasCeil
+		// }
 	}
 	return limit
 }

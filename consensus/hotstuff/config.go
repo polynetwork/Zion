@@ -36,8 +36,8 @@ type Config struct {
 
 // todo: modify request timeout, and miner recommit default value is 3s. recommit time should be > blockPeriod
 var DefaultBasicConfig = &Config{
-	RequestTimeout: 4000,
-	BlockPeriod:    1,
+	RequestTimeout: 6000,
+	BlockPeriod:    3,
 	LeaderPolicy:   RoundRobin,
 	Epoch:          30000,
 	Test:           false,

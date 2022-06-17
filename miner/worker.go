@@ -990,19 +990,14 @@ func (w *worker) commitNewWork(interrupt *int32, noempty bool, timestamp int64) 
 	commitUncles(w.localUncles)
 	commitUncles(w.remoteUncles)
 
-	// Create an empty block based on temporary copied state for
-	// sealing in advance without waiting block execution finished.
-	if !noempty && atomic.LoadUint32(&w.noempty) == 0 {
-		w.commit(uncles, nil, false, tstart)
-	}
-
 	// Fill the block with all available pending transactions.
 	pending, _ := w.eth.TxPool().Pending()
 
 	// Short circuit if there is no available pending transactions.
 	// But if we disable empty precommit already, ignore it. Since
 	// empty block is necessary to keep the liveness of the network.
-	if len(pending) == 0 && atomic.LoadUint32(&w.noempty) == 0 {
+	if !noempty && len(pending) == 0 && atomic.LoadUint32(&w.noempty) == 0 {
+		w.commit(uncles, nil, false, tstart)
 		w.updateSnapshot()
 		return
 	}
