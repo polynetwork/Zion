@@ -37,6 +37,12 @@ var (
 		MethodBlockAccount: 30000,
 		MethodIsBlocked:    0,
 		MethodGetBlacklist: 0,
+
+		MethodEnableGasManage:    30000,
+		MethodSetGasManager:      30000,
+		MethodIsGasManageEnabled: 0,
+		MethodIsGasManager:       0,
+		MethodGetGasManagerList:  0,
 	}
 )
 
@@ -51,9 +57,16 @@ func RegisterMaasConfigContract(s *native.NativeContract) {
 	s.Register(MethodName, Name)
 	s.Register(MethodChangeOwner, ChangeOwner)
 	s.Register(MethodGetOwner, GetOwner)
+
 	s.Register(MethodBlockAccount, BlockAccount)
 	s.Register(MethodIsBlocked, IsBlocked)
 	s.Register(MethodGetBlacklist, GetBlacklist)
+
+	s.Register(MethodEnableGasManage, EnableGasManage)
+	s.Register(MethodSetGasManager, SetGasManager)
+	s.Register(MethodIsGasManageEnabled, IsGasManageEnabled)
+	s.Register(MethodIsGasManager, IsGasManager)
+	s.Register(MethodGetGasManagerList, GetGasManagerList)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -67,14 +80,12 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 
 	// check authority
 	if err := contract.ValidateOwner(s, caller); err != nil {
-		log.Trace("ChangeOwner", "ValidateOwner caller failed", err)
 		return utils.ByteFailed, errors.New("invalid authority for caller")
 	}
 
 	currentOwner := getOwner(s)
 	if currentOwner != common.EmptyAddress {
 		if err := contract.ValidateOwner(s, currentOwner); err != nil {
-			log.Trace("ChangeOwner", "ValidateOwner owner failed", err)
 			return utils.ByteFailed, errors.New("invalid authority for owner")
 		}
 	}
@@ -87,7 +98,7 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// verify new owner address
-	m := getBlacklistMap(s)
+	m := getAddressMap(s, blacklistKey)
 	_, ok := m[input.Addr]
 	if ok {
 		err := errors.New("new owner address in blacklist")
@@ -96,50 +107,54 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// store owner
-	key := getOwnerKey()
-	set(s, key, input.Addr.Bytes())
+	set(s, ownerKey, input.Addr.Bytes())
 
 	// emit event log
 	if err := s.AddNotify(ABI, []string{EventChangeOwner}, common.BytesToHash(currentOwner.Bytes()), common.BytesToHash(input.Addr.Bytes())); err != nil {
-		log.Trace("propose", "emit event log failed", err)
+		log.Trace("ChangeOwner", "emit event log failed", err)
 		return utils.ByteFailed, errors.New("emit EventChangeOwner error")
 	}
 
-	log.Debug("ChangeOwner: " + input.Addr.String())
 	return utils.ByteSuccess, nil
 }
 
 // get owner
 func GetOwner(s *native.NativeContract) ([]byte, error) {
-	output := &MethodGetOwnerOutput{Addr: getOwner(s)}
-	return output.Encode()
+	output := &MethodAddressOutput{Addr: getOwner(s)}
+	return output.Encode(MethodGetOwner)
 }
 
 func getOwner(s *native.NativeContract) common.Address {
 	// get value
-	key := getOwnerKey()
-	value, _ := get(s, key)
+	value, _ := get(s, ownerKey)
 	if len(value) == 0 {
 		return common.EmptyAddress
 	}
 	return common.BytesToAddress(value)
 }
 
-// block account(add account to blacklist map) or unblock account
-func BlockAccount(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
-	caller := ctx.Caller
-
-	// check authority
+func validateOwner(s *native.NativeContract) error {
+	caller := s.ContractRef().CurrentContext().Caller
 	if err := contract.ValidateOwner(s, caller); err != nil {
-		log.Trace("blockAccount", "ValidateOwner caller failed", err)
-		return utils.ByteFailed, errors.New("invalid authority for caller")
+		log.Trace("validateOwner", "ValidateOwner caller failed", err)
+		return errors.New("invalid authority for caller")
 	}
 
 	currentOwner := getOwner(s)
 	if err := contract.ValidateOwner(s, currentOwner); err != nil {
-		log.Trace("blockAccount", "ValidateOwner owner failed", err)
-		return utils.ByteFailed, errors.New("invalid authority for owner")
+		log.Trace("validateOwner", "ValidateOwner owner failed", err)
+		return errors.New("invalid authority for owner")
+	}
+	return nil
+}
+
+// block account(add account to blacklist map) or unblock account
+func BlockAccount(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// check owner
+	if err := validateOwner(s); err != nil {
+		return utils.ByteFailed, err
 	}
 
 	// decode input
@@ -149,14 +164,14 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 		return utils.ByteFailed, errors.New("invalid input")
 	}
 
+	currentOwner := getOwner(s)
 	if input.Addr == currentOwner {
 		err := errors.New("block owner is forbidden")
 		log.Trace("blockAccount", "block owner is forbidden", err)
 		return utils.ByteFailed, err
 	}
 
-	key := blacklistKey()
-	m := getBlacklistMap(s)
+	m := getAddressMap(s, blacklistKey)
 	if input.DoBlock {
 		m[input.Addr] = struct{}{}
 	} else {
@@ -164,41 +179,30 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 	}
 
 	value, err := json.Marshal(m)
-	log.Debug("m json:" + string(value))
 	if err != nil {
 		log.Trace("blockAccount", "encode value failed", err)
 		return utils.ByteFailed, errors.New("encode value failed")
 	}
-	set(s, key, value)
+	set(s, blacklistKey, value)
 
 	// emit event log
 	if err := s.AddNotify(ABI, []string{EventBlockAccount}, common.BytesToHash(input.Addr.Bytes()), input.DoBlock); err != nil {
-		log.Trace("propose", "emit event log failed", err)
-		return utils.ByteFailed, errors.New("emitBlockAccount error")
+		log.Trace("blockAccount", "emit event log failed", err)
+		return utils.ByteFailed, errors.New("emit EventBlockAccount error")
 	}
 
-	log.Debug("BlockAccount: "+input.Addr.String(), input.DoBlock)
 	return utils.ByteSuccess, nil
 }
 
-func getBlacklistMap(s *native.NativeContract) map[common.Address]struct{} {
-	key := blacklistKey()
+func getAddressMap(s *native.NativeContract, key []byte) map[common.Address]struct{} {
 	value, _ := get(s, key)
 	m := make(map[common.Address]struct{})
 	if len(value) > 0 {
 		if err := json.Unmarshal(value, &m); err != nil {
-			log.Trace("blockAccount", "decode value failed", err)
+			log.Trace("getAddressMap", "decode value failed", err)
 		}
 	}
 	return m
-}
-
-func blacklistKey() []byte {
-	return utils.ConcatKey(this, []byte(BLACKLIST))
-}
-
-func getOwnerKey() []byte {
-	return utils.ConcatKey(this, []byte(OWNER))
 }
 
 // check if account is blocked
@@ -213,22 +217,133 @@ func IsBlocked(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// get value
-	m := getBlacklistMap(s)
+	m := getAddressMap(s, blacklistKey)
 	_, ok := m[input.Addr]
-	output := &MethodIsBlockedOutput{Success: ok}
+	output := &MethodBoolOutput{Success: ok}
 
-	return output.Encode()
+	return output.Encode(MethodIsBlocked)
 }
 
 // get blacklist json
 func GetBlacklist(s *native.NativeContract) ([]byte, error) {
 	// get value
-	m := getBlacklistMap(s)
+	m := getAddressMap(s, blacklistKey)
 	list := make([]common.Address, 0, len(m))
 	for key := range m {
 		list = append(list, key)
 	}
 	result, _ := json.Marshal(list)
-	output := &MethodGetBlacklistOutput{Result: string(result)}
-	return output.Encode()
+	output := &MethodStringOutput{Result: string(result)}
+	return output.Encode(MethodGetBlacklist)
+}
+
+// enable gas manage
+func EnableGasManage(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// check owner
+	if err := validateOwner(s); err != nil {
+		return utils.ByteFailed, err
+	}
+
+	// decode input
+	input := new(MethodEnableGasManageInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("EnableGasManage", "decode input failed", err)
+		return utils.ByteFailed, errors.New("invalid input")
+	}
+
+	// set enable status
+	if input.DoEnable {
+		set(s, gasManageEnableKey, utils.BYTE_TRUE)
+	} else {
+		del(s, gasManageEnableKey)
+	}
+
+	// emit event log
+	if err := s.AddNotify(ABI, []string{EventEnableGasManage}, input.DoEnable); err != nil {
+		log.Trace("EnableGasManage", "emit event log failed", err)
+		return utils.ByteFailed, errors.New("emit EventEnableGasManage error")
+	}
+
+	return utils.ByteSuccess, nil
+}
+
+// check if gas manage is enabled
+func IsGasManageEnabled(s *native.NativeContract) ([]byte, error) {
+	// get value
+	value, _ := get(s, gasManageEnableKey)
+	output := &MethodBoolOutput{Success: len(value) > 0}
+	return output.Encode(MethodIsGasManageEnabled)
+}
+
+// set gas manager address
+func SetGasManager(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// check owner
+	if err := validateOwner(s); err != nil {
+		return utils.ByteFailed, err
+	}
+
+	// decode input
+	input := new(MethodSetGasManagerInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("SetGasManager", "decode input failed", err)
+		return utils.ByteFailed, errors.New("invalid input")
+	}
+
+	m := getAddressMap(s, gasManagerListKey)
+	if input.IsManager {
+		m[input.Addr] = struct{}{}
+	} else {
+		delete(m, input.Addr)
+	}
+
+	value, err := json.Marshal(m)
+	if err != nil {
+		log.Trace("SetGasManager", "encode value failed", err)
+		return utils.ByteFailed, errors.New("encode value failed")
+	}
+	set(s, gasManagerListKey, value)
+
+	// emit event log
+	if err := s.AddNotify(ABI, []string{EventSetGasManager}, common.BytesToHash(input.Addr.Bytes()), input.IsManager); err != nil {
+		log.Trace("SetGasManager", "emit event log failed", err)
+		return utils.ByteFailed, errors.New("emit EventSetGasManager error")
+	}
+
+	return utils.ByteSuccess, nil
+}
+
+// check if address is in gas manager list
+func IsGasManager(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// decode input
+	input := new(MethodIsGasManagerInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("IsGasManager", "decode input failed", err)
+		return utils.ByteFailed, errors.New("invalid input")
+	}
+
+	// get value
+	m := getAddressMap(s, gasManagerListKey)
+	_, ok := m[input.Addr]
+	output := &MethodBoolOutput{Success: ok}
+
+	return output.Encode(MethodIsGasManager)
+}
+
+// get gas manager list json
+func GetGasManagerList(s *native.NativeContract) ([]byte, error) {
+	// get value
+	m := getAddressMap(s, gasManagerListKey)
+	list := make([]common.Address, 0, len(m))
+	for key := range m {
+		list = append(list, key)
+	}
+	result, _ := json.Marshal(list)
+	output := &MethodStringOutput{Result: string(result)}
+	return output.Encode(MethodGetGasManagerList)
 }

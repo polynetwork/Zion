@@ -544,6 +544,12 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	if native_client.IsBlocked(pool.currentState, &from) || native_client.IsBlocked(pool.currentState, tx.To()) {
 		return native_client.ErrAccountBlocked
 	}
+	// gas manager check
+	if tx.Value().Cmp(common.Big0) > 0 {
+		if native_client.IsGasManageEnable(pool.currentState) && !native_client.IsGasManager(pool.currentState, &from) && !native_client.IsGasManager(pool.currentState, tx.To()) {
+			return native_client.ErrNotGasManager
+		}
+	}
 
 	// Drop non-local transactions under our own minimal accepted gas price or tip
 	log.Trace("### Txpool gas limit", "local", local, "tx gasPrice", tx.GasPrice(), "pool gasPrice", pool.gasPrice)

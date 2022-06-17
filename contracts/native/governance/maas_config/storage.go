@@ -19,28 +19,28 @@
 package maas_config
 
 import (
-	"errors"
-
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 )
 
-const (
-	StartEpochID uint64 = 1 // epoch started from 1, NOT 0!
-)
-
-var ErrEof = errors.New("EOF")
-
 // storage key prefix
 const (
-	SKP_EPOCH     = "st_epoch"
-	SKP_PROOF     = "st_proof"
-	SKP_PROPOSAL  = "st_proposal"
-	SKP_VOTE      = "st_vote"
-	SKP_VOTE_TO   = "st_vote_to"
-	SKP_CUR_EPOCH = "st_cur_epoch"
-	SKP_SIGN      = "st_sign"
-	SKP_SIGNER    = "st_signer"
+	BLACKLIST         = "blacklist"
+	OWNER             = "owner"
+	NODE_WHITE_ENABLE = "node_white_enable"
+	GAS_MANAGE_ENABLE = "gas_manage_enable"
+	NODE_WHITELIST    = "node_whitelist"
+	GAS_MANAGER_LIST  = "gas_manager_list"
+)
+
+var (
+	blacklistKey       = utils.ConcatKey(this, []byte(BLACKLIST))
+	ownerKey           = utils.ConcatKey(this, []byte(OWNER))
+	nodeWhiteEnableKey = utils.ConcatKey(this, []byte(NODE_WHITE_ENABLE))
+	nodeWhitelistKey   = utils.ConcatKey(this, []byte(NODE_WHITELIST))
+	gasManageEnableKey = utils.ConcatKey(this, []byte(GAS_MANAGE_ENABLE))
+	gasManagerListKey  = utils.ConcatKey(this, []byte(GAS_MANAGER_LIST))
 )
 
 // ====================================================================

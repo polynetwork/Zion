@@ -2,32 +2,33 @@ package maas_config
 
 import (
 	"errors"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func TestSetAndGet(t *testing.T) {
 	resetTestContext()
 	type TestCase struct {
-		Key []byte
-		Value []byte
+		Key    []byte
+		Value  []byte
 		expect error
 	}
 
-	cases := []TestCase {
+	cases := []TestCase{
 		{
-			Key: getOwnerKey(),
-			Value: []byte("0x2D3913c12ACa0E4A2278f829Fb78A682123c0129"),
+			Key:    ownerKey,
+			Value:  []byte("0x2D3913c12ACa0E4A2278f829Fb78A682123c0129"),
 			expect: nil,
 		},
 		{
-			Key: []byte("testKey"),
-			Value: []byte("testValue"),
+			Key:    []byte("testKey"),
+			Value:  []byte("testValue"),
 			expect: errors.New("CacheDB should only be used for native contract storage"),
 		},
 		{
-			Key: []byte("0x2D3913c12ACa0E4A2278f829Fb78A682123c0129"),
-			Value: []byte("testValue"),
+			Key:    []byte("0x2D3913c12ACa0E4A2278f829Fb78A682123c0129"),
+			Value:  []byte("testValue"),
 			expect: nil,
 		},
 	}
@@ -51,17 +52,17 @@ func TestSetAndGet(t *testing.T) {
 func TestSetDelAndGet(t *testing.T) {
 	resetTestContext()
 	type TestCase struct {
-		Key []byte
-		Value []byte
+		Key           []byte
+		Value         []byte
 		BeforeHandler func(testCase *TestCase)
-		AfterHandler func(testCase *TestCase)
-		expect error
+		AfterHandler  func(testCase *TestCase)
+		expect        error
 	}
 
 	cases := []TestCase{
 		{
-			Key:    getOwnerKey(),
-			Value:  []byte("0x2D3913c12ACa0E4A2278f829Fb78A682123c0129"),
+			Key:   ownerKey,
+			Value: []byte("0x2D3913c12ACa0E4A2278f829Fb78A682123c0129"),
 			BeforeHandler: func(testCase *TestCase) {
 				key := testCase.Key
 				value := testCase.Value
@@ -82,13 +83,13 @@ func TestSetDelAndGet(t *testing.T) {
 			expect: nil,
 		},
 		{
-			Key: []byte("testKey"),
+			Key:   []byte("testKey"),
 			Value: []byte("testValue"),
 			BeforeHandler: func(testCase *TestCase) {
 				set(testEmptyCtx, testCase.Key, testCase.Value)
 			},
 			AfterHandler: nil,
-			expect: errors.New("CacheDB should only be used for native contract storage"),
+			expect:       errors.New("CacheDB should only be used for native contract storage"),
 		},
 	}
 
@@ -102,6 +103,5 @@ func TestSetDelAndGet(t *testing.T) {
 		testCase.BeforeHandler(&testCase)
 		testCase.AfterHandler(&testCase)
 	}
-
 
 }

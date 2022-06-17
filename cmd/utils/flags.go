@@ -501,6 +501,10 @@ var (
 		Name:  "allow-insecure-unlock",
 		Usage: "Allow insecure account unlocking when account-related RPCs are exposed by http",
 	}
+	NodeWhitePath = cli.StringFlag{
+		Name:  "node.whitelist",
+		Usage: "node whitelist config file path",
+	}
 	RPCGlobalGasCapFlag = cli.Uint64Flag{
 		Name:  "rpc.gascap",
 		Usage: "Sets a cap on gas that can be used in eth_call/estimateGas (0=infinite)",
@@ -1246,6 +1250,13 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 	if ctx.GlobalIsSet(InsecureUnlockAllowedFlag.Name) {
 		cfg.InsecureUnlockAllowed = ctx.GlobalBool(InsecureUnlockAllowedFlag.Name)
 	}
+	// set node whitelist file path
+	if !ctx.GlobalIsSet(NodeWhitePath.Name) {
+		ctx.GlobalSet(NodeWhitePath.Name, "node-whitelist.json")
+	}
+	cfg.NodeWhitePath = ctx.GlobalString(NodeWhitePath.Name)
+	log.Warn("### NodeWhite file path: " + cfg.NodeWhitePath)
+	params.StartNodeWhiteLoadTask(cfg.NodeWhitePath)
 }
 
 func setSmartCard(ctx *cli.Context, cfg *node.Config) {

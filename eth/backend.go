@@ -207,6 +207,9 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 	}
 	eth.txPool = core.NewTxPool(config.TxPool, chainConfig, eth.blockchain)
 
+	// set blockchain for p2pServer
+	eth.p2pServer.Chain = eth.blockchain
+
 	// Permit the downloader to use the trie cache allowance during fast sync
 	cacheLimit := cacheConfig.TrieCleanLimit + cacheConfig.TrieDirtyLimit + cacheConfig.SnapshotLimit
 	checkpoint := config.Checkpoint

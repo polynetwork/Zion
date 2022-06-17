@@ -30,6 +30,7 @@ import (
 )
 
 var ErrAccountBlocked = errors.New("account is in blacklist")
+var ErrNotGasManager = errors.New("address is not in gas manager list")
 
 func IsBlocked(state *state.StateDB, address *common.Address) bool {
 	log.Debug("### isBlocked called")
@@ -48,12 +49,59 @@ func IsBlocked(state *state.StateDB, address *common.Address) bool {
 	if err != nil {
 		return false
 	}
-	output := new(maas_config.MethodIsBlockedOutput)
-	if err := output.Decode(enc); err != nil {
+	output := new(maas_config.MethodBoolOutput)
+	if err := output.Decode(enc, maas_config.MethodIsBlocked); err != nil {
 		log.Error("[native call]", "unpack `IsBlocked` output failed", err)
 		return false
 	}
 
 	log.Debug("IsBlocked: " + address.String() + ", " + strconv.FormatBool(output.Success))
+	return output.Success
+}
+
+func IsGasManageEnable(state *state.StateDB) bool {
+	caller := common.EmptyAddress
+	ref := native.NewContractRef(state, caller, caller, big.NewInt(-1), common.EmptyHash, 0, nil)
+
+	payload, err := utils.PackMethod(maas_config.ABI, maas_config.MethodIsGasManageEnabled)
+	if err != nil {
+		log.Error("[PackMethod]", "pack `IsGasManageEnable` input failed", err)
+		return false
+	}
+	enc, _, err := ref.NativeCall(caller, utils.MaasConfigContractAddress, payload)
+	if err != nil {
+		return false
+	}
+	output := new(maas_config.MethodBoolOutput)
+	if err := output.Decode(enc, maas_config.MethodIsGasManageEnabled); err != nil {
+		log.Error("[native call]", "unpack `IsGasManageEnable` output failed", err)
+		return false
+	}
+
+	return output.Success
+}
+
+func IsGasManager(state *state.StateDB, address *common.Address) bool {
+	if address == nil {
+		return false
+	}
+	caller := common.EmptyAddress
+	ref := native.NewContractRef(state, caller, caller, big.NewInt(-1), common.EmptyHash, 0, nil)
+
+	payload, err := (&maas_config.MethodIsGasManagerInput{Addr: *address}).Encode()
+	if err != nil {
+		log.Error("[PackMethod]", "pack `IsGasManager` input failed", err)
+		return false
+	}
+	enc, _, err := ref.NativeCall(caller, utils.MaasConfigContractAddress, payload)
+	if err != nil {
+		return false
+	}
+	output := new(maas_config.MethodBoolOutput)
+	if err := output.Decode(enc, maas_config.MethodIsGasManager); err != nil {
+		log.Error("[native call]", "unpack `IsGasManager` output failed", err)
+		return false
+	}
+
 	return output.Success
 }

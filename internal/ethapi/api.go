@@ -1781,6 +1781,12 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	if native_client.IsBlocked(state, &args.From) || native_client.IsBlocked(state, args.To) {
 		return common.Hash{}, native_client.ErrAccountBlocked
 	}
+	// gas manager check
+	if args.Value.ToInt().Cmp(common.Big0) > 0 {
+		if native_client.IsGasManageEnable(state) && !native_client.IsGasManager(state, &args.From) && !native_client.IsGasManager(state, args.To) {
+			return common.Hash{}, native_client.ErrNotGasManager
+		}
+	}
 
 	// Look up the wallet containing the requested signer
 	account := accounts.Account{Address: args.From}
@@ -1843,6 +1849,12 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, input
 	// check if address is blocked
 	if native_client.IsBlocked(state, &from) || native_client.IsBlocked(state, tx.To()) {
 		return common.Hash{}, native_client.ErrAccountBlocked
+	}
+	// gas manager check
+	if tx.Value().Cmp(common.Big0) > 0 {
+		if native_client.IsGasManageEnable(state) && !native_client.IsGasManager(state, &from) && !native_client.IsGasManager(state, tx.To()) {
+			return common.Hash{}, native_client.ErrNotGasManager
+		}
 	}
 
 	return SubmitTransaction(ctx, s.b, tx)

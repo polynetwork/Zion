@@ -32,21 +32,26 @@ const contractName = "maas config"
 const (
 
 	// abi
-	MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"ChangeOwner\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBlacklist\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"}]"
+	MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"ChangeOwner\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doEnable\",\"type\":\"bool\"}],\"name\":\"EnableGasManage\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doEnable\",\"type\":\"bool\"}],\"name\":\"EnableNodeWhite\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isManager\",\"type\":\"bool\"}],\"name\":\"SetGasManager\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isWhite\",\"type\":\"bool\"}],\"name\":\"SetNodeWhite\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"doEnable\",\"type\":\"bool\"}],\"name\":\"enableGasManage\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"doEnable\",\"type\":\"bool\"}],\"name\":\"enableNodeWhite\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBlacklist\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getGasManagerList\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getNodeWhitelist\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isGasManageEnabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isGasManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isInNodeWhite\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isNodeWhiteEnabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isManager\",\"type\":\"bool\"}],\"name\":\"setGasManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isWhite\",\"type\":\"bool\"}],\"name\":\"setNodeWhite\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 	// method name
-	MethodBlockAccount = "blockAccount"
+	MethodName         = "name"
 	MethodChangeOwner  = "changeOwner"
 	MethodGetOwner     = "getOwner"
-	MethodGetBlacklist = "getBlacklist"
+	MethodBlockAccount = "blockAccount"
 	MethodIsBlocked    = "isBlocked"
-	MethodName         = "name"
-	EventBlockAccount  = "BlockAccount"
-	EventChangeOwner   = "ChangeOwner"
+	MethodGetBlacklist = "getBlacklist"
 
-	// key prefix
-	BLACKLIST = "blacklist"
-	OWNER     = "owner"
+	MethodEnableGasManage    = "enableGasManage"
+	MethodSetGasManager      = "setGasManager"
+	MethodIsGasManageEnabled = "isGasManageEnabled"
+	MethodIsGasManager       = "isGasManager"
+	MethodGetGasManagerList  = "getGasManagerList"
+
+	EventChangeOwner     = "ChangeOwner"
+	EventBlockAccount    = "BlockAccount"
+	EventEnableGasManage = "EnableGasManage"
+	EventSetGasManager   = "SetGasManager"
 )
 
 func InitABI() {
@@ -74,6 +79,30 @@ func (m *MethodContractNameOutput) Decode(payload []byte) error {
 	return utils.UnpackOutputs(ABI, MethodName, m, payload)
 }
 
+type MethodBoolOutput struct {
+	Success bool
+}
+
+func (m *MethodBoolOutput) Encode(methodName string) ([]byte, error) {
+	return utils.PackOutputs(ABI, methodName, m.Success)
+}
+
+func (m *MethodBoolOutput) Decode(payload []byte, methodName string) error {
+	return utils.UnpackOutputs(ABI, methodName, m, payload)
+}
+
+type MethodAddressOutput struct {
+	Addr common.Address
+}
+
+func (m *MethodAddressOutput) Encode(methodName string) ([]byte, error) {
+	return utils.PackOutputs(ABI, methodName, m.Addr)
+}
+
+func (m *MethodAddressOutput) Decode(payload []byte, methodName string) error {
+	return utils.UnpackOutputs(ABI, methodName, m, payload)
+}
+
 type MethodChangeOwnerInput struct {
 	Addr common.Address
 }
@@ -91,30 +120,6 @@ func (m *MethodChangeOwnerInput) Decode(payload []byte) error {
 	}
 	m.Addr = data.Addr
 	return nil
-}
-
-type MethodChangeOwnerOutput struct {
-	Success bool
-}
-
-func (m *MethodChangeOwnerOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodChangeOwner, m.Success)
-}
-
-func (m *MethodChangeOwnerOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodChangeOwner, m, payload)
-}
-
-type MethodGetOwnerOutput struct {
-	Addr common.Address
-}
-
-func (m *MethodGetOwnerOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodGetOwner, m.Addr)
-}
-
-func (m *MethodGetOwnerOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodGetOwner, m, payload)
 }
 
 type MethodBlockAccountInput struct {
@@ -139,18 +144,6 @@ func (m *MethodBlockAccountInput) Decode(payload []byte) error {
 	return nil
 }
 
-type MethodBlockAccountOutput struct {
-	Success bool
-}
-
-func (m *MethodBlockAccountOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodBlockAccount, m.Success)
-}
-
-func (m *MethodBlockAccountOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodBlockAccount, m, payload)
-}
-
 type MethodIsBlockedInput struct {
 	Addr common.Address
 }
@@ -170,26 +163,51 @@ func (m *MethodIsBlockedInput) Decode(payload []byte) error {
 	return nil
 }
 
-type MethodIsBlockedOutput struct {
-	Success bool
-}
-
-func (m *MethodIsBlockedOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodIsBlocked, m.Success)
-}
-
-func (m *MethodIsBlockedOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodIsBlocked, m, payload)
-}
-
-type MethodGetBlacklistOutput struct {
+type MethodStringOutput struct {
 	Result string
 }
 
-func (m *MethodGetBlacklistOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodGetBlacklist, m.Result)
+func (m *MethodStringOutput) Encode(methodName string) ([]byte, error) {
+	return utils.PackOutputs(ABI, methodName, m.Result)
 }
 
-func (m *MethodGetBlacklistOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodGetBlacklist, m, payload)
+func (m *MethodStringOutput) Decode(payload []byte, methodName string) error {
+	return utils.UnpackOutputs(ABI, methodName, m, payload)
+}
+
+type MethodEnableGasManageInput struct {
+	DoEnable bool
+}
+
+func (m *MethodEnableGasManageInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodEnableGasManage, m.DoEnable)
+}
+
+func (m *MethodEnableGasManageInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodEnableGasManage, m, payload)
+}
+
+type MethodSetGasManagerInput struct {
+	Addr      common.Address
+	IsManager bool
+}
+
+func (m *MethodSetGasManagerInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodSetGasManager, m.Addr, m.IsManager)
+}
+
+func (m *MethodSetGasManagerInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodSetGasManager, m, payload)
+}
+
+type MethodIsGasManagerInput struct {
+	Addr common.Address
+}
+
+func (m *MethodIsGasManagerInput) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodIsGasManager, m.Addr)
+}
+
+func (m *MethodIsGasManagerInput) Decode(payload []byte) error {
+	return utils.UnpackMethod(ABI, MethodIsGasManager, m, payload)
 }
