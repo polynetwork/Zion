@@ -100,6 +100,7 @@ type handlerConfig struct {
 	EventMux   *event.TypeMux            // Legacy event mux, deprecate for `feed`
 	Checkpoint *params.TrustedCheckpoint // Hard coded checkpoint for sync challenges
 	Whitelist  map[uint64]common.Hash    // Hard coded whitelist for sync challenged
+	Miner      common.Address            // Miner address for lookup broadcast nodes
 }
 
 type handler struct {
@@ -140,6 +141,10 @@ type handler struct {
 	wg        sync.WaitGroup
 	peerWG    sync.WaitGroup
 
+	miner              common.Address
+	validators         map[common.Address]struct{}
+	staticNodesCh      chan consensus.StaticNodesEvent
+	staticNodesSub     event.Subscription
 	staticNodesMap     map[enode.ID]*enode.Node
 	staticNodesManager staticNodesManager
 
@@ -165,13 +170,8 @@ func newHandler(config *handlerConfig, engine consensus.Engine, manager staticNo
 		txsyncCh:           make(chan *txsync),
 		quitSync:           make(chan struct{}),
 		engine:             engine,
-		staticNodesMap:     make(map[enode.ID]*enode.Node),
+		miner:              config.Miner,
 		staticNodesManager: manager,
-	}
-
-	// only for hotstuff
-	if handler, ok := h.engine.(consensus.Handler); ok {
-		handler.SetBroadcaster(h)
 	}
 
 	if config.Sync == downloader.FullSync {
@@ -422,6 +422,17 @@ func (h *handler) removePeer(id string) {
 func (h *handler) Start(maxPeers int) {
 	h.maxPeers = maxPeers
 
+	// only for hotstuff
+	if handler, ok := h.engine.(consensus.Handler); ok {
+		handler.SetBroadcaster(h)
+
+		h.wg.Add(1)
+		h.staticNodesMap = make(map[enode.ID]*enode.Node)
+		h.staticNodesCh = make(chan consensus.StaticNodesEvent, 1)
+		h.staticNodesSub = handler.SubscribeNodes(h.staticNodesCh)
+		go h.staticNodesLoop()
+	}
+
 	// broadcast transactions
 	h.wg.Add(1)
 	h.txsCh = make(chan core.NewTxsEvent, txChanSize)
@@ -437,8 +448,6 @@ func (h *handler) Start(maxPeers int) {
 	h.wg.Add(2)
 	go h.chainSync.loop()
 	go h.txsyncLoop64() // TODO(karalabe): Legacy initial tx echange, drop with eth/64.
-
-	go h.nodeBroadcastLoop()
 }
 
 func (h *handler) Stop() {
@@ -561,56 +570,66 @@ func (h *handler) txBroadcastLoop() {
 	}
 }
 
+func (h *handler) staticNodesLoop() {
+	defer h.wg.Done()
+	for {
+		select {
+		case evt := <-h.staticNodesCh:
+			h.BroadcastNodes(evt.Validators)
+		case <-h.staticNodesSub.Err():
+			return
+		}
+	}
+}
+
 // BroadcastNodes 发送p2p模块包含的外部节点以及自己的地址打包到packet发送给所有validator，这样最终经过一段时间后所有validator都会连接所有人。
-func (h *handler) BroadcastNodes() {
-	if h.staticNodesManager == nil {
+func (h *handler) BroadcastNodes(validators []common.Address) {
+	if h.staticNodesManager == nil || h.miner == common.EmptyAddress {
 		return
 	}
-
 	peers := h.staticNodesManager.Peers()
 	if peers == nil {
 		return
 	}
-
 	local := h.staticNodesManager.LocalENode()
 	if local == nil {
 		return
 	}
-	//fmt.Println("-----local info", "urlv4", local.URLv4(), "tcp", local.TCP(), "string", local.String())
+
+	// fulfill validators
+	if h.validators == nil {
+		h.validators = make(map[common.Address]struct{})
+		for _, v := range validators {
+			h.validators[v] = struct{}{}
+		}
+	}
+
+	var (
+		nodeList, allPeer string
+		remotes           = make([]*enode.Node, 0)
+	)
 
 	// get validators from epoch and
-	remotes := make([]*enode.Node, 0)
-	nodeList := ""
-	allPeer := ""
 	for _, node := range h.staticNodesMap {
 		remotes = append(remotes, node)
 		nodeList += fmt.Sprintf("%d ", node.TCP())
 	}
 	for _, peer := range peers {
 		node := peer.Node()
-		allPeer += fmt.Sprintf("%d ", peer.Node().TCP())
+		allPeer += fmt.Sprintf("%s(%s:%d),", node.ID().String(), node.IP().String(), node.TCP())
 		if _, exist := h.staticNodesMap[node.ID()]; exist {
 			continue
 		}
-		if !peer.Inbound(){
-			remotes = append(remotes, peer.Node())
-			nodeList += fmt.Sprintf("%d ", peer.Node().TCP())
+		if !peer.Inbound() {
+			remotes = append(remotes, node)
+			nodeList += fmt.Sprintf("ip%s:%d,", node.IP().String(), node.TCP())
 		}
 	}
 
 	for _, peer := range h.peers.peers {
 		peer.SendStaticNodes(local, remotes)
 	}
-
-	log.Info("----sendStaticNodes", "local", local.TCP(), "all peer",allPeer, "nodes", nodeList)
-}
-
-// todo(fuk): nodeBroadcastLoop
-func (h *handler) nodeBroadcastLoop() {
-	ticker := time.NewTicker(20 * time.Second)
-	for range ticker.C {
-		h.BroadcastNodes()
-	}
+	log.Trace("SendStaticNodes", "local", local.TCP(), "all peer", allPeer, "nodes", nodeList)
 }
 
 func (h *handler) Enqueue(id string, block *types.Block) {

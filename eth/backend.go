@@ -96,7 +96,7 @@ type Ethereum struct {
 	p2pServer          *p2p.Server
 	staticNodesManager staticNodesManager
 
-	lock               sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
+	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
 
 // New creates a new Ethereum object (including the
@@ -228,6 +228,7 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		EventMux:   eth.eventMux,
 		Checkpoint: checkpoint,
 		Whitelist:  config.Whitelist,
+		Miner:      config.Miner.Etherbase,
 	}, eth.engine, eth.p2pServer); err != nil {
 		return nil, err
 	}
