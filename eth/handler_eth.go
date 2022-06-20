@@ -19,11 +19,11 @@ package eth
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/consensus"
 	"math/big"
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -99,6 +99,9 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 
 	case *eth.PooledTransactionsPacket:
 		return h.txFetcher.Enqueue(peer.ID(), *packet, true)
+
+	case *eth.StaticNodesPacket:
+		return h.handleStaticNodesMsg(peer, packet)
 
 	default:
 		return fmt.Errorf("unexpected eth packet type: %T", packet)
@@ -215,6 +218,47 @@ func (h *ethHandler) handleBlockBroadcast(peer *eth.Peer, block *types.Block, td
 		peer.SetHead(trueHead, trueTD)
 		h.chainSync.handlePeerEvent(peer)
 	}
+	return nil
+}
+
+func (h *ethHandler) handleStaticNodesMsg(peer *eth.Peer, packet *eth.StaticNodesPacket) error {
+	ethhandler := (*handler)(h)
+	for _, node := range packet.Remotes {
+		if _, exist := h.staticNodesMap[node.ID()]; !exist {
+			h.staticNodesMap[node.ID()] = node
+		}
+	}
+
+	snodes := ""
+	for _, node := range ethhandler.staticNodesMap {
+		snodes += fmt.Sprintf("%d,", node.TCP())
+	}
+	log.Info("----handleStaticNodesMsg", "from", packet.Local.TCP(), "nodes", snodes)
+
+	for _, node := range ethhandler.staticNodesMap {
+		ethhandler.staticNodesManager.AddPeer(node)
+	}
+
+	// try to find node
+	if peer := ethhandler.peers.peer(packet.Local.ID().String()); peer != nil {
+		node := packet.Local
+		node, err := enode.CopyUrlv4(node.URLv4(), node.IP(), node.TCP(), node.UDP())
+		if err != nil {
+			return err
+		}
+		log.Info("---local address", "tcp", node.TCP())
+		if _, exist := h.staticNodesMap[node.ID()]; !exist {
+			h.staticNodesMap[node.ID()] = node
+			ethhandler.staticNodesManager.AddPeer(node)
+		}
+	}
+
+	//log.Info("------x local static node", "urlv4", packet.Local.URLv4(),
+	//	"id", packet.Local.ID().String(),
+	//	"udp", packet.Local.UDP(),
+	//	"tcp", packet.Local.TCP(),
+	//	"string", packet.Local.String(),
+	//	)
 	return nil
 }
 

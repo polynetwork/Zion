@@ -145,6 +145,7 @@ func (s *backend) Gossip(valSet hotstuff.ValidatorSet, payload []byte) error {
 	}
 	if s.broadcaster != nil && len(targets) > 0 {
 		ps := s.broadcaster.FindPeers(targets)
+		//fmt.Println("-------gossip find peers", "length", len(ps))
 		for addr, p := range ps {
 			ms, ok := s.recentMessages.Get(addr)
 			var m *lru.ARCCache

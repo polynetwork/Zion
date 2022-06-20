@@ -19,6 +19,7 @@ package eth
 import (
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"io"
 	"math/big"
 
@@ -46,7 +47,7 @@ var ProtocolVersions = []uint{HOTSTUFF}
 
 // protocolLengths are the number of implemented message corresponding to
 // different protocol versions.
-var protocolLengths = map[uint]uint64{ETH66: 17, ETH65: 17, HOTSTUFF: 18}
+var protocolLengths = map[uint]uint64{ETH66: 17, ETH65: 17, HOTSTUFF: 34}
 
 // maxMessageSize is the maximum cap on the size of a protocol message.
 const maxMessageSize = 10 * 1024 * 1024
@@ -70,6 +71,9 @@ const (
 	NewPooledTransactionHashesMsg = 0x08
 	GetPooledTransactionsMsg      = 0x09
 	PooledTransactionsMsg         = 0x0a
+
+	// Protocol messages overloaded in hotstuff
+	StaticNodesMsg = 0x21
 )
 
 var (
@@ -323,6 +327,52 @@ type PooledTransactionsRLPPacket66 struct {
 	PooledTransactionsRLPPacket
 }
 
+// StaticNodesPacket is the network packet for static-nodes distribution.
+type StaticNodesPacket struct {
+	Local   *enode.Node
+	Remotes []*enode.Node
+}
+
+func (p *StaticNodesPacket) EncodeRLP(w io.Writer) error {
+	local, err := p.Local.MarshalText()
+	if err != nil {
+		return err
+	}
+	remotes := make([][]byte, 0)
+	for _, v := range p.Remotes {
+		enc, err := v.MarshalText()
+		if err != nil {
+			return err
+		}
+		remotes = append(remotes, enc)
+	}
+	return rlp.Encode(w, []interface{}{local, remotes})
+}
+
+func (p *StaticNodesPacket) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Local   []byte
+		Remotes [][]byte
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	p.Local = new(enode.Node)
+	if err := p.Local.UnmarshalText(data.Local); err != nil {
+		return err
+	}
+	p.Remotes = make([]*enode.Node, 0)
+	for _, v := range data.Remotes {
+		node := new(enode.Node)
+		if err := node.UnmarshalText(v); err != nil {
+			return err
+		}
+		p.Remotes = append(p.Remotes, node)
+	}
+	return nil
+}
+
 func (*StatusPacket) Name() string { return "Status" }
 func (*StatusPacket) Kind() byte   { return StatusMsg }
 
@@ -367,3 +417,6 @@ func (*GetPooledTransactionsPacket) Kind() byte   { return GetPooledTransactions
 
 func (*PooledTransactionsPacket) Name() string { return "PooledTransactions" }
 func (*PooledTransactionsPacket) Kind() byte   { return PooledTransactionsMsg }
+
+func (*StaticNodesPacket) Name() string { return "StaticNodes" }
+func (*StaticNodesPacket) Kind() byte   { return StaticNodesMsg }

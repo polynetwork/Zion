@@ -101,6 +101,26 @@ func NewV4(pubkey *ecdsa.PublicKey, ip net.IP, tcp, udp int) *Node {
 	return n
 }
 
+func CopyUrlv4(rawurl string, ip net.IP, tcp, udp int) (*Node, error) {
+	var id               *ecdsa.PublicKey
+
+	u, err := url.Parse(rawurl)
+	if err != nil {
+		return nil, err
+	}
+	if u.Scheme != "enode" {
+		return nil, errors.New("invalid URL scheme, want \"enode\"")
+	}
+	// Parse the Node ID from the user portion.
+	if u.User == nil {
+		return nil, errors.New("does not contain node ID")
+	}
+	if id, err = parsePubkey(u.User.String()); err != nil {
+		return nil, fmt.Errorf("invalid public key (%v)", err)
+	}
+	return NewV4(id, ip, tcp, udp), nil
+}
+
 // isNewV4 returns true for nodes created by NewV4.
 func isNewV4(n *Node) bool {
 	var k s256raw

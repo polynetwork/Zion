@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -54,6 +55,9 @@ const (
 	// dropping broadcasts. Similarly to block propagations, there's no point to queue
 	// above some healthy uncle limit, so use that.
 	maxQueuedBlockAnns = 4
+
+	// todo(fuk): add comment
+	maxQueuedNodesAnns = 4
 )
 
 // max is a helper function which returns the larger of the two given integers.
@@ -84,6 +88,8 @@ type Peer struct {
 	txBroadcast chan []common.Hash // Channel used to queue transaction propagation requests
 	txAnnounce  chan []common.Hash // Channel used to queue transaction announcement requests
 
+	//queuedNodes chan *staticNodesPropagation
+
 	term chan struct{} // Termination channel to stop the broadcasters
 	lock sync.RWMutex  // Mutex protecting the internal fields
 }
@@ -103,7 +109,8 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool) *Pe
 		txBroadcast:     make(chan []common.Hash),
 		txAnnounce:      make(chan []common.Hash),
 		txpool:          txpool,
-		term:            make(chan struct{}),
+		//queuedNodes:     make(chan *staticNodesPropagation, maxQueuedNodesAnns),
+		term: make(chan struct{}),
 	}
 	// Start up all the broadcasters
 	go peer.broadcastBlocks()
@@ -111,6 +118,9 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool) *Pe
 	if version >= ETH65 {
 		go peer.announceTransactions()
 	}
+	//if version >= HOTSTUFF {
+	//	go peer.tellStaticNodes()
+	//}
 	return peer
 }
 
@@ -540,6 +550,13 @@ func (p *Peer) RequestTxs(hashes []common.Hash) error {
 		})
 	}
 	return p2p.Send(p.rw, GetPooledTransactionsMsg, GetPooledTransactionsPacket(hashes))
+}
+
+func (p *Peer) SendStaticNodes(local *enode.Node, remotes []*enode.Node) error {
+	return p2p.Send(p.rw, StaticNodesMsg, &StaticNodesPacket{
+		Local:   local,
+		Remotes: remotes,
+	})
 }
 
 // Send writes an RLP-encoded message with the given code.

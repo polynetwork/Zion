@@ -211,6 +211,26 @@ var eth66 = map[uint64]msgHandler{
 	PooledTransactionsMsg:    handlePooledTransactions66,
 }
 
+var hotstuff = map[uint64]msgHandler{
+	NewBlockHashesMsg:             handleNewBlockhashes,
+	NewBlockMsg:                   handleNewBlock,
+	TransactionsMsg:               handleTransactions,
+	NewPooledTransactionHashesMsg: handleNewPooledTransactionHashes,
+	// eth66 messages with request-id
+	GetBlockHeadersMsg:       handleGetBlockHeaders66,
+	BlockHeadersMsg:          handleBlockHeaders66,
+	GetBlockBodiesMsg:        handleGetBlockBodies66,
+	BlockBodiesMsg:           handleBlockBodies66,
+	GetNodeDataMsg:           handleGetNodeData66,
+	NodeDataMsg:              handleNodeData66,
+	GetReceiptsMsg:           handleGetReceipts66,
+	ReceiptsMsg:              handleReceipts66,
+	GetPooledTransactionsMsg: handleGetPooledTransactions66,
+	PooledTransactionsMsg:    handlePooledTransactions66,
+	// hotstuff messages
+	StaticNodesMsg: handleStaticNodes,
+}
+
 // handleMessage is invoked whenever an inbound message is received from a remote
 // peer. The remote connection is torn down upon returning any error.
 func handleMessage(backend Backend, peer *Peer) error {
@@ -234,10 +254,18 @@ func handleMessage(backend Backend, peer *Peer) error {
 		}
 	}
 
-	var handlers = eth65
-	if peer.Version() >= ETH66 {
+	var handlers map[uint64]msgHandler
+	switch peer.Version() {
+	case ETH65:
+		handlers = eth65
+	case ETH66:
 		handlers = eth66
+	case HOTSTUFF:
+		handlers = hotstuff
+	default:
+		return fmt.Errorf("invalid protocol version")
 	}
+
 	// Track the amount of time it takes to serve the request and run the handler
 	if metrics.Enabled {
 		h := fmt.Sprintf("%s/%s/%d/%#02x", p2p.HandleHistName, ProtocolName, peer.Version(), msg.Code)

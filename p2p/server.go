@@ -296,6 +296,10 @@ func (srv *Server) LocalNode() *enode.LocalNode {
 	return srv.localnode
 }
 
+func (srv *Server) LocalENode() *enode.Node {
+	return srv.localnode.Node()
+}
+
 // Peers returns all connected peers.
 func (srv *Server) Peers() []*Peer {
 	var ps []*Peer
