@@ -23,6 +23,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"github.com/ethereum/go-ethereum/crypto"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
@@ -224,29 +226,30 @@ func (h *ethHandler) handleBlockBroadcast(peer *eth.Peer, block *types.Block, td
 func (h *ethHandler) handleStaticNodesMsg(peer *eth.Peer, packet *eth.StaticNodesPacket) error {
 	ethhandler := (*handler)(h)
 
-	process := func(node *enode.Node) {
-		if _, exist := h.staticNodesMap[node.ID()]; !exist {
-			ethhandler.staticNodesManager.AddPeer(node)
-			h.staticNodesMap[node.ID()] = node
-		}
-	}
-
-	for _, node := range packet.Remotes {
-		process(node)
-	}
-
-	from := packet.Local
-	if _, exist := h.staticNodesMap[from.ID()]; exist {
+	if h.validators == nil || len(h.validators) < 1 {
 		return nil
 	}
 
-	if peer := ethhandler.peers.peer(from.ID().String()); peer != nil {
-		node, err := enode.CopyUrlv4(from.URLv4(), from.IP(), from.TCP(), from.UDP())
-		if err != nil {
-			return err
-		}
-		process(node)
+	// parse urlv4 to enode and append it in remote node list
+	from := packet.Local
+	node, err := enode.CopyUrlv4(from.URLv4(), from.IP(), from.TCP(), from.UDP())
+	if err != nil {
+		return err
 	}
+	packet.Remotes = append(packet.Remotes, node)
+
+	// filter node that not validator and not connected with local peer
+	nodestr := ""
+	for _, node := range packet.Remotes {
+		nodestr += fmt.Sprintf("%d,", node.TCP())
+		addr := crypto.PubkeyToAddress(*node.Pubkey())
+		if _, exist := h.validators[addr]; exist {
+			if _, exist := h.peers.peers[node.ID().String()]; !exist {
+				ethhandler.staticNodesManager.AddPeer(node)
+			}
+		}
+	}
+	log.Info("-----receiveRemoteNodes", "list", nodestr)
 
 	return nil
 }

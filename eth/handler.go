@@ -54,6 +54,10 @@ const (
 
 var (
 	syncChallengeTimeout = 15 * time.Second // Time allowance for a node to reply to the sync progress challenge
+
+	broadcastDuration   = 10 * time.Second // Time duration for broadcast static-nodes
+	broadcastLastTime   = 5 * time.Minute  // Last time for broadcast static-nodes
+	broadcastChCapacity = 16               // Capacity for broadcast channel
 )
 
 // txPool defines the methods needed from a transaction pool implementation to
@@ -143,9 +147,9 @@ type handler struct {
 
 	miner              common.Address
 	validators         map[common.Address]struct{}
+	validatorsMu       sync.Mutex
 	staticNodesCh      chan consensus.StaticNodesEvent
 	staticNodesSub     event.Subscription
-	staticNodesMap     map[enode.ID]*enode.Node
 	staticNodesManager staticNodesManager
 
 	// hotstuff
@@ -427,10 +431,9 @@ func (h *handler) Start(maxPeers int) {
 		handler.SetBroadcaster(h)
 
 		h.wg.Add(1)
-		h.staticNodesMap = make(map[enode.ID]*enode.Node)
-		h.staticNodesCh = make(chan consensus.StaticNodesEvent, 1)
+		h.staticNodesCh = make(chan consensus.StaticNodesEvent, broadcastChCapacity)
 		h.staticNodesSub = handler.SubscribeNodes(h.staticNodesCh)
-		go h.staticNodesLoop()
+		go h.staticNodesBroadcastLoop()
 	}
 
 	// broadcast transactions
@@ -451,8 +454,9 @@ func (h *handler) Start(maxPeers int) {
 }
 
 func (h *handler) Stop() {
-	h.txsSub.Unsubscribe()        // quits txBroadcastLoop
-	h.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
+	h.txsSub.Unsubscribe()         // quits txBroadcastLoop
+	h.minedBlockSub.Unsubscribe()  // quits blockBroadcastLoop
+	h.staticNodesSub.Unsubscribe() // quits staticNodesLoop
 
 	// Quit chainSync and txsync64.
 	// After this is done, no new peers will be accepted.
@@ -570,8 +574,13 @@ func (h *handler) txBroadcastLoop() {
 	}
 }
 
-func (h *handler) staticNodesLoop() {
+func (h *handler) staticNodesBroadcastLoop() {
 	defer h.wg.Done()
+
+	if h.staticNodesManager == nil || h.miner == common.EmptyAddress {
+		return
+	}
+
 	for {
 		select {
 		case evt := <-h.staticNodesCh:
@@ -584,9 +593,6 @@ func (h *handler) staticNodesLoop() {
 
 // BroadcastNodes 发送p2p模块包含的外部节点以及自己的地址打包到packet发送给所有validator，这样最终经过一段时间后所有validator都会连接所有人。
 func (h *handler) BroadcastNodes(validators []common.Address) {
-	if h.staticNodesManager == nil || h.miner == common.EmptyAddress {
-		return
-	}
 	peers := h.staticNodesManager.Peers()
 	if peers == nil {
 		return
@@ -597,39 +603,58 @@ func (h *handler) BroadcastNodes(validators []common.Address) {
 	}
 
 	// fulfill validators
-	if h.validators == nil {
-		h.validators = make(map[common.Address]struct{})
-		for _, v := range validators {
-			h.validators[v] = struct{}{}
-		}
+	h.validatorsMu.Lock()
+	h.validators = make(map[common.Address]struct{})
+	for _, v := range validators {
+		h.validators[v] = struct{}{}
+	}
+	h.validatorsMu.Unlock()
+
+	// do not need to broadcast static-nodes if miner is not validator
+	if _, exist := h.validators[h.miner]; !exist {
+		return
 	}
 
-	var (
-		nodeList, allPeer string
-		remotes           = make([]*enode.Node, 0)
-	)
+	timer := time.NewTimer(broadcastDuration)
+	done := make(chan struct{})
+	time.AfterFunc(broadcastLastTime, func() {
+		close(done)
+	})
 
-	// get validators from epoch and
-	for _, node := range h.staticNodesMap {
-		remotes = append(remotes, node)
-		nodeList += fmt.Sprintf("%d ", node.TCP())
-	}
-	for _, peer := range peers {
-		node := peer.Node()
-		allPeer += fmt.Sprintf("%s(%s:%d),", node.ID().String(), node.IP().String(), node.TCP())
-		if _, exist := h.staticNodesMap[node.ID()]; exist {
-			continue
-		}
-		if !peer.Inbound() {
-			remotes = append(remotes, node)
-			nodeList += fmt.Sprintf("ip%s:%d,", node.IP().String(), node.TCP())
-		}
-	}
+	for {
+		select {
+		case <-timer.C:
+			var (
+				addNodes, delNodes = make([]*enode.Node, 0), make([]*enode.Node, 0)
+				addStr, delStr     string
+			)
 
-	for _, peer := range h.peers.peers {
-		peer.SendStaticNodes(local, remotes)
+			// only inbound connections' remote address contains its own p2p server listening tcp/udp port.
+			for _, peer := range peers {
+				node := peer.Node()
+				addr := crypto.PubkeyToAddress(*node.Pubkey())
+				if _, exist := h.validators[addr]; !exist {
+					delNodes = append(delNodes, node)
+					//h.staticNodesManager.RemovePeer(node)
+					delStr += fmt.Sprintf("%s:%d,", node.IP().String(), node.TCP())
+				} else if !peer.Inbound() {
+					addNodes = append(addNodes, node)
+					addStr += fmt.Sprintf("%s:%d,", node.IP().String(), node.TCP())
+				}
+			}
+
+			for _, peer := range h.peers.peers {
+				peer.SendStaticNodes(local, addNodes)
+			}
+			timer.Reset(broadcastDuration)
+
+			log.Trace("SendStaticNodes", "local", local.TCP(), "add", addStr, "del", delStr)
+
+		case <-done:
+			// todo(fuk): p2p module persistence new static nodes in leveldb
+			return
+		}
 	}
-	log.Trace("SendStaticNodes", "local", local.TCP(), "all peer", allPeer, "nodes", nodeList)
 }
 
 func (h *handler) Enqueue(id string, block *types.Block) {
