@@ -21,12 +21,17 @@ package node_manager
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"math/big"
 )
 
 func deposit(s *native.NativeContract, from common.Address, amount *big.Int, validator *Validator) error {
 	height := s.ContractRef().BlockHeight()
+	dec, err := hexutil.Decode(validator.ConsensusPubkey)
+	if err != nil {
+		return fmt.Errorf("deposit, decode pubkey error: %v", err)
+	}
 	// get deposit info
 	stakeInfo, found, err := GetStakeInfo(s, from, validator.ConsensusPubkey)
 	if err != nil {
@@ -34,9 +39,15 @@ func deposit(s *native.NativeContract, from common.Address, amount *big.Int, val
 	}
 	// call the appropriate hook if present
 	if found {
-		err = BeforeStakeModified(s, from, validator)
+		err = BeforeStakeModified(s, validator, stakeInfo)
+		if err != nil {
+			return fmt.Errorf("deposit, BeforeStakeModified error: %v", err)
+		}
 	} else {
 		err = BeforeStakeCreated(s, validator)
+		if err != nil {
+			return fmt.Errorf("deposit, BeforeStakeCreated error: %v", err)
+		}
 	}
 	// update stake info
 	stakeInfo.Amount = new(big.Int).Add(stakeInfo.Amount, amount)
@@ -67,20 +78,36 @@ func deposit(s *native.NativeContract, from common.Address, amount *big.Int, val
 		return fmt.Errorf("invalid status")
 	}
 
+	// Call the after-stake hook
+	if err = AfterStakeModified(s, stakeInfo, dec); err != nil {
+		return err
+	}
+
 	return nil
 }
 
 func unStake(s *native.NativeContract, from common.Address, amount *big.Int, validator *Validator) error {
 	height := s.ContractRef().BlockHeight()
+	dec, err := hexutil.Decode(validator.ConsensusPubkey)
+	if err != nil {
+		return fmt.Errorf("unStake, decode pubkey error: %v", err)
+	}
 	globalConfig, err := GetGlobalConfig(s)
 	if err != nil {
 		return fmt.Errorf("unStake, GetGlobalConfig error: %v", err)
 	}
 
-	// store deposit info
-	err = withdrawStakeInfo(s, from, validator.ConsensusPubkey, amount)
+	stakeInfo, found, err := GetStakeInfo(s, from, validator.ConsensusPubkey)
 	if err != nil {
-		return fmt.Errorf("unStake, depositStakeInfo error: %v", err)
+		return fmt.Errorf("unStake, get stake info error: %v", err)
+	}
+	if !found {
+		return fmt.Errorf("unStake, stake info nit exist")
+	}
+
+	err = BeforeStakeModified(s, validator, stakeInfo)
+	if err != nil {
+		return fmt.Errorf("unStake, BeforeStakeModified error: %v", err)
 	}
 
 	// update lock and unlock token pool
@@ -125,6 +152,26 @@ func unStake(s *native.NativeContract, from common.Address, amount *big.Int, val
 		err = addUnlockingInfo(s, from, unlockingStake)
 		if err != nil {
 			return fmt.Errorf("unStake, addUnlockingInfo error: %v", err)
+		}
+	}
+
+	if stakeInfo.Amount.Cmp(amount) == -1 {
+		return fmt.Errorf("unStake, stake info is less than amount")
+	}
+	stakeInfo.Amount = new(big.Int).Sub(stakeInfo.Amount, amount)
+	if stakeInfo.Amount.Sign() == 0 {
+		err = delStakeInfo(s, from, validator.ConsensusPubkey)
+		if err != nil {
+			return fmt.Errorf("unStake, delete stake info error: %v", err)
+		}
+	} else {
+		err = setStakeInfo(s, stakeInfo)
+		if err != nil {
+			return fmt.Errorf("unStake, set stake info error: %v", err)
+		}
+		// Call the after-stake hook
+		if err = AfterStakeModified(s, stakeInfo, dec); err != nil {
+			return err
 		}
 	}
 

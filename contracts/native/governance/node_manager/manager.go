@@ -61,6 +61,8 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Register(MethodChangeEpoch, ChangeEpoch)
 
 	s.Register(MethodWithdrawStakeRewards, WithdrawStakeRewards)
+	s.Register(MethodWithdrawCommission, WithdrawCommission)
+	s.Register(MethodBeginBlock, BeginBlock)
 }
 
 func CreateValidator(s *native.NativeContract) ([]byte, error) {
@@ -125,16 +127,17 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 
 	// store validator
 	validator := &Validator{
-		StakeAddress:    caller,
-		ConsensusPubkey: params.ConsensusPubkey,
-		ProposalAddress: params.ProposalAddress,
-		Commission:      &Commission{Rate: params.Commission, UpdateHeight: height},
-		Status:          Unlock,
-		Jailed:          false,
-		UnlockHeight:    common.Big0,
-		TotalStake:      params.InitStake,
-		SelfStake:       params.InitStake,
-		Desc:            params.Desc,
+		StakeAddress:     caller,
+		ConsensusPubkey:  params.ConsensusPubkey,
+		ConsensusAddress: addr,
+		ProposalAddress:  params.ProposalAddress,
+		Commission:       &Commission{Rate: params.Commission, UpdateHeight: height},
+		Status:           Unlock,
+		Jailed:           false,
+		UnlockHeight:     common.Big0,
+		TotalStake:       params.InitStake,
+		SelfStake:        params.InitStake,
+		Desc:             params.Desc,
 	}
 	err = setValidator(s, validator)
 	if err != nil {
@@ -203,10 +206,17 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 		if params.Commission.Sign() == -1 {
 			return nil, fmt.Errorf("UpdateValidator, commission must be positive")
 		}
+		if params.Commission.Cmp(new(big.Int).SetUint64(100)) == 1 {
+			return nil, fmt.Errorf("UpdateValidator, commission can not more than 100")
+		}
 		if params.Commission.Cmp(globalConfig.MaxCommission) == 1 {
 			return nil, fmt.Errorf("UpdateValidator, commission can not greater than globalConfig.MaxCommission: %s",
 				globalConfig.MaxCommission.String())
 		}
+		if height.Cmp(new(big.Int).Add(validator.Commission.UpdateHeight, globalConfig.BlockPerEpoch)) < 0 {
+			return nil, fmt.Errorf("UpdateValidator, commission can not changed in one epoch twice")
+		}
+
 		validator.Commission = &Commission{Rate: params.Commission, UpdateHeight: height}
 	}
 
@@ -461,14 +471,9 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawValidator, unStake error: %v", err)
 	}
 
-	// withdraw commission
-	accumulatedCommission, err := GetAccumulatedCommission(s, dec)
+	_, err = withdrawCommission(s, caller, dec)
 	if err != nil {
-		return nil, fmt.Errorf("WithdrawValidator, GetAccumulatedCommission error: %v", err)
-	}
-	err = nativeTransfer(s, this, caller, accumulatedCommission.Amount)
-	if err != nil {
-		return nil, fmt.Errorf("WithdrawValidator, nativeTransfer commission error: %v", err)
+		return nil, fmt.Errorf("WithdrawValidator, withdrawCommission error: %v", err)
 	}
 	delAccumulatedCommission(s, dec)
 
@@ -538,7 +543,8 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	})
 	epochInfo := &EpochInfo{
 		ID:          new(big.Int).Add(currentEpochInfo.ID, common.Big1),
-		Validators:  make([]*Validator, 0, globalConfig.ConsensusValidatorNum),
+		Validators:  make([]*Peer, 0, globalConfig.ConsensusValidatorNum),
+		Voters:      make([]*Peer, 0, globalConfig.VoterValidatorNum),
 		StartHeight: height,
 	}
 	// update validator status
@@ -549,7 +555,12 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		case validator.IsUnlocking(height), validator.IsUnlocked(height):
 			validator.Status = Lock
 		}
-		epochInfo.Validators = append(epochInfo.Validators, validator)
+
+		peer := &Peer{
+			PubKey:  validator.ConsensusPubkey,
+			Address: validator.ConsensusAddress,
+		}
+		epochInfo.Validators = append(epochInfo.Validators, peer)
 	}
 	for i := globalConfig.ConsensusValidatorNum; i < uint64(len(validatorList)); i++ {
 		validator := validatorList[i]
@@ -559,6 +570,15 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 			validator.UnlockHeight = new(big.Int).Add(height, globalConfig.BlockPerEpoch)
 		case validator.IsUnlocking(height), validator.IsUnlocked(height):
 		}
+	}
+	//update voters
+	for i := 0; uint64(i) < globalConfig.VoterValidatorNum; i++ {
+		validator := validatorList[i]
+		peer := &Peer{
+			PubKey:  validator.ConsensusPubkey,
+			Address: validator.ConsensusAddress,
+		}
+		epochInfo.Validators = append(epochInfo.Voters, peer)
 	}
 
 	// update epoch info
@@ -580,7 +600,7 @@ func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 
 	params := &WithdrawStakeRewardsParam{}
 	if err := utils.UnpackMethod(ABI, MethodWithdrawStakeRewards, params, ctx.Payload); err != nil {
-		return nil, fmt.Errorf("CreateValidator, unpack params error: %v", err)
+		return nil, fmt.Errorf("WithdrawStakeRewards, unpack params error: %v", err)
 	}
 	dec, err := hexutil.Decode(params.ConsensusPubkey)
 	if err != nil {
@@ -591,4 +611,130 @@ func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawStakeRewards, node_manager.GetValidator error: %v", err)
 	}
+	if !found {
+		return nil, fmt.Errorf("WithdrawStakeRewards, validator not found")
+	}
+	if caller != validator.StakeAddress {
+		return nil, fmt.Errorf("WithdrawStakeRewards, caller is not stake address error: %v", err)
+	}
+	stakeInfo, found, err := GetStakeInfo(s, caller, params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawStakeRewards, GetStakeInfo error: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("WithdrawStakeRewards, stake info not found")
+	}
+
+	rewards, err := withdrawStakeRewards(s, validator, stakeInfo)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawStakeRewards, withdrawDelegationRewards error: %v", err)
+	}
+
+	// reinitialize the delegation
+	err = initializeStake(s, stakeInfo, dec)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawStakeRewards, initializeStake error: %v", err)
+	}
+
+	err = s.AddNotify(ABI, []string{MethodWithdrawStakeRewards}, rewards.String())
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawStakeRewards, AddNotify error: %v", err)
+	}
+	return utils.ByteSuccess, nil
+}
+
+func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	caller := ctx.Caller
+
+	params := &WithdrawCommissionParam{}
+	if err := utils.UnpackMethod(ABI, MethodWithdrawCommission, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("WithdrawCommission, unpack params error: %v", err)
+	}
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawCommission, decode pubkey error: %v", err)
+	}
+	validator, found, err := GetValidator(s, dec)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawCommission, GetValidator error: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("WithdrawCommission, can not find validator")
+	}
+	if validator.StakeAddress != caller {
+		return nil, fmt.Errorf("WithdrawCommission, caller is not stake address")
+	}
+
+	commission, err := withdrawCommission(s, caller, dec)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawValidator, withdrawCommission error: %v", err)
+	}
+	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{common.Big0})
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawValidator, setAccumulatedCommission error: %v", err)
+	}
+
+	err = s.AddNotify(ABI, []string{MethodWithdrawCommission}, commission.String())
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawStakeRewards, AddNotify error: %v", err)
+	}
+	return utils.ByteSuccess, nil
+}
+
+func BeginBlock(s *native.NativeContract) ([]byte, error) {
+	// contract balance = lockpool + unlockpool + outstanding + new block reward
+	balance := s.StateDB().GetBalance(this)
+
+	lockPool, err := GetLockPool(s)
+	if err != nil {
+		return nil, fmt.Errorf("BeginBlock, GetLockPool error: %v", err)
+	}
+	unlockPool, err := GetUnlockPool(s)
+	if err != nil {
+		return nil, fmt.Errorf("BeginBlock, GetUnlockPool error: %v", err)
+	}
+	outstanding, err := GetOutstandingRewards(s)
+	if err != nil {
+		return nil, fmt.Errorf("BeginBlock, GetOutstandingRewards error: %v", err)
+	}
+
+	// cal rewards
+	temp := new(big.Int).Add(outstanding.Rewards, new(big.Int).Add(lockPool, unlockPool))
+	newRewards := new(big.Int).Sub(balance, temp)
+	if newRewards.Sign() < 0 {
+		panic("new block rewards is negative")
+	}
+
+	epochInfo, err := GetCurrentEpochInfo(s)
+	if err != nil {
+		return nil, fmt.Errorf("BeginBlock, GetCurrentEpochInfo error: %v", err)
+	}
+	validatorRewards := new(big.Int).Div(newRewards, new(big.Int).SetUint64(uint64(len(epochInfo.Validators))))
+	for _, v := range epochInfo.Validators {
+		dec, err := hexutil.Decode(v.PubKey)
+		if err != nil {
+			return nil, fmt.Errorf("BeginBlock, decode pubkey error: %v", err)
+		}
+		validator, found, err := GetValidator(s, dec)
+		if err != nil {
+			return nil, fmt.Errorf("BeginBlock, GetValidator error: %v", err)
+		}
+		if !found {
+			panic("validator is not found")
+		}
+		err = allocateRewardsToValidator(s, validator, validatorRewards)
+		if err != nil {
+			return nil, fmt.Errorf("BeginBlock, allocateRewardsToValidator error: %v", err)
+		}
+	}
+
+	// update outstanding rewards
+	outstanding.Rewards = new(big.Int).Add(outstanding.Rewards, newRewards)
+	err = setOutstandingRewards(s, outstanding)
+	if err != nil {
+		return nil, fmt.Errorf("BeginBlock, setOutstandingRewards error: %v", err)
+	}
+
+	return utils.ByteSuccess, nil
 }

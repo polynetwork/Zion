@@ -31,9 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 )
 
-const (
-	StartEpochID uint64 = 1 // epoch started from 1, NOT 0!
-)
+var StartEpochID = common.Big1 // epoch started from 1, NOT 0!
 
 var ErrEof = errors.New("EOF")
 
@@ -51,6 +49,7 @@ const (
 	SKP_ACCUMULATED_COMMISSION        = "st_accumulated_commission"
 	SKP_VALIDATOR_ACCUMULATED_REWARDS = "st_validator_accumulated_rewards"
 	SKP_VALIDATOR_OUTSTANDING_REWARDS = "st_validator_outstanding_rewards"
+	SKP_OUTSTANDING_REWARDS           = "st_outstanding_rewards"
 	SKP_VALIDATOR_SNAPSHOT_REWARDS    = "st_validator_snapshot_rewards"
 	SKP_STAKE_STARTING_INFO           = "st_stake_starting_info"
 )
@@ -139,6 +138,34 @@ func delValidatorOutstandingRewards(s *native.NativeContract, dec []byte) {
 	del(s, key)
 }
 
+func setOutstandingRewards(s *native.NativeContract, outstandingRewards *OutstandingRewards) error {
+	key := outstandingRewardsKey()
+	store, err := rlp.EncodeToBytes(outstandingRewards)
+	if err != nil {
+		return fmt.Errorf("setOutstandingRewards, serialize outstandingRewards error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func GetOutstandingRewards(s *native.NativeContract) (*OutstandingRewards, error) {
+	outstandingRewards := &OutstandingRewards{
+		Rewards: common.Big0,
+	}
+	key := outstandingRewardsKey()
+	store, err := get(s, key)
+	if err == ErrEof {
+		return outstandingRewards, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("GetOutstandingRewards, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, outstandingRewards); err != nil {
+		return nil, fmt.Errorf("GetOutstandingRewards, deserialize outstandingRewards error: %v", err)
+	}
+	return outstandingRewards, nil
+}
+
 func increaseReferenceCount(s *native.NativeContract, dec []byte, period uint64) error {
 	validatorSnapshotRewards, err := GetValidatorSnapshotRewards(s, dec, period)
 	if err != nil {
@@ -189,9 +216,6 @@ func GetValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period ui
 	validatorSnapshotRewards := &ValidatorSnapshotRewards{}
 	key := validatorSnapshotRewardsKey(dec, period)
 	store, err := get(s, key)
-	if err == ErrEof {
-		return validatorSnapshotRewards, nil
-	}
 	if err != nil {
 		return nil, fmt.Errorf("GetValidatorSnapshotRewards, get store error: %v", err)
 	}
@@ -206,8 +230,8 @@ func delValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period ui
 	del(s, key)
 }
 
-func setStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, stakeStartingInfo *StakeStartingInfo) error {
-	key := stakeStartingInfoKey(stakeAddress)
+func setStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, dec []byte, stakeStartingInfo *StakeStartingInfo) error {
+	key := stakeStartingInfoKey(stakeAddress, dec)
 	store, err := rlp.EncodeToBytes(stakeStartingInfo)
 	if err != nil {
 		return fmt.Errorf("setStakeStartingInfo, serialize stakeStartingInfo error: %v", err)
@@ -216,9 +240,9 @@ func setStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address,
 	return nil
 }
 
-func GetStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address) (*StakeStartingInfo, error) {
+func GetStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, dec []byte) (*StakeStartingInfo, error) {
 	stakeStartingInfo := &StakeStartingInfo{}
-	key := stakeStartingInfoKey(stakeAddress)
+	key := stakeStartingInfoKey(stakeAddress, dec)
 	store, err := get(s, key)
 	if err != nil {
 		return nil, fmt.Errorf("GetStakeStartingInfo, get store error: %v", err)
@@ -229,8 +253,8 @@ func GetStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address)
 	return stakeStartingInfo, nil
 }
 
-func delStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address) {
-	key := stakeStartingInfoKey(stakeAddress)
+func delStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, dec []byte) {
+	key := stakeStartingInfoKey(stakeAddress, dec)
 	del(s, key)
 }
 
@@ -438,32 +462,6 @@ func GetUnlockPool(s *native.NativeContract) (*big.Int, error) {
 	return new(big.Int).SetBytes(store), nil
 }
 
-func withdrawStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string, amount *big.Int) error {
-	stakeInfo, found, err := GetStakeInfo(s, stakeAddress, consensusPk)
-	if err != nil {
-		return fmt.Errorf("withdrawStakeInfo, get stake info error: %v", err)
-	}
-	if !found {
-		return fmt.Errorf("withdrawStakeInfo, stake info nit exist")
-	}
-	if stakeInfo.Amount.Cmp(amount) == -1 {
-		return fmt.Errorf("withdrawStakeInfo, stake info is less than amount")
-	}
-	stakeInfo.Amount = new(big.Int).Sub(stakeInfo.Amount, amount)
-	if stakeInfo.Amount.Sign() == 0 {
-		err = delStakeInfo(s, stakeAddress, consensusPk)
-		if err != nil {
-			return fmt.Errorf("withdrawStakeInfo, delete stake info error: %v", err)
-		}
-	} else {
-		err = setStakeInfo(s, stakeInfo)
-		if err != nil {
-			return fmt.Errorf("withdrawStakeInfo, set stake info error: %v", err)
-		}
-	}
-	return nil
-}
-
 func setStakeInfo(s *native.NativeContract, stakeInfo *StakeInfo) error {
 	dec, err := hexutil.Decode(stakeInfo.ConsensusPubkey)
 	if err != nil {
@@ -611,6 +609,20 @@ func setCurrentEpochInfo(s *native.NativeContract, epochInfo *EpochInfo) error {
 	return nil
 }
 
+func setGenesisEpochInfo(s *state.CacheDB, epochInfo *EpochInfo) error {
+	// set current epoch
+	key1 := currentEpochKey()
+	customSet(s, key1, epochInfo.ID.Bytes())
+	//set epoch info
+	key2 := epochInfoKey(epochInfo.ID)
+	store, err := rlp.EncodeToBytes(epochInfo)
+	if err != nil {
+		return fmt.Errorf("setGenesisEpochInfo, serialize epoch info error: %v", err)
+	}
+	customSet(s, key2, store)
+	return nil
+}
+
 func GetCurrentEpochInfo(s *native.NativeContract) (*EpochInfo, error) {
 	ID, err := GetCurrentEpoch(s)
 	if err != nil {
@@ -635,7 +647,7 @@ func setEpochInfo(s *native.NativeContract, epochInfo *EpochInfo) error {
 
 func GetEpochInfo(s *native.NativeContract, ID *big.Int) (*EpochInfo, error) {
 	epochInfo := &EpochInfo{
-		Validators: make([]*Validator, 0),
+		Validators: make([]*Peer, 0),
 	}
 	key := epochInfoKey(ID)
 	store, err := get(s, key)
@@ -739,10 +751,14 @@ func validatorOutstandingRewardsKey(dec []byte) []byte {
 	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_OUTSTANDING_REWARDS), dec)
 }
 
+func outstandingRewardsKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_OUTSTANDING_REWARDS))
+}
+
 func validatorSnapshotRewardsKey(dec []byte, period uint64) []byte {
 	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_SNAPSHOT_REWARDS), dec, utils.Uint64Bytes(period))
 }
 
-func stakeStartingInfoKey(stakeAddress common.Address) []byte {
-	return utils.ConcatKey(this, []byte(SKP_STAKE_STARTING_INFO), stakeAddress[:])
+func stakeStartingInfoKey(stakeAddress common.Address, dec []byte) []byte {
+	return utils.ConcatKey(this, []byte(SKP_STAKE_STARTING_INFO), stakeAddress[:], dec)
 }

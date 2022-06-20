@@ -85,6 +85,7 @@ type GenesisAccount struct {
 	Code       []byte                      `json:"code,omitempty"`
 	Storage    map[common.Hash]common.Hash `json:"storage,omitempty"`
 	Balance    *big.Int                    `json:"balance" gencodec:"required"`
+	Commission *big.Int                    `json:"commission" gencodec:"required"`
 	Nonce      uint64                      `json:"nonce,omitempty"`
 	PublicKey  []byte                      `json:"publicKey" gencodec:"required"`
 	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests

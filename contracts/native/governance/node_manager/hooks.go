@@ -33,19 +33,19 @@ func AfterValidatorCreated(s *native.NativeContract, validator *Validator) error
 	}
 
 	// set initial historical rewards (period 0) with reference count of 1
-	err = setValidatorSnapshotRewards(s, dec, 0, &ValidatorSnapshotRewards{new(big.Int), 1})
+	err = setValidatorSnapshotRewards(s, dec, 0, &ValidatorSnapshotRewards{common.Big0, 1})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorSnapshotRewards error: %v", err)
 	}
 
 	// set accumulate rewards (starting at period 1)
-	err = setValidatorAccumulatedRewards(s, dec, &ValidatorAccumulatedRewards{new(big.Int), 1})
+	err = setValidatorAccumulatedRewards(s, dec, &ValidatorAccumulatedRewards{common.Big0, 1})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorAccumulatedRewards error: %v", err)
 	}
 
 	// set accumulated commission
-	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{new(big.Int)})
+	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{common.Big0})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setAccumulatedCommission error: %v", err)
 	}
@@ -87,6 +87,7 @@ func AfterValidatorRemoved(s *native.NativeContract, validator *Validator) error
 
 	// clear snapshot rewards
 	delValidatorSnapshotRewards(s, dec, validatorAccumulatedRewards.Period-1)
+	return nil
 }
 
 func BeforeStakeCreated(s *native.NativeContract, validator *Validator) error {
@@ -94,6 +95,17 @@ func BeforeStakeCreated(s *native.NativeContract, validator *Validator) error {
 	return err
 }
 
-func BeforeStakeModified(s *native.NativeContract, stakeAddress common.Address, validator *Validator) error {
+func BeforeStakeModified(s *native.NativeContract, validator *Validator, stakeInfo *StakeInfo) error {
+	if _, err := withdrawStakeRewards(s, validator, stakeInfo); err != nil {
+		return err
+	}
+	return nil
+}
 
+func AfterStakeModified(s *native.NativeContract, stakeInfo *StakeInfo, dec []byte) error {
+	err := initializeStake(s, stakeInfo, dec)
+	if err != nil {
+		return fmt.Errorf("AfterStakeModified, initializeStake error: %v", err)
+	}
+	return nil
 }

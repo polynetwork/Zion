@@ -204,3 +204,23 @@ func (m *WithdrawStakeRewardsParam) DecodeRLP(s *rlp.Stream) error {
 	m.ConsensusPubkey = data.ConsensusPubkey
 	return nil
 }
+
+type WithdrawCommissionParam struct {
+	ConsensusPubkey string
+}
+
+func (m *WithdrawCommissionParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
+}
+
+func (m *WithdrawCommissionParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey = data.ConsensusPubkey
+	return nil
+}
