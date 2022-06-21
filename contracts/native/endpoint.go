@@ -47,7 +47,6 @@ func NewContractRef(
 	origin common.Address,
 	caller common.Address,
 	blockHeight *big.Int,
-	blockTime *big.Int,
 	txHash common.Hash,
 	suppliedGas uint64,
 	evmHandler EVMHandler) *ContractRef {
@@ -58,7 +57,6 @@ func NewContractRef(
 		origin:      origin,
 		caller:      caller,
 		blockHeight: blockHeight,
-		blockTime:   blockTime,
 		txHash:      txHash,
 		gasLeft:     suppliedGas,
 		evmHandler:  evmHandler,

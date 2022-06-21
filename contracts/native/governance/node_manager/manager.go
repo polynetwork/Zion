@@ -33,13 +33,7 @@ import (
 
 var (
 	gasTable = map[string]uint64{
-		MethodName:             0,
-		MethodPropose:          30000,
-		MethodVote:             30000,
-		MethodEpoch:            0,
-		MethodGetEpochByID:     0,
-		MethodProof:            0,
-		MethodGetChangingEpoch: 0,
+	// TODO: add gas table
 	}
 )
 

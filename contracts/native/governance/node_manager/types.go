@@ -20,9 +20,12 @@ package node_manager
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
+	"math"
 	"math/big"
+	"sync/atomic"
 )
 
 type LockStatus uint8
@@ -275,6 +278,33 @@ func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
+func (m *EpochInfo) ValidatorQuorumSize() int {
+	if m == nil || m.Validators == nil {
+		return 0
+	}
+	total := len(m.Validators)
+	return int(math.Ceil(float64(2*total) / 3))
+}
+
+func (m *EpochInfo) VoterQuorumSize() int {
+	if m == nil || m.Voters == nil {
+		return 0
+	}
+	total := len(m.Voters)
+	return int(math.Ceil(float64(2*total) / 3))
+}
+
+func (m *EpochInfo) MemberList() []common.Address {
+	list := make([]common.Address, 0)
+	if m == nil || m.Validators == nil || len(m.Validators) == 0 {
+		return list
+	}
+	for _, v := range m.Validators {
+		list = append(list, v.Address)
+	}
+	return list
+}
+
 type AccumulatedCommission struct {
 	Amount *big.Int
 }
@@ -423,4 +453,61 @@ func (m *Peer) DecodeRLP(s *rlp.Stream) error {
 	}
 	m.PubKey, m.Address = data.ConsensusPubkey, data.ConsensusAddress
 	return nil
+}
+
+type AddressList struct {
+	List []common.Address
+}
+
+func (m *AddressList) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.List})
+}
+
+func (m *AddressList) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		List []common.Address
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.List = data.List
+	return nil
+}
+
+type ConsensusSign struct {
+	Method string
+	Input  []byte
+	hash   atomic.Value
+}
+
+func (m *ConsensusSign) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Method, m.Input})
+}
+func (m *ConsensusSign) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Method string
+		Input  []byte
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.Method, m.Input = data.Method, data.Input
+	return nil
+}
+func (m *ConsensusSign) Hash() common.Hash {
+	if hash := m.hash.Load(); hash != nil {
+		return hash.(common.Hash)
+	}
+	var inf = struct {
+		Method string
+		Input  []byte
+	}{
+		Method: m.Method,
+		Input:  m.Input,
+	}
+	v := utils.RLPHash(inf)
+	m.hash.Store(v)
+	return v
 }

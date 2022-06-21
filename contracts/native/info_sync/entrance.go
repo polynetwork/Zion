@@ -21,6 +21,7 @@ package info_sync
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	iscommon "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/info_sync/consensus_vote"
@@ -52,6 +53,7 @@ func Name(s *native.NativeContract) ([]byte, error) {
 
 func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
+	caller := ctx.Caller
 	params := &iscommon.SyncRootInfoParam{}
 	if err := utils.UnpackMethod(iscommon.ABI, iscommon.MethodSyncRootInfo, params, ctx.Payload); err != nil {
 		return nil, err
@@ -86,7 +88,7 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 			return nil, err
 		}
 
-		ok, err := consensus_vote.CheckConsensusSigns(s, blob)
+		ok, err := node_manager.CheckVoterSigns(s, iscommon.MethodSyncRootInfo, blob, caller)
 		if err != nil {
 			return nil, fmt.Errorf("SyncRootInfo, CheckConsensusSigns error: %v", err)
 		}
