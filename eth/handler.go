@@ -53,8 +53,8 @@ const (
 var (
 	syncChallengeTimeout = 15 * time.Second // Time allowance for a node to reply to the sync progress challenge
 
-	broadcastDuration   = 10 * time.Second // Time duration for broadcast static-nodes
-	broadcastLastTime   = 5 * time.Minute  // Last time for broadcast static-nodes
+	broadcastDuration   = 60 * time.Second // Time duration for broadcast static-nodes
+	broadcastLastTime   = 24 * time.Hour   // Last time for broadcast static-nodes
 	broadcastChCapacity = 3                // Capacity for broadcast channel, is a low frequency action
 )
 
@@ -81,7 +81,8 @@ type txPool interface {
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 }
 
-// todo(fuk): add comments for this interface
+// staticNodesManager defines the methods need from a p2p server implementation to
+// support operation needed by the `hotstuff` protocol.
 type staticNodesManager interface {
 	PeersInfo() []*p2p.PeerInfo
 	Peers() []*p2p.Peer
@@ -573,8 +574,8 @@ func (h *handler) txBroadcastLoop() {
 	defer h.wg.Done()
 	for {
 		select {
-		case evt := <-h.txsCh:
-			h.BroadcastTransactions(evt.Txs)
+		case event := <-h.txsCh:
+			h.BroadcastTransactions(event.Txs)
 		case <-h.txsSub.Err():
 			return
 		}

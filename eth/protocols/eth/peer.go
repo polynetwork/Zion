@@ -55,9 +55,6 @@ const (
 	// dropping broadcasts. Similarly to block propagations, there's no point to queue
 	// above some healthy uncle limit, so use that.
 	maxQueuedBlockAnns = 4
-
-	// todo(fuk): add comment
-	maxQueuedNodesAnns = 4
 )
 
 // max is a helper function which returns the larger of the two given integers.
@@ -109,8 +106,7 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool) *Pe
 		txBroadcast:     make(chan []common.Hash),
 		txAnnounce:      make(chan []common.Hash),
 		txpool:          txpool,
-		//queuedNodes:     make(chan *staticNodesPropagation, maxQueuedNodesAnns),
-		term: make(chan struct{}),
+		term:            make(chan struct{}),
 	}
 	// Start up all the broadcasters
 	go peer.broadcastBlocks()
@@ -118,9 +114,6 @@ func NewPeer(version uint, p *p2p.Peer, rw p2p.MsgReadWriter, txpool TxPool) *Pe
 	if version >= ETH65 {
 		go peer.announceTransactions()
 	}
-	//if version >= HOTSTUFF {
-	//	go peer.tellStaticNodes()
-	//}
 	return peer
 }
 

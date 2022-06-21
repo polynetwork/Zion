@@ -19,9 +19,10 @@ package eth
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/p2p/enode"
 	"io"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/p2p/enode"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/forkid"

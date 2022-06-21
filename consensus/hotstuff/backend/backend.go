@@ -147,7 +147,6 @@ func (s *backend) Gossip(valSet hotstuff.ValidatorSet, payload []byte) error {
 	}
 	if s.broadcaster != nil && len(targets) > 0 {
 		ps := s.broadcaster.FindPeers(targets)
-		//fmt.Println("-------gossip find peers", "length", len(ps))
 		for addr, p := range ps {
 			ms, ok := s.recentMessages.Get(addr)
 			var m *lru.ARCCache
@@ -388,7 +387,6 @@ func (s *backend) AskMiningProposalWithParent(parent *types.Block) {
 	s.reqFeed.Send(*parent)
 }
 
-// todo(fuk): tell ethHandler that the validators have changed
-func (s *backend) TellValidatorsChanged(list []common.Address) {
+func (s *backend) SendValidatorsChange(list []common.Address) {
 	s.nodesFeed.Send(consensus.StaticNodesEvent{Validators: list})
 }

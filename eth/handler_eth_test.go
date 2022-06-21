@@ -24,9 +24,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/consensus"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
@@ -728,29 +727,4 @@ func testBroadcastMalformedBlock(t *testing.T, protocol uint) {
 		case <-time.After(100 * time.Millisecond):
 		}
 	}
-}
-
-// todo(fuk): delete after test
-func TestSimple(t *testing.T) {
-	timer := time.NewTimer(1 * time.Second)
-	stopCh := make(chan struct{})
-	time.AfterFunc(3*time.Second, func() {
-		close(stopCh)
-	})
-	for {
-		select {
-		case <-timer.C:
-			t.Log(time.Now().Unix())
-			timer.Reset(1 * time.Second)
-		case <-stopCh:
-			timer.Stop()
-			goto end
-		}
-	}
-	end:
-		if stopCh == nil {
-			t.Log("end!!!")
-		} else {
-			t.Log("timer is not stopped!")
-		}
 }

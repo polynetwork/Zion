@@ -137,8 +137,8 @@ func (s *backend) saveEpoch(height uint64, list []common.Address) error {
 	s.epochs[height] = epoch
 	s.maxEpochStartHeight = height
 
-	// try to update static nodes
-	s.TellValidatorsChanged(list)
+	// tell `eth handler` that static-nodes changed
+	s.SendValidatorsChange(list)
 
 	log.Info("[epoch]", "save epoch", epoch.String())
 	return nil
