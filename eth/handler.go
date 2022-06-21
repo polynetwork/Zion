@@ -25,15 +25,12 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/ethereum/go-ethereum/p2p/enode"
-
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/fetcher"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
@@ -42,6 +39,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -57,7 +55,7 @@ var (
 
 	broadcastDuration   = 10 * time.Second // Time duration for broadcast static-nodes
 	broadcastLastTime   = 5 * time.Minute  // Last time for broadcast static-nodes
-	broadcastChCapacity = 16               // Capacity for broadcast channel
+	broadcastChCapacity = 3                // Capacity for broadcast channel, is a low frequency action
 )
 
 // txPool defines the methods needed from a transaction pool implementation to
@@ -145,17 +143,17 @@ type handler struct {
 	wg        sync.WaitGroup
 	peerWG    sync.WaitGroup
 
-	miner              common.Address
-	validators         map[common.Address]struct{}
-	validatorsMu       sync.Mutex
-	staticNodesCh      chan consensus.StaticNodesEvent
-	staticNodesSub     event.Subscription
-	staticNodesMap     map[string]*enode.Node
-	staticNodesMapMu   sync.Mutex
-	staticNodesManager staticNodesManager
-	isBroadcast        bool
-	stopBroadcast      chan struct{}
-	quitBroadcast      chan struct{}
+	miner              common.Address                  // miner address used to judge that whether this program need to broadcast static-nodes
+	validators         map[common.Address]struct{}     // validators map for filter useless connection
+	validatorsMu       sync.Mutex                      // mutex for validators map
+	staticNodesCh      chan consensus.StaticNodesEvent // channel for listening `StaticNodeEvent`
+	staticNodesSub     event.Subscription              // subscribe consensus `StaticNodeEvent`
+	staticNodesMap     map[string]*enode.Node          // static nodes storage
+	staticNodesMapMu   sync.Mutex                      // mutex for static-nodes storage
+	staticNodesManager staticNodesManager              // interface of p2p server
+	isBroadcast        bool                            // Flag whether the broadcasting procedure is running
+	haltBroadcast      chan struct{}                   // Signal for procedure halt
+	quitBroadcast      chan struct{}                   // Signal for quit broadcasting
 
 	// hotstuff
 	engine consensus.Engine
@@ -182,7 +180,7 @@ func newHandler(config *handlerConfig, engine consensus.Engine, manager staticNo
 		miner:              config.Miner,
 		staticNodesManager: manager,
 		quitBroadcast:      make(chan struct{}),
-		stopBroadcast:      make(chan struct{}),
+		haltBroadcast:      make(chan struct{}),
 	}
 
 	if config.Sync == downloader.FullSync {
@@ -576,9 +574,6 @@ func (h *handler) txBroadcastLoop() {
 	for {
 		select {
 		case evt := <-h.txsCh:
-			if h.isBroadcast {
-				h.stopBroadcast <- struct{}{}
-			}
 			h.BroadcastTransactions(evt.Txs)
 		case <-h.txsSub.Err():
 			return
@@ -594,16 +589,21 @@ func (h *handler) staticNodesBroadcastLoop() {
 	for {
 		select {
 		case evt := <-h.staticNodesCh:
+			if h.isBroadcast {
+				h.haltBroadcast <- struct{}{}
+			}
 			h.BroadcastNodes(evt.Validators)
+
 		case <-h.staticNodesSub.Err():
 			return
+
 		case <-h.quitBroadcast:
 			return
 		}
 	}
 }
 
-// BroadcastNodes 发送p2p模块包含的外部节点以及自己的地址打包到packet发送给所有validator，这样最终经过一段时间后所有validator都会连接所有人。
+// BroadcastNodes will broadcast all validators' enode information in a fixed time
 func (h *handler) BroadcastNodes(validators []common.Address) {
 	h.isBroadcast = true
 	defer func() {
@@ -622,12 +622,6 @@ func (h *handler) BroadcastNodes(validators []common.Address) {
 	// fulfill validators
 	h.validatorsMu.Lock()
 	h.validators = make(map[common.Address]struct{})
-	vstr := ""
-	for _, v := range validators {
-		h.validators[v] = struct{}{}
-		vstr += v.Hex() + ","
-	}
-	log.Info("-----receiveChangeEpoch", "validators", vstr)
 	h.validatorsMu.Unlock()
 
 	// do not need to broadcast static-nodes if miner is not validator
@@ -635,6 +629,7 @@ func (h *handler) BroadcastNodes(validators []common.Address) {
 		return
 	}
 
+	// only working in fixed time.
 	timer := time.NewTimer(broadcastDuration)
 	done := make(chan struct{})
 	time.AfterFunc(broadcastLastTime, func() {
@@ -645,27 +640,22 @@ func (h *handler) BroadcastNodes(validators []common.Address) {
 		select {
 		case <-timer.C:
 			var (
-				addNodes, delNodes = make([]*enode.Node, 0), make([]*enode.Node, 0)
-				addStr, delStr     string
+				addinf   string
+				addNodes = make([]*enode.Node, 0)
 			)
 
 			// only inbound connections' remote address contains its own p2p server listening tcp/udp port.
 			for _, peer := range peers {
 				node := peer.Node()
 				addr := crypto.PubkeyToAddress(*node.Pubkey())
-				if _, exist := h.validators[addr]; !exist {
-					// todo(fuk): how to remove nodes
-					delNodes = append(delNodes, node)
-					//h.staticNodesManager.RemovePeer(node)
-					delStr += fmt.Sprintf("%s:%d,", node.IP().String(), node.TCP())
-				} else if !peer.Inbound() {
+				if _, exist := h.validators[addr]; !exist && !peer.Inbound() {
 					h.addStaticNode(node)
 				}
 			}
 
 			for _, node := range h.staticNodesMap {
 				addNodes = append(addNodes, node)
-				addStr += fmt.Sprintf("%s:%d,", node.IP().String(), node.TCP())
+				addinf += fmt.Sprintf("%s:%d,", node.IP().String(), node.TCP())
 			}
 
 			// todo(fuk): consider the packet size
@@ -674,13 +664,16 @@ func (h *handler) BroadcastNodes(validators []common.Address) {
 					log.Error("SendStaticNodes", "to", peer.Node().ID(), "err", err)
 				}
 			}
+			log.Debug("SendStaticNodes", "local", local.TCP(), "add", addinf)
+
+			// reset timer to start the next round
 			timer.Reset(broadcastDuration)
 
-			log.Debug("SendStaticNodes", "local", local.TCP(), "add", addStr, "del", delStr)
-
-		case <-h.stopBroadcast:
+		// function halt signal
+		case <-h.haltBroadcast:
 			return
 
+		// system stop signal
 		case <-h.quitBroadcast:
 			return
 

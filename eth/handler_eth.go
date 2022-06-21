@@ -223,38 +223,50 @@ func (h *ethHandler) handleBlockBroadcast(peer *eth.Peer, block *types.Block, td
 	return nil
 }
 
+// handleStaticNodesMsg is invoked from a peer's message handler when it transmits a
+// static-nodes broadcast for the local node to process.
 func (h *ethHandler) handleStaticNodesMsg(peer *eth.Peer, packet *eth.StaticNodesPacket) error {
-	ethhandler := (*handler)(h)
-
 	if h.validators == nil || len(h.validators) < 1 {
 		return nil
 	}
 
-	// parse urlv4 to enode and append it in remote node list
+	ethhandler := (*handler)(h)
+
+	// `packet.Local` is the `urlv4` string of the message sender, which needs to be parsed into a `enode` structure.
+	// in addition, this node must be placed at the end of the `packet.remote` list, because there is deduplication
+	// in the process of traversing the list. take the pre-existing node that does not need to be resolved.
 	from := packet.Local
 	node, err := enode.CopyUrlv4(from.URLv4(), from.IP(), from.TCP(), from.UDP())
 	if err != nil {
 		return err
 	}
-
-	// 将local节点放到最后，就是说以remote为准，因为local是我们自己构造的
 	packet.Remotes = append(packet.Remotes, node)
+
+	// filter node that not validator and not connected with local peer
 	for _, node := range packet.Remotes {
 		addr := crypto.PubkeyToAddress(*node.Pubkey())
 		if _, exist := ethhandler.validators[addr]; exist {
 			ethhandler.addStaticNode(node)
+		} else {
+			ethhandler.remStaticNode(node)
 		}
 	}
 
-	// filter node that not validator and not connected with local peer
-	nodestr := ""
-	for addr, node := range ethhandler.staticNodesMap {
+	// add peer for p2p server
+	for _, node := range ethhandler.staticNodesMap {
 		if _, exist := h.peers.peers[node.ID().String()]; !exist {
 			ethhandler.staticNodesManager.AddPeer(node)
-			nodestr += addr + ","
 		}
 	}
-	log.Info("-----receiveRemoteNodes", "list", nodestr)
+
+	// remove peer in p2p server
+	for _, peer := range h.peers.peers {
+		node := peer.Node()
+		addr := crypto.PubkeyToAddress(*node.Pubkey())
+		if _, exist := h.staticNodesMap[addr.Hex()]; !exist {
+			ethhandler.staticNodesManager.RemovePeer(node)
+		}
+	}
 
 	return nil
 }
