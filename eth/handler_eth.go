@@ -236,17 +236,22 @@ func (h *ethHandler) handleStaticNodesMsg(peer *eth.Peer, packet *eth.StaticNode
 	if err != nil {
 		return err
 	}
+
+	// 将local节点放到最后，就是说以remote为准，因为local是我们自己构造的
 	packet.Remotes = append(packet.Remotes, node)
+	for _, node := range packet.Remotes {
+		addr := crypto.PubkeyToAddress(*node.Pubkey())
+		if _, exist := ethhandler.validators[addr]; exist {
+			ethhandler.addStaticNode(node)
+		}
+	}
 
 	// filter node that not validator and not connected with local peer
 	nodestr := ""
-	for _, node := range packet.Remotes {
-		nodestr += fmt.Sprintf("%d,", node.TCP())
-		addr := crypto.PubkeyToAddress(*node.Pubkey())
-		if _, exist := h.validators[addr]; exist {
-			if _, exist := h.peers.peers[node.ID().String()]; !exist {
-				ethhandler.staticNodesManager.AddPeer(node)
-			}
+	for addr, node := range ethhandler.staticNodesMap {
+		if _, exist := h.peers.peers[node.ID().String()]; !exist {
+			ethhandler.staticNodesManager.AddPeer(node)
+			nodestr += addr + ","
 		}
 	}
 	log.Info("-----receiveRemoteNodes", "list", nodestr)

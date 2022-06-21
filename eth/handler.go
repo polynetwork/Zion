@@ -150,7 +150,12 @@ type handler struct {
 	validatorsMu       sync.Mutex
 	staticNodesCh      chan consensus.StaticNodesEvent
 	staticNodesSub     event.Subscription
+	staticNodesMap     map[string]*enode.Node
+	staticNodesMapMu   sync.Mutex
 	staticNodesManager staticNodesManager
+	isBroadcast        bool
+	stopBroadcast      chan struct{}
+	quitBroadcast      chan struct{}
 
 	// hotstuff
 	engine consensus.Engine
@@ -176,6 +181,8 @@ func newHandler(config *handlerConfig, engine consensus.Engine, manager staticNo
 		engine:             engine,
 		miner:              config.Miner,
 		staticNodesManager: manager,
+		quitBroadcast:      make(chan struct{}),
+		stopBroadcast:      make(chan struct{}),
 	}
 
 	if config.Sync == downloader.FullSync {
@@ -430,7 +437,6 @@ func (h *handler) Start(maxPeers int) {
 	if handler, ok := h.engine.(consensus.Handler); ok {
 		handler.SetBroadcaster(h)
 
-		h.wg.Add(1)
 		h.staticNodesCh = make(chan consensus.StaticNodesEvent, broadcastChCapacity)
 		h.staticNodesSub = handler.SubscribeNodes(h.staticNodesCh)
 		go h.staticNodesBroadcastLoop()
@@ -469,6 +475,9 @@ func (h *handler) Stop() {
 	// will exit when they try to register.
 	h.peers.close()
 	h.peerWG.Wait()
+
+	// Quit broadcast nodes
+	close(h.quitBroadcast)
 
 	log.Info("Ethereum protocol stopped")
 }
@@ -566,8 +575,11 @@ func (h *handler) txBroadcastLoop() {
 	defer h.wg.Done()
 	for {
 		select {
-		case event := <-h.txsCh:
-			h.BroadcastTransactions(event.Txs)
+		case evt := <-h.txsCh:
+			if h.isBroadcast {
+				h.stopBroadcast <- struct{}{}
+			}
+			h.BroadcastTransactions(evt.Txs)
 		case <-h.txsSub.Err():
 			return
 		}
@@ -575,8 +587,6 @@ func (h *handler) txBroadcastLoop() {
 }
 
 func (h *handler) staticNodesBroadcastLoop() {
-	defer h.wg.Done()
-
 	if h.staticNodesManager == nil || h.miner == common.EmptyAddress {
 		return
 	}
@@ -587,12 +597,19 @@ func (h *handler) staticNodesBroadcastLoop() {
 			h.BroadcastNodes(evt.Validators)
 		case <-h.staticNodesSub.Err():
 			return
+		case <-h.quitBroadcast:
+			return
 		}
 	}
 }
 
 // BroadcastNodes 发送p2p模块包含的外部节点以及自己的地址打包到packet发送给所有validator，这样最终经过一段时间后所有validator都会连接所有人。
 func (h *handler) BroadcastNodes(validators []common.Address) {
+	h.isBroadcast = true
+	defer func() {
+		h.isBroadcast = false
+	}()
+
 	peers := h.staticNodesManager.Peers()
 	if peers == nil {
 		return
@@ -605,9 +622,12 @@ func (h *handler) BroadcastNodes(validators []common.Address) {
 	// fulfill validators
 	h.validatorsMu.Lock()
 	h.validators = make(map[common.Address]struct{})
+	vstr := ""
 	for _, v := range validators {
 		h.validators[v] = struct{}{}
+		vstr += v.Hex() + ","
 	}
+	log.Info("-----receiveChangeEpoch", "validators", vstr)
 	h.validatorsMu.Unlock()
 
 	// do not need to broadcast static-nodes if miner is not validator
@@ -634,26 +654,75 @@ func (h *handler) BroadcastNodes(validators []common.Address) {
 				node := peer.Node()
 				addr := crypto.PubkeyToAddress(*node.Pubkey())
 				if _, exist := h.validators[addr]; !exist {
+					// todo(fuk): how to remove nodes
 					delNodes = append(delNodes, node)
 					//h.staticNodesManager.RemovePeer(node)
 					delStr += fmt.Sprintf("%s:%d,", node.IP().String(), node.TCP())
 				} else if !peer.Inbound() {
-					addNodes = append(addNodes, node)
-					addStr += fmt.Sprintf("%s:%d,", node.IP().String(), node.TCP())
+					h.addStaticNode(node)
 				}
 			}
 
+			for _, node := range h.staticNodesMap {
+				addNodes = append(addNodes, node)
+				addStr += fmt.Sprintf("%s:%d,", node.IP().String(), node.TCP())
+			}
+
+			// todo(fuk): consider the packet size
 			for _, peer := range h.peers.peers {
-				peer.SendStaticNodes(local, addNodes)
+				if err := peer.SendStaticNodes(local, addNodes); err != nil {
+					log.Error("SendStaticNodes", "to", peer.Node().ID(), "err", err)
+				}
 			}
 			timer.Reset(broadcastDuration)
 
-			log.Trace("SendStaticNodes", "local", local.TCP(), "add", addStr, "del", delStr)
+			log.Debug("SendStaticNodes", "local", local.TCP(), "add", addStr, "del", delStr)
+
+		case <-h.stopBroadcast:
+			return
+
+		case <-h.quitBroadcast:
+			return
 
 		case <-done:
 			// todo(fuk): p2p module persistence new static nodes in leveldb
 			return
 		}
+	}
+}
+
+// addStaticNode add node and retrieve the node id and existence
+func (h *handler) addStaticNode(node *enode.Node) (id string, exist bool) {
+	h.staticNodesMapMu.Lock()
+	defer h.staticNodesMapMu.Unlock()
+
+	if h.staticNodesMap == nil {
+		h.staticNodesMap = make(map[string]*enode.Node)
+	}
+
+	id = node.ID().String()
+	if _, exist = h.staticNodesMap[id]; !exist {
+		h.staticNodesMap[id] = node
+	}
+
+	return
+}
+
+// remStaticNode remove static node from node map and retrieve node id and existence
+func (h *handler) remStaticNode(node *enode.Node) (string, bool) {
+	h.staticNodesMapMu.Lock()
+	defer h.staticNodesMapMu.Unlock()
+
+	id := node.ID().String()
+	if h.staticNodesMap == nil {
+		return id, false
+	}
+
+	if _, exist := h.staticNodesMap[id]; exist {
+		delete(h.staticNodesMap, id)
+		return id, true
+	} else {
+		return id, false
 	}
 }
 
