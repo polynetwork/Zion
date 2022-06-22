@@ -77,27 +77,46 @@ func (m *CreateValidatorParam) DecodeRLP(s *rlp.Stream) error {
 type UpdateValidatorParam struct {
 	ConsensusPubkey string
 	ProposalAddress common.Address
-	Commission      *big.Int
 	Desc            string
 }
 
 func (m *UpdateValidatorParam) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.Desc})
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.ProposalAddress, m.Desc})
 }
 
 func (m *UpdateValidatorParam) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		ConsensusPubkey string
 		ProposalAddress common.Address
-		Commission      *big.Int
 		Desc            string
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.Desc = data.ConsensusPubkey, data.ProposalAddress,
-		data.Commission, data.Desc
+	m.ConsensusPubkey, m.ProposalAddress, m.Desc = data.ConsensusPubkey, data.ProposalAddress, data.Desc
+	return nil
+}
+
+type UpdateCommissionParam struct {
+	ConsensusPubkey string
+	Commission      *big.Int
+}
+
+func (m *UpdateCommissionParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.Commission})
+}
+
+func (m *UpdateCommissionParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+		Commission      *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey, m.Commission = data.ConsensusPubkey, data.Commission
 	return nil
 }
 

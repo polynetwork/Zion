@@ -29,8 +29,8 @@ import (
 )
 
 func nativeTransfer(s *native.NativeContract, from, to common.Address, amount *big.Int) error {
-	if amount.Sign() <= 0 {
-		return fmt.Errorf("amount must be positive")
+	if amount.Sign() == -1 {
+		return fmt.Errorf("amount can not be negative")
 	}
 	if !core.CanTransfer(s.StateDB(), from, amount) {
 		return fmt.Errorf("%s insufficient balance", from.Hex())
@@ -89,9 +89,6 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 		return false, fmt.Errorf("CheckConsensusSigns, store signer failed: %s, hash %s", err, sign.Hash().Hex())
 	}
 	sizeAfterSign := getSignerSize(s, sign.Hash())
-	if err := s.AddNotify(ABI, []string{"CheckConsensusSigns"}, sign.Method, sign.Input, signer, uint64(sizeAfterSign)); err != nil {
-		return false, fmt.Errorf("CheckConsensusSigns, emit consensus sign log failed: %s, hash %s", err, sign.Hash().Hex())
-	}
 	log.Trace("checkConsensusSign", "sign hash", sign.Hash().Hex(), "size after sign", sizeAfterSign)
 
 	return sizeAfterSign >= epoch.ValidatorQuorumSize(), nil
@@ -147,9 +144,6 @@ func CheckVoterSigns(s *native.NativeContract, method string, input []byte, sign
 		return false, fmt.Errorf("CheckVoterSigns, store signer failed: %s, hash %s", err, sign.Hash().Hex())
 	}
 	sizeAfterSign := getSignerSize(s, sign.Hash())
-	if err := s.AddNotify(ABI, []string{"CheckVoterSigns"}, sign.Method, sign.Input, signer, uint64(sizeAfterSign)); err != nil {
-		return false, fmt.Errorf("CheckVoterSigns, emit consensus sign log failed: %s, hash %s", err, sign.Hash().Hex())
-	}
 	log.Trace("CheckVoterSigns", "sign hash", sign.Hash().Hex(), "size after sign", sizeAfterSign)
 
 	return sizeAfterSign >= epoch.VoterQuorumSize(), nil

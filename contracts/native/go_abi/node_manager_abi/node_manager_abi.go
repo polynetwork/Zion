@@ -39,6 +39,8 @@ var (
 
 	MethodUnStake = "unStake"
 
+	MethodUpdateCommission = "updateCommission"
+
 	MethodUpdateValidator = "updateValidator"
 
 	MethodWithdraw = "withdraw"
@@ -48,10 +50,32 @@ var (
 	MethodWithdrawStakeRewards = "withdrawStakeRewards"
 
 	MethodWithdrawValidator = "withdrawValidator"
+
+	EventCancelValidator = "CancelValidator"
+
+	EventChangeEpoch = "ChangeEpoch"
+
+	EventCreateValidator = "CreateValidator"
+
+	EventStake = "Stake"
+
+	EventUnStake = "UnStake"
+
+	EventUpdateCommission = "UpdateCommission"
+
+	EventUpdateValidator = "UpdateValidator"
+
+	EventWithdraw = "Withdraw"
+
+	EventWithdrawCommission = "WithdrawCommission"
+
+	EventWithdrawStakeRewards = "WithdrawStakeRewards"
+
+	EventWithdrawValidator = "WithdrawValidator"
 )
 
 // INodeManagerABI is the input ABI used to generate the binding from.
-const INodeManagerABI = "[{\"constant\":false,\"inputs\":[],\"name\":\"beginBlock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"cancelValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"changeEpoch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"initStake\",\"type\":\"int256\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"createValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"stake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"unStake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"updateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawStakeRewards\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const INodeManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CancelValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"epochID\",\"type\":\"string\"}],\"name\":\"ChangeEpoch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CreateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Stake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"UnStake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Withdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"commission\",\"type\":\"string\"}],\"name\":\"WithdrawCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rewards\",\"type\":\"string\"}],\"name\":\"WithdrawStakeRewards\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"selfStake\",\"type\":\"string\"}],\"name\":\"WithdrawValidator\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[],\"name\":\"beginBlock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"cancelValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"changeEpoch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"initStake\",\"type\":\"int256\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"createValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"stake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"unStake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"}],\"name\":\"updateCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"updateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawStakeRewards\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // INodeManagerFuncSigs maps the 4-byte function signature to its string representation.
 var INodeManagerFuncSigs = map[string]string{
@@ -61,7 +85,8 @@ var INodeManagerFuncSigs = map[string]string{
 	"afa1d242": "createValidator(string,address,int256,int256,string)",
 	"102fc25a": "stake(string,int256)",
 	"6b2e7c4e": "unStake(string,int256)",
-	"b0694322": "updateValidator(string,address,int256,string)",
+	"9b079ff7": "updateCommission(string,int256)",
+	"74bddcc1": "updateValidator(string,address,string)",
 	"3ccfd60b": "withdraw()",
 	"65371818": "withdrawCommission(string)",
 	"377b97fb": "withdrawStakeRewards(string)",
@@ -336,25 +361,46 @@ func (_INodeManager *INodeManagerTransactorSession) UnStake(consensusPubkey stri
 	return _INodeManager.Contract.UnStake(&_INodeManager.TransactOpts, consensusPubkey, amount)
 }
 
-// UpdateValidator is a paid mutator transaction binding the contract method 0xb0694322.
+// UpdateCommission is a paid mutator transaction binding the contract method 0x9b079ff7.
 //
-// Solidity: function updateValidator(string consensusPubkey, address proposalAddress, int256 commission, string desc) returns(bool success)
-func (_INodeManager *INodeManagerTransactor) UpdateValidator(opts *bind.TransactOpts, consensusPubkey string, proposalAddress common.Address, commission *big.Int, desc string) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "updateValidator", consensusPubkey, proposalAddress, commission, desc)
+// Solidity: function updateCommission(string consensusPubkey, int256 commission) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) UpdateCommission(opts *bind.TransactOpts, consensusPubkey string, commission *big.Int) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "updateCommission", consensusPubkey, commission)
 }
 
-// UpdateValidator is a paid mutator transaction binding the contract method 0xb0694322.
+// UpdateCommission is a paid mutator transaction binding the contract method 0x9b079ff7.
 //
-// Solidity: function updateValidator(string consensusPubkey, address proposalAddress, int256 commission, string desc) returns(bool success)
-func (_INodeManager *INodeManagerSession) UpdateValidator(consensusPubkey string, proposalAddress common.Address, commission *big.Int, desc string) (*types.Transaction, error) {
-	return _INodeManager.Contract.UpdateValidator(&_INodeManager.TransactOpts, consensusPubkey, proposalAddress, commission, desc)
+// Solidity: function updateCommission(string consensusPubkey, int256 commission) returns(bool success)
+func (_INodeManager *INodeManagerSession) UpdateCommission(consensusPubkey string, commission *big.Int) (*types.Transaction, error) {
+	return _INodeManager.Contract.UpdateCommission(&_INodeManager.TransactOpts, consensusPubkey, commission)
 }
 
-// UpdateValidator is a paid mutator transaction binding the contract method 0xb0694322.
+// UpdateCommission is a paid mutator transaction binding the contract method 0x9b079ff7.
 //
-// Solidity: function updateValidator(string consensusPubkey, address proposalAddress, int256 commission, string desc) returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) UpdateValidator(consensusPubkey string, proposalAddress common.Address, commission *big.Int, desc string) (*types.Transaction, error) {
-	return _INodeManager.Contract.UpdateValidator(&_INodeManager.TransactOpts, consensusPubkey, proposalAddress, commission, desc)
+// Solidity: function updateCommission(string consensusPubkey, int256 commission) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) UpdateCommission(consensusPubkey string, commission *big.Int) (*types.Transaction, error) {
+	return _INodeManager.Contract.UpdateCommission(&_INodeManager.TransactOpts, consensusPubkey, commission)
+}
+
+// UpdateValidator is a paid mutator transaction binding the contract method 0x74bddcc1.
+//
+// Solidity: function updateValidator(string consensusPubkey, address proposalAddress, string desc) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) UpdateValidator(opts *bind.TransactOpts, consensusPubkey string, proposalAddress common.Address, desc string) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "updateValidator", consensusPubkey, proposalAddress, desc)
+}
+
+// UpdateValidator is a paid mutator transaction binding the contract method 0x74bddcc1.
+//
+// Solidity: function updateValidator(string consensusPubkey, address proposalAddress, string desc) returns(bool success)
+func (_INodeManager *INodeManagerSession) UpdateValidator(consensusPubkey string, proposalAddress common.Address, desc string) (*types.Transaction, error) {
+	return _INodeManager.Contract.UpdateValidator(&_INodeManager.TransactOpts, consensusPubkey, proposalAddress, desc)
+}
+
+// UpdateValidator is a paid mutator transaction binding the contract method 0x74bddcc1.
+//
+// Solidity: function updateValidator(string consensusPubkey, address proposalAddress, string desc) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) UpdateValidator(consensusPubkey string, proposalAddress common.Address, desc string) (*types.Transaction, error) {
+	return _INodeManager.Contract.UpdateValidator(&_INodeManager.TransactOpts, consensusPubkey, proposalAddress, desc)
 }
 
 // Withdraw is a paid mutator transaction binding the contract method 0x3ccfd60b.
@@ -439,5 +485,1484 @@ func (_INodeManager *INodeManagerSession) WithdrawValidator(consensusPubkey stri
 // Solidity: function withdrawValidator(string consensusPubkey) returns(bool success)
 func (_INodeManager *INodeManagerTransactorSession) WithdrawValidator(consensusPubkey string) (*types.Transaction, error) {
 	return _INodeManager.Contract.WithdrawValidator(&_INodeManager.TransactOpts, consensusPubkey)
+}
+
+// INodeManagerCancelValidatorIterator is returned from FilterCancelValidator and is used to iterate over the raw logs and unpacked data for CancelValidator events raised by the INodeManager contract.
+type INodeManagerCancelValidatorIterator struct {
+	Event *INodeManagerCancelValidator // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerCancelValidatorIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerCancelValidator)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerCancelValidator)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerCancelValidatorIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerCancelValidatorIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerCancelValidator represents a CancelValidator event raised by the INodeManager contract.
+type INodeManagerCancelValidator struct {
+	ConsensusPubkey string
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterCancelValidator is a free log retrieval operation binding the contract event 0x958925709318fd39dab7c4c9812b315994b68e8d17a3408c1ca4bf0dc594473d.
+//
+// Solidity: event CancelValidator(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) FilterCancelValidator(opts *bind.FilterOpts) (*INodeManagerCancelValidatorIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "CancelValidator")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerCancelValidatorIterator{contract: _INodeManager.contract, event: "CancelValidator", logs: logs, sub: sub}, nil
+}
+
+// WatchCancelValidator is a free log subscription operation binding the contract event 0x958925709318fd39dab7c4c9812b315994b68e8d17a3408c1ca4bf0dc594473d.
+//
+// Solidity: event CancelValidator(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) WatchCancelValidator(opts *bind.WatchOpts, sink chan<- *INodeManagerCancelValidator) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "CancelValidator")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerCancelValidator)
+				if err := _INodeManager.contract.UnpackLog(event, "CancelValidator", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseCancelValidator is a log parse operation binding the contract event 0x958925709318fd39dab7c4c9812b315994b68e8d17a3408c1ca4bf0dc594473d.
+//
+// Solidity: event CancelValidator(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) ParseCancelValidator(log types.Log) (*INodeManagerCancelValidator, error) {
+	event := new(INodeManagerCancelValidator)
+	if err := _INodeManager.contract.UnpackLog(event, "CancelValidator", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// INodeManagerChangeEpochIterator is returned from FilterChangeEpoch and is used to iterate over the raw logs and unpacked data for ChangeEpoch events raised by the INodeManager contract.
+type INodeManagerChangeEpochIterator struct {
+	Event *INodeManagerChangeEpoch // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerChangeEpochIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerChangeEpoch)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerChangeEpoch)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerChangeEpochIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerChangeEpochIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerChangeEpoch represents a ChangeEpoch event raised by the INodeManager contract.
+type INodeManagerChangeEpoch struct {
+	EpochID string
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterChangeEpoch is a free log retrieval operation binding the contract event 0xf92b44dcfd5f229b4a15bfb78fe69d9bc16bfeae87450b6fe3b33d11074d4330.
+//
+// Solidity: event ChangeEpoch(string epochID)
+func (_INodeManager *INodeManagerFilterer) FilterChangeEpoch(opts *bind.FilterOpts) (*INodeManagerChangeEpochIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "ChangeEpoch")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerChangeEpochIterator{contract: _INodeManager.contract, event: "ChangeEpoch", logs: logs, sub: sub}, nil
+}
+
+// WatchChangeEpoch is a free log subscription operation binding the contract event 0xf92b44dcfd5f229b4a15bfb78fe69d9bc16bfeae87450b6fe3b33d11074d4330.
+//
+// Solidity: event ChangeEpoch(string epochID)
+func (_INodeManager *INodeManagerFilterer) WatchChangeEpoch(opts *bind.WatchOpts, sink chan<- *INodeManagerChangeEpoch) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "ChangeEpoch")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerChangeEpoch)
+				if err := _INodeManager.contract.UnpackLog(event, "ChangeEpoch", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseChangeEpoch is a log parse operation binding the contract event 0xf92b44dcfd5f229b4a15bfb78fe69d9bc16bfeae87450b6fe3b33d11074d4330.
+//
+// Solidity: event ChangeEpoch(string epochID)
+func (_INodeManager *INodeManagerFilterer) ParseChangeEpoch(log types.Log) (*INodeManagerChangeEpoch, error) {
+	event := new(INodeManagerChangeEpoch)
+	if err := _INodeManager.contract.UnpackLog(event, "ChangeEpoch", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// INodeManagerCreateValidatorIterator is returned from FilterCreateValidator and is used to iterate over the raw logs and unpacked data for CreateValidator events raised by the INodeManager contract.
+type INodeManagerCreateValidatorIterator struct {
+	Event *INodeManagerCreateValidator // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerCreateValidatorIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerCreateValidator)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerCreateValidator)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerCreateValidatorIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerCreateValidatorIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerCreateValidator represents a CreateValidator event raised by the INodeManager contract.
+type INodeManagerCreateValidator struct {
+	ConsensusPubkey string
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterCreateValidator is a free log retrieval operation binding the contract event 0xb7f4cfc364000338326cb6f95799a39e25447cd02f70d1c7568f2d8d0a6fa2df.
+//
+// Solidity: event CreateValidator(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) FilterCreateValidator(opts *bind.FilterOpts) (*INodeManagerCreateValidatorIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "CreateValidator")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerCreateValidatorIterator{contract: _INodeManager.contract, event: "CreateValidator", logs: logs, sub: sub}, nil
+}
+
+// WatchCreateValidator is a free log subscription operation binding the contract event 0xb7f4cfc364000338326cb6f95799a39e25447cd02f70d1c7568f2d8d0a6fa2df.
+//
+// Solidity: event CreateValidator(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) WatchCreateValidator(opts *bind.WatchOpts, sink chan<- *INodeManagerCreateValidator) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "CreateValidator")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerCreateValidator)
+				if err := _INodeManager.contract.UnpackLog(event, "CreateValidator", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseCreateValidator is a log parse operation binding the contract event 0xb7f4cfc364000338326cb6f95799a39e25447cd02f70d1c7568f2d8d0a6fa2df.
+//
+// Solidity: event CreateValidator(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) ParseCreateValidator(log types.Log) (*INodeManagerCreateValidator, error) {
+	event := new(INodeManagerCreateValidator)
+	if err := _INodeManager.contract.UnpackLog(event, "CreateValidator", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// INodeManagerStakeIterator is returned from FilterStake and is used to iterate over the raw logs and unpacked data for Stake events raised by the INodeManager contract.
+type INodeManagerStakeIterator struct {
+	Event *INodeManagerStake // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerStakeIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerStake)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerStake)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerStakeIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerStakeIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerStake represents a Stake event raised by the INodeManager contract.
+type INodeManagerStake struct {
+	ConsensusPubkey string
+	Amount          string
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterStake is a free log retrieval operation binding the contract event 0x28c6fab16944691610b9d650c8296cb50ed85a965e81865eb3f1f3ccc274a272.
+//
+// Solidity: event Stake(string consensusPubkey, string amount)
+func (_INodeManager *INodeManagerFilterer) FilterStake(opts *bind.FilterOpts) (*INodeManagerStakeIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "Stake")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerStakeIterator{contract: _INodeManager.contract, event: "Stake", logs: logs, sub: sub}, nil
+}
+
+// WatchStake is a free log subscription operation binding the contract event 0x28c6fab16944691610b9d650c8296cb50ed85a965e81865eb3f1f3ccc274a272.
+//
+// Solidity: event Stake(string consensusPubkey, string amount)
+func (_INodeManager *INodeManagerFilterer) WatchStake(opts *bind.WatchOpts, sink chan<- *INodeManagerStake) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "Stake")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerStake)
+				if err := _INodeManager.contract.UnpackLog(event, "Stake", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseStake is a log parse operation binding the contract event 0x28c6fab16944691610b9d650c8296cb50ed85a965e81865eb3f1f3ccc274a272.
+//
+// Solidity: event Stake(string consensusPubkey, string amount)
+func (_INodeManager *INodeManagerFilterer) ParseStake(log types.Log) (*INodeManagerStake, error) {
+	event := new(INodeManagerStake)
+	if err := _INodeManager.contract.UnpackLog(event, "Stake", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// INodeManagerUnStakeIterator is returned from FilterUnStake and is used to iterate over the raw logs and unpacked data for UnStake events raised by the INodeManager contract.
+type INodeManagerUnStakeIterator struct {
+	Event *INodeManagerUnStake // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerUnStakeIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerUnStake)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerUnStake)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerUnStakeIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerUnStakeIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerUnStake represents a UnStake event raised by the INodeManager contract.
+type INodeManagerUnStake struct {
+	ConsensusPubkey string
+	Amount          string
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterUnStake is a free log retrieval operation binding the contract event 0x09c079860913a3cf3561020297d9982bdeb613ecdb83920f88063bf6e3e19088.
+//
+// Solidity: event UnStake(string consensusPubkey, string amount)
+func (_INodeManager *INodeManagerFilterer) FilterUnStake(opts *bind.FilterOpts) (*INodeManagerUnStakeIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "UnStake")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerUnStakeIterator{contract: _INodeManager.contract, event: "UnStake", logs: logs, sub: sub}, nil
+}
+
+// WatchUnStake is a free log subscription operation binding the contract event 0x09c079860913a3cf3561020297d9982bdeb613ecdb83920f88063bf6e3e19088.
+//
+// Solidity: event UnStake(string consensusPubkey, string amount)
+func (_INodeManager *INodeManagerFilterer) WatchUnStake(opts *bind.WatchOpts, sink chan<- *INodeManagerUnStake) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "UnStake")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerUnStake)
+				if err := _INodeManager.contract.UnpackLog(event, "UnStake", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseUnStake is a log parse operation binding the contract event 0x09c079860913a3cf3561020297d9982bdeb613ecdb83920f88063bf6e3e19088.
+//
+// Solidity: event UnStake(string consensusPubkey, string amount)
+func (_INodeManager *INodeManagerFilterer) ParseUnStake(log types.Log) (*INodeManagerUnStake, error) {
+	event := new(INodeManagerUnStake)
+	if err := _INodeManager.contract.UnpackLog(event, "UnStake", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// INodeManagerUpdateCommissionIterator is returned from FilterUpdateCommission and is used to iterate over the raw logs and unpacked data for UpdateCommission events raised by the INodeManager contract.
+type INodeManagerUpdateCommissionIterator struct {
+	Event *INodeManagerUpdateCommission // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerUpdateCommissionIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerUpdateCommission)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerUpdateCommission)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerUpdateCommissionIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerUpdateCommissionIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerUpdateCommission represents a UpdateCommission event raised by the INodeManager contract.
+type INodeManagerUpdateCommission struct {
+	ConsensusPubkey string
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterUpdateCommission is a free log retrieval operation binding the contract event 0x4122b09ab8922a4e7eb98b7aade17dd076d3eb78158a17a0ab826b857b17e2b2.
+//
+// Solidity: event UpdateCommission(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) FilterUpdateCommission(opts *bind.FilterOpts) (*INodeManagerUpdateCommissionIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "UpdateCommission")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerUpdateCommissionIterator{contract: _INodeManager.contract, event: "UpdateCommission", logs: logs, sub: sub}, nil
+}
+
+// WatchUpdateCommission is a free log subscription operation binding the contract event 0x4122b09ab8922a4e7eb98b7aade17dd076d3eb78158a17a0ab826b857b17e2b2.
+//
+// Solidity: event UpdateCommission(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) WatchUpdateCommission(opts *bind.WatchOpts, sink chan<- *INodeManagerUpdateCommission) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "UpdateCommission")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerUpdateCommission)
+				if err := _INodeManager.contract.UnpackLog(event, "UpdateCommission", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseUpdateCommission is a log parse operation binding the contract event 0x4122b09ab8922a4e7eb98b7aade17dd076d3eb78158a17a0ab826b857b17e2b2.
+//
+// Solidity: event UpdateCommission(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) ParseUpdateCommission(log types.Log) (*INodeManagerUpdateCommission, error) {
+	event := new(INodeManagerUpdateCommission)
+	if err := _INodeManager.contract.UnpackLog(event, "UpdateCommission", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// INodeManagerUpdateValidatorIterator is returned from FilterUpdateValidator and is used to iterate over the raw logs and unpacked data for UpdateValidator events raised by the INodeManager contract.
+type INodeManagerUpdateValidatorIterator struct {
+	Event *INodeManagerUpdateValidator // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerUpdateValidatorIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerUpdateValidator)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerUpdateValidator)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerUpdateValidatorIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerUpdateValidatorIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerUpdateValidator represents a UpdateValidator event raised by the INodeManager contract.
+type INodeManagerUpdateValidator struct {
+	ConsensusPubkey string
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterUpdateValidator is a free log retrieval operation binding the contract event 0xf6d6118bb8579adc14af14122184c92bc5fa2d973b612298019af0fab85640c1.
+//
+// Solidity: event UpdateValidator(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) FilterUpdateValidator(opts *bind.FilterOpts) (*INodeManagerUpdateValidatorIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "UpdateValidator")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerUpdateValidatorIterator{contract: _INodeManager.contract, event: "UpdateValidator", logs: logs, sub: sub}, nil
+}
+
+// WatchUpdateValidator is a free log subscription operation binding the contract event 0xf6d6118bb8579adc14af14122184c92bc5fa2d973b612298019af0fab85640c1.
+//
+// Solidity: event UpdateValidator(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) WatchUpdateValidator(opts *bind.WatchOpts, sink chan<- *INodeManagerUpdateValidator) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "UpdateValidator")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerUpdateValidator)
+				if err := _INodeManager.contract.UnpackLog(event, "UpdateValidator", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseUpdateValidator is a log parse operation binding the contract event 0xf6d6118bb8579adc14af14122184c92bc5fa2d973b612298019af0fab85640c1.
+//
+// Solidity: event UpdateValidator(string consensusPubkey)
+func (_INodeManager *INodeManagerFilterer) ParseUpdateValidator(log types.Log) (*INodeManagerUpdateValidator, error) {
+	event := new(INodeManagerUpdateValidator)
+	if err := _INodeManager.contract.UnpackLog(event, "UpdateValidator", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// INodeManagerWithdrawIterator is returned from FilterWithdraw and is used to iterate over the raw logs and unpacked data for Withdraw events raised by the INodeManager contract.
+type INodeManagerWithdrawIterator struct {
+	Event *INodeManagerWithdraw // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerWithdrawIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerWithdraw)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerWithdraw)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerWithdrawIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerWithdrawIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerWithdraw represents a Withdraw event raised by the INodeManager contract.
+type INodeManagerWithdraw struct {
+	Caller string
+	Amount string
+	Raw    types.Log // Blockchain specific contextual infos
+}
+
+// FilterWithdraw is a free log retrieval operation binding the contract event 0x8611643a3aa3bfaaff3142871c24f5b4013939f2c2b7a5a36aaf32d5e1c68994.
+//
+// Solidity: event Withdraw(string caller, string amount)
+func (_INodeManager *INodeManagerFilterer) FilterWithdraw(opts *bind.FilterOpts) (*INodeManagerWithdrawIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "Withdraw")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerWithdrawIterator{contract: _INodeManager.contract, event: "Withdraw", logs: logs, sub: sub}, nil
+}
+
+// WatchWithdraw is a free log subscription operation binding the contract event 0x8611643a3aa3bfaaff3142871c24f5b4013939f2c2b7a5a36aaf32d5e1c68994.
+//
+// Solidity: event Withdraw(string caller, string amount)
+func (_INodeManager *INodeManagerFilterer) WatchWithdraw(opts *bind.WatchOpts, sink chan<- *INodeManagerWithdraw) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "Withdraw")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerWithdraw)
+				if err := _INodeManager.contract.UnpackLog(event, "Withdraw", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseWithdraw is a log parse operation binding the contract event 0x8611643a3aa3bfaaff3142871c24f5b4013939f2c2b7a5a36aaf32d5e1c68994.
+//
+// Solidity: event Withdraw(string caller, string amount)
+func (_INodeManager *INodeManagerFilterer) ParseWithdraw(log types.Log) (*INodeManagerWithdraw, error) {
+	event := new(INodeManagerWithdraw)
+	if err := _INodeManager.contract.UnpackLog(event, "Withdraw", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// INodeManagerWithdrawCommissionIterator is returned from FilterWithdrawCommission and is used to iterate over the raw logs and unpacked data for WithdrawCommission events raised by the INodeManager contract.
+type INodeManagerWithdrawCommissionIterator struct {
+	Event *INodeManagerWithdrawCommission // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerWithdrawCommissionIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerWithdrawCommission)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerWithdrawCommission)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerWithdrawCommissionIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerWithdrawCommissionIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerWithdrawCommission represents a WithdrawCommission event raised by the INodeManager contract.
+type INodeManagerWithdrawCommission struct {
+	ConsensusPubkey string
+	Commission      string
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterWithdrawCommission is a free log retrieval operation binding the contract event 0xb732e4a208911fcc74b6416fb6480712d8e9f03baecb7acc08372cb8a4ea64a7.
+//
+// Solidity: event WithdrawCommission(string consensusPubkey, string commission)
+func (_INodeManager *INodeManagerFilterer) FilterWithdrawCommission(opts *bind.FilterOpts) (*INodeManagerWithdrawCommissionIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "WithdrawCommission")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerWithdrawCommissionIterator{contract: _INodeManager.contract, event: "WithdrawCommission", logs: logs, sub: sub}, nil
+}
+
+// WatchWithdrawCommission is a free log subscription operation binding the contract event 0xb732e4a208911fcc74b6416fb6480712d8e9f03baecb7acc08372cb8a4ea64a7.
+//
+// Solidity: event WithdrawCommission(string consensusPubkey, string commission)
+func (_INodeManager *INodeManagerFilterer) WatchWithdrawCommission(opts *bind.WatchOpts, sink chan<- *INodeManagerWithdrawCommission) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "WithdrawCommission")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerWithdrawCommission)
+				if err := _INodeManager.contract.UnpackLog(event, "WithdrawCommission", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseWithdrawCommission is a log parse operation binding the contract event 0xb732e4a208911fcc74b6416fb6480712d8e9f03baecb7acc08372cb8a4ea64a7.
+//
+// Solidity: event WithdrawCommission(string consensusPubkey, string commission)
+func (_INodeManager *INodeManagerFilterer) ParseWithdrawCommission(log types.Log) (*INodeManagerWithdrawCommission, error) {
+	event := new(INodeManagerWithdrawCommission)
+	if err := _INodeManager.contract.UnpackLog(event, "WithdrawCommission", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// INodeManagerWithdrawStakeRewardsIterator is returned from FilterWithdrawStakeRewards and is used to iterate over the raw logs and unpacked data for WithdrawStakeRewards events raised by the INodeManager contract.
+type INodeManagerWithdrawStakeRewardsIterator struct {
+	Event *INodeManagerWithdrawStakeRewards // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerWithdrawStakeRewardsIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerWithdrawStakeRewards)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerWithdrawStakeRewards)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerWithdrawStakeRewardsIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerWithdrawStakeRewardsIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerWithdrawStakeRewards represents a WithdrawStakeRewards event raised by the INodeManager contract.
+type INodeManagerWithdrawStakeRewards struct {
+	Rewards string
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterWithdrawStakeRewards is a free log retrieval operation binding the contract event 0x4cfbe5cdece0beac6f7f101ecb4f9f5abce4f1dda029cf4bd5c3adfbb62a41a3.
+//
+// Solidity: event WithdrawStakeRewards(string rewards)
+func (_INodeManager *INodeManagerFilterer) FilterWithdrawStakeRewards(opts *bind.FilterOpts) (*INodeManagerWithdrawStakeRewardsIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "WithdrawStakeRewards")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerWithdrawStakeRewardsIterator{contract: _INodeManager.contract, event: "WithdrawStakeRewards", logs: logs, sub: sub}, nil
+}
+
+// WatchWithdrawStakeRewards is a free log subscription operation binding the contract event 0x4cfbe5cdece0beac6f7f101ecb4f9f5abce4f1dda029cf4bd5c3adfbb62a41a3.
+//
+// Solidity: event WithdrawStakeRewards(string rewards)
+func (_INodeManager *INodeManagerFilterer) WatchWithdrawStakeRewards(opts *bind.WatchOpts, sink chan<- *INodeManagerWithdrawStakeRewards) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "WithdrawStakeRewards")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerWithdrawStakeRewards)
+				if err := _INodeManager.contract.UnpackLog(event, "WithdrawStakeRewards", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseWithdrawStakeRewards is a log parse operation binding the contract event 0x4cfbe5cdece0beac6f7f101ecb4f9f5abce4f1dda029cf4bd5c3adfbb62a41a3.
+//
+// Solidity: event WithdrawStakeRewards(string rewards)
+func (_INodeManager *INodeManagerFilterer) ParseWithdrawStakeRewards(log types.Log) (*INodeManagerWithdrawStakeRewards, error) {
+	event := new(INodeManagerWithdrawStakeRewards)
+	if err := _INodeManager.contract.UnpackLog(event, "WithdrawStakeRewards", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// INodeManagerWithdrawValidatorIterator is returned from FilterWithdrawValidator and is used to iterate over the raw logs and unpacked data for WithdrawValidator events raised by the INodeManager contract.
+type INodeManagerWithdrawValidatorIterator struct {
+	Event *INodeManagerWithdrawValidator // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *INodeManagerWithdrawValidatorIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(INodeManagerWithdrawValidator)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(INodeManagerWithdrawValidator)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *INodeManagerWithdrawValidatorIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *INodeManagerWithdrawValidatorIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// INodeManagerWithdrawValidator represents a WithdrawValidator event raised by the INodeManager contract.
+type INodeManagerWithdrawValidator struct {
+	ConsensusPubkey string
+	SelfStake       string
+	Raw             types.Log // Blockchain specific contextual infos
+}
+
+// FilterWithdrawValidator is a free log retrieval operation binding the contract event 0xa5bee9e1a2697e6ed6ddf963ed42431f3c8c594f49c697cf1391bbf74e4ea877.
+//
+// Solidity: event WithdrawValidator(string consensusPubkey, string selfStake)
+func (_INodeManager *INodeManagerFilterer) FilterWithdrawValidator(opts *bind.FilterOpts) (*INodeManagerWithdrawValidatorIterator, error) {
+
+	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "WithdrawValidator")
+	if err != nil {
+		return nil, err
+	}
+	return &INodeManagerWithdrawValidatorIterator{contract: _INodeManager.contract, event: "WithdrawValidator", logs: logs, sub: sub}, nil
+}
+
+// WatchWithdrawValidator is a free log subscription operation binding the contract event 0xa5bee9e1a2697e6ed6ddf963ed42431f3c8c594f49c697cf1391bbf74e4ea877.
+//
+// Solidity: event WithdrawValidator(string consensusPubkey, string selfStake)
+func (_INodeManager *INodeManagerFilterer) WatchWithdrawValidator(opts *bind.WatchOpts, sink chan<- *INodeManagerWithdrawValidator) (event.Subscription, error) {
+
+	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "WithdrawValidator")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(INodeManagerWithdrawValidator)
+				if err := _INodeManager.contract.UnpackLog(event, "WithdrawValidator", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseWithdrawValidator is a log parse operation binding the contract event 0xa5bee9e1a2697e6ed6ddf963ed42431f3c8c594f49c697cf1391bbf74e4ea877.
+//
+// Solidity: event WithdrawValidator(string consensusPubkey, string selfStake)
+func (_INodeManager *INodeManagerFilterer) ParseWithdrawValidator(log types.Log) (*INodeManagerWithdrawValidator, error) {
+	event := new(INodeManagerWithdrawValidator)
+	if err := _INodeManager.contract.UnpackLog(event, "WithdrawValidator", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 

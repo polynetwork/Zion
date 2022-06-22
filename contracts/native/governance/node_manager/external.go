@@ -25,6 +25,16 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
+	"math/big"
+)
+
+var (
+	GenesisMaxCommission                = new(big.Int).SetUint64(50)
+	GenesisMinInitialStake              = new(big.Int).SetUint64(100000)
+	GenesisMaxDescLength         uint64 = 2048
+	GenesisBlockPerEpoch                = new(big.Int).SetUint64(400000)
+	GenesisConsensusValidatorNum uint64 = 4
+	GenesisVoterValidatorNum     uint64 = 4
 )
 
 func init() {
@@ -43,15 +53,17 @@ func init() {
 			peer := &Peer{PubKey: pk, Address: addr}
 			peers = append(peers, peer)
 		}
-		if _, err := storeGenesisEpoch(db, peers); err != nil {
+		if _, err := StoreGenesisEpoch(db, peers); err != nil {
 			return err
-		} else {
-			return nil
 		}
+		if err := StoreGenesisGlobalConfig(db); err != nil {
+			return err
+		}
+		return nil
 	}
 }
 
-func storeGenesisEpoch(s *state.StateDB, peers []*Peer) (*EpochInfo, error) {
+func StoreGenesisEpoch(s *state.StateDB, peers []*Peer) (*EpochInfo, error) {
 	cache := (*state.CacheDB)(s)
 	epoch := &EpochInfo{
 		ID:          StartEpochID,
@@ -64,6 +76,23 @@ func storeGenesisEpoch(s *state.StateDB, peers []*Peer) (*EpochInfo, error) {
 	if err := setGenesisEpochInfo(cache, epoch); err != nil {
 		return nil, err
 	}
-
 	return epoch, nil
+}
+
+func StoreGenesisGlobalConfig(s *state.StateDB) error {
+	cache := (*state.CacheDB)(s)
+	globalConfig := &GlobalConfig{
+		MaxCommission:         GenesisMaxCommission,
+		MinInitialStake:       GenesisMinInitialStake,
+		MaxDescLength:         GenesisMaxDescLength,
+		BlockPerEpoch:         GenesisBlockPerEpoch,
+		ConsensusValidatorNum: GenesisConsensusValidatorNum,
+		VoterValidatorNum:     GenesisVoterValidatorNum,
+	}
+
+	// store current epoch and epoch info
+	if err := setGenesisGlobalConfig(cache, globalConfig); err != nil {
+		return err
+	}
+	return nil
 }

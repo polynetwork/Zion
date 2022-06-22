@@ -40,8 +40,7 @@ const (
 	SKP_GLOBAL_CONFIG                 = "st_global_config"
 	SKP_VALIDATOR                     = "st_validator"
 	SKP_ALL_VALIDATOR                 = "st_all_validator"
-	SKP_LOCK_POOL                     = "st_lock_pool"
-	SKP_UNLOCK_POOL                   = "st_unlock_pool"
+	SKP_TOTAL_POOL                    = "st_lock_pool"
 	SKP_STAKE_INFO                    = "st_stake_info"
 	SKP_UNLOCK_INFO                   = "st_unlock_info"
 	SKP_CURRENT_EPOCH                 = "st_current_epoch"
@@ -270,6 +269,16 @@ func setGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error
 	return nil
 }
 
+func setGenesisGlobalConfig(s *state.CacheDB, globalConfig *GlobalConfig) error {
+	key := globalConfigKey()
+	store, err := rlp.EncodeToBytes(globalConfig)
+	if err != nil {
+		return fmt.Errorf("setGenesisGlobalConfig, serialize globalConfig error: %v", err)
+	}
+	customSet(s, key, store)
+	return nil
+}
+
 func GetGlobalConfig(s *native.NativeContract) (*GlobalConfig, error) {
 	key := globalConfigKey()
 	store, err := get(s, key)
@@ -384,82 +393,42 @@ func GetAllValidators(s *native.NativeContract) (*AllValidators, error) {
 	return allValidators, nil
 }
 
-func depositLockPool(s *native.NativeContract, amount *big.Int) error {
-	lockPool, err := GetLockPool(s)
+func depositTotalPool(s *native.NativeContract, amount *big.Int) error {
+	lockPool, err := GetTotalPool(s)
 	if err != nil {
-		return fmt.Errorf("depositLockPool, get lock pool error: %v", err)
+		return fmt.Errorf("depositTotalPool, get total pool error: %v", err)
 	}
 	lockPool = new(big.Int).Add(lockPool, amount)
-	setLockPool(s, lockPool)
+	setTotalPool(s, lockPool)
 	return nil
 }
 
-func withdrawLockPool(s *native.NativeContract, amount *big.Int) error {
-	lockPool, err := GetLockPool(s)
+func withdrawTotalPool(s *native.NativeContract, amount *big.Int) error {
+	lockPool, err := GetTotalPool(s)
 	if err != nil {
-		return fmt.Errorf("withdrawLockPool, get lock pool error: %v", err)
+		return fmt.Errorf("withdrawTotalPool, get total pool error: %v", err)
 	}
 	lockPool = new(big.Int).Sub(lockPool, amount)
 	if lockPool.Sign() < 0 {
-		return fmt.Errorf("withdrawLockPool, lock pool is less than amount, please check")
+		return fmt.Errorf("withdrawTotalPool, total pool is less than amount, please check")
 	}
-	setLockPool(s, lockPool)
+	setTotalPool(s, lockPool)
 	return nil
 }
 
-func depositUnlockPool(s *native.NativeContract, amount *big.Int) error {
-	unlockPool, err := GetUnlockPool(s)
-	if err != nil {
-		return fmt.Errorf("depositUnlockPool, get unlock pool error: %v", err)
-	}
-	unlockPool = new(big.Int).Add(unlockPool, amount)
-	setUnlockPool(s, unlockPool)
-	return nil
-}
-
-func withdrawUnlockPool(s *native.NativeContract, amount *big.Int) error {
-	unlockPool, err := GetUnlockPool(s)
-	if err != nil {
-		return fmt.Errorf("withdrawUnlockPool, get lock pool error: %v", err)
-	}
-	unlockPool = new(big.Int).Sub(unlockPool, amount)
-	if unlockPool.Sign() < 0 {
-		return fmt.Errorf("withdrawUnlockPool, unlock pool is less than amount, please check")
-	}
-	setUnlockPool(s, unlockPool)
-	return nil
-}
-
-func setLockPool(s *native.NativeContract, amount *big.Int) {
-	key := lockPoolKey()
+func setTotalPool(s *native.NativeContract, amount *big.Int) {
+	key := totalPoolKey()
 	set(s, key, amount.Bytes())
 }
 
-func GetLockPool(s *native.NativeContract) (*big.Int, error) {
-	key := lockPoolKey()
+func GetTotalPool(s *native.NativeContract) (*big.Int, error) {
+	key := totalPoolKey()
 	store, err := get(s, key)
 	if err == ErrEof {
 		return common.Big0, nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("GetLockPool, get store error: %v", err)
-	}
-	return new(big.Int).SetBytes(store), nil
-}
-
-func setUnlockPool(s *native.NativeContract, amount *big.Int) {
-	key := unlockPoolKey()
-	set(s, key, amount.Bytes())
-}
-
-func GetUnlockPool(s *native.NativeContract) (*big.Int, error) {
-	key := unlockPoolKey()
-	store, err := get(s, key)
-	if err == ErrEof {
-		return common.Big0, nil
-	}
-	if err != nil {
-		return nil, fmt.Errorf("GetUnlockPool, get store error: %v", err)
+		return nil, fmt.Errorf("GetTotalPool, get store error: %v", err)
 	}
 	return new(big.Int).SetBytes(store), nil
 }
@@ -492,6 +461,7 @@ func GetStakeInfo(s *native.NativeContract, stakeAddress common.Address, consens
 	stakeInfo := &StakeInfo{
 		StakeAddress:    stakeAddress,
 		ConsensusPubkey: consensusPk,
+		Amount:          common.Big0,
 	}
 	dec, err := hexutil.Decode(stakeInfo.ConsensusPubkey)
 	if err != nil {
@@ -531,7 +501,7 @@ func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Ad
 		return nil, fmt.Errorf("filterExpiredUnlockingInfo, GetUnlockingInfo error: %v", err)
 	}
 	j := 0
-	var expiredSum *big.Int
+	expiredSum := new(big.Int)
 	for _, unlockingStake := range unlockingInfo.UnlockingStake {
 		if unlockingStake.CompleteHeight.Cmp(height) == 1 {
 			unlockingInfo.UnlockingStake[j] = unlockingStake
@@ -812,12 +782,8 @@ func allValidatorKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_ALL_VALIDATOR))
 }
 
-func lockPoolKey() []byte {
-	return utils.ConcatKey(this, []byte(SKP_LOCK_POOL))
-}
-
-func unlockPoolKey() []byte {
-	return utils.ConcatKey(this, []byte(SKP_UNLOCK_POOL))
+func totalPoolKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_TOTAL_POOL))
 }
 
 func stakeInfoKey(stakeAddress common.Address, dec []byte) []byte {

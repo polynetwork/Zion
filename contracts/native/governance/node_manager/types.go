@@ -235,7 +235,7 @@ type UnlockingStake struct {
 }
 
 func (m *UnlockingStake) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Height, m.CompleteHeight, m.CompleteHeight})
+	return rlp.Encode(w, []interface{}{m.Height, m.CompleteHeight, m.Amount})
 }
 
 func (m *UnlockingStake) DecodeRLP(s *rlp.Stream) error {

@@ -90,7 +90,7 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 
 		ok, err := node_manager.CheckVoterSigns(s, iscommon.MethodSyncRootInfo, blob, caller)
 		if err != nil {
-			return nil, fmt.Errorf("SyncRootInfo, CheckConsensusSigns error: %v", err)
+			return nil, fmt.Errorf("SyncRootInfo, CheckVoterSigns error: %v", err)
 		}
 		if ok {
 			err := iscommon.PutRootInfo(s, chainID, rootInfo.Height, rootInfo.Info)

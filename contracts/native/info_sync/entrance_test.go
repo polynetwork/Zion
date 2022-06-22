@@ -42,7 +42,7 @@ var (
 	sdb              *state.StateDB
 	testGenesisNum   = 4
 	acct             *ecdsa.PublicKey
-	testGenesisPeers *node_manager.Peers
+	testGenesisPeers []*node_manager.Peer
 )
 
 const (
@@ -59,7 +59,7 @@ func init() {
 	db := rawdb.NewMemoryDatabase()
 	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testGenesisPeers = generateTestPeers(testGenesisNum)
-	storeGenesisEpoch(sdb, testGenesisPeers)
+	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers)
 
 	putSideChain()
 }
@@ -109,7 +109,7 @@ func TestNoAuthSyncRootInfo(t *testing.T) {
 	extra := uint64(1000)
 	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, 0+extra, nil)
 	_, _, err = contractRef.NativeCall(caller, utils.InfoSyncContractAddress, input)
-	assert.Equal(t, "SyncRootInfo, CheckConsensusSigns error: invalid authority", err.Error())
+	assert.NotNil(t, err)
 }
 
 func TestNormalSyncRootInfo(t *testing.T) {
@@ -128,7 +128,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 	assert.Nil(t, err)
 
 	for i := 0; i < testGenesisNum; i++ {
-		caller := testGenesisPeers.List[i].Address
+		caller := testGenesisPeers[i].Address
 		blockNumber := big.NewInt(1)
 		extra := uint64(1000)
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, 0+extra, nil)
@@ -154,79 +154,18 @@ func TestNormalSyncRootInfo(t *testing.T) {
 }
 
 // generateTestPeer ONLY used for testing
-func generateTestPeer() *node_manager.PeerInfo {
+func generateTestPeer() *node_manager.Peer {
 	pk, _ := crypto.GenerateKey()
-	return &node_manager.PeerInfo{
+	return &node_manager.Peer{
 		PubKey:  hexutil.Encode(crypto.CompressPubkey(&pk.PublicKey)),
 		Address: crypto.PubkeyToAddress(pk.PublicKey),
 	}
 }
 
-func generateTestPeers(n int) *node_manager.Peers {
-	peers := &node_manager.Peers{List: make([]*node_manager.PeerInfo, n)}
+func generateTestPeers(n int) []*node_manager.Peer {
+	peers := make([]*node_manager.Peer, n)
 	for i := 0; i < n; i++ {
-		peers.List[i] = generateTestPeer()
+		peers[i] = generateTestPeer()
 	}
 	return peers
-}
-
-func storeGenesisEpoch(s *state.StateDB, peers *node_manager.Peers) (*node_manager.EpochInfo, error) {
-	cache := (*state.CacheDB)(s)
-	epoch := &node_manager.EpochInfo{
-		ID:          node_manager.StartEpochID,
-		Peers:       peers,
-		StartHeight: 0,
-	}
-
-	// store current epoch and epoch info
-	if err := setEpoch(cache, epoch); err != nil {
-		return nil, err
-	}
-
-	// store current hash
-	curKey := curEpochKey()
-	cache.Put(curKey, epoch.Hash().Bytes())
-
-	// store genesis epoch id to list
-	value, err := rlp.EncodeToBytes(&node_manager.HashList{List: []common.Hash{epoch.Hash()}})
-	if err != nil {
-		return nil, err
-	}
-	proposalKey := proposalsKey(epoch.ID)
-	cache.Put(proposalKey, value)
-
-	// store genesis epoch proof
-	key := epochProofKey(node_manager.EpochProofHash(epoch.ID))
-	cache.Put(key, epoch.Hash().Bytes())
-
-	return epoch, nil
-}
-
-func setEpoch(s *state.CacheDB, epoch *node_manager.EpochInfo) error {
-	hash := epoch.Hash()
-	key := epochKey(hash)
-
-	value, err := rlp.EncodeToBytes(epoch)
-	if err != nil {
-		return err
-	}
-
-	s.Put(key, value)
-	return nil
-}
-
-func epochKey(epochHash common.Hash) []byte {
-	return utils.ConcatKey(utils.NodeManagerContractAddress, []byte("st_epoch"), epochHash.Bytes())
-}
-
-func curEpochKey() []byte {
-	return utils.ConcatKey(utils.NodeManagerContractAddress, []byte("st_cur_epoch"), []byte("1"))
-}
-
-func epochProofKey(proofHashKey common.Hash) []byte {
-	return utils.ConcatKey(utils.NodeManagerContractAddress, []byte("st_proof"), proofHashKey.Bytes())
-}
-
-func proposalsKey(epochID uint64) []byte {
-	return utils.ConcatKey(utils.NodeManagerContractAddress, []byte("st_proposal"), utils.GetUint64Bytes(epochID))
 }

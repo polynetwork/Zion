@@ -27,7 +27,6 @@ import (
 )
 
 func deposit(s *native.NativeContract, from common.Address, amount *big.Int, validator *Validator) error {
-	height := s.ContractRef().BlockHeight()
 	dec, err := hexutil.Decode(validator.ConsensusPubkey)
 	if err != nil {
 		return fmt.Errorf("deposit, decode pubkey error: %v", err)
@@ -62,20 +61,10 @@ func deposit(s *native.NativeContract, from common.Address, amount *big.Int, val
 		return fmt.Errorf("deposit, nativeTransfer error: %v", err)
 	}
 
-	// update lock and unlock token pool
-	switch {
-	case validator.IsLocked():
-		err := depositLockPool(s, amount)
-		if err != nil {
-			return fmt.Errorf("deposit, depositLockPool error: %v", err)
-		}
-	case validator.IsUnlocking(height), validator.IsUnlocked(height):
-		err := depositUnlockPool(s, amount)
-		if err != nil {
-			return fmt.Errorf("deposit, depositUnlockPool error: %v", err)
-		}
-	default:
-		return fmt.Errorf("invalid status")
+	// update total token pool
+	err = depositTotalPool(s, amount)
+	if err != nil {
+		return fmt.Errorf("deposit, depositTotalPool error: %v", err)
 	}
 
 	// Call the after-stake hook
@@ -112,14 +101,6 @@ func unStake(s *native.NativeContract, from common.Address, amount *big.Int, val
 
 	// update lock and unlock token pool
 	if validator.IsLocked() {
-		err = withdrawLockPool(s, amount)
-		if err != nil {
-			return fmt.Errorf("unStake, withdrawLockPool error: %v", err)
-		}
-		err = depositUnlockPool(s, amount)
-		if err != nil {
-			return fmt.Errorf("unStake, depositUnlockPool error: %v", err)
-		}
 		unlockingStake := &UnlockingStake{
 			Height:         height,
 			CompleteHeight: new(big.Int).Add(height, globalConfig.BlockPerEpoch),
@@ -132,9 +113,9 @@ func unStake(s *native.NativeContract, from common.Address, amount *big.Int, val
 	}
 
 	if validator.IsUnlocked(height) || validator.IsRemoved(height) {
-		err = withdrawUnlockPool(s, amount)
+		err = withdrawTotalPool(s, amount)
 		if err != nil {
-			return fmt.Errorf("unStake, withdrawUnlockPool error: %v", err)
+			return fmt.Errorf("unStake, withdrawTotalPool error: %v", err)
 		}
 		// transfer native token
 		err = nativeTransfer(s, this, from, amount)
