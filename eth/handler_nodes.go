@@ -29,14 +29,34 @@ import (
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/p2p/enode"
 )
+
+// hotstuff is the master-slave network, so that unconnected nodes in devp2p cannot receive
+// consensus messages. It is necessary to implement an new protocol to achieve direct network
+// connection of validator nodes.
+//
+// implement an loop to monitor and process the `epochChange` event, miner should parse and
+// resemble it's own enode info and broadcast it and remote enodes to other validators. After
+// the node receives node info, it adds connections and deletes unnecessary links.
+//
 
 var (
 	broadcastDuration   = 60 * time.Second // Time duration for broadcast static-nodes
 	broadcastLastTime   = 24 * time.Hour   // Last time for broadcast static-nodes
 	broadcastChCapacity = 10               // Capacity for broadcast channel, is a low frequency action
 )
+
+// staticNodeServer defines the methods need from a p2p server implementation to
+// support operation needed by the `hotstuff` protocol.
+type staticNodeServer interface {
+	PeersInfo() []*p2p.PeerInfo
+	Peers() []*p2p.Peer
+	AddPeer(node *enode.Node)
+	RemovePeer(node *enode.Node)
+	LocalENode() *enode.Node
+}
 
 type haltTask struct {
 	waiting chan struct{}
@@ -48,52 +68,52 @@ type nodeBroadcaster struct {
 
 	miner common.Address // miner address used to judge that whether this program need to broadcast static-nodes
 
-	validators       map[common.Address]struct{}     // validators map for filter useless connection
-	validatorsMu     sync.Mutex                      // mutex for validators map
-	staticNodesCh    chan consensus.StaticNodesEvent // channel for listening `StaticNodeEvent`
-	staticNodesSub   event.Subscription              // subscribe consensus `StaticNodeEvent`
-	staticNodesMap   map[string]*enode.Node          // static nodes storage
-	staticNodesMapMu sync.Mutex                      // mutex for static-nodes storage
+	validators   map[common.Address]struct{}     // validators map for filter useless connection
+	validatorsMu sync.Mutex                      // mutex for validators map
+	nodesCh      chan consensus.StaticNodesEvent // channel for listening `StaticNodeEvent`
+	nodesSub     event.Subscription              // subscribe consensus `StaticNodeEvent`
+	nodesMap     map[string]*enode.Node          // static nodes storage
+	nodesMapMu   sync.Mutex                      // mutex for static-nodes storage
 
 	server staticNodeServer // interface of p2p server
 
-	round         int
-	haltCh        chan *haltTask // Signal for procedure halt
-	quitBroadcast chan struct{}  // Signal for quit broadcasting
+	round  int
+	haltCh chan *haltTask // Signal for procedure halt
+	quit   chan struct{}  // Signal for quit broadcasting
 }
 
 func newNodeBroadcaster(miner common.Address, manager staticNodeServer, handler *handler) *nodeBroadcaster {
 	return &nodeBroadcaster{
-		handler:       handler,
-		miner:         miner,
-		server:        manager,
-		quitBroadcast: make(chan struct{}),
-		haltCh:        make(chan *haltTask, 10),
+		handler: handler,
+		miner:   miner,
+		server:  manager,
+		quit:    make(chan struct{}),
+		haltCh:  make(chan *haltTask, 10),
 	}
 }
 
+// only used for hotstuff
 func (h *nodeBroadcaster) Start() {
-	// only used for hotstuff
 	handler := h.handler.engine.(consensus.Handler)
-	h.staticNodesCh = make(chan consensus.StaticNodesEvent, broadcastChCapacity)
-	h.staticNodesSub = handler.SubscribeNodes(h.staticNodesCh)
-	go h.staticNodesBroadcastLoop()
+	h.nodesCh = make(chan consensus.StaticNodesEvent, broadcastChCapacity)
+	h.nodesSub = handler.SubscribeNodes(h.nodesCh)
+	go h.loop()
 }
 
 func (h *nodeBroadcaster) Stop() {
-	h.staticNodesSub.Unsubscribe() // quits staticNodesLoop
-	close(h.quitBroadcast)
+	h.nodesSub.Unsubscribe() // quits staticNodesLoop
+	close(h.quit)
 }
 
-// staticNodesBroadcastLoop
-func (h *nodeBroadcaster) staticNodesBroadcastLoop() {
+// loop
+func (h *nodeBroadcaster) loop() {
 	if h.server == nil || h.miner == common.EmptyAddress {
 		return
 	}
 
 	for {
 		select {
-		case evt := <-h.staticNodesCh:
+		case evt := <-h.nodesCh:
 			if h.round > 0 {
 				task := <-h.haltCh
 				close(task.waiting)
@@ -104,23 +124,22 @@ func (h *nodeBroadcaster) staticNodesBroadcastLoop() {
 				done:    make(chan struct{}),
 			}
 			h.haltCh <- task
-			go h.BroadcastNodes(evt.Validators, task)
+			go h.handleTask(evt.Validators, task)
 
-		case <-h.staticNodesSub.Err():
+		case <-h.nodesSub.Err():
 			return
 
-		case <-h.quitBroadcast:
+		case <-h.quit:
 			return
 		}
 	}
 }
 
-// BroadcastNodes will broadcast all validators' enode information in a fixed time,
-// only working in fixed time.
-func (h *nodeBroadcaster) BroadcastNodes(validators []common.Address, task *haltTask) {
+// handleTask will broadcast all validators' enode information in fixed time
+func (h *nodeBroadcaster) handleTask(validators []common.Address, task *haltTask) {
 	done := make(chan struct{})
 
-	log.Debug("BroadcastNodes", "current round", h.round, "validators", validators)
+	log.Debug("handleTask", "current round", h.round, "validators", validators)
 	h.round += 1
 
 	timer := time.NewTimer(broadcastDuration)
@@ -155,14 +174,14 @@ func (h *nodeBroadcaster) BroadcastNodes(validators []common.Address, task *halt
 			// only inbound connections' remote address contains its own p2p server listening tcp/udp port.
 			for _, peer := range peers {
 				if _, exist := h.isValidator(peer.Node()); exist && !peer.Inbound() {
-					h.addStaticNode(peer.Node())
+					h.addNode(peer.Node())
 				}
 			}
 
 			// send all static-nodes to remote peer
 			// todo(fuk): consider the packet size. todo, addInf change to id or address
 			// todo(fuk): update log to local.ID
-			for _, node := range h.staticNodesMap {
+			for _, node := range h.nodesMap {
 				addNodes = append(addNodes, node)
 				addinf += fmt.Sprintf("%d,", node.TCP())
 			}
@@ -185,40 +204,40 @@ func (h *nodeBroadcaster) BroadcastNodes(validators []common.Address, task *halt
 			return
 
 		// system stop signal
-		case <-h.quitBroadcast:
+		case <-h.quit:
 			return
 		}
 	}
 }
 
-// addStaticNode add node and retrieve the node id and existence
-func (h *nodeBroadcaster) addStaticNode(node *enode.Node) (id string, exist bool) {
-	h.staticNodesMapMu.Lock()
-	defer h.staticNodesMapMu.Unlock()
+// addNode add node and retrieve the node id and existence
+func (h *nodeBroadcaster) addNode(node *enode.Node) (id string, exist bool) {
+	h.nodesMapMu.Lock()
+	defer h.nodesMapMu.Unlock()
 
-	if h.staticNodesMap == nil {
-		h.staticNodesMap = make(map[string]*enode.Node)
+	if h.nodesMap == nil {
+		h.nodesMap = make(map[string]*enode.Node)
 	}
 
 	id = node.ID().String()
-	if _, exist = h.staticNodesMap[id]; !exist {
-		h.staticNodesMap[id] = node
+	if _, exist = h.nodesMap[id]; !exist {
+		h.nodesMap[id] = node
 	}
 	return
 }
 
-// remStaticNode remove static node from node map and retrieve node id and existence
-func (h *nodeBroadcaster) remStaticNode(node *enode.Node) (id string, exist bool) {
-	h.staticNodesMapMu.Lock()
-	defer h.staticNodesMapMu.Unlock()
+// delNode remove static node from node map and retrieve node id and existence
+func (h *nodeBroadcaster) delNode(node *enode.Node) (id string, exist bool) {
+	h.nodesMapMu.Lock()
+	defer h.nodesMapMu.Unlock()
 
 	id = node.ID().String()
-	if h.staticNodesMap == nil {
+	if h.nodesMap == nil {
 		return
 	}
 
-	if _, exist = h.staticNodesMap[id]; exist {
-		delete(h.staticNodesMap, id)
+	if _, exist = h.nodesMap[id]; exist {
+		delete(h.nodesMap, id)
 	}
 	return
 }
@@ -271,23 +290,23 @@ func (h *ethHandler) handleStaticNodesMsg(peer *eth.Peer, packet *eth.StaticNode
 	for _, node := range packet.Remotes {
 		log.Debug("handleStaticNodesMsg", "from", peer.Node().TCP(), "receive tcp", node.TCP())
 		if _, exist := broadcaster.isValidator(node); exist {
-			broadcaster.addStaticNode(node)
+			broadcaster.addNode(node)
 			log.Debug("handleStaticNodesMsg", "from", peer.Node().TCP(), "add tcp", node.TCP())
 		}
 	}
 
 	// filter old validators
 	olds := make(map[enode.ID]*enode.Node)
-	for _, node := range broadcaster.staticNodesMap {
+	for _, node := range broadcaster.nodesMap {
 		if _, exist := broadcaster.isValidator(node); !exist {
 			olds[node.ID()] = node
-			broadcaster.remStaticNode(node)
+			broadcaster.delNode(node)
 			log.Debug("handleStaticNodesMsg", "from", peer.Node().TCP(), "remove old tcp", node.TCP())
 		}
 	}
 
 	// add new peer for p2p server
-	for _, node := range broadcaster.staticNodesMap {
+	for _, node := range broadcaster.nodesMap {
 		if _, exist := h.peers.peers[node.ID().String()]; !exist {
 			broadcaster.server.AddPeer(node)
 		}

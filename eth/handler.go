@@ -38,7 +38,6 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
 )
@@ -74,16 +73,6 @@ type txPool interface {
 	// SubscribeNewTxsEvent should return an event subscription of
 	// NewTxsEvent and send events to the given channel.
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
-}
-
-// staticNodeServer defines the methods need from a p2p server implementation to
-// support operation needed by the `hotstuff` protocol.
-type staticNodeServer interface {
-	PeersInfo() []*p2p.PeerInfo
-	Peers() []*p2p.Peer
-	AddPeer(node *enode.Node)
-	RemovePeer(node *enode.Node)
-	LocalENode() *enode.Node
 }
 
 // handlerConfig is the collection of initialization parameters to create a full
