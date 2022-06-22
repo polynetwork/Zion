@@ -240,6 +240,80 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, validator.Commission.UpdateHeight, new(big.Int).SetUint64(800000))
 	assert.Equal(t, validator.UnlockHeight, common.Big0)
 	assert.Equal(t, validator.Desc, "test2")
+
+	// cancel validator && unstake && withdraw validator
+	param6 := new(CancelValidatorParam)
+	param6.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	input, err = utils.PackMethodWithStruct(ABI, MethodCancelValidator, param6)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param7 := new(UnStakeParam)
+	param7.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param7.Amount = new(big.Int).SetUint64(1000)
+	input, err = utils.PackMethodWithStruct(ABI, MethodUnStake, param3)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	blockNumber = new(big.Int).SetUint64(1000000)
+	input, err = utils.PackMethod(ABI, MethodWithdraw)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param8 := new(WithdrawValidatorParam)
+	param8.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	input, err = utils.PackMethodWithStruct(ABI, MethodWithdrawValidator, param8)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	assert.NotNil(t, err)
+
+	// check
+	validator, _, err = GetValidator(contractQuery, validatorsKey[0].Dec)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.Status, Remove)
+	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).SetUint64(992000))
+
+	// add block num
+	blockNumber = new(big.Int).SetUint64(1300000)
+	input, err = utils.PackMethod(ABI, MethodWithdraw)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param9 := new(WithdrawValidatorParam)
+	param9.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	input, err = utils.PackMethodWithStruct(ABI, MethodWithdrawValidator, param9)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	validator, _, err = GetValidator(contractQuery, validatorsKey[0].Dec)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.Status, Remove)
+	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).SetUint64(993000))
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].Address), new(big.Int).SetUint64(1000000))
+
+	// unstake
+	param10 := new(UnStakeParam)
+	param10.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param10.Amount = new(big.Int).SetUint64(7000)
+	input, err = utils.PackMethodWithStruct(ABI, MethodUnStake, param10)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	validator, found, err := GetValidator(contractQuery, validatorsKey[0].Dec)
+	assert.Nil(t, err)
+	assert.Equal(t, found, false)
+	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).SetUint64(1000000))
 }
 
 // generateTestPeer ONLY used for testing

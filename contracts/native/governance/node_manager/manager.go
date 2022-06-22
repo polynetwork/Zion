@@ -366,6 +366,12 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("UnStake, validator is not exist")
 	}
 
+	// unStake native token
+	err = unStake(s, caller, params.Amount, validator)
+	if err != nil {
+		return nil, fmt.Errorf("UnStake, unStake error: %v", err)
+	}
+
 	// update validator
 	if validator.StakeAddress == caller {
 		return nil, fmt.Errorf("UnStake, stake address can not unstake")
@@ -375,7 +381,7 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 		}
 		validator.TotalStake = new(big.Int).Sub(validator.TotalStake, params.Amount)
 	}
-	if validator.TotalStake == common.Big0 && validator.SelfStake == common.Big0 {
+	if validator.TotalStake.Sign() == 0 && validator.SelfStake.Sign() == 0 {
 		err = delValidator(s, params.ConsensusPubkey)
 		if err != nil {
 			return nil, fmt.Errorf("UnStake, delValidator error: %v", err)
@@ -389,12 +395,6 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("UnStake, setValidator error: %v", err)
 		}
-	}
-
-	// unStake native token
-	err = unStake(s, caller, params.Amount, validator)
-	if err != nil {
-		return nil, fmt.Errorf("UnStake, unStake error: %v", err)
 	}
 
 	err = s.AddNotify(ABI, []string{UNSTAKE_EVENT}, params.ConsensusPubkey, params.Amount.String())
@@ -519,12 +519,7 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawValidator, unStake error: %v", err)
 	}
 
-	_, err = withdrawCommission(s, caller, dec)
-	if err != nil {
-		return nil, fmt.Errorf("WithdrawValidator, withdrawCommission error: %v", err)
-	}
-	delAccumulatedCommission(s, dec)
-
+	validator.TotalStake = new(big.Int).Sub(validator.TotalStake, validator.SelfStake)
 	validator.SelfStake = common.Big0
 	if validator.TotalStake == common.Big0 {
 		err = delValidator(s, params.ConsensusPubkey)
@@ -541,6 +536,12 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 			return nil, fmt.Errorf("WithdrawValidator, setValidator error: %v", err)
 		}
 	}
+
+	_, err = withdrawCommission(s, caller, dec)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawValidator, withdrawCommission error: %v", err)
+	}
+	delAccumulatedCommission(s, dec)
 
 	err = s.AddNotify(ABI, []string{WITHDRAW_VALIDATOR_EVENT}, params.ConsensusPubkey, validator.SelfStake.String())
 	if err != nil {
