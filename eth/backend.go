@@ -94,7 +94,7 @@ type Ethereum struct {
 	netRPCService *ethapi.PublicNetAPI
 
 	p2pServer          *p2p.Server
-	staticNodesManager staticNodesManager
+	staticNodesManager staticNodeServer
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }

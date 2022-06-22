@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p/enode"
@@ -219,54 +218,6 @@ func (h *ethHandler) handleBlockBroadcast(peer *eth.Peer, block *types.Block, td
 		peer.SetHead(trueHead, trueTD)
 		h.chainSync.handlePeerEvent(peer)
 	}
-	return nil
-}
-
-// handleStaticNodesMsg is invoked from a peer's message handler when it transmits a
-// static-nodes broadcast for the local node to process.
-func (h *ethHandler) handleStaticNodesMsg(peer *eth.Peer, packet *eth.StaticNodesPacket) error {
-	if h.validators == nil || len(h.validators) < 1 {
-		return nil
-	}
-
-	ethhandler := (*handler)(h)
-
-	// `packet.Local` is the `urlv4` string of the message sender, which needs to be parsed into a `enode` structure.
-	// in addition, this node must be placed at the end of the `packet.remote` list, because there is deduplication
-	// in the process of traversing the list. take the pre-existing node that does not need to be resolved.
-	from := packet.Local
-	node, err := enode.CopyUrlv4(from.URLv4(), from.IP(), from.TCP(), from.UDP())
-	if err != nil {
-		return err
-	}
-	packet.Remotes = append(packet.Remotes, node)
-
-	// filter node that not validator and not connected with local peer
-	for _, node := range packet.Remotes {
-		addr := crypto.PubkeyToAddress(*node.Pubkey())
-		if _, exist := ethhandler.validators[addr]; exist {
-			ethhandler.addStaticNode(node)
-		} else {
-			ethhandler.remStaticNode(node)
-		}
-	}
-
-	// add peer for p2p server
-	for _, node := range ethhandler.staticNodesMap {
-		if _, exist := h.peers.peers[node.ID().String()]; !exist {
-			ethhandler.staticNodesManager.AddPeer(node)
-		}
-	}
-
-	// remove peer in p2p server
-	for _, peer := range h.peers.peers {
-		node := peer.Node()
-		addr := crypto.PubkeyToAddress(*node.Pubkey())
-		if _, exist := h.staticNodesMap[addr.Hex()]; !exist {
-			ethhandler.staticNodesManager.RemovePeer(node)
-		}
-	}
-
 	return nil
 }
 

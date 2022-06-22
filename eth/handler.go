@@ -18,7 +18,6 @@ package eth
 
 import (
 	"errors"
-	"fmt"
 	"math"
 	"math/big"
 	"sync"
@@ -52,10 +51,6 @@ const (
 
 var (
 	syncChallengeTimeout = 15 * time.Second // Time allowance for a node to reply to the sync progress challenge
-
-	broadcastDuration   = 60 * time.Second // Time duration for broadcast static-nodes
-	broadcastLastTime   = 24 * time.Hour   // Last time for broadcast static-nodes
-	broadcastChCapacity = 3                // Capacity for broadcast channel, is a low frequency action
 )
 
 // txPool defines the methods needed from a transaction pool implementation to
@@ -81,9 +76,9 @@ type txPool interface {
 	SubscribeNewTxsEvent(chan<- core.NewTxsEvent) event.Subscription
 }
 
-// staticNodesManager defines the methods need from a p2p server implementation to
+// staticNodeServer defines the methods need from a p2p server implementation to
 // support operation needed by the `hotstuff` protocol.
-type staticNodesManager interface {
+type staticNodeServer interface {
 	PeersInfo() []*p2p.PeerInfo
 	Peers() []*p2p.Peer
 	AddPeer(node *enode.Node)
@@ -144,45 +139,33 @@ type handler struct {
 	wg        sync.WaitGroup
 	peerWG    sync.WaitGroup
 
-	miner              common.Address                  // miner address used to judge that whether this program need to broadcast static-nodes
-	validators         map[common.Address]struct{}     // validators map for filter useless connection
-	validatorsMu       sync.Mutex                      // mutex for validators map
-	staticNodesCh      chan consensus.StaticNodesEvent // channel for listening `StaticNodeEvent`
-	staticNodesSub     event.Subscription              // subscribe consensus `StaticNodeEvent`
-	staticNodesMap     map[string]*enode.Node          // static nodes storage
-	staticNodesMapMu   sync.Mutex                      // mutex for static-nodes storage
-	staticNodesManager staticNodesManager              // interface of p2p server
-	isBroadcast        bool                            // Flag whether the broadcasting procedure is running
-	haltBroadcast      chan struct{}                   // Signal for procedure halt
-	quitBroadcast      chan struct{}                   // Signal for quit broadcasting
+	nodeBroadcaster *nodeBroadcaster
 
 	// hotstuff
 	engine consensus.Engine
 }
 
 // newHandler returns a handler for all Ethereum chain management protocol.
-func newHandler(config *handlerConfig, engine consensus.Engine, manager staticNodesManager) (*handler, error) {
+func newHandler(config *handlerConfig, engine consensus.Engine, manager staticNodeServer) (*handler, error) {
 	// Create the protocol manager with the base fields
 	if config.EventMux == nil {
 		config.EventMux = new(event.TypeMux) // Nicety initialization for tests
 	}
 	h := &handler{
-		networkID:          config.Network,
-		forkFilter:         forkid.NewFilter(config.Chain),
-		eventMux:           config.EventMux,
-		database:           config.Database,
-		txpool:             config.TxPool,
-		chain:              config.Chain,
-		peers:              newPeerSet(),
-		whitelist:          config.Whitelist,
-		txsyncCh:           make(chan *txsync),
-		quitSync:           make(chan struct{}),
-		engine:             engine,
-		miner:              config.Miner,
-		staticNodesManager: manager,
-		quitBroadcast:      make(chan struct{}),
-		haltBroadcast:      make(chan struct{}),
+		networkID:  config.Network,
+		forkFilter: forkid.NewFilter(config.Chain),
+		eventMux:   config.EventMux,
+		database:   config.Database,
+		txpool:     config.TxPool,
+		chain:      config.Chain,
+		peers:      newPeerSet(),
+		whitelist:  config.Whitelist,
+		txsyncCh:   make(chan *txsync),
+		quitSync:   make(chan struct{}),
+		engine:     engine,
 	}
+
+	h.nodeBroadcaster = newNodeBroadcaster(config.Miner, manager, h)
 
 	if config.Sync == downloader.FullSync {
 		// The database seems empty as the current block is the genesis. Yet the fast
@@ -435,11 +418,8 @@ func (h *handler) Start(maxPeers int) {
 	// only for hotstuff
 	if handler, ok := h.engine.(consensus.Handler); ok {
 		handler.SetBroadcaster(h)
-
-		h.staticNodesCh = make(chan consensus.StaticNodesEvent, broadcastChCapacity)
-		h.staticNodesSub = handler.SubscribeNodes(h.staticNodesCh)
-		go h.staticNodesBroadcastLoop()
 	}
+	h.nodeBroadcaster.Start()
 
 	// broadcast transactions
 	h.wg.Add(1)
@@ -459,9 +439,8 @@ func (h *handler) Start(maxPeers int) {
 }
 
 func (h *handler) Stop() {
-	h.txsSub.Unsubscribe()         // quits txBroadcastLoop
-	h.minedBlockSub.Unsubscribe()  // quits blockBroadcastLoop
-	h.staticNodesSub.Unsubscribe() // quits staticNodesLoop
+	h.txsSub.Unsubscribe()        // quits txBroadcastLoop
+	h.minedBlockSub.Unsubscribe() // quits blockBroadcastLoop
 
 	// Quit chainSync and txsync64.
 	// After this is done, no new peers will be accepted.
@@ -476,7 +455,7 @@ func (h *handler) Stop() {
 	h.peerWG.Wait()
 
 	// Quit broadcast nodes
-	close(h.quitBroadcast)
+	h.nodeBroadcaster.Stop()
 
 	log.Info("Ethereum protocol stopped")
 }
@@ -579,144 +558,6 @@ func (h *handler) txBroadcastLoop() {
 		case <-h.txsSub.Err():
 			return
 		}
-	}
-}
-
-func (h *handler) staticNodesBroadcastLoop() {
-	if h.staticNodesManager == nil || h.miner == common.EmptyAddress {
-		return
-	}
-
-	for {
-		select {
-		case evt := <-h.staticNodesCh:
-			if h.isBroadcast {
-				h.haltBroadcast <- struct{}{}
-			}
-			h.BroadcastNodes(evt.Validators)
-
-		case <-h.staticNodesSub.Err():
-			return
-
-		case <-h.quitBroadcast:
-			return
-		}
-	}
-}
-
-// BroadcastNodes will broadcast all validators' enode information in a fixed time
-func (h *handler) BroadcastNodes(validators []common.Address) {
-	h.isBroadcast = true
-	defer func() {
-		h.isBroadcast = false
-	}()
-
-	peers := h.staticNodesManager.Peers()
-	if peers == nil {
-		return
-	}
-	local := h.staticNodesManager.LocalENode()
-	if local == nil {
-		return
-	}
-
-	// fulfill validators
-	h.validatorsMu.Lock()
-	h.validators = make(map[common.Address]struct{})
-	h.validatorsMu.Unlock()
-
-	// do not need to broadcast static-nodes if miner is not validator
-	if _, exist := h.validators[h.miner]; !exist {
-		return
-	}
-
-	// only working in fixed time.
-	timer := time.NewTimer(broadcastDuration)
-	done := make(chan struct{})
-	time.AfterFunc(broadcastLastTime, func() {
-		close(done)
-	})
-
-	for {
-		select {
-		case <-timer.C:
-			var (
-				addinf   string
-				addNodes = make([]*enode.Node, 0)
-			)
-
-			// only inbound connections' remote address contains its own p2p server listening tcp/udp port.
-			for _, peer := range peers {
-				node := peer.Node()
-				addr := crypto.PubkeyToAddress(*node.Pubkey())
-				if _, exist := h.validators[addr]; !exist && !peer.Inbound() {
-					h.addStaticNode(node)
-				}
-			}
-
-			for _, node := range h.staticNodesMap {
-				addNodes = append(addNodes, node)
-				addinf += fmt.Sprintf("%s:%d,", node.IP().String(), node.TCP())
-			}
-
-			// todo(fuk): consider the packet size
-			for _, peer := range h.peers.peers {
-				if err := peer.SendStaticNodes(local, addNodes); err != nil {
-					log.Error("SendStaticNodes", "to", peer.Node().ID(), "err", err)
-				}
-			}
-			log.Debug("SendStaticNodes", "local", local.TCP(), "add", addinf)
-
-			// reset timer to start the next round
-			timer.Reset(broadcastDuration)
-
-		// function halt signal
-		case <-h.haltBroadcast:
-			return
-
-		// system stop signal
-		case <-h.quitBroadcast:
-			return
-
-		case <-done:
-			// todo(fuk): p2p module persistence new static nodes in leveldb
-			return
-		}
-	}
-}
-
-// addStaticNode add node and retrieve the node id and existence
-func (h *handler) addStaticNode(node *enode.Node) (id string, exist bool) {
-	h.staticNodesMapMu.Lock()
-	defer h.staticNodesMapMu.Unlock()
-
-	if h.staticNodesMap == nil {
-		h.staticNodesMap = make(map[string]*enode.Node)
-	}
-
-	id = node.ID().String()
-	if _, exist = h.staticNodesMap[id]; !exist {
-		h.staticNodesMap[id] = node
-	}
-
-	return
-}
-
-// remStaticNode remove static node from node map and retrieve node id and existence
-func (h *handler) remStaticNode(node *enode.Node) (string, bool) {
-	h.staticNodesMapMu.Lock()
-	defer h.staticNodesMapMu.Unlock()
-
-	id := node.ID().String()
-	if h.staticNodesMap == nil {
-		return id, false
-	}
-
-	if _, exist := h.staticNodesMap[id]; exist {
-		delete(h.staticNodesMap, id)
-		return id, true
-	} else {
-		return id, false
 	}
 }
 
