@@ -73,11 +73,11 @@ func newNodeBroadcaster(miner common.Address, manager staticNodeServer, handler 
 }
 
 func (h *nodeBroadcaster) Start() {
-	if handler, ok := h.handler.engine.(consensus.Handler); ok {
-		h.staticNodesCh = make(chan consensus.StaticNodesEvent, broadcastChCapacity)
-		h.staticNodesSub = handler.SubscribeNodes(h.staticNodesCh)
-		go h.staticNodesBroadcastLoop()
-	}
+	// only used for hotstuff
+	handler := h.handler.engine.(consensus.Handler)
+	h.staticNodesCh = make(chan consensus.StaticNodesEvent, broadcastChCapacity)
+	h.staticNodesSub = handler.SubscribeNodes(h.staticNodesCh)
+	go h.staticNodesBroadcastLoop()
 }
 
 func (h *nodeBroadcaster) Stop() {
