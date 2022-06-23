@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -38,28 +37,23 @@ func CheckSigns(native *native.NativeContract, id, sig []byte, address common.Ad
 	}
 
 	// get epoch info
-	epochBytes, err := node_manager.GetCurrentEpoch(native)
+	epochInfo, err := node_manager.GetCurrentEpochInfo(native)
 	if err != nil {
-		log.Trace("CheckSigns", "get current epoch bytes failed", err)
-		return false, node_manager.ErrEpochNotExist
+		return false, fmt.Errorf("CheckSigns, node_manager.GetCurrentEpochInfo error: %v", err)
 	}
-	output := new(node_manager.MethodEpochOutput)
-	output.Decode(epochBytes)
-	epoch := output.Epoch
 
 	ctx := native.ContractRef().CurrentContext()
 	caller := ctx.Caller
 
 	// check authority
-	if err := node_manager.CheckAuthority(caller, caller, epoch); err != nil {
-		log.Trace("checkConsensusSign", "check authority failed", err)
-		return false, node_manager.ErrInvalidAuthority
+	if err := node_manager.CheckVoterAuthority(caller, caller, epochInfo); err != nil {
+		return false, fmt.Errorf("CheckSigns", "check authority failed", err)
 	}
 
 	//check signs num
 	num := 0
-	sum := len(epoch.Peers.List)
-	for _, v := range epoch.Peers.List {
+	sum := len(epochInfo.Voters)
+	for _, v := range epochInfo.Voters {
 		address := v.Address
 		_, ok := sigInfo.m[address.Hex()]
 		if ok {
