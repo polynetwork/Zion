@@ -20,21 +20,29 @@ package node_manager
 
 import (
 	"fmt"
-	"sort"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
+	"math/big"
+)
+
+var (
+	GenesisMaxCommission                = new(big.Int).SetUint64(50)
+	GenesisMinInitialStake              = new(big.Int).SetUint64(100000)
+	GenesisMaxDescLength         uint64 = 2048
+	GenesisBlockPerEpoch                = new(big.Int).SetUint64(400000)
+	GenesisConsensusValidatorNum uint64 = 4
+	GenesisVoterValidatorNum     uint64 = 4
 )
 
 func init() {
 	// store data in genesis block
 	core.RegGenesis = func(db *state.StateDB, data core.GenesisAlloc) error {
-		peers := &Peers{List: make([]*PeerInfo, 0)}
+		peers := make([]*Peer, 0, len(data))
 		for addr, v := range data {
+			pk := hexutil.Encode(v.PublicKey)
 			pubkey, err := crypto.DecompressPubkey(v.PublicKey)
 			if err != nil {
 				return fmt.Errorf("store genesis peers, decompress pubkey failed, err: %v", err)
@@ -42,47 +50,49 @@ func init() {
 			if got := crypto.PubkeyToAddress(*pubkey); got != addr {
 				return fmt.Errorf("store genesis peers, expect address %s got %s", addr.Hex(), got.Hex())
 			}
-			peer := &PeerInfo{Address: addr, PubKey: hexutil.Encode(v.PublicKey)}
-			peers.List = append(peers.List, peer)
+			peer := &Peer{PubKey: pk, Address: addr}
+			peers = append(peers, peer)
 		}
-		sort.Sort(peers)
-		if _, err := storeGenesisEpoch(db, peers); err != nil {
+		if _, err := StoreGenesisEpoch(db, peers); err != nil {
 			return err
-		} else {
-			return nil
 		}
+		if err := StoreGenesisGlobalConfig(db); err != nil {
+			return err
+		}
+		return nil
 	}
 }
 
-func storeGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
+func StoreGenesisEpoch(s *state.StateDB, peers []*Peer) (*EpochInfo, error) {
 	cache := (*state.CacheDB)(s)
 	epoch := &EpochInfo{
 		ID:          StartEpochID,
-		Peers:       peers,
-		StartHeight: 0,
-		Status:      ProposalStatusPassed,
+		Validators:  peers,
+		Voters:      peers,
+		StartHeight: common.Big0,
 	}
 
 	// store current epoch and epoch info
-	if err := setEpoch(cache, epoch); err != nil {
+	if err := setGenesisEpochInfo(cache, epoch); err != nil {
 		return nil, err
 	}
-
-	// store current hash
-	curKey := curEpochKey()
-	cache.Put(curKey, epoch.Hash().Bytes())
-
-	// store genesis epoch id to list
-	value, err := rlp.EncodeToBytes(&HashList{List: []common.Hash{epoch.Hash()}})
-	if err != nil {
-		return nil, err
-	}
-	proposalKey := proposalsKey(epoch.ID)
-	cache.Put(proposalKey, value)
-
-	// store genesis epoch proof
-	key := epochProofKey(EpochProofHash(epoch.ID))
-	cache.Put(key, epoch.Hash().Bytes())
-
 	return epoch, nil
+}
+
+func StoreGenesisGlobalConfig(s *state.StateDB) error {
+	cache := (*state.CacheDB)(s)
+	globalConfig := &GlobalConfig{
+		MaxCommission:         GenesisMaxCommission,
+		MinInitialStake:       GenesisMinInitialStake,
+		MaxDescLength:         GenesisMaxDescLength,
+		BlockPerEpoch:         GenesisBlockPerEpoch,
+		ConsensusValidatorNum: GenesisConsensusValidatorNum,
+		VoterValidatorNum:     GenesisVoterValidatorNum,
+	}
+
+	// store current epoch and epoch info
+	if err := setGenesisGlobalConfig(cache, globalConfig); err != nil {
+		return err
+	}
+	return nil
 }

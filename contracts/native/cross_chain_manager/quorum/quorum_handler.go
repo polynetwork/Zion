@@ -20,13 +20,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth/types"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
@@ -62,23 +62,14 @@ func (this *QuorumHandler) MakeDepositProposal(ns *native.NativeContract) (*comm
 		return nil, fmt.Errorf("Quorum MakeDepositProposal, PutDoneTx error: %v", err)
 	}
 
+	value, err := common2.GetRootInfo(ns, params.SourceChainID, params.Height)
+	if err != nil {
+		return nil, fmt.Errorf("Quorum MakeDepositProposal, GetCrossChainInfo error:%s", err)
+	}
 	header := &types.Header{}
-	if err := json.Unmarshal(params.HeaderOrCrossChainMsg, header); err != nil {
-		return nil, fmt.Errorf("Quorum MakeDepositProposal, deserialize header err: %v", err)
-	}
-	valh, err := quorum.GetCurrentValHeight(ns, params.SourceChainID)
+	err = json.Unmarshal(value, header)
 	if err != nil {
-		return nil, fmt.Errorf("Quorum MakeDepositProposal, failed to get current validators height: %v", err)
-	}
-	if header.Number.Uint64() < valh {
-		return nil, fmt.Errorf("Quorum MakeDepositProposal, height of header %d is less than epoch height %d", header.Number.Uint64(), valh)
-	}
-	vs, err := quorum.GetValSet(ns, params.SourceChainID)
-	if err != nil {
-		return nil, fmt.Errorf("Quorum MakeDepositProposal, failed to get quorum validators: %v", err)
-	}
-	if _, err := quorum.VerifyQuorumHeader(vs, header, false); err != nil {
-		return nil, fmt.Errorf("Quorum MakeDepositProposal, failed to verify quorum header %s: %v", header.Hash().String(), err)
+		return nil, fmt.Errorf("Quorum MakeDepositProposal, json unmarshal header error:%s", err)
 	}
 
 	if err := verifyFromQuorumTx(params.Proof, params.Extra, header, sideChain); err != nil {

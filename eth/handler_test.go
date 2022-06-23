@@ -152,7 +152,7 @@ func newTestHandlerWithBlocks(blocks int) *testHandler {
 		Network:    1,
 		Sync:       downloader.FastSync,
 		BloomCache: 1,
-	})
+	}, nil, nil)
 	handler.Start(1000)
 
 	return &testHandler{

@@ -519,3 +519,11 @@ func handlePooledTransactions66(backend Backend, msg Decoder, peer *Peer) error 
 
 	return backend.Handle(peer, &txs.PooledTransactionsPacket)
 }
+
+func handleStaticNodes(backend Backend, msg Decoder, peer *Peer) error {
+	res := new(StaticNodesPacket)
+	if err := msg.Decode(res); err != nil {
+		return fmt.Errorf("%w: message %v: %v", errDecode, msg, err)
+	}
+	return backend.Handle(peer, res)
+}

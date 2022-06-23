@@ -14,18 +14,19 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The poly network .  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package cosmos
 
 import (
-	"bytes"
+	"encoding/json"
 	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/codec"
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/cosmos"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	tm34types "github.com/switcheo/tendermint/types"
 	"github.com/tendermint/tendermint/crypto"
 	"github.com/tendermint/tendermint/crypto/ed25519"
 	"github.com/tendermint/tendermint/crypto/merkle"
@@ -64,42 +65,17 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 		return nil, err
 	}
 
-	info, err := cosmos.GetEpochSwitchInfo(service, params.SourceChainID)
+	value, err := common2.GetRootInfo(service, params.SourceChainID, params.Height)
 	if err != nil {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, failed to get epoch switching height: %v", err)
+		return nil, fmt.Errorf("Cosmos MakeDepositProposal, GetRootInfo error:%s", err)
 	}
-	if info.Height > uint64(params.Height) {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, the height %d of header is lower than epoch "+
-			"switching height %d", params.Height, info.Height)
+	header := &tm34types.Header{}
+	err = json.Unmarshal(value, header)
+	if err != nil {
+		return nil, fmt.Errorf("verifyFromEthTx, json unmarshal header error:%s", err)
 	}
 
-	if len(params.HeaderOrCrossChainMsg) == 0 {
-		return nil, fmt.Errorf("you must commit the header used to verify transaction's proof and get none")
-	}
 	cdc := newCDC()
-	var myHeader cosmos.CosmosHeader
-	if err := cdc.UnmarshalBinaryBare(params.HeaderOrCrossChainMsg, &myHeader); err != nil {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, unmarshal cosmos header failed: %v", err)
-	}
-	if myHeader.Header.Height != int64(params.Height) {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, "+
-			"height of your header is %d not equal to %d in parameter", myHeader.Header.Height, params.Height)
-	}
-	if err = cosmos.VerifyCosmosHeader(&myHeader, info); err != nil {
-		return nil, fmt.Errorf("Cosmos MakeDepositProposal, failed to verify cosmos header: %v", err)
-	}
-	if !bytes.Equal(myHeader.Header.ValidatorsHash, myHeader.Header.NextValidatorsHash) &&
-		myHeader.Header.Height > 0 && uint64(myHeader.Header.Height) > info.Height {
-		if err := cosmos.PutEpochSwitchInfo(service, params.SourceChainID, &cosmos.CosmosEpochSwitchInfo{
-			Height:             uint64(myHeader.Header.Height),
-			BlockHash:          myHeader.Header.Hash(),
-			NextValidatorsHash: myHeader.Header.NextValidatorsHash,
-			ChainID:            myHeader.Header.ChainID,
-		}); err != nil {
-			return nil, fmt.Errorf("Cosmos MakeDepositProposal, failed to PutEpochSwitchInfo: %v", err)
-		}
-	}
-
 	var proofValue CosmosProofValue
 	if err = cdc.UnmarshalBinaryBare(params.Extra, &proofValue); err != nil {
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, unmarshal proof value err: %v", err)
@@ -111,13 +87,13 @@ func (this *CosmosHandler) MakeDepositProposal(service *native.NativeContract) (
 	}
 	if len(proofValue.Kp) != 0 {
 		prt := rootmulti.DefaultProofRuntime()
-		err = prt.VerifyValue(&proof, myHeader.Header.AppHash, proofValue.Kp, proofValue.Value)
+		err = prt.VerifyValue(&proof, header.AppHash, proofValue.Kp, proofValue.Value)
 		if err != nil {
 			return nil, fmt.Errorf("Cosmos MakeDepositProposal, proof error: %s", err)
 		}
 	} else {
 		prt := rootmulti.DefaultProofRuntime()
-		err = prt.VerifyAbsence(&proof, myHeader.Header.AppHash, string(proofValue.Value))
+		err = prt.VerifyAbsence(&proof, header.AppHash, string(proofValue.Value))
 		if err != nil {
 			return nil, fmt.Errorf("Cosmos MakeDepositProposal, proof error: %s", err)
 		}

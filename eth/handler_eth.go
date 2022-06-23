@@ -19,12 +19,12 @@ package eth
 import (
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/consensus"
 	"math/big"
 	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
@@ -99,6 +99,9 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 
 	case *eth.PooledTransactionsPacket:
 		return h.txFetcher.Enqueue(peer.ID(), *packet, true)
+
+	case *eth.StaticNodesPacket:
+		return h.handleStaticNodesMsg(peer, packet)
 
 	default:
 		return fmt.Errorf("unexpected eth packet type: %T", packet)

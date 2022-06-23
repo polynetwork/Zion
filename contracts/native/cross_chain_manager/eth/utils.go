@@ -22,73 +22,69 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
-	"math/big"
-
 	ecom "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth/types"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth/types"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
+	"math/big"
 )
 
-func verifyFromEthTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32, sideChain *side_chain_manager.SideChain) (*scom.MakeTxParam, error) {
-	bestHeader, _, err := eth.GetCurrentHeader(native, fromChainID)
+func verifyFromEthTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32,
+	sideChain *side_chain_manager.SideChain) (*scom.MakeTxParam, error) {
+	value, err := common2.GetRootInfo(native, fromChainID, height)
 	if err != nil {
-		return nil, fmt.Errorf("VerifyFromEthProof, get current header fail, error:%s", err)
+		return nil, fmt.Errorf("verifyFromEthTx, GetCrossChainInfo error:%s", err)
 	}
-	bestHeight := uint32(bestHeader.Number.Uint64())
-	if bestHeight < height || bestHeight-height < uint32(sideChain.BlocksToWait-1) {
-		return nil, fmt.Errorf("VerifyFromEthProof, transaction is not confirmed, current height: %d, input height: %d", bestHeight, height)
-	}
-
-	blockData, _, err := eth.GetHeaderByHeight(native, uint64(height), fromChainID)
+	header := &Header{}
+	err = json.Unmarshal(value, header)
 	if err != nil {
-		return nil, fmt.Errorf("VerifyFromEthProof, get header by height, height:%d, error:%s", height, err)
+		return nil, fmt.Errorf("verifyFromEthTx, json unmarshal header error:%s", err)
 	}
 
 	ethProof := new(ETHProof)
 	err = json.Unmarshal(proof, ethProof)
 	if err != nil {
-		return nil, fmt.Errorf("VerifyFromEthProof, unmarshal proof error:%s", err)
+		return nil, fmt.Errorf("verifyFromEthTx, unmarshal proof error:%s", err)
 	}
 
 	if len(ethProof.StorageProofs) != 1 {
-		return nil, fmt.Errorf("VerifyFromEthProof, incorrect proof format")
+		return nil, fmt.Errorf("verifyFromEthTx, incorrect proof format")
 	}
 
 	//todo 1. verify the proof with header
 	//determine where the k and v from
-	proofResult, err := VerifyMerkleProof(ethProof, blockData, sideChain.CCMCAddress)
+	proofResult, err := VerifyMerkleProof(ethProof, header, sideChain.CCMCAddress)
 	if err != nil {
-		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof error:%v", err)
+		return nil, fmt.Errorf("verifyFromEthTx, verifyMerkleProof error:%v", err)
 	}
 	if proofResult == nil {
-		return nil, fmt.Errorf("VerifyFromEthProof, verifyMerkleProof failed!")
+		return nil, fmt.Errorf("verifyFromEthTx, verifyMerkleProof failed!")
 	}
 
 	if !CheckProofResult(proofResult, extra) {
-		return nil, fmt.Errorf("VerifyFromEthProof, verify proof value hash failed, proof result:%x, extra:%x", proofResult, extra)
+		return nil, fmt.Errorf("verifyFromEthTx, verify proof value hash failed, proof result:%x, extra:%x", proofResult, extra)
 	}
 
 	txParam, err := scom.DecodeTxParam(extra)
 	if err != nil {
-		return nil, fmt.Errorf("VerifyFromEthProof, deserialize merkleValue error:%s", err)
+		return nil, fmt.Errorf("verifyFromEthTx, deserialize merkleValue error:%s", err)
 	}
 	return txParam, nil
 }
 
 // used by quorum
 func VerifyMerkleProofLegacy(ethProof *ETHProof, blockData *types.Header, contractAddr []byte) ([]byte, error) {
-	return VerifyMerkleProof(ethProof, eth.To1559(blockData), contractAddr)
+	return VerifyMerkleProof(ethProof, To1559(blockData), contractAddr)
 }
 
-func VerifyMerkleProof(ethProof *ETHProof, blockData *eth.Header, contractAddr []byte) ([]byte, error) {
+func VerifyMerkleProof(ethProof *ETHProof, blockData *Header, contractAddr []byte) ([]byte, error) {
 	//1. prepare verify account
 	nodeList := new(light.NodeList)
 

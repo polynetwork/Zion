@@ -20,14 +20,14 @@ package node_manager
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
+	"io"
+	"math/big"
+	"strings"
 )
 
 const contractName = "node manager"
@@ -45,206 +45,201 @@ var (
 	this = utils.NodeManagerContractAddress
 )
 
-type MethodContractNameInput struct{}
-
-func (m *MethodContractNameInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodName)
-}
-func (m *MethodContractNameInput) Decode(payload []byte) error { return nil }
-
-type MethodContractNameOutput struct {
-	Name string
+type CreateValidatorParam struct {
+	ConsensusPubkey string
+	ProposalAddress common.Address
+	Commission      *big.Int
+	InitStake       *big.Int
+	Desc            string
 }
 
-func (m *MethodContractNameOutput) Encode() ([]byte, error) {
-	m.Name = contractName
-	return utils.PackOutputs(ABI, MethodName, m.Name)
-}
-func (m *MethodContractNameOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodName, m, payload)
+func (m *CreateValidatorParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.InitStake, m.Desc})
 }
 
-type MethodProposeInput struct {
-	StartHeight uint64
-	Peers       *Peers
-}
-
-func (m *MethodProposeInput) Encode() ([]byte, error) {
-	enc, err := rlp.EncodeToBytes(m.Peers)
-	if err != nil {
-		return nil, err
-	}
-	return utils.PackMethod(ABI, MethodPropose, m.StartHeight, enc)
-}
-func (m *MethodProposeInput) Decode(payload []byte) error {
+func (m *CreateValidatorParam) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		StartHeight uint64
-		Peers       []byte
+		ConsensusPubkey string
+		ProposalAddress common.Address
+		Commission      *big.Int
+		InitStake       *big.Int
+		Desc            string
 	}
-	if err := utils.UnpackMethod(ABI, MethodPropose, &data, payload); err != nil {
+
+	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.StartHeight = data.StartHeight
-	return rlp.DecodeBytes(data.Peers, &m.Peers)
-}
-
-type MethodProposeOutput struct {
-	Success bool
-}
-
-func (m *MethodProposeOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodPropose, m.Success)
-}
-func (m *MethodProposeOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodPropose, m, payload)
-}
-
-type MethodVoteInput struct {
-	EpochID   uint64
-	EpochHash common.Hash
-}
-
-func (m *MethodVoteInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodVote, m.EpochID, m.EpochHash.Bytes())
-}
-func (m *MethodVoteInput) Decode(payload []byte) error {
-	var data struct {
-		EpochID   uint64
-		EpochHash []byte
-	}
-	if err := utils.UnpackMethod(ABI, MethodVote, &data, payload); err != nil {
-		return err
-	}
-
-	m.EpochID = data.EpochID
-	m.EpochHash = common.BytesToHash(data.EpochHash)
+	m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.InitStake, m.Desc = data.ConsensusPubkey,
+		data.ProposalAddress, data.Commission, data.InitStake, data.Desc
 	return nil
 }
 
-type MethodVoteOutput struct {
-	Success bool
+type UpdateValidatorParam struct {
+	ConsensusPubkey string
+	ProposalAddress common.Address
+	Desc            string
 }
 
-func (m *MethodVoteOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodVote, m.Success)
-}
-func (m *MethodVoteOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodVote, m, payload)
+func (m *UpdateValidatorParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.ProposalAddress, m.Desc})
 }
 
-// useless input
-type MethodEpochInput struct{}
-
-func (m *MethodEpochInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodEpoch)
-}
-func (m *MethodEpochInput) Decode(payload []byte) error { return nil }
-
-type MethodEpochOutput struct {
-	Epoch *EpochInfo
-}
-
-func (m *MethodEpochOutput) Encode() ([]byte, error) {
-	enc, err := rlp.EncodeToBytes(m.Epoch)
-	if err != nil {
-		return nil, err
-	}
-	return utils.PackOutputs(ABI, MethodEpoch, enc)
-}
-func (m *MethodEpochOutput) Decode(payload []byte) error {
+func (m *UpdateValidatorParam) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Epoch []byte
+		ConsensusPubkey string
+		ProposalAddress common.Address
+		Desc            string
 	}
-	if err := utils.UnpackOutputs(ABI, MethodEpoch, &data, payload); err != nil {
+
+	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	return rlp.DecodeBytes(data.Epoch, &m.Epoch)
-}
-
-// useless input
-type MethodGetChangingEpochInput struct{}
-
-func (m *MethodGetChangingEpochInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodGetChangingEpoch)
-}
-func (m *MethodGetChangingEpochInput) Decode(payload []byte) error { return nil }
-
-type MethodGetEpochByIDInput struct {
-	EpochID uint64
-}
-
-func (m *MethodGetEpochByIDInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodGetEpochByID, m.EpochID)
-}
-func (m *MethodGetEpochByIDInput) Decode(payload []byte) error {
-	var data struct {
-		EpochID uint64
-	}
-	if err := utils.UnpackMethod(ABI, MethodGetEpochByID, &data, payload); err != nil {
-		return err
-	}
-	m.EpochID = data.EpochID
+	m.ConsensusPubkey, m.ProposalAddress, m.Desc = data.ConsensusPubkey, data.ProposalAddress, data.Desc
 	return nil
 }
 
-type MethodProofInput struct {
-	EpochID uint64
+type UpdateCommissionParam struct {
+	ConsensusPubkey string
+	Commission      *big.Int
 }
 
-func (m *MethodProofInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodProof, m.EpochID)
+func (m *UpdateCommissionParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.Commission})
 }
-func (m *MethodProofInput) Decode(payload []byte) error {
+
+func (m *UpdateCommissionParam) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		EpochID uint64
+		ConsensusPubkey string
+		Commission      *big.Int
 	}
-	if err := utils.UnpackMethod(ABI, MethodProof, &data, payload); err != nil {
+
+	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.EpochID = data.EpochID
+	m.ConsensusPubkey, m.Commission = data.ConsensusPubkey, data.Commission
 	return nil
 }
 
-type MethodProofOutput struct {
-	Hash common.Hash
+type StakeParam struct {
+	ConsensusPubkey string
+	Amount          *big.Int
 }
 
-func (m *MethodProofOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodProof, m.Hash.Bytes())
+func (m *StakeParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.Amount})
 }
-func (m *MethodProofOutput) Decode(payload []byte) error {
-	var data common.Hash
-	if err := utils.UnpackOutputs(ABI, MethodProof, &data, payload); err != nil {
+
+func (m *StakeParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+		Amount          *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.Hash = data
+	m.ConsensusPubkey, m.Amount = data.ConsensusPubkey, data.Amount
 	return nil
 }
 
-func emitEventProposed(s *native.NativeContract, epoch *EpochInfo) error {
-	enc, err := rlp.EncodeToBytes(epoch)
-	if err != nil {
-		return err
-	}
-	return s.AddNotify(ABI, []string{EventProposed}, enc)
+type UnStakeParam struct {
+	ConsensusPubkey string
+	Amount          *big.Int
 }
 
-func emitEventVoted(s *native.NativeContract, epochID uint64, hash common.Hash, curVotedNum int, groupSize int) error {
-	return s.AddNotify(ABI, []string{EventVoted}, epochID, hash.Bytes(), uint64(curVotedNum), uint64(groupSize))
+func (m *UnStakeParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.Amount})
 }
 
-func emitEpochChange(s *native.NativeContract, curEpoch, nextEpoch *EpochInfo) error {
-	curEnc, err := rlp.EncodeToBytes(curEpoch)
-	if err != nil {
+func (m *UnStakeParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+		Amount          *big.Int
+	}
+
+	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	nextEnc, err := rlp.EncodeToBytes(nextEpoch)
-	if err != nil {
-		return err
-	}
-	return s.AddNotify(ABI, []string{EventEpochChanged}, curEnc, nextEnc)
+	m.ConsensusPubkey, m.Amount = data.ConsensusPubkey, data.Amount
+	return nil
 }
 
-func emitConsensusSign(s *native.NativeContract, sign *ConsensusSign, signer common.Address, num int) error {
-	return s.AddNotify(ABI, []string{EventConsensusSigned}, sign.Method, sign.Input, signer, uint64(num))
+type CancelValidatorParam struct {
+	ConsensusPubkey string
+}
+
+func (m *CancelValidatorParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
+}
+
+func (m *CancelValidatorParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey = data.ConsensusPubkey
+	return nil
+}
+
+type WithdrawValidatorParam struct {
+	ConsensusPubkey string
+}
+
+func (m *WithdrawValidatorParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
+}
+
+func (m *WithdrawValidatorParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey = data.ConsensusPubkey
+	return nil
+}
+
+type WithdrawStakeRewardsParam struct {
+	ConsensusPubkey string
+}
+
+func (m *WithdrawStakeRewardsParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
+}
+
+func (m *WithdrawStakeRewardsParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey = data.ConsensusPubkey
+	return nil
+}
+
+type WithdrawCommissionParam struct {
+	ConsensusPubkey string
+}
+
+func (m *WithdrawCommissionParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
+}
+
+func (m *WithdrawCommissionParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ConsensusPubkey string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.ConsensusPubkey = data.ConsensusPubkey
+	return nil
 }

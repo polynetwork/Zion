@@ -20,17 +20,16 @@ package zilliqa
 import (
 	"encoding/json"
 	"fmt"
-	"strings"
-
 	"github.com/Zilliqa/gozilliqa-sdk/core"
 	"github.com/Zilliqa/gozilliqa-sdk/mpt"
 	"github.com/Zilliqa/gozilliqa-sdk/util"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zilliqa"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
+	"strings"
 )
 
 // Handler ...
@@ -82,19 +81,17 @@ type StorageProof struct {
 	Proof []string `json:"proof"`
 }
 
-func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32, sideChain *side_chain_manager.SideChain) (param *scom.MakeTxParam, err error) {
-	bestHeader, err := zilliqa.GetCurrentTxHeader(native, fromChainID)
-	if err != nil {
-		return nil, fmt.Errorf("VerifyFromZilProof, get current header fail, error:%s", err)
-	}
+func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32,
+	sideChain *side_chain_manager.SideChain) (param *scom.MakeTxParam, err error) {
 
-	bestHeight := uint32(bestHeader.BlockHeader.BlockNum)
-	if bestHeight < height {
-		return nil, fmt.Errorf("VerifyFromZilProof, transaction is not confirmed, current height: %d, input height: %d", bestHeight, height)
-	}
-	blockData, err := zilliqa.GetTxHeaderByHeight(native, uint64(height), fromChainID)
+	value, err := common2.GetRootInfo(native, fromChainID, height)
 	if err != nil {
-		return nil, fmt.Errorf("VerifyFromZilProof, get header by height, height:%d, error:%s", height, err)
+		return nil, fmt.Errorf("verifyFromTx, GetCrossChainInfo error:%s", err)
+	}
+	header := &core.TxBlockOrDsBlock{}
+	err = json.Unmarshal(value, header)
+	if err != nil {
+		return nil, fmt.Errorf("verifyFromTx, json unmarshal header error:%s", err)
 	}
 
 	var zilProof ZILProof
@@ -114,11 +111,11 @@ func verifyFromTx(native *native.NativeContract, proof, extra []byte, fromChainI
 	}
 
 	db := mpt.NewFromProof(pf)
-	root := blockData.BlockHeader.HashSet.StateRootHash[:]
-	key := strings.TrimPrefix(util.EncodeHex(sideChain.CCMCAddress), "0x")
-	accountBaseBytes, err := mpt.Verify([]byte(key), db, root)
+	root := header.TxBlock.BlockHeader.HashSet.StateRootHash[:]
+	k := strings.TrimPrefix(util.EncodeHex(sideChain.CCMCAddress), "0x")
+	accountBaseBytes, err := mpt.Verify([]byte(k), db, root)
 	if err != nil {
-		return nil, fmt.Errorf("verifyMerkleProof, verify account proof error:%s, key is %s proof is: %+v, root is %s", err, key, zilProof.AccountProof, util.EncodeHex(root))
+		return nil, fmt.Errorf("verifyMerkleProof, verify account proof error:%s, key is %s proof is: %+v, root is %s", err, k, zilProof.AccountProof, util.EncodeHex(root))
 	}
 
 	accountBase, err := core.AccountBaseFromBytes(accountBaseBytes)

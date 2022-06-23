@@ -22,14 +22,14 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
 	"math/big"
 
 	ecommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/eth"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/light"
@@ -74,21 +74,16 @@ func (h *HecoHandler) MakeDepositProposal(service *native.NativeContract) (*scom
 	return value, nil
 }
 
-func verifyFromHecoTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32, sideChain *side_chain_manager.SideChain) (param *scom.MakeTxParam, err error) {
-	cheight, err := heco.GetCanonicalHeight(native, fromChainID)
+func verifyFromHecoTx(native *native.NativeContract, proof, extra []byte, fromChainID uint64, height uint32,
+	sideChain *side_chain_manager.SideChain) (param *scom.MakeTxParam, err error) {
+	value, err := common2.GetRootInfo(native, fromChainID, height)
 	if err != nil {
-		return
+		return nil, fmt.Errorf("verifyFromHecoTx, GetCrossChainInfo error:%s", err)
 	}
-
-	cheight32 := uint32(cheight)
-
-	if cheight32 < height || cheight32-height < uint32(sideChain.BlocksToWait-1) {
-		return nil, fmt.Errorf("verifyFromHecoTx, transaction is not confirmed, current height: %d, input height: %d", cheight, height)
-	}
-
-	headerWithSum, err := heco.GetCanonicalHeader(native, fromChainID, uint64(height))
+	header := &eth.Header{}
+	err = json.Unmarshal(value, header)
 	if err != nil {
-		return nil, fmt.Errorf("verifyFromHecoTx, GetCanonicalHeader height:%d, error:%s", height, err)
+		return nil, fmt.Errorf("verifyFromHecoTx, json unmarshal header error:%s", err)
 	}
 
 	hecoProof := new(Proof)
@@ -101,7 +96,7 @@ func verifyFromHecoTx(native *native.NativeContract, proof, extra []byte, fromCh
 		return nil, fmt.Errorf("verifyFromHecoTx, incorrect proof format")
 	}
 
-	proofResult, err := verifyMerkleProof(hecoProof, headerWithSum.Header, sideChain.CCMCAddress)
+	proofResult, err := verifyMerkleProof(hecoProof, header, sideChain.CCMCAddress)
 	if err != nil {
 		return nil, fmt.Errorf("verifyFromHecoTx, verifyMerkleProof error:%v", err)
 	}

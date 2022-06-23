@@ -172,6 +172,9 @@ type Handler interface {
 
 	// SubscribeRequest event subscribe for mining proposal with parent block
 	SubscribeRequest(ch chan<- types.Block) event.Subscription
+
+	// SubscribeNodes event subscribe for listening static nodes in eth handler
+	SubscribeNodes(ch chan <- StaticNodesEvent) event.Subscription
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -181,3 +184,5 @@ type PoW interface {
 	// Hashrate returns the current mining hashrate of a PoW consensus engine.
 	Hashrate() float64
 }
+
+type StaticNodesEvent struct{ Validators []common.Address }

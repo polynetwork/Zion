@@ -24,26 +24,31 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/relayer_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/signature_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/log"
 )
 
 func InitNativeContracts() {
-	header_sync.InitHeaderSync()
+	info_sync.InitInfoSync()
 	cross_chain_manager.InitCrossChainManager()
 	neo3_state_manager.InitNeo3StateManager()
 	node_manager.InitNodeManager()
 	relayer_manager.InitRelayerManager()
 	side_chain_manager.InitSideChainManager()
+
+	signature_manager.InitSignatureManager()
+
 	economic.InitEconomic()
 
 	log.Info("Initialize main chain native contracts",
-		"header sync", utils.HeaderSyncContractAddress.Hex(),
+		"header sync", utils.InfoSyncContractAddress.Hex(),
 		"cross chain manager", utils.CrossChainManagerContractAddress.Hex(),
 		"neo3 state manager", utils.Neo3StateManagerContractAddress.Hex(),
 		"node manager", utils.NodeManagerContractAddress.Hex(),
 		"relayer manager", utils.RelayerManagerContractAddress.Hex(),
 		"side chain manager", utils.SideChainManagerContractAddress.Hex(),
+		"signature manager", utils.SignatureManagerContractAddress.Hex(),
 		"economic", utils.EconomicContractAddress.Hex())
 }

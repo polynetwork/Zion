@@ -616,7 +616,7 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 		GasLimit:   core.CalcGasLimit(parent, w.config.GasFloor, w.config.GasCeil),
 		Time:       uint64(timestamp),
 	}
-	if w.epoch != nil && w.epoch.MemberList() != nil && nm.EpochChangeAtNextBlock(header.Number.Uint64(), w.epoch.StartHeight) {
+	if w.epoch != nil && w.epoch.MemberList() != nil && nm.EpochChangeAtNextBlock(header.Number.Uint64(), w.epoch.StartHeight.Uint64()) {
 		types.HotstuffHeaderFillWithValidators(header, w.epoch.MemberList())
 	} else {
 		types.HotstuffHeaderFillWithValidators(header, nil)
@@ -731,39 +731,20 @@ func (w *worker) fetchEpoch() {
 
 	caller := w.coinbase
 	ref := native.NewContractRef(statedb, caller, caller, parent.Number(), common.EmptyHash, 0, nil)
-	payload, err := new(nm.MethodGetChangingEpochInput).Encode()
-	if err != nil {
-		log.Error("[miner worker]", "pack `getChangingEpoch` input failed", err)
-		return
-	}
-	enc, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
-	if err != nil {
-		return
-	}
-	output := new(nm.MethodEpochOutput)
-	if err := output.Decode(enc); err != nil {
-		log.Error("[miner worker]", "unpack `getChangingEpoch` output failed", err)
-		return
-	}
-	if output.Epoch == nil {
-		return
-	}
-
-	if output.Epoch.StartHeight > 1 && output.Epoch.StartHeight > parent.NumberU64() {
-		w.epoch = output.Epoch
-		log.Debug("[miner worker]", "fetch new epoch", w.epoch.ID, "member list", w.epoch.MemberList(), "size", len(w.epoch.MemberList()))
-	}
+	payload := []byte{}
+	ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
+	// TODO
 }
 
 func (w *worker) changeEpoch(reachedBlockHeight uint64) {
 	w.epochMu.Lock()
 	defer w.epochMu.Unlock()
 
-	if w.epoch == nil || w.epoch.MemberList() == nil || w.epoch.StartHeight <= 1 {
+	if w.epoch == nil || w.epoch.MemberList() == nil || w.epoch.StartHeight.Uint64() <= 1 {
 		return
 	}
 
-	if reachedBlockHeight+1 != w.epoch.StartHeight {
+	if reachedBlockHeight+1 != w.epoch.StartHeight.Uint64() {
 		return
 	}
 
@@ -777,7 +758,7 @@ func (w *worker) changeEpoch(reachedBlockHeight uint64) {
 
 	log.Debug("Restart consensus engine")
 	w.Stop()
-	if err := engine.ChangeEpoch(w.epoch.StartHeight, w.epoch.MemberList()); err != nil {
+	if err := engine.ChangeEpoch(w.epoch.StartHeight.Uint64(), w.epoch.MemberList()); err != nil {
 		log.Error("Change Epoch", "change failed", err)
 		return
 	}
