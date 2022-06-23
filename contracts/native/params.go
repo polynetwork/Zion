@@ -33,6 +33,15 @@ const (
 	NativeNodeManager        = "node_manager"
 	NativeRelayerManager     = "relayer_manager"
 	NativeSideChainManager   = "side_chain_manager"
+	NativeGovernance       = "governance"
+	NativeEconomic         = "economic"
+	NativeSyncHeader       = "sync_header"
+	NativeCrossChain       = "cross_chain"
+	NativeNeo3StateManager = "neo3_state_manager"
+	NativeNodeManager      = "node_manager"
+	NativeRelayerManager   = "relayer_manager"
+	NativeSideChainManager = "side_chain_manager"
+	NativeSignatureManager = "signature_manager"
 
 	// native backup contracts
 	NativeExtra4  = "extra4"
@@ -77,6 +86,30 @@ var NativeContractAddrMap = map[string]common.Address{
 	NativeExtra17:            common.HexToAddress("0x40E25A4c3316F54c913542Ad293420cF3c6C2Ff3"),
 	NativeExtra18:            common.HexToAddress("0x5e66f4D53236348334E13F1d5F83b48083a4ADd0"),
 	NativeExtra19:            common.HexToAddress("0x0763E5717f8bD8C710E0d38a21e224D8C560e597"),
+	NativeGovernance:       utils.GovernanceContractAddress,
+	NativeEconomic:         utils.EconomicContractAddress,
+	NativeSyncHeader:       utils.HeaderSyncContractAddress,
+	NativeCrossChain:       utils.CrossChainManagerContractAddress,
+	NativeSideChainManager: utils.SideChainManagerContractAddress,
+	NativeNodeManager:      utils.NodeManagerContractAddress,
+	NativeRelayerManager:   utils.RelayerManagerContractAddress,
+	NativeNeo3StateManager: utils.Neo3StateManagerContractAddress,
+	NativeSignatureManager: utils.SignatureManagerContractAddress,
+	NativeExtra5:           common.HexToAddress("0x0000000000000000000000000000000000001008"),
+	NativeExtra6:           common.HexToAddress("0x0000000000000000000000000000000000001009"),
+	NativeExtra7:           common.HexToAddress("0x000000000000000000000000000000000000100a"),
+	NativeExtra8:           common.HexToAddress("0x000000000000000000000000000000000000100b"),
+	NativeExtra9:           common.HexToAddress("0x000000000000000000000000000000000000100c"),
+	NativeExtra10:          common.HexToAddress("0x000000000000000000000000000000000000100d"),
+	NativeExtra11:          common.HexToAddress("0x000000000000000000000000000000000000100e"),
+	NativeExtra12:          common.HexToAddress("0x000000000000000000000000000000000000100f"),
+	NativeExtra13:          common.HexToAddress("0x0000000000000000000000000000000000001010"),
+	NativeExtra14:          common.HexToAddress("0x0000000000000000000000000000000000001011"),
+	NativeExtra15:          common.HexToAddress("0x0000000000000000000000000000000000001012"),
+	NativeExtra16:          common.HexToAddress("0x0000000000000000000000000000000000001013"),
+	NativeExtra17:          common.HexToAddress("0x0000000000000000000000000000000000001014"),
+	NativeExtra18:          common.HexToAddress("0x0000000000000000000000000000000000001015"),
+	NativeExtra19:          common.HexToAddress("0x0000000000000000000000000000000000001016"),
 }
 
 func IsNativeContract(addr common.Address) bool {

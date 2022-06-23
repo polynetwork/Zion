@@ -95,7 +95,7 @@ type Engine interface {
 	// Note: The block header and state database might be updated to reflect any
 	// consensus rules that happen at finalization (e.g. block rewards).
 	Finalize(chain ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-		uncles []*types.Header)
+		uncles []*types.Header) error
 
 	// FinalizeAndAssemble runs any post-transaction state modifications (e.g. block
 	// rewards) and assembles the final block.
@@ -172,6 +172,9 @@ type Handler interface {
 
 	// SubscribeRequest event subscribe for mining proposal with parent block
 	SubscribeRequest(ch chan<- types.Block) event.Subscription
+
+	// SubscribeNodes event subscribe for listening static nodes in eth handler
+	SubscribeNodes(ch chan <- StaticNodesEvent) event.Subscription
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -181,3 +184,5 @@ type PoW interface {
 	// Hashrate returns the current mining hashrate of a PoW consensus engine.
 	Hashrate() float64
 }
+
+type StaticNodesEvent struct{ Validators []common.Address }

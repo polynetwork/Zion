@@ -75,6 +75,8 @@ type backend struct {
 	broadcaster consensus.Broadcaster
 	// event subscription for request new block from miner/worker.
 	reqFeed event.Feed
+	// event subscription for static nodes listen
+	nodesFeed event.Feed
 
 	eventMux *event.TypeMux
 
@@ -383,4 +385,8 @@ func (s *backend) HasBadProposal(hash common.Hash) bool {
 
 func (s *backend) AskMiningProposalWithParent(parent *types.Block) {
 	s.reqFeed.Send(*parent)
+}
+
+func (s *backend) SendValidatorsChange(list []common.Address) {
+	s.nodesFeed.Send(consensus.StaticNodesEvent{Validators: list})
 }

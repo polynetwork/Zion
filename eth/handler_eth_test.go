@@ -18,7 +18,6 @@ package eth
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/consensus"
 	"math/big"
 	"math/rand"
 	"sync/atomic"
@@ -26,6 +25,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
@@ -121,7 +121,7 @@ func testForkIDSplit(t *testing.T, protocol uint) {
 			Network:    1,
 			Sync:       downloader.FullSync,
 			BloomCache: 1,
-		}, nil)
+		}, nil, nil)
 		ethProFork, _ = newHandler(&handlerConfig{
 			Database:   dbProFork,
 			Chain:      chainProFork,
@@ -129,7 +129,7 @@ func testForkIDSplit(t *testing.T, protocol uint) {
 			Network:    1,
 			Sync:       downloader.FullSync,
 			BloomCache: 1,
-		}, nil)
+		}, nil, nil)
 	)
 	ethNoFork.Start(1000)
 	ethProFork.Start(1000)

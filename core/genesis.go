@@ -326,6 +326,15 @@ func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
 	if params.IsMainChain(g.Config.ChainID.Uint64()) {
+		// check total balance
+		total := new(big.Int)
+		for _, account := range g.Alloc {
+			total = new(big.Int).Add(total, account.Balance)
+		}
+		if total.Cmp(params.GenesisSupply) > 0 {
+			panic("alloc amount greater than genesis supply")
+		}
+
 		for addr, account := range g.Alloc {
 			statedb.AddBalance(addr, account.Balance)
 			statedb.SetCode(addr, account.Code)
@@ -374,7 +383,17 @@ func (g *Genesis) MustCommit(db ethdb.Database) *types.Block {
 
 // GenesisBlockForTesting creates and writes a block in which addr has the given wei balance.
 func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big.Int) *types.Block {
+	RegGenesis = func(db *state.StateDB, data GenesisAlloc) error {
+		return nil
+	}
+	StoreGenesis = func(db ethdb.Database, header *types.Header) error {
+		return nil
+	}
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
+	g.Config = &params.ChainConfig{
+		ChainID:  new(big.Int).SetUint64(params.MainnetMainChainID),
+		HotStuff: &params.HotStuffConfig{},
+	}
 	return g.MustCommit(db)
 }
 

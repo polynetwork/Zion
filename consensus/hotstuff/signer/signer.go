@@ -73,6 +73,10 @@ func (s *SignerImpl) SignHash(hash common.Hash) ([]byte, error) {
 	return s.Sign(wrapHash)
 }
 
+func (s *SignerImpl) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
+	return types.SignTx(tx, signer, s.privateKey)
+}
+
 // SigHash returns the hash which is used as input for the Hotstuff
 // signing. It is the hash of the entire header apart from the 65 byte signature
 // contained at the end of the extra data.

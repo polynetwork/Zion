@@ -93,7 +93,8 @@ type Ethereum struct {
 	networkID     uint64
 	netRPCService *ethapi.PublicNetAPI
 
-	p2pServer *p2p.Server
+	p2pServer          *p2p.Server
+	staticNodesManager staticNodeServer
 
 	lock sync.RWMutex // Protects the variadic fields (e.g. gas price and etherbase)
 }
@@ -227,7 +228,8 @@ func New(stack *node.Node, config *ethconfig.Config) (*Ethereum, error) {
 		EventMux:   eth.eventMux,
 		Checkpoint: checkpoint,
 		Whitelist:  config.Whitelist,
-	}, eth.engine); err != nil {
+		Miner:      config.Miner.Etherbase,
+	}, eth.engine, eth.p2pServer); err != nil {
 		return nil, err
 	}
 
