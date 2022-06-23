@@ -37,7 +37,7 @@ var (
 )
 
 var (
-	RewardPerBlock = params.OneEth
+	RewardPerBlock = params.ZNT1
 	GenesisSupply  = params.GenesisSupply
 
 	// rewardPoolFactor default value should be 0.2 = 2000/10000

@@ -28,11 +28,12 @@ import (
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 var (
 	GenesisMaxCommission                = new(big.Int).SetUint64(50)
-	GenesisMinInitialStake              = new(big.Int).SetUint64(100000)
+	GenesisMinInitialStake              = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	GenesisMaxDescLength         uint64 = 2048
 	GenesisBlockPerEpoch                = new(big.Int).SetUint64(400000)
 	GenesisConsensusValidatorNum uint64 = 4

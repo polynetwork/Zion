@@ -59,9 +59,11 @@ var (
 	TestnetMainChainID uint64 = 60802
 	DevnetMainChainID  uint64 = 60803
 
-	OneEth, _ = new(big.Int).SetString("1000000000000000000", 10)
+	// zion token alias, decimal is 18
+	ZNT1, _        = new(big.Int).SetString("1000000000000000000", 10)
+
 	uGenesisSupply = new(big.Int).SetUint64(1e8)
-	GenesisSupply = new(big.Int).Mul(OneEth, uGenesisSupply)
+	GenesisSupply  = new(big.Int).Mul(ZNT1, uGenesisSupply)
 )
 
 func IsMainChain(chainID uint64) bool {
