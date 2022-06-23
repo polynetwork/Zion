@@ -270,6 +270,9 @@ func TestStake(t *testing.T) {
 	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
 	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
 	assert.NotNil(t, err)
+	allValidators, err = GetAllValidators(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, len(allValidators.AllValidators), loop-1)
 
 	// check
 	validator, _, err = GetValidator(contractQuery, validatorsKey[0].Dec)
@@ -314,6 +317,28 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, found, false)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).SetUint64(1000000))
+
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	epochInfo, err = GetCurrentEpochInfo(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, epochInfo.ID, common.Big3)
+	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(1300000))
+	assert.Equal(t, len(epochInfo.Validators), 4)
+	assert.Equal(t, len(epochInfo.Voters), 4)
+	validator, _, err = GetValidator(contractQuery, validatorsKey[4].Dec)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.Status, Lock)
+}
+
+func TestDistribute(t *testing.T) {
+
 }
 
 // generateTestPeer ONLY used for testing
