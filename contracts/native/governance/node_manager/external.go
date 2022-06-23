@@ -20,12 +20,14 @@ package node_manager
 
 import (
 	"fmt"
+	"math/big"
+	"sort"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
-	"math/big"
 )
 
 var (
@@ -53,6 +55,11 @@ func init() {
 			peer := &Peer{PubKey: pk, Address: addr}
 			peers = append(peers, peer)
 		}
+		// the order of peer in the list is random, so we must sort the list before store.
+		// btw, the mpt tree only needs the value of state_object to be deterministic.
+		sort.Slice(peers, func(i, j int) bool {
+			return peers[i].Address.Hex() < peers[j].Address.Hex()
+		})
 		if _, err := StoreGenesisEpoch(db, peers); err != nil {
 			return err
 		}
