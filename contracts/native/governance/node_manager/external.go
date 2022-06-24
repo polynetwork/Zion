@@ -42,7 +42,8 @@ var (
 
 func init() {
 	// store data in genesis block
-	core.RegGenesis = func(db *state.StateDB, data core.GenesisAlloc) error {
+	core.RegGenesis = func(db *state.StateDB, genesis *core.Genesis) error {
+		data := genesis.Alloc
 		peers := make([]*Peer, 0, len(data))
 		for addr, v := range data {
 			pk := hexutil.Encode(v.PublicKey)
@@ -61,14 +62,30 @@ func init() {
 		sort.Slice(peers, func(i, j int) bool {
 			return peers[i].Address.Hex() < peers[j].Address.Hex()
 		})
+		if _, err := StoreCommunityInfo(db, genesis.CommunityRate, genesis.CommunityAddress); err != nil {
+			return err
+		}
 		if _, err := StoreGenesisEpoch(db, peers); err != nil {
 			return err
 		}
 		if err := StoreGenesisGlobalConfig(db); err != nil {
 			return err
 		}
+
 		return nil
 	}
+}
+
+func StoreCommunityInfo(s *state.StateDB, communityRate *big.Int, communityAddress common.Address) (*CommunityInfo, error) {
+	cache := (*state.CacheDB)(s)
+	communityInfo := &CommunityInfo{
+		CommunityRate:    communityRate,
+		CommunityAddress: communityAddress,
+	}
+	if err := setGenesisCommunityInfo(cache, communityInfo); err != nil {
+		return nil, err
+	}
+	return communityInfo, nil
 }
 
 func StoreGenesisEpoch(s *state.StateDB, peers []*Peer) (*EpochInfo, error) {

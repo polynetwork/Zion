@@ -20,6 +20,7 @@ package node_manager
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
@@ -180,6 +181,16 @@ func (m *GlobalConfig) DecodeRLP(s *rlp.Stream) error {
 		m.VoterValidatorNum = data.MaxCommission, data.MinInitialStake, data.MaxDescLength, data.BlockPerEpoch,
 		data.ConsensusValidatorNum, data.VoterValidatorNum
 	return nil
+}
+
+func (m *GlobalConfig) Decode(payload []byte) error {
+	var data struct {
+		GlobalConfig []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetGlobalConfig, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.GlobalConfig, m)
 }
 
 type StakeInfo struct {
@@ -510,4 +521,34 @@ func (m *ConsensusSign) Hash() common.Hash {
 	v := utils.RLPHash(inf)
 	m.hash.Store(v)
 	return v
+}
+
+type CommunityInfo struct {
+	CommunityRate    *big.Int
+	CommunityAddress common.Address
+}
+
+func (m *CommunityInfo) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.CommunityRate, m.CommunityAddress})
+}
+func (m *CommunityInfo) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		CommunityRate    *big.Int
+		CommunityAddress common.Address
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	m.CommunityRate, m.CommunityAddress = data.CommunityRate, data.CommunityAddress
+	return nil
+}
+func (m *CommunityInfo) Decode(payload []byte) error {
+	var data struct {
+		CommunityInfo []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetCommunityInfo, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.CommunityInfo, m)
 }

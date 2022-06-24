@@ -53,6 +53,10 @@ type CreateValidatorParam struct {
 	Desc            string
 }
 
+func (m *CreateValidatorParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodCreateValidator, m)
+}
+
 func (m *CreateValidatorParam) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.ProposalAddress, m.Commission, m.InitStake, m.Desc})
 }
@@ -80,6 +84,10 @@ type UpdateValidatorParam struct {
 	Desc            string
 }
 
+func (m *UpdateValidatorParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodUpdateValidator, m)
+}
+
 func (m *UpdateValidatorParam) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.ProposalAddress, m.Desc})
 }
@@ -101,6 +109,10 @@ func (m *UpdateValidatorParam) DecodeRLP(s *rlp.Stream) error {
 type UpdateCommissionParam struct {
 	ConsensusPubkey string
 	Commission      *big.Int
+}
+
+func (m *UpdateCommissionParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodUpdateCommission, m)
 }
 
 func (m *UpdateCommissionParam) EncodeRLP(w io.Writer) error {
@@ -125,6 +137,10 @@ type StakeParam struct {
 	Amount          *big.Int
 }
 
+func (m *StakeParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodStake, m)
+}
+
 func (m *StakeParam) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.ConsensusPubkey, m.Amount})
 }
@@ -145,6 +161,10 @@ func (m *StakeParam) DecodeRLP(s *rlp.Stream) error {
 type UnStakeParam struct {
 	ConsensusPubkey string
 	Amount          *big.Int
+}
+
+func (m *UnStakeParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodUnStake, m)
 }
 
 func (m *UnStakeParam) EncodeRLP(w io.Writer) error {
@@ -168,6 +188,10 @@ type CancelValidatorParam struct {
 	ConsensusPubkey string
 }
 
+func (m *CancelValidatorParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodCancelValidator, m)
+}
+
 func (m *CancelValidatorParam) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
 }
@@ -186,6 +210,10 @@ func (m *CancelValidatorParam) DecodeRLP(s *rlp.Stream) error {
 
 type WithdrawValidatorParam struct {
 	ConsensusPubkey string
+}
+
+func (m *WithdrawValidatorParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodWithdrawValidator, m)
 }
 
 func (m *WithdrawValidatorParam) EncodeRLP(w io.Writer) error {
@@ -208,6 +236,10 @@ type WithdrawStakeRewardsParam struct {
 	ConsensusPubkey string
 }
 
+func (m *WithdrawStakeRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodWithdrawStakeRewards, m)
+}
+
 func (m *WithdrawStakeRewardsParam) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
 }
@@ -228,6 +260,10 @@ type WithdrawCommissionParam struct {
 	ConsensusPubkey string
 }
 
+func (m *WithdrawCommissionParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodWithdrawCommission, m)
+}
+
 func (m *WithdrawCommissionParam) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.ConsensusPubkey})
 }
@@ -242,4 +278,34 @@ func (m *WithdrawCommissionParam) DecodeRLP(s *rlp.Stream) error {
 	}
 	m.ConsensusPubkey = data.ConsensusPubkey
 	return nil
+}
+
+type ChangeEpochParam struct{}
+
+func (m *ChangeEpochParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodChangeEpoch)
+}
+
+type WithdrawParam struct{}
+
+func (m *WithdrawParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodWithdraw)
+}
+
+type EndBlockParam struct{}
+
+func (m *EndBlockParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodEndBlock)
+}
+
+type GetGlobalConfigParam struct {}
+
+func (m *GetGlobalConfigParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetGlobalConfig)
+}
+
+type GetCommunityInfoParam struct {}
+
+func (m *GetCommunityInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetCommunityInfo)
 }

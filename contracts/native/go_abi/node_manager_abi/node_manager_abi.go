@@ -27,13 +27,13 @@ var (
 )
 
 var (
-	MethodBeginBlock = "beginBlock"
-
 	MethodCancelValidator = "cancelValidator"
 
 	MethodChangeEpoch = "changeEpoch"
 
 	MethodCreateValidator = "createValidator"
+
+	MethodEndBlock = "endBlock"
 
 	MethodStake = "stake"
 
@@ -50,6 +50,10 @@ var (
 	MethodWithdrawStakeRewards = "withdrawStakeRewards"
 
 	MethodWithdrawValidator = "withdrawValidator"
+
+	MethodGetCommunityInfo = "GetCommunityInfo"
+
+	MethodGetGlobalConfig = "getGlobalConfig"
 
 	EventCancelValidator = "CancelValidator"
 
@@ -75,14 +79,16 @@ var (
 )
 
 // INodeManagerABI is the input ABI used to generate the binding from.
-const INodeManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CancelValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"epochID\",\"type\":\"string\"}],\"name\":\"ChangeEpoch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CreateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Stake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"UnStake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Withdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"commission\",\"type\":\"string\"}],\"name\":\"WithdrawCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rewards\",\"type\":\"string\"}],\"name\":\"WithdrawStakeRewards\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"selfStake\",\"type\":\"string\"}],\"name\":\"WithdrawValidator\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[],\"name\":\"beginBlock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"cancelValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"changeEpoch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"initStake\",\"type\":\"int256\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"createValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"stake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"unStake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"}],\"name\":\"updateCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"updateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawStakeRewards\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const INodeManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CancelValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"epochID\",\"type\":\"string\"}],\"name\":\"ChangeEpoch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CreateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Stake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"UnStake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Withdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"commission\",\"type\":\"string\"}],\"name\":\"WithdrawCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rewards\",\"type\":\"string\"}],\"name\":\"WithdrawStakeRewards\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"selfStake\",\"type\":\"string\"}],\"name\":\"WithdrawValidator\",\"type\":\"event\"},{\"constant\":true,\"inputs\":[],\"name\":\"GetCommunityInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"cancelValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"changeEpoch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"initStake\",\"type\":\"int256\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"createValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"endBlock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getGlobalConfig\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"stake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"unStake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"}],\"name\":\"updateCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"updateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawStakeRewards\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // INodeManagerFuncSigs maps the 4-byte function signature to its string representation.
 var INodeManagerFuncSigs = map[string]string{
-	"a6903278": "beginBlock()",
+	"1d6f9fc7": "GetCommunityInfo()",
 	"d087b01b": "cancelValidator(string)",
 	"fe6f86f8": "changeEpoch()",
 	"afa1d242": "createValidator(string,address,int256,int256,string)",
+	"083c6323": "endBlock()",
+	"cda92be4": "getGlobalConfig()",
 	"102fc25a": "stake(string,int256)",
 	"6b2e7c4e": "unStake(string,int256)",
 	"9b079ff7": "updateCommission(string,int256)",
@@ -235,25 +241,66 @@ func (_INodeManager *INodeManagerTransactorRaw) Transact(opts *bind.TransactOpts
 	return _INodeManager.Contract.contract.Transact(opts, method, params...)
 }
 
-// BeginBlock is a paid mutator transaction binding the contract method 0xa6903278.
+// GetCommunityInfo is a free data retrieval call binding the contract method 0x1d6f9fc7.
 //
-// Solidity: function beginBlock() returns(bool success)
-func (_INodeManager *INodeManagerTransactor) BeginBlock(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "beginBlock")
+// Solidity: function GetCommunityInfo() view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetCommunityInfo(opts *bind.CallOpts) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "GetCommunityInfo")
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
 }
 
-// BeginBlock is a paid mutator transaction binding the contract method 0xa6903278.
+// GetCommunityInfo is a free data retrieval call binding the contract method 0x1d6f9fc7.
 //
-// Solidity: function beginBlock() returns(bool success)
-func (_INodeManager *INodeManagerSession) BeginBlock() (*types.Transaction, error) {
-	return _INodeManager.Contract.BeginBlock(&_INodeManager.TransactOpts)
+// Solidity: function GetCommunityInfo() view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetCommunityInfo() ([]byte, error) {
+	return _INodeManager.Contract.GetCommunityInfo(&_INodeManager.CallOpts)
 }
 
-// BeginBlock is a paid mutator transaction binding the contract method 0xa6903278.
+// GetCommunityInfo is a free data retrieval call binding the contract method 0x1d6f9fc7.
 //
-// Solidity: function beginBlock() returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) BeginBlock() (*types.Transaction, error) {
-	return _INodeManager.Contract.BeginBlock(&_INodeManager.TransactOpts)
+// Solidity: function GetCommunityInfo() view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetCommunityInfo() ([]byte, error) {
+	return _INodeManager.Contract.GetCommunityInfo(&_INodeManager.CallOpts)
+}
+
+// GetGlobalConfig is a free data retrieval call binding the contract method 0xcda92be4.
+//
+// Solidity: function getGlobalConfig() view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetGlobalConfig(opts *bind.CallOpts) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getGlobalConfig")
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetGlobalConfig is a free data retrieval call binding the contract method 0xcda92be4.
+//
+// Solidity: function getGlobalConfig() view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetGlobalConfig() ([]byte, error) {
+	return _INodeManager.Contract.GetGlobalConfig(&_INodeManager.CallOpts)
+}
+
+// GetGlobalConfig is a free data retrieval call binding the contract method 0xcda92be4.
+//
+// Solidity: function getGlobalConfig() view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetGlobalConfig() ([]byte, error) {
+	return _INodeManager.Contract.GetGlobalConfig(&_INodeManager.CallOpts)
 }
 
 // CancelValidator is a paid mutator transaction binding the contract method 0xd087b01b.
@@ -317,6 +364,27 @@ func (_INodeManager *INodeManagerSession) CreateValidator(consensusPubkey string
 // Solidity: function createValidator(string consensusPubkey, address proposalAddress, int256 commission, int256 initStake, string desc) returns(bool success)
 func (_INodeManager *INodeManagerTransactorSession) CreateValidator(consensusPubkey string, proposalAddress common.Address, commission *big.Int, initStake *big.Int, desc string) (*types.Transaction, error) {
 	return _INodeManager.Contract.CreateValidator(&_INodeManager.TransactOpts, consensusPubkey, proposalAddress, commission, initStake, desc)
+}
+
+// EndBlock is a paid mutator transaction binding the contract method 0x083c6323.
+//
+// Solidity: function endBlock() returns(bool success)
+func (_INodeManager *INodeManagerTransactor) EndBlock(opts *bind.TransactOpts) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "endBlock")
+}
+
+// EndBlock is a paid mutator transaction binding the contract method 0x083c6323.
+//
+// Solidity: function endBlock() returns(bool success)
+func (_INodeManager *INodeManagerSession) EndBlock() (*types.Transaction, error) {
+	return _INodeManager.Contract.EndBlock(&_INodeManager.TransactOpts)
+}
+
+// EndBlock is a paid mutator transaction binding the contract method 0x083c6323.
+//
+// Solidity: function endBlock() returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) EndBlock() (*types.Transaction, error) {
+	return _INodeManager.Contract.EndBlock(&_INodeManager.TransactOpts)
 }
 
 // Stake is a paid mutator transaction binding the contract method 0x102fc25a.
