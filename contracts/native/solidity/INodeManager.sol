@@ -14,7 +14,7 @@ contract INodeManager {
     function withdrawCommission(string calldata consensusPubkey) external returns(bool success);
     function endBlock() external returns(bool success);
     function getGlobalConfig() external view returns (bytes memory);
-    function GetCommunityInfo() external view returns (bytes memory);
+    function getCommunityInfo() external view returns (bytes memory);
 
     event CreateValidator(string consensusPubkey);
     event UpdateValidator(string consensusPubkey);
