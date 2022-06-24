@@ -100,8 +100,8 @@ var INodeManagerFuncSigs = map[string]string{
 }
 
 // GetSpecMethodID for consensus use
-func GetSpecMethodID() []string {
-	return []string{"fe6f86f8", "083c6323"}
+func GetSpecMethodID() map[string]bool {
+	return map[string]bool{"fe6f86f8": true, "083c6323": true}
 }
 
 // INodeManager is an auto generated Go binding around an Ethereum contract.
@@ -2038,4 +2038,3 @@ func (_INodeManager *INodeManagerFilterer) ParseWithdrawValidator(log types.Log)
 	event.Raw = log
 	return event, nil
 }
-
