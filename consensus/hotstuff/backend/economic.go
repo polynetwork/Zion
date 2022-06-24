@@ -23,13 +23,10 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/economic"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 )
 
@@ -56,12 +53,9 @@ func (s *backend) reward(state *state.StateDB, height *big.Int) error {
 }
 
 // prepare for slashing...
-
 // todo(fuk): slash for governance
-func (s *backend) slash(chain consensus.ChainHeaderReader, amount *big.Int, state *state.StateDB, header *types.Header, chainCtx core.ChainContext,
-	txs *[]*types.Transaction, receipts *[]*types.Receipt, receivedTxs *[]*types.Transaction, usedGas *uint64, mining bool) error {
-	msg := s.getSystemMessage(header.Coinbase, utils.GovernanceContractAddress, nil, amount)
-	return s.applyTransaction(chain, msg, state, header, chainCtx, txs, receipts, receivedTxs, usedGas, mining)
+func (s *backend) slash(ctx *systemTxContext) error {
+	return s.executeSystemTx(ctx, utils.GovernanceContractAddress, nil)
 }
 
 func (s *backend) getRewardList(state *state.StateDB, height *big.Int) ([]*economic.RewardAmount, error) {
