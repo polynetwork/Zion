@@ -28,7 +28,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rpc"
-	"github.com/ethereum/go-ethereum/trie"
 )
 
 const (
@@ -106,8 +105,9 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 	return nil
 }
 
-func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction, uncles []*types.Header) error {
-	if err := s.reward(state, header); err != nil {
+func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
+		uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
+	if err := s.reward(state, header.Number); err != nil {
 		return err
 	}
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
@@ -115,16 +115,26 @@ func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Head
 	return nil
 }
 
-func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-	uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error) {
-	if err := s.reward(state, header); err != nil {
-		return nil, err
+func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
+	txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, []*types.Receipt, error) {
+	// No block rewards in PoA, so the state remains as is and uncles are dropped
+
+	if err := s.reward(state, header.Number); err != nil {
+		return nil, nil, err
 	}
-	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-	header.UncleHash = nilUncleHash
+
+	// used to execute epoch change...
+	// cx := chainContext{Chain: chain, engine: s}
+	if txs == nil {
+		txs = make([]*types.Transaction, 0)
+	}
+	if receipts == nil {
+		receipts = make([]*types.Receipt, 0)
+	}
 
 	// Assemble and return the final block for sealing
-	return types.NewBlock(header, txs, nil, receipts, trie.NewStackTrie(nil)), nil
+	block := quickPackBlock(state, chain, header, txs, receipts)
+	return block, receipts, nil
 }
 
 func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
