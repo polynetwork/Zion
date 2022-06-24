@@ -81,7 +81,7 @@ func unStake(s *native.NativeContract, from common.Address, amount *big.Int, val
 	if err != nil {
 		return fmt.Errorf("unStake, decode pubkey error: %v", err)
 	}
-	globalConfig, err := GetGlobalConfig(s)
+	globalConfig, err := getGlobalConfig(s)
 	if err != nil {
 		return fmt.Errorf("unStake, GetGlobalConfig error: %v", err)
 	}

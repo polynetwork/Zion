@@ -53,6 +53,7 @@ const (
 	SKP_STAKE_STARTING_INFO           = "st_stake_starting_info"
 	SKP_SIGN                          = "st_sign"
 	SKP_SIGNER                        = "st_signer"
+	SKP_COMMUNITY_INFO                = "st_community_info"
 )
 
 func setAccumulatedCommission(s *native.NativeContract, dec []byte, accumulatedCommission *AccumulatedCommission) error {
@@ -279,7 +280,7 @@ func setGenesisGlobalConfig(s *state.CacheDB, globalConfig *GlobalConfig) error 
 	return nil
 }
 
-func GetGlobalConfig(s *native.NativeContract) (*GlobalConfig, error) {
+func getGlobalConfig(s *native.NativeContract) (*GlobalConfig, error) {
 	key := globalConfigKey()
 	store, err := get(s, key)
 	if err != nil {
@@ -632,6 +633,39 @@ func GetEpochInfo(s *native.NativeContract, ID *big.Int) (*EpochInfo, error) {
 	return epochInfo, nil
 }
 
+func setGenesisCommunityInfo(s *state.CacheDB, communityInfo *CommunityInfo) error {
+	key := communityInfoKey()
+	store, err := rlp.EncodeToBytes(communityInfo)
+	if err != nil {
+		return fmt.Errorf("setCommunityInfo, serialize community info error: %v", err)
+	}
+	customSet(s, key, store)
+	return nil
+}
+
+func setCommunityInfo(s *native.NativeContract, communityInfo *CommunityInfo) error {
+	key := communityInfoKey()
+	store, err := rlp.EncodeToBytes(communityInfo)
+	if err != nil {
+		return fmt.Errorf("setCommunityInfo, serialize community info error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func getCommunityInfo(s *native.NativeContract) (*CommunityInfo, error) {
+	communityInfo := new(CommunityInfo)
+	key := communityInfoKey()
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetCommunityInfo, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, communityInfo); err != nil {
+		return nil, fmt.Errorf("GetCommunityInfo, deserialize community info error: %v", err)
+	}
+	return communityInfo, nil
+}
+
 // ====================================================================
 //
 // `consensus sign` storage
@@ -832,4 +866,8 @@ func signKey(hash common.Hash) []byte {
 
 func signerKey(hash common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_SIGNER), hash.Bytes())
+}
+
+func communityInfoKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_COMMUNITY_INFO))
 }

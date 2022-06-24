@@ -58,6 +58,10 @@ type Genesis struct {
 	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
 
+	// config of community pool
+	CommunityRate    *big.Int       `json:"community_rate" gencodec:"required"`
+	CommunityAddress common.Address `json:"community_address" gencodec:"required"`
+
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
 	Number     uint64      `json:"number"`
@@ -85,7 +89,6 @@ type GenesisAccount struct {
 	Code       []byte                      `json:"code,omitempty"`
 	Storage    map[common.Hash]common.Hash `json:"storage,omitempty"`
 	Balance    *big.Int                    `json:"balance" gencodec:"required"`
-	Commission *big.Int                    `json:"commission" gencodec:"required"`
 	Nonce      uint64                      `json:"nonce,omitempty"`
 	PublicKey  []byte                      `json:"publicKey" gencodec:"required"`
 	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests
@@ -258,7 +261,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 
 var (
 	// RegGenesis store genesis validators and public keys in governance contract
-	RegGenesis func(db *state.StateDB, data GenesisAlloc) error
+	RegGenesis func(db *state.StateDB, genesis *Genesis) error
 
 	// StoreGenesis store genesis validators in consensus snapshot
 	StoreGenesis func(db ethdb.Database, header *types.Header) error
@@ -282,7 +285,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	for _, v := range native.NativeContractAddrMap {
 		g.createNativeContract(statedb, v)
 	}
-	RegGenesis(statedb, g.Alloc)
+	RegGenesis(statedb, g)
 
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
@@ -383,7 +386,7 @@ func (g *Genesis) MustCommit(db ethdb.Database) *types.Block {
 
 // GenesisBlockForTesting creates and writes a block in which addr has the given wei balance.
 func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big.Int) *types.Block {
-	RegGenesis = func(db *state.StateDB, data GenesisAlloc) error {
+	RegGenesis = func(db *state.StateDB, genesis *Genesis) error {
 		return nil
 	}
 	StoreGenesis = func(db ethdb.Database, header *types.Header) error {

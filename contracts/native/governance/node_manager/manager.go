@@ -20,6 +20,7 @@ package node_manager
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
 	"sort"
 
@@ -58,7 +59,9 @@ var (
 		MethodChangeEpoch:          0,
 		MethodWithdrawStakeRewards: 0,
 		MethodWithdrawCommission:   0,
-		MethodBeginBlock:           0,
+		MethodEndBlock:             0,
+		MethodGetGlobalConfig:      0,
+		MethodGetCommunityInfo:     0,
 	}
 )
 
@@ -82,7 +85,11 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 
 	s.Register(MethodWithdrawStakeRewards, WithdrawStakeRewards)
 	s.Register(MethodWithdrawCommission, WithdrawCommission)
-	s.Register(MethodBeginBlock, BeginBlock)
+	s.Register(MethodEndBlock, EndBlock)
+
+	// Query
+	s.Register(MethodGetGlobalConfig, GetGlobalConfig)
+	s.Register(MethodGetCommunityInfo, GetCommunityInfo)
 }
 
 func CreateValidator(s *native.NativeContract) ([]byte, error) {
@@ -113,7 +120,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// check commission
-	globalConfig, err := GetGlobalConfig(s)
+	globalConfig, err := getGlobalConfig(s)
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, GetGlobalConfig error: %v", err)
 	}
@@ -211,7 +218,7 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 	if validator.StakeAddress != caller {
 		return nil, fmt.Errorf("UpdateValidator, stake address is not caller")
 	}
-	globalConfig, err := GetGlobalConfig(s)
+	globalConfig, err := getGlobalConfig(s)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateValidator, GetGlobalConfig error: %v", err)
 	}
@@ -264,7 +271,7 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 	if validator.StakeAddress != caller {
 		return nil, fmt.Errorf("UpdateCommission, stake address is not caller")
 	}
-	globalConfig, err := GetGlobalConfig(s)
+	globalConfig, err := getGlobalConfig(s)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateCommission, GetGlobalConfig error: %v", err)
 	}
@@ -445,7 +452,7 @@ func CancelValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("CancelValidator, decode pubkey error: %v", err)
 	}
 
-	globalConfig, err := GetGlobalConfig(s)
+	globalConfig, err := getGlobalConfig(s)
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, GetGlobalConfig error: %v", err)
 	}
@@ -557,7 +564,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ChangeEpoch, GetCurrentEpochInfo error: %v", err)
 	}
-	globalConfig, err := GetGlobalConfig(s)
+	globalConfig, err := getGlobalConfig(s)
 
 	// anyone can call this if height reaches
 	if new(big.Int).Sub(height, currentEpochInfo.StartHeight).Cmp(globalConfig.BlockPerEpoch) == -1 {
@@ -738,7 +745,7 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 	return utils.ByteSuccess, nil
 }
 
-func BeginBlock(s *native.NativeContract) ([]byte, error) {
+func EndBlock(s *native.NativeContract) ([]byte, error) {
 	// contract balance = lockpool + unlockpool + outstanding + new block reward
 	balance := s.StateDB().GetBalance(this)
 
@@ -789,4 +796,30 @@ func BeginBlock(s *native.NativeContract) ([]byte, error) {
 	}
 
 	return utils.ByteSuccess, nil
+}
+
+func GetGlobalConfig(s *native.NativeContract) ([]byte, error) {
+	globalConfig, err := getGlobalConfig(s)
+	if err != nil {
+		return nil, fmt.Errorf("GetGlobalConfig, getGlobalConfig error: %v", err)
+	}
+
+	enc, err := rlp.EncodeToBytes(globalConfig)
+	if err != nil {
+		return nil, fmt.Errorf("GetGlobalConfig, serialize global config error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetGlobalConfig, enc)
+}
+
+func GetCommunityInfo(s *native.NativeContract) ([]byte, error) {
+	communityInfo, err := getCommunityInfo(s)
+	if err != nil {
+		return nil, fmt.Errorf("GetCommunityInfo, getCommunityInfo error: %v", err)
+	}
+
+	enc, err := rlp.EncodeToBytes(communityInfo)
+	if err != nil {
+		return nil, fmt.Errorf("GetCommunityInfo, serialize community info error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetCommunityInfo, enc)
 }
