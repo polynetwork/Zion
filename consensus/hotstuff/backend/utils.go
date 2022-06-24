@@ -209,3 +209,20 @@ func quickPackBlock(state *state.StateDB, chain consensus.ChainHeaderReader,
 	block.SetRoot(root)
 	return block
 }
+
+type systemTxContext struct {
+	chain    consensus.ChainHeaderReader
+	state    *state.StateDB
+	header   *types.Header
+	chainCtx core.ChainContext
+	txs      *[]*types.Transaction
+	sysTxs   *[]*types.Transaction
+	receipts *[]*types.Receipt
+	usedGas  *uint64
+	mining   bool
+}
+
+func (s *backend) executeSystemTx(ctx *systemTxContext, contract common.Address, payload []byte) error {
+	msg := s.getSystemMessage(ctx.header.Coinbase, contract, payload, common.Big0)
+	return s.applyTransaction(ctx.chain, msg, ctx.state, ctx.header, ctx.chainCtx, ctx.txs, ctx.receipts, ctx.sysTxs, ctx.usedGas, ctx.mining)
+}
