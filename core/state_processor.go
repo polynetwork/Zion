@@ -57,11 +57,11 @@ func NewStateProcessor(config *params.ChainConfig, bc *BlockChain, engine consen
 // transactions failed to execute due to insufficient gas it will return an error.
 func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg vm.Config) (types.Receipts, []*types.Log, uint64, error) {
 	var (
-		receipts types.Receipts
 		usedGas  = new(uint64)
 		header   = block.Header()
 		allLogs  []*types.Log
 		gp       = new(GasPool).AddGas(block.GasLimit())
+		receipts = make([]*types.Receipt, 0)
 	)
 	// Mutate the block and state according to any hard-fork specs
 	if p.config.DAOForkSupport && p.config.DAOForkBlock != nil && p.config.DAOForkBlock.Cmp(block.Number()) == 0 {
@@ -69,8 +69,25 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	}
 	blockContext := NewEVMBlockContext(header, p.bc, nil)
 	vmenv := vm.NewEVM(blockContext, vm.TxContext{}, statedb, p.config, cfg)
+
+	// zion hotstuff consensus engine will add two tx for governance epoch change.
+	// separate the system tx and common tx before consensus `finalize` and assemble the
+	// tx and receipts again after `finalize` finished.
+	engine, isHotstuff := p.engine.(consensus.HotStuff)
+	txNum := len(block.Transactions())
+	systemTxs := make([]*types.Transaction, 0, 2)
+	commonTxs := make([]*types.Transaction, 0, txNum)
+
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
+		if isHotstuff {
+			if isSystemTx, err := engine.IsSystemTransaction(tx, block.Header()); err != nil {
+				return nil, nil, 0, err
+			} else if isSystemTx {
+				systemTxs = append(systemTxs, tx)
+				continue
+			}
+		}
 		msg, err := tx.AsMessage(types.MakeSigner(p.config, header.Number))
 		if err != nil {
 			return nil, nil, 0, err
@@ -80,12 +97,16 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		if err != nil {
 			return nil, nil, 0, fmt.Errorf("could not apply tx %d [%v]: %w", i, tx.Hash().Hex(), err)
 		}
+		commonTxs = append(commonTxs, tx)
 		receipts = append(receipts, receipt)
-		allLogs = append(allLogs, receipt.Logs...)
 	}
 	// Finalize the block, applying any consensus engine specific extras (e.g. block rewards)
-	if err := p.engine.Finalize(p.bc, header, statedb, block.Transactions(), block.Uncles()); err != nil {
+	if err := p.engine.Finalize(p.bc, header, statedb, &commonTxs, block.Uncles(), &receipts, &systemTxs, usedGas); err != nil {
 		return receipts, allLogs, *usedGas, err
+	}
+
+	for _, receipt := range receipts {
+		allLogs = append(allLogs, receipt.Logs...)
 	}
 
 	return receipts, allLogs, *usedGas, nil

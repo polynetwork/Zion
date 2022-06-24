@@ -672,9 +672,8 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 // and commits new work if consensus engine is running.
 func (w *worker) commit(update bool, start time.Time) error {
 	// Deep copy receipts here to avoid interaction between different tasks.
-	receipts := copyReceipts(w.current.receipts)
 	s := w.current.state.Copy()
-	block, err := w.engine.FinalizeAndAssemble(w.chain, w.current.header, s, w.current.txs, nil, receipts)
+	block, receipts, err := w.engine.FinalizeAndAssemble(w.chain, w.current.header, s, w.current.txs, nil, w.current.receipts)
 	if err != nil {
 		return err
 	}
