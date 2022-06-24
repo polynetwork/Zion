@@ -55,6 +55,11 @@ func init() {
 }
 
 func TestCheckGenesis(t *testing.T) {
+	// check get spec methodID
+	m := GetSpecMethodID()
+	assert.Equal(t, m["fe6f86f8"], true)
+	assert.Equal(t, m["083c6323"], true)
+
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
 	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
