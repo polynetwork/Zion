@@ -79,7 +79,7 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(20))
 	assert.Equal(t, communityInfo.CommunityAddress, common.EmptyAddress)
 
-	epochInfo, err := GetCurrentEpochInfo(contract)
+	epochInfo, err := getCurrentEpochInfo(contract)
 	assert.Nil(t, err)
 	assert.Equal(t, epochInfo.ID, common.Big1)
 
@@ -109,6 +109,19 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, communityInfo2.CommunityRate, big.NewInt(20))
 	assert.Equal(t, communityInfo2.CommunityAddress, common.EmptyAddress)
+
+	param3 := new(GetCurrentEpochInfoParam)
+	input, err = param3.Encode()
+	assert.Nil(t, err)
+	ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	currentEpochInfo := new(EpochInfo)
+	err = currentEpochInfo.Decode(ret)
+	assert.Nil(t, err)
+	assert.Equal(t, currentEpochInfo.ID, big.NewInt(1))
+	assert.Equal(t, currentEpochInfo.StartHeight, big.NewInt(0))
+	assert.Equal(t, uint64(len(currentEpochInfo.Validators)), GenesisConsensusValidatorNum)
+	assert.Equal(t, uint64(len(currentEpochInfo.Voters)), GenesisVoterValidatorNum)
 }
 
 func TestStake(t *testing.T) {
@@ -202,7 +215,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	epochInfo, err := GetCurrentEpochInfo(contractQuery)
+	epochInfo, err := getCurrentEpochInfo(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, epochInfo.ID, common.Big2)
 	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(400000))
@@ -365,7 +378,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	epochInfo, err = GetCurrentEpochInfo(contractQuery)
+	epochInfo, err = getCurrentEpochInfo(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, epochInfo.ID, common.Big3)
 	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(1300000))

@@ -15,6 +15,7 @@ contract INodeManager {
     function endBlock() external returns(bool success);
     function getGlobalConfig() external view returns (bytes memory);
     function getCommunityInfo() external view returns (bytes memory);
+    function getCurrentEpochInfo() external view returns (bytes memory);
 
     event CreateValidator(string consensusPubkey);
     event UpdateValidator(string consensusPubkey);

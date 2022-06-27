@@ -273,7 +273,6 @@ type EpochInfo struct {
 func (m *EpochInfo) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{m.ID, m.Validators, m.Voters, m.StartHeight})
 }
-
 func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		ID          *big.Int
@@ -287,6 +286,15 @@ func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
 	}
 	m.ID, m.Validators, m.Voters, m.StartHeight = data.ID, data.Validators, data.Voters, data.StartHeight
 	return nil
+}
+func (m *EpochInfo) Decode(payload []byte) error {
+	var data struct {
+		EpochInfo []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetCurrentEpochInfo, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.EpochInfo, m)
 }
 
 func (m *EpochInfo) ValidatorQuorumSize() int {

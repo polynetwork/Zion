@@ -37,7 +37,7 @@ func CheckSigns(native *native.NativeContract, id, sig []byte, address common.Ad
 	}
 
 	// get epoch info
-	epochInfo, err := node_manager.GetCurrentEpochInfo(native)
+	epochInfo, err := node_manager.GetCurrentEpochInfoImpl(native)
 	if err != nil {
 		return false, fmt.Errorf("CheckSigns, node_manager.GetCurrentEpochInfo error: %v", err)
 	}
