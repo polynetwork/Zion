@@ -31,24 +31,24 @@ import (
 )
 
 func InitNativeContracts() {
+	node_manager.InitNodeManager()
+	economic.InitEconomic()
 	info_sync.InitInfoSync()
 	cross_chain_manager.InitCrossChainManager()
-	neo3_state_manager.InitNeo3StateManager()
-	node_manager.InitNodeManager()
-	relayer_manager.InitRelayerManager()
 	side_chain_manager.InitSideChainManager()
-
+	relayer_manager.InitRelayerManager()
+	neo3_state_manager.InitNeo3StateManager()
 	signature_manager.InitSignatureManager()
 
-	economic.InitEconomic()
-
 	log.Info("Initialize main chain native contracts",
+		"node manager", utils.NodeManagerContractAddress.Hex(),
+		"economic", utils.EconomicContractAddress.Hex(),
 		"header sync", utils.InfoSyncContractAddress.Hex(),
 		"cross chain manager", utils.CrossChainManagerContractAddress.Hex(),
-		"neo3 state manager", utils.Neo3StateManagerContractAddress.Hex(),
-		"node manager", utils.NodeManagerContractAddress.Hex(),
-		"relayer manager", utils.RelayerManagerContractAddress.Hex(),
 		"side chain manager", utils.SideChainManagerContractAddress.Hex(),
+		"relayer manager", utils.RelayerManagerContractAddress.Hex(),
+		"neo3 state manager", utils.Neo3StateManagerContractAddress.Hex(),
 		"signature manager", utils.SignatureManagerContractAddress.Hex(),
-		"economic", utils.EconomicContractAddress.Hex())
+	)
+
 }

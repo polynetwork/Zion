@@ -86,7 +86,7 @@ func Reward(s *native.NativeContract) ([]byte, error) {
 		Amount:  poolRwdAmt,
 	}
 	stakingRwd := &RewardAmount{
-		Address: utils.GovernanceContractAddress,
+		Address: utils.NodeManagerContractAddress,
 		Amount:  stakingRwdAmt,
 	}
 

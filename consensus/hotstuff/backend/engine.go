@@ -106,10 +106,29 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 }
 
 func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
-		uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
+	uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
+
 	if err := s.reward(state, header.Number); err != nil {
 		return err
 	}
+
+	ctx := &systemTxContext{
+		chain:    chain,
+		state:    state,
+		header:   header,
+		chainCtx: chainContext{Chain: chain, engine: s},
+		txs:      txs,
+		sysTxs:   systemTxs,
+		receipts: receipts,
+		usedGas:  usedGas,
+		mining:   true,
+	}
+	if err := s.execEpochChange(ctx); err != nil {
+		// todo(fuk): return err
+		//return fmt.Errorf("danger, execute node_manager.epochChangeFailed, err: %v", err)
+	}
+	// s.execEndBlock()
+
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 	return nil
@@ -117,23 +136,36 @@ func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Head
 
 func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
 	txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, []*types.Receipt, error) {
-	// No block rewards in PoA, so the state remains as is and uncles are dropped
 
 	if err := s.reward(state, header.Number); err != nil {
 		return nil, nil, err
 	}
 
-	// used to execute epoch change...
-	// cx := chainContext{Chain: chain, engine: s}
 	if txs == nil {
 		txs = make([]*types.Transaction, 0)
 	}
 	if receipts == nil {
 		receipts = make([]*types.Receipt, 0)
 	}
+	ctx := &systemTxContext{
+		chain:    chain,
+		state:    state,
+		header:   header,
+		chainCtx: chainContext{Chain: chain, engine: s},
+		txs:      &txs,
+		sysTxs:   nil,
+		receipts: &receipts,
+		usedGas:  &header.GasUsed,
+		mining:   true,
+	}
+	if err := s.execEpochChange(ctx); err != nil {
+		// todo(fuk): return err
+		//return nil, nil, fmt.Errorf("danger, execute node_manager.epochChangeFailed, err: %v", err)
+	}
+	// s.execEndBlock()
 
 	// Assemble and return the final block for sealing
-	block := quickPackBlock(state, chain, header, txs, receipts)
+	block := packBlock(state, chain, header, txs, receipts)
 	return block, receipts, nil
 }
 

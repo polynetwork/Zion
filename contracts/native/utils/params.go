@@ -34,15 +34,14 @@ var (
 )
 
 var (
-	GovernanceContractAddress        = common.HexToAddress("0x0000000000000000000000000000000000001000")
+	NodeManagerContractAddress       = common.HexToAddress("0x0000000000000000000000000000000000001000")
 	EconomicContractAddress          = common.HexToAddress("0x0000000000000000000000000000000000001001")
 	InfoSyncContractAddress          = common.HexToAddress("0x0000000000000000000000000000000000001002")
 	CrossChainManagerContractAddress = common.HexToAddress("0x0000000000000000000000000000000000001003")
 	SideChainManagerContractAddress  = common.HexToAddress("0x0000000000000000000000000000000000001004")
-	NodeManagerContractAddress       = common.HexToAddress("0x0000000000000000000000000000000000001005")
-	RelayerManagerContractAddress    = common.HexToAddress("0x0000000000000000000000000000000000001006")
-	Neo3StateManagerContractAddress  = common.HexToAddress("0x0000000000000000000000000000000000001007")
-	SignatureManagerContractAddress  = common.HexToAddress("0x0000000000000000000000000000000000001008")
+	RelayerManagerContractAddress    = common.HexToAddress("0x0000000000000000000000000000000000001005")
+	Neo3StateManagerContractAddress  = common.HexToAddress("0x0000000000000000000000000000000000001006")
+	SignatureManagerContractAddress  = common.HexToAddress("0x0000000000000000000000000000000000001007")
 
 	NO_PROOF_ROUTER    = uint64(0)
 	BTC_ROUTER         = uint64(1)

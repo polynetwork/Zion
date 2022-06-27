@@ -26,9 +26,6 @@ import (
 	mapset "github.com/deckarep/golang-set"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/contracts/native"
-	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -101,9 +98,6 @@ type worker struct {
 	chainHeadSub event.Subscription
 	requestCh    chan types.Block
 	requestSub   event.Subscription
-
-	epochMu sync.RWMutex
-	epoch   *nm.EpochInfo
 
 	// Channels
 	newWorkCh chan *newWorkReq
@@ -297,8 +291,7 @@ func (w *worker) newWorkLoop() {
 				h.NewChainHead(head.Block.Header())
 			}
 			clearPending(head.Block.NumberU64())
-			w.fetchEpoch()
-			w.changeEpoch(head.Block.NumberU64())
+			w.changeEpoch(head.Block.Header(), false)
 
 		case <-w.exitCh:
 			return
@@ -616,11 +609,14 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 		GasLimit:   core.CalcGasLimit(parent, w.config.GasFloor, w.config.GasCeil),
 		Time:       uint64(timestamp),
 	}
-	if w.epoch != nil && w.epoch.MemberList() != nil && nm.EpochChangeAtNextBlock(header.Number.Uint64(), w.epoch.StartHeight.Uint64()) {
-		types.HotstuffHeaderFillWithValidators(header, w.epoch.MemberList())
-	} else {
-		types.HotstuffHeaderFillWithValidators(header, nil)
+
+	// Could potentially happen if starting to mine in an odd state.
+	err := w.makeCurrent(parent, header)
+	if err != nil {
+		log.Error("Failed to create mining context", "err", err)
+		return
 	}
+	w.changeEpoch(header, true)
 
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
 	if w.IsRunning() {
@@ -632,13 +628,6 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 	}
 	if err := w.engine.Prepare(w.chain, header); err != nil {
 		log.Error("Failed to prepare header for mining", "err", err)
-		return
-	}
-
-	// Could potentially happen if starting to mine in an odd state.
-	err := w.makeCurrent(parent, header)
-	if err != nil {
-		log.Error("Failed to create mining context", "err", err)
 		return
 	}
 
@@ -713,56 +702,43 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
 }
 
-func (w *worker) fetchEpoch() {
-	w.epochMu.Lock()
-	defer w.epochMu.Unlock()
-
-	if w.epoch != nil {
-		return
-	}
-
-	parent := w.chain.CurrentBlock()
-	statedb, err := w.chain.StateAt(parent.Root())
-	if err != nil {
-		log.Debug("[miner worker]", "get statedb failed", err)
-		return
-	}
-
-	caller := w.coinbase
-	ref := native.NewContractRef(statedb, caller, caller, parent.Number(), common.EmptyHash, 0, nil)
-	payload := []byte{}
-	ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
-	// TODO
-}
-
-func (w *worker) changeEpoch(reachedBlockHeight uint64) {
-	w.epochMu.Lock()
-	defer w.epochMu.Unlock()
-
-	if w.epoch == nil || w.epoch.MemberList() == nil || w.epoch.StartHeight.Uint64() <= 1 {
-		return
-	}
-
-	if reachedBlockHeight+1 != w.epoch.StartHeight.Uint64() {
-		return
-	}
-
-	log.Debug("[miner worker]", "handle epoch change", w.epoch.ID)
-
+func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) {
 	engine, ok := w.engine.(consensus.HotStuff)
 	if !ok {
-		log.Warn("Only basic-hotstuff support `change-epoch`")
+		// todo(fuk): allow clique and ethhash
+		panic("invalid consensus engine")
+	}
+
+	// todo(fuk): need state.Copy()??
+	if w.current == nil || w.current.state == nil {
+		return
+	}
+
+	beforeChange, changingEpoch, nextValidators, err := engine.GetEpochChangeInfo(w.current.state, header.Number)
+	if err != nil {
+		//log.Error("Failed to get epoch change info", "err", err)
+		//return
+	}
+
+	if needFillHeader {
+		if beforeChange {
+			types.HotstuffHeaderFillWithValidators(header, nextValidators)
+		} else {
+			types.HotstuffHeaderFillWithValidators(header, nil)
+		}
+		w.current.header = header
+	}
+
+	if !changingEpoch {
 		return
 	}
 
 	log.Debug("Restart consensus engine")
 	w.Stop()
-	if err := engine.ChangeEpoch(w.epoch.StartHeight.Uint64(), w.epoch.MemberList()); err != nil {
+	if err := engine.ChangeEpoch(header.Number.Uint64(), nextValidators); err != nil {
 		log.Error("Change Epoch", "change failed", err)
 		return
 	}
 	time.Sleep(30 * time.Second)
 	w.Start()
-
-	w.epoch = nil
 }

@@ -55,7 +55,7 @@ func (s *backend) reward(state *state.StateDB, height *big.Int) error {
 // prepare for slashing...
 // todo(fuk): slash for governance
 func (s *backend) slash(ctx *systemTxContext) error {
-	return s.executeSystemTx(ctx, utils.GovernanceContractAddress, nil)
+	return s.executeSystemTx(ctx, contractAddr, nil)
 }
 
 func (s *backend) getRewardList(state *state.StateDB, height *big.Int) ([]*economic.RewardAmount, error) {
