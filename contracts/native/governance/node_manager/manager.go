@@ -835,5 +835,5 @@ func GetCurrentEpochInfo(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("GetCurrentEpochInfo, serialize current epoch info error: %v", err)
 	}
-	return utils.PackOutputs(ABI, MethodGetCommunityInfo, enc)
+	return utils.PackOutputs(ABI, MethodGetCurrentEpochInfo, enc)
 }
