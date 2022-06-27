@@ -309,3 +309,9 @@ type GetCommunityInfoParam struct {}
 func (m *GetCommunityInfoParam) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodGetCommunityInfo)
 }
+
+type GetCurrentEpochInfoParam struct {}
+
+func (m *GetCurrentEpochInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetCurrentEpochInfo)
+}

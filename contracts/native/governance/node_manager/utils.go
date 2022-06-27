@@ -46,7 +46,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	log.Trace("checkConsensusSign", "method", method, "input", hexutil.Encode(input), "signer", signer.Hex())
 
 	// get epoch info
-	epoch, err := GetCurrentEpochInfo(s)
+	epoch, err := getCurrentEpochInfo(s)
 	if err != nil {
 		return false, fmt.Errorf("CheckConsensusSigns, GetCurrentEpochInfo error: %v", err)
 	}
@@ -101,7 +101,7 @@ func CheckVoterSigns(s *native.NativeContract, method string, input []byte, sign
 	log.Trace("CheckVoterSigns", "method", method, "input", hexutil.Encode(input), "signer", signer.Hex())
 
 	// get epoch info
-	epoch, err := GetCurrentEpochInfo(s)
+	epoch, err := getCurrentEpochInfo(s)
 	if err != nil {
 		return false, fmt.Errorf("CheckVoterSigns, GetCurrentEpochInfo error: %v", err)
 	}
