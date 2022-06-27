@@ -483,7 +483,7 @@ func GetStakeInfo(s *native.NativeContract, stakeAddress common.Address, consens
 }
 
 func addUnlockingInfo(s *native.NativeContract, stakeAddress common.Address, unlockingStake *UnlockingStake) error {
-	unlockingInfo, err := GetUnlockingInfo(s, stakeAddress)
+	unlockingInfo, err := getUnlockingInfo(s, stakeAddress)
 	if err != nil {
 		return fmt.Errorf("addUnlockingInfo, GetUnlockingInfo error: %v", err)
 	}
@@ -497,7 +497,7 @@ func addUnlockingInfo(s *native.NativeContract, stakeAddress common.Address, unl
 
 func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (*big.Int, error) {
 	height := s.ContractRef().BlockHeight()
-	unlockingInfo, err := GetUnlockingInfo(s, stakeAddress)
+	unlockingInfo, err := getUnlockingInfo(s, stakeAddress)
 	if err != nil {
 		return nil, fmt.Errorf("filterExpiredUnlockingInfo, GetUnlockingInfo error: %v", err)
 	}
@@ -538,7 +538,7 @@ func delUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) {
 	del(s, key)
 }
 
-func GetUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (*UnlockingInfo, error) {
+func getUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (*UnlockingInfo, error) {
 	unlockingInfo := &UnlockingInfo{
 		StakeAddress:   stakeAddress,
 		UnlockingStake: make([]*UnlockingStake, 0),
@@ -562,7 +562,7 @@ func setCurrentEpoch(s *native.NativeContract, ID *big.Int) {
 	set(s, key, ID.Bytes())
 }
 
-func GetCurrentEpoch(s *native.NativeContract) (*big.Int, error) {
+func getCurrentEpoch(s *native.NativeContract) (*big.Int, error) {
 	key := currentEpochKey()
 	store, err := get(s, key)
 	if err != nil {
@@ -596,14 +596,14 @@ func setGenesisEpochInfo(s *state.CacheDB, epochInfo *EpochInfo) error {
 	return nil
 }
 
-func GetCurrentEpochInfo(s *native.NativeContract) (*EpochInfo, error) {
-	ID, err := GetCurrentEpoch(s)
+func GetCurrentEpochInfoImpl(s *native.NativeContract) (*EpochInfo, error) {
+	ID, err := getCurrentEpoch(s)
 	if err != nil {
-		return nil, fmt.Errorf("GetCurrentEpochInfo, GetCurrentEpochInfo error: %v", err)
+		return nil, fmt.Errorf("GetCurrentEpochInfoImpl, getCurrentEpochInfo error: %v", err)
 	}
-	epochInfo, err := GetEpochInfo(s, ID)
+	epochInfo, err := getEpochInfo(s, ID)
 	if err != nil {
-		return nil, fmt.Errorf("GetCurrentEpochInfo, GetEpochInfo error: %v", err)
+		return nil, fmt.Errorf("GetCurrentEpochInfoImpl, getEpochInfo error: %v", err)
 	}
 	return epochInfo, nil
 }
@@ -618,7 +618,7 @@ func setEpochInfo(s *native.NativeContract, epochInfo *EpochInfo) error {
 	return nil
 }
 
-func GetEpochInfo(s *native.NativeContract, ID *big.Int) (*EpochInfo, error) {
+func getEpochInfo(s *native.NativeContract, ID *big.Int) (*EpochInfo, error) {
 	epochInfo := &EpochInfo{
 		Validators: make([]*Peer, 0),
 	}

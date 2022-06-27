@@ -62,6 +62,7 @@ var (
 		MethodEndBlock:             0,
 		MethodGetGlobalConfig:      0,
 		MethodGetCommunityInfo:     0,
+		MethodGetCurrentEpochInfo:  0,
 	}
 )
 
@@ -90,6 +91,7 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	// Query
 	s.Register(MethodGetGlobalConfig, GetGlobalConfig)
 	s.Register(MethodGetCommunityInfo, GetCommunityInfo)
+	s.Register(MethodGetCurrentEpochInfo, GetCurrentEpochInfo)
 }
 
 func CreateValidator(s *native.NativeContract) ([]byte, error) {
@@ -560,9 +562,9 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	height := s.ContractRef().BlockHeight()
 
-	currentEpochInfo, err := GetCurrentEpochInfo(s)
+	currentEpochInfo, err := GetCurrentEpochInfoImpl(s)
 	if err != nil {
-		return nil, fmt.Errorf("ChangeEpoch, GetCurrentEpochInfo error: %v", err)
+		return nil, fmt.Errorf("ChangeEpoch, GetCurrentEpochInfoImpl error: %v", err)
 	}
 	globalConfig, err := getGlobalConfig(s)
 
@@ -765,9 +767,9 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 		panic("new block rewards is negative")
 	}
 
-	epochInfo, err := GetCurrentEpochInfo(s)
+	epochInfo, err := GetCurrentEpochInfoImpl(s)
 	if err != nil {
-		return nil, fmt.Errorf("BeginBlock, GetCurrentEpochInfo error: %v", err)
+		return nil, fmt.Errorf("BeginBlock, GetCurrentEpochInfoImpl error: %v", err)
 	}
 	validatorRewards := new(big.Int).Div(newRewards, new(big.Int).SetUint64(uint64(len(epochInfo.Validators))))
 	for _, v := range epochInfo.Validators {
@@ -820,6 +822,18 @@ func GetCommunityInfo(s *native.NativeContract) ([]byte, error) {
 	enc, err := rlp.EncodeToBytes(communityInfo)
 	if err != nil {
 		return nil, fmt.Errorf("GetCommunityInfo, serialize community info error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetCommunityInfo, enc)
+}
+
+func GetCurrentEpochInfo(s *native.NativeContract) ([]byte, error) {
+	currentEpochInfo, err := GetCurrentEpochInfoImpl(s)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfo, GetCurrentEpochInfoImpl error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(currentEpochInfo)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfo, serialize current epoch info error: %v", err)
 	}
 	return utils.PackOutputs(ABI, MethodGetCommunityInfo, enc)
 }
