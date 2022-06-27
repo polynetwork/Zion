@@ -19,7 +19,9 @@
 package info_sync
 
 import (
+	"encoding/binary"
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
@@ -45,6 +47,8 @@ func RegisterInfoSyncContract(s *native.NativeContract) {
 
 	s.Register(iscommon.MethodContractName, Name)
 	s.Register(iscommon.MethodSyncRootInfo, SyncRootInfo)
+	s.Register(iscommon.MethodGetInfoHeight, GetInfoHeight)
+	s.Register(iscommon.MethodGetInfo, GetInfo)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -101,4 +105,29 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 	}
 
 	return utils.PackOutputs(iscommon.ABI, iscommon.MethodSyncRootInfo, true)
+}
+
+func GetInfoHeight(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	params := &iscommon.GetInfoHeightParam{}
+	if err := utils.UnpackMethod(iscommon.ABI, iscommon.MethodGetInfoHeight, params, ctx.Payload); err != nil {
+		return nil, err
+	}
+
+	height, err := iscommon.GetCurrentHeight(s, params.ChainID)
+	if err != nil { return nil, err }
+	v := make([]byte, 4)
+	binary.LittleEndian.PutUint32(v, height)
+	return utils.PackOutputs(iscommon.ABI, iscommon.MethodGetInfoHeight, v)
+}
+
+func GetInfo(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	params := &iscommon.GetInfoParam{}
+	if err := utils.UnpackMethod(iscommon.ABI, iscommon.MethodGetInfo, params, ctx.Payload); err != nil {
+		return nil, err
+	}
+	info, err := iscommon.GetRootInfo(s, params.ChainID, params.Height)
+	if err != nil { return nil, err }
+	return utils.PackOutputs(iscommon.ABI, iscommon.MethodGetInfo, info)
 }

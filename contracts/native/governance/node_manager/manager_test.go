@@ -79,7 +79,7 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(20))
 	assert.Equal(t, communityInfo.CommunityAddress, common.EmptyAddress)
 
-	epochInfo, err := getCurrentEpochInfo(contract)
+	epochInfo, err := GetCurrentEpochInfoImpl(contract)
 	assert.Nil(t, err)
 	assert.Equal(t, epochInfo.ID, common.Big1)
 
@@ -215,7 +215,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	epochInfo, err := getCurrentEpochInfo(contractQuery)
+	epochInfo, err := GetCurrentEpochInfoImpl(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, epochInfo.ID, common.Big2)
 	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(400000))
@@ -378,7 +378,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	epochInfo, err = getCurrentEpochInfo(contractQuery)
+	epochInfo, err = GetCurrentEpochInfoImpl(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, epochInfo.ID, common.Big3)
 	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(1300000))
@@ -390,7 +390,74 @@ func TestStake(t *testing.T) {
 }
 
 func TestDistribute(t *testing.T) {
+	blockNumber := big.NewInt(1)
+	extra := uint64(10)
+	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
 
+	type ValidatorKey struct {
+		ConsensusPubkey string
+		Dec             []byte
+		Address         common.Address
+	}
+	// create validator
+	// 6 address with 1000000 token and  create 6 validators with 100000 init stake
+	loop := 6
+	validatorsKey := make([]*ValidatorKey, 0, loop)
+	for i := 0; i < loop; i++ {
+		pk, _ := crypto.GenerateKey()
+		caller := crypto.PubkeyToAddress(*acct)
+		sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+		param := new(CreateValidatorParam)
+		param.ConsensusPubkey = hexutil.Encode(crypto.CompressPubkey(&pk.PublicKey))
+		param.ProposalAddress = caller
+		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+		param.Commission = new(big.Int).SetUint64(20)
+		param.Desc = "test"
+		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusPubkey, crypto.CompressPubkey(&pk.PublicKey), caller})
+		input, err := param.Encode()
+		assert.Nil(t, err)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+		_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+	}
+
+	// stake
+	// 2 address with 1000000 token and stake 10000, 20000 to first validator
+	pkStake, _ := crypto.GenerateKey()
+	staker := &pkStake.PublicKey
+	stakeAddress := crypto.PubkeyToAddress(*staker)
+	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+	param1 := new(StakeParam)
+	param1.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
+	input, err := param1.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	pkStake2, _ := crypto.GenerateKey()
+	staker2 := &pkStake2.PublicKey
+	stakeAddress2 := crypto.PubkeyToAddress(*staker2)
+	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+	param2 := new(StakeParam)
+	param2.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param2.Amount = new(big.Int).Mul(big.NewInt(20000), params.ZNT1)
+	input, err = param2.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress2, stakeAddress2, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress2, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+
+	
 }
 
 // generateTestPeer ONLY used for testing

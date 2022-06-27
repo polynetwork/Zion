@@ -29,6 +29,8 @@ import (
 var (
 	MethodContractName = info_sync_abi.MethodName
 	MethodSyncRootInfo = info_sync_abi.MethodSyncRootInfo
+	MethodGetInfoHeight = info_sync_abi.MethodGetInfoHeight
+	MethodGetInfo = info_sync_abi.MethodGetInfo
 )
 
 var GasTable = map[string]uint64{
