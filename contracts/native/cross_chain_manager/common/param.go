@@ -43,6 +43,11 @@ type InitRedeemScriptParam struct {
 	RedeemScript string
 }
 
+type CheckDoneParam struct {
+	SourceChainID uint64
+	CrossChainID []byte
+}
+
 type EntranceParam struct {
 	SourceChainID uint64 `json:"sourceChainId"`
 	Height        uint32 `json:"key"`

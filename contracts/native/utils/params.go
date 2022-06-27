@@ -58,4 +58,6 @@ var (
 	NEO3_LEGACY_ROUTER = uint64(11)
 	OKEX_ROUTER        = uint64(12)
 	NEO3_ROUTER        = uint64(14)
+
+	ETH_COMMON_ROUTER = uint64(15)
 )

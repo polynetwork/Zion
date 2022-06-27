@@ -21,11 +21,14 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"errors"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
+
+var ErrTxAlreadyImported = errors.New("tx already imported")
 
 func Replace0x(s string) string {
 	return strings.Replace(strings.ToLower(s), "0x", "", 1)
@@ -42,7 +45,7 @@ func CheckDoneTx(native *native.NativeContract, crossChainID []byte, chainID uin
 		return fmt.Errorf("checkDoneTx, native.GetCacheDB().Get error: %v", err)
 	}
 	if value != nil {
-		return fmt.Errorf("checkDoneTx, tx already done")
+		return ErrTxAlreadyImported
 	}
 	return nil
 }

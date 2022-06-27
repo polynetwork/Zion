@@ -28,6 +28,7 @@ import (
 var (
 	MethodContractName        = cross_chain_manager_abi.MethodName
 	MethodImportOuterTransfer = cross_chain_manager_abi.MethodImportOuterTransfer
+	MethodCheckDone           = cross_chain_manager_abi.MethodCheckDone
 	MethodMultiSign           = cross_chain_manager_abi.MethodMultiSign
 	MethodBlackChain          = cross_chain_manager_abi.MethodBlackChain
 	MethodWhiteChain          = cross_chain_manager_abi.MethodWhiteChain

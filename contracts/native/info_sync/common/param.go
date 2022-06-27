@@ -33,6 +33,16 @@ const (
 	SYNC_ROOT_INFO_EVENT = "SyncRootInfoEvent"
 )
 
+
+type GetInfoParam struct {
+	ChainID uint64
+	Height  uint32
+}
+
+type GetInfoHeightParam struct {
+	ChainID uint64
+}
+
 type SyncRootInfoParam struct {
 	ChainID   uint64
 	RootInfos [][]byte

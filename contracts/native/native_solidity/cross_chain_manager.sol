@@ -14,6 +14,10 @@ contract cross_chain_manager {
     function importOuterTransfer(uint64 SourceChainID, uint32 Height, bytes memory Proof, bytes memory RelayerAddress, bytes memory Extra, bytes memory HeaderOrCrossChainMsg) public returns(bool success) {
         return success;
     }
+
+    function checkDone(uint64 chainID, bytes memory crossChainID) public view returns(bool success) {
+        return success;
+    }
     
     function MultiSign(uint64 ChainID, string memory RedeemKey, bytes memory TxHash, string memory Address, bytes[] memory Signs) public returns(bool success) {
         //why does the type of this address is string?

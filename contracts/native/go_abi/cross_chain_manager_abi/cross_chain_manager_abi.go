@@ -36,22 +36,33 @@ var (
 	MethodImportOuterTransfer = "importOuterTransfer"
 
 	MethodName = "name"
+
+	MethodCheckDone = "checkDone"
+
+	EventBtcTxMultiSignEvent = "btcTxMultiSignEvent"
+
+	EventBtcTxToRelayEvent = "btcTxToRelayEvent"
+
+	EventMakeBtcTxEvent = "makeBtcTxEvent"
+
+	EventMakeProof = "makeProof"
 )
 
 // CrossChainManagerABI is the input ABI used to generate the binding from.
-const CrossChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"MultiSign\",\"type\":\"bytes\"}],\"name\":\"btcTxMultiSignEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"FromChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"FromTxHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"}],\"name\":\"btcTxToRelayEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"amts\",\"type\":\"uint64[]\"}],\"name\":\"makeBtcTxEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"merkleValueHex\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlockHeight\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"}],\"name\":\"makeProof\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"BlackChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"internalType\":\"string\",\"name\":\"Address\",\"type\":\"string\"},{\"internalType\":\"bytes[]\",\"name\":\"Signs\",\"type\":\"bytes[]\"}],\"name\":\"MultiSign\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"WhiteChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"SourceChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"Height\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"Proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"RelayerAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"Extra\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"HeaderOrCrossChainMsg\",\"type\":\"bytes\"}],\"name\":\"importOuterTransfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const CrossChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"MultiSign\",\"type\":\"bytes\"}],\"name\":\"btcTxMultiSignEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"FromChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"FromTxHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"}],\"name\":\"btcTxToRelayEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"buf\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64[]\",\"name\":\"amts\",\"type\":\"uint64[]\"}],\"name\":\"makeBtcTxEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"merkleValueHex\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlockHeight\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"}],\"name\":\"makeProof\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"BlackChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"RedeemKey\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"internalType\":\"string\",\"name\":\"Address\",\"type\":\"string\"},{\"internalType\":\"bytes[]\",\"name\":\"Signs\",\"type\":\"bytes[]\"}],\"name\":\"MultiSign\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"WhiteChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"crossChainID\",\"type\":\"bytes\"}],\"name\":\"checkDone\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"SourceChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"Height\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"Proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"RelayerAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"Extra\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"HeaderOrCrossChainMsg\",\"type\":\"bytes\"}],\"name\":\"importOuterTransfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // CrossChainManagerFuncSigs maps the 4-byte function signature to its string representation.
 var CrossChainManagerFuncSigs = map[string]string{
 	"8a449f03": "BlackChain(uint64)",
 	"48c79d9d": "MultiSign(uint64,string,bytes,string,bytes[])",
 	"99d0e87a": "WhiteChain(uint64)",
+	"1245f8d5": "checkDone(uint64,bytes)",
 	"5b60b01e": "importOuterTransfer(uint64,uint32,bytes,bytes,bytes,bytes)",
 	"06fdde03": "name()",
 }
 
 // CrossChainManagerBin is the compiled bytecode used for deploying new contracts.
-var CrossChainManagerBin = "0x608060405234801561001057600080fd5b50610475806100206000396000f3fe608060405234801561001057600080fd5b50600436106100575760003560e01c806306fdde031461005c57806348c79d9d146100745780635b60b01e1461009d5780638a449f03146100b757806399d0e87a146100b7575b600080fd5b606060405161006b91906103a3565b60405180910390f35b61008d61008236600461018e565b600095945050505050565b604051901515815260200161006b565b61008d6100ab3660046102d6565b60009695505050505050565b61008d6100c536600461016c565b50600090565b600082601f8301126100dc57600080fd5b813567ffffffffffffffff8111156100f6576100f6610429565b610109601f8201601f19166020016103f8565b81815284602083860101111561011e57600080fd5b816020850160208301376000918101602001919091529392505050565b803563ffffffff8116811461014f57600080fd5b919050565b803567ffffffffffffffff8116811461014f57600080fd5b60006020828403121561017e57600080fd5b61018782610154565b9392505050565b600080600080600060a086880312156101a657600080fd5b6101af86610154565b945060208087013567ffffffffffffffff808211156101cd57600080fd5b6101d98a838b016100cb565b965060408901359150808211156101ef57600080fd5b6101fb8a838b016100cb565b9550606089013591508082111561021157600080fd5b61021d8a838b016100cb565b9450608089013591508082111561023357600080fd5b818901915089601f83011261024757600080fd5b81358181111561025957610259610429565b8060051b6102688582016103f8565b8281528581019085870183870188018f101561028357600080fd5b600093505b848410156102c157858135111561029e57600080fd5b6102ad8f8983358a01016100cb565b835260019390930192918701918701610288565b50809750505050505050509295509295909350565b60008060008060008060c087890312156102ef57600080fd5b6102f887610154565b95506103066020880161013b565b9450604087013567ffffffffffffffff8082111561032357600080fd5b61032f8a838b016100cb565b9550606089013591508082111561034557600080fd5b6103518a838b016100cb565b9450608089013591508082111561036757600080fd5b6103738a838b016100cb565b935060a089013591508082111561038957600080fd5b5061039689828a016100cb565b9150509295509295509295565b600060208083528351808285015260005b818110156103d0578581018301518582016040015282016103b4565b818111156103e2576000604083870101525b50601f01601f1916929092016040019392505050565b604051601f8201601f1916810167ffffffffffffffff8111828210171561042157610421610429565b604052919050565b634e487b7160e01b600052604160045260246000fdfea2646970667358221220cb47f48504debcee7fac8555b2c134ff9fdff419dfbc5f0c487127571e51b34d64736f6c63430008060033"
+var CrossChainManagerBin = "0x608060405234801561001057600080fd5b506104c6806100206000396000f3fe608060405234801561001057600080fd5b50600436106100625760003560e01c806306fdde03146100675780631245f8d51461008557806348c79d9d146100a55780635b60b01e146100b85780638a449f03146100cb57806399d0e87a146100cb575b600080fd5b61006f6100de565b60405161007c91906103fd565b60405180910390f35b6100986100933660046101c2565b6100e3565b60405161007c91906103f2565b6100986100b336600461020e565b6100eb565b6100986100c636600461032a565b6100f6565b6100986100d93660046101a1565b610102565b606090565b600092915050565b600095945050505050565b60009695505050505050565b60005b919050565b600082601f83011261011a578081fd5b813567ffffffffffffffff8111156101345761013461047a565b610147601f8201601f1916602001610450565b81815284602083860101111561015b578283fd5b816020850160208301379081016020019190915292915050565b803563ffffffff8116811461010557600080fd5b803567ffffffffffffffff8116811461010557600080fd5b6000602082840312156101b2578081fd5b6101bb82610189565b9392505050565b600080604083850312156101d4578081fd5b6101dd83610189565b9150602083013567ffffffffffffffff8111156101f8578182fd5b6102048582860161010a565b9150509250929050565b600080600080600060a08688031215610225578081fd5b61022e86610189565b945060208087013567ffffffffffffffff8082111561024b578384fd5b6102578a838b0161010a565b9650604089013591508082111561026c578384fd5b6102788a838b0161010a565b9550606089013591508082111561028d578384fd5b6102998a838b0161010a565b945060808901359150808211156102ae578384fd5b818901915089601f8301126102c1578384fd5b8135818111156102d3576102d361047a565b6102e08485830201610450565b8181528481019250838501865b83811015610316576103048e88843589010161010a565b855293860193908601906001016102ed565b505080955050505050509295509295909350565b60008060008060008060c08789031215610342578081fd5b61034b87610189565b955061035960208801610175565b9450604087013567ffffffffffffffff80821115610375578283fd5b6103818a838b0161010a565b95506060890135915080821115610396578283fd5b6103a28a838b0161010a565b945060808901359150808211156103b7578283fd5b6103c38a838b0161010a565b935060a08901359150808211156103d8578283fd5b506103e589828a0161010a565b9150509295509295509295565b901515815260200190565b6000602080835283518082850152825b818110156104295785810183015185820160400152820161040d565b8181111561043a5783604083870101525b50601f01601f1916929092016040019392505050565b60405181810167ffffffffffffffff811182821017156104725761047261047a565b604052919050565b634e487b7160e01b600052604160045260246000fdfea2646970667358221220178e141b7e42a19d716a993addee0426c9940308f1d1d6754b1e29c15528a51064736f6c63430008000033"
 
 // DeployCrossChainManager deploys a new Ethereum contract, binding an instance of CrossChainManager to it.
 func DeployCrossChainManager(auth *bind.TransactOpts, backend bind.ContractBackend) (common.Address, *types.Transaction, *CrossChainManager, error) {
@@ -207,6 +218,37 @@ func (_CrossChainManager *CrossChainManagerTransactorRaw) Transfer(opts *bind.Tr
 // Transact invokes the (paid) contract method with params as input values.
 func (_CrossChainManager *CrossChainManagerTransactorRaw) Transact(opts *bind.TransactOpts, method string, params ...interface{}) (*types.Transaction, error) {
 	return _CrossChainManager.Contract.contract.Transact(opts, method, params...)
+}
+
+// CheckDone is a free data retrieval call binding the contract method 0x1245f8d5.
+//
+// Solidity: function checkDone(uint64 chainID, bytes crossChainID) view returns(bool success)
+func (_CrossChainManager *CrossChainManagerCaller) CheckDone(opts *bind.CallOpts, chainID uint64, crossChainID []byte) (bool, error) {
+	var out []interface{}
+	err := _CrossChainManager.contract.Call(opts, &out, "checkDone", chainID, crossChainID)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// CheckDone is a free data retrieval call binding the contract method 0x1245f8d5.
+//
+// Solidity: function checkDone(uint64 chainID, bytes crossChainID) view returns(bool success)
+func (_CrossChainManager *CrossChainManagerSession) CheckDone(chainID uint64, crossChainID []byte) (bool, error) {
+	return _CrossChainManager.Contract.CheckDone(&_CrossChainManager.CallOpts, chainID, crossChainID)
+}
+
+// CheckDone is a free data retrieval call binding the contract method 0x1245f8d5.
+//
+// Solidity: function checkDone(uint64 chainID, bytes crossChainID) view returns(bool success)
+func (_CrossChainManager *CrossChainManagerCallerSession) CheckDone(chainID uint64, crossChainID []byte) (bool, error) {
+	return _CrossChainManager.Contract.CheckDone(&_CrossChainManager.CallOpts, chainID, crossChainID)
 }
 
 // BlackChain is a paid mutator transaction binding the contract method 0x8a449f03.
@@ -858,3 +900,4 @@ func (_CrossChainManager *CrossChainManagerFilterer) ParseMakeProof(log types.Lo
 	event.Raw = log
 	return event, nil
 }
+

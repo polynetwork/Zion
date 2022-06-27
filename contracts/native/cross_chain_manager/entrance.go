@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/no_proof"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth_common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
@@ -70,6 +71,8 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 	switch router {
 	case utils.NO_PROOF_ROUTER:
 		return no_proof.NewNoProofHandler(), nil
+	case utils.ETH_COMMON_ROUTER:
+		return eth_common.NewHandler(), nil
 	case utils.BSC_ROUTER:
 		return bsc.NewHandler(), nil
 	case utils.ETH_ROUTER:
@@ -93,6 +96,16 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 
 func Name(s *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(scom.ABI, scom.MethodContractName, contractName)
+}
+
+func CheckDone(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	params := &scom.CheckDoneParam{}
+	if err := utils.UnpackMethod(scom.ABI, scom.MethodCheckDone, params, ctx.Payload); err != nil {
+		return nil, err
+	}
+	err := scom.CheckDoneTx(s, params.CrossChainID, params.SourceChainID)
+	return utils.PackOutputs(scom.ABI, scom.MethodCheckDone, err == scom.ErrTxAlreadyImported)
 }
 
 func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
