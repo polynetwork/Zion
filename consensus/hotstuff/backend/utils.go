@@ -183,7 +183,7 @@ func applyMessage(
 	return msg.Gas() - returnGas, err
 }
 
-func quickPackBlock(state *state.StateDB, chain consensus.ChainHeaderReader,
+func packBlock(state *state.StateDB, chain consensus.ChainHeaderReader,
 	header *types.Header, txs []*types.Transaction, receipts []*types.Receipt) *types.Block {
 
 	var (

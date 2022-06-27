@@ -158,6 +158,9 @@ type HotStuff interface {
 	// ChangeEpoch save validators and start height for next epoch
 	ChangeEpoch(epochStartHeight uint64, list []common.Address) error
 
+	// GetEpochChangeInfo retrieve the flags of whether epoch change and next validator set.
+	GetEpochChangeInfo(state *state.StateDB, height *big.Int) (bool, bool, []common.Address, error)
+
 	// IsSystemCall whether the method id is the governance tx method
 	IsSystemTransaction(tx *types.Transaction, header *types.Header) (bool, error)
 }
@@ -177,7 +180,7 @@ type Handler interface {
 	SubscribeRequest(ch chan<- types.Block) event.Subscription
 
 	// SubscribeNodes event subscribe for listening static nodes in eth handler
-	SubscribeNodes(ch chan <- StaticNodesEvent) event.Subscription
+	SubscribeNodes(ch chan<- StaticNodesEvent) event.Subscription
 }
 
 // PoW is a consensus engine based on proof-of-work.

@@ -31,6 +31,35 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
+var contractAddr = utils.NodeManagerContractAddress
+
+func (s *backend) GetEpochChangeInfo(state *state.StateDB, height *big.Int) (
+	beforeChange, changing bool, validators []common.Address, err error) {
+
+	var (
+		config *nm.GlobalConfig
+		epoch *nm.EpochInfo
+	)
+
+	if config, err = s.getGlobalConfig(state, height); err != nil {
+		return
+	}
+	if epoch, err = s.getEpoch(state, height); err != nil {
+		return
+	}
+
+	epochHeight := new(big.Int).Add(config.BlockPerEpoch, epoch.StartHeight)
+	if diff := new(big.Int).Sub(epochHeight, height); diff.Cmp(big.NewInt(1)) == 0 {
+		beforeChange = true
+		validators = epoch.MemberList()
+	} else if diff.Sign() == 0 {
+		changing = true
+		validators = epoch.MemberList()
+	}
+
+	return
+}
+
 func (s *backend) getGlobalConfig(state *state.StateDB, height *big.Int) (*nm.GlobalConfig, error) {
 
 	caller := s.signer.Address()
@@ -39,7 +68,7 @@ func (s *backend) getGlobalConfig(state *state.StateDB, height *big.Int) (*nm.Gl
 	if err != nil {
 		return nil, fmt.Errorf("encode GetGlobalConfig input failed: %v", err)
 	}
-	output, _, err := ref.NativeCall(caller, utils.GovernanceContractAddress, payload)
+	output, _, err := ref.NativeCall(caller, contractAddr, payload)
 	if err != nil {
 		return nil, fmt.Errorf("GetGlobalConfig native call failed: %v", err)
 	}
@@ -57,19 +86,44 @@ func (s *backend) getGlobalConfig(state *state.StateDB, height *big.Int) (*nm.Gl
 	return config, nil
 }
 
-func (s *backend) epochChange(ctx *systemTxContext) error {
-	payload, err := new(nm.ChangeEpochParam).Encode()
+func (s *backend) getEpoch(state *state.StateDB, height *big.Int) (*nm.EpochInfo, error) {
+	caller := s.signer.Address()
+	ref := native.NewContractRef(state, caller, caller, height, common.EmptyHash, 0, nil)
+	payload, err := new(nm.GetCurrentEpochInfoParam).Encode()
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("encode GetGlobalConfig input failed: %v", err)
 	}
-	return s.executeSystemTx(ctx, utils.GovernanceContractAddress, payload)
+	output, _, err := ref.NativeCall(caller, utils.NodeManagerContractAddress, payload)
+	if err != nil {
+		return nil, fmt.Errorf("GetGlobalConfig native call failed: %v", err)
+	}
+
+	var (
+		raw   []byte
+		epoch = new(nm.EpochInfo)
+	)
+	if err := utils.UnpackOutputs(nm.ABI, nmabi.MethodGetCurrentEpochInfo, &raw, output); err != nil {
+		return nil, err
+	}
+	if err := rlp.DecodeBytes(raw, epoch); err != nil {
+		return nil, err
+	}
+	return epoch, nil
 }
 
-func (s *backend) endBlock(ctx *systemTxContext) error {
+func (s *backend) execEpochChange(ctx *systemTxContext) error {
+	payload, err := new(nm.ChangeEpochParam).Encode()
+	if err != nil {
+		return err
+	}
+	return s.executeSystemTx(ctx, contractAddr, payload)
+}
+
+func (s *backend) execEndBlock(ctx *systemTxContext) error {
 	payload, err := new(nm.ChangeEpochParam).Encode()
 	if err != nil {
 		return err
 	}
 
-	return s.executeSystemTx(ctx, utils.GovernanceContractAddress, payload)
+	return s.executeSystemTx(ctx, contractAddr, payload)
 }
