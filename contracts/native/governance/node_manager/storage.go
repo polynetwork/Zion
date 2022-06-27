@@ -596,14 +596,14 @@ func setGenesisEpochInfo(s *state.CacheDB, epochInfo *EpochInfo) error {
 	return nil
 }
 
-func getCurrentEpochInfo(s *native.NativeContract) (*EpochInfo, error) {
+func GetCurrentEpochInfoImpl(s *native.NativeContract) (*EpochInfo, error) {
 	ID, err := getCurrentEpoch(s)
 	if err != nil {
-		return nil, fmt.Errorf("getCurrentEpochInfo, GetCurrentEpochInfo error: %v", err)
+		return nil, fmt.Errorf("GetCurrentEpochInfoImpl, getCurrentEpochInfo error: %v", err)
 	}
 	epochInfo, err := getEpochInfo(s, ID)
 	if err != nil {
-		return nil, fmt.Errorf("getCurrentEpochInfo, GetEpochInfo error: %v", err)
+		return nil, fmt.Errorf("GetCurrentEpochInfoImpl, getEpochInfo error: %v", err)
 	}
 	return epochInfo, nil
 }

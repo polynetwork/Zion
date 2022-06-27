@@ -562,9 +562,9 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	height := s.ContractRef().BlockHeight()
 
-	currentEpochInfo, err := getCurrentEpochInfo(s)
+	currentEpochInfo, err := GetCurrentEpochInfoImpl(s)
 	if err != nil {
-		return nil, fmt.Errorf("ChangeEpoch, getCurrentEpochInfo error: %v", err)
+		return nil, fmt.Errorf("ChangeEpoch, GetCurrentEpochInfoImpl error: %v", err)
 	}
 	globalConfig, err := getGlobalConfig(s)
 
@@ -767,9 +767,9 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 		panic("new block rewards is negative")
 	}
 
-	epochInfo, err := getCurrentEpochInfo(s)
+	epochInfo, err := GetCurrentEpochInfoImpl(s)
 	if err != nil {
-		return nil, fmt.Errorf("BeginBlock, getCurrentEpochInfo error: %v", err)
+		return nil, fmt.Errorf("BeginBlock, GetCurrentEpochInfoImpl error: %v", err)
 	}
 	validatorRewards := new(big.Int).Div(newRewards, new(big.Int).SetUint64(uint64(len(epochInfo.Validators))))
 	for _, v := range epochInfo.Validators {
@@ -827,9 +827,9 @@ func GetCommunityInfo(s *native.NativeContract) ([]byte, error) {
 }
 
 func GetCurrentEpochInfo(s *native.NativeContract) ([]byte, error) {
-	currentEpochInfo, err := getCurrentEpochInfo(s)
+	currentEpochInfo, err := GetCurrentEpochInfoImpl(s)
 	if err != nil {
-		return nil, fmt.Errorf("GetCurrentEpochInfo, getCurrentEpochInfo error: %v", err)
+		return nil, fmt.Errorf("GetCurrentEpochInfo, GetCurrentEpochInfoImpl error: %v", err)
 	}
 	enc, err := rlp.EncodeToBytes(currentEpochInfo)
 	if err != nil {
