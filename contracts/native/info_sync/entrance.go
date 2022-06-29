@@ -79,12 +79,9 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("SyncRootInfo, digest input param error: %v", err)
 	}
-	if !crypto.VerifySignature(params.Pub, digest, params.Signature) {
-		return nil, fmt.Errorf("SyncRootInfo, verify input signature error: %v", err)
-	}
-	pub, err := crypto.DecompressPubkey(params.Pub)
+	pub, err := crypto.SigToPub(digest, params.Signature)
 	if err != nil {
-		return nil, fmt.Errorf("SyncRootInfo, crypto.DecompressPubkey error: %v", err)
+		return nil, fmt.Errorf("SyncRootInfo, crypto.SigToPub error: %v", err)
 	}
 	addr := crypto.PubkeyToAddress(*pub)
 

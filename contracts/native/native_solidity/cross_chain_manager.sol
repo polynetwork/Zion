@@ -11,7 +11,7 @@ contract cross_chain_manager {
         return Name;
     }
     
-    function importOuterTransfer(uint64 SourceChainID, uint32 Height, bytes memory Proof, bytes memory RelayerAddress, bytes memory Extra, bytes memory HeaderOrCrossChainMsg) public returns(bool success) {
+    function importOuterTransfer(uint64 SourceChainID, uint32 Height, bytes memory Proof, bytes memory Extra, bytes memory Signature) public returns(bool success) {
         return success;
     }
 

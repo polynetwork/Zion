@@ -46,12 +46,9 @@ func (this *NoProofHandler) MakeDepositProposal(service *native.NativeContract) 
 	if err != nil {
 		return nil, fmt.Errorf("no proof MakeDepositProposal, digest input param error: %v", err)
 	}
-	if !crypto.VerifySignature(params.Pub, digest, params.Signature) {
-		return nil, fmt.Errorf("no proof MakeDepositProposal, verify input signature error: %v", err)
-	}
-	pub, err := crypto.DecompressPubkey(params.Pub)
+	pub, err := crypto.SigToPub(digest, params.Signature)
 	if err != nil {
-		return nil, fmt.Errorf("no proof MakeDepositProposal, crypto.DecompressPubkey error: %v", err)
+		return nil, fmt.Errorf("no proof MakeDepositProposal, crypto.SigToPub error: %v", err)
 	}
 	addr := crypto.PubkeyToAddress(*pub)
 

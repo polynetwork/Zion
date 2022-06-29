@@ -55,11 +55,10 @@ type EntranceParam struct {
 	Proof         []byte
 	Extra         []byte
 	Signature     []byte
-	Pub           []byte
 }
 
 func (m *EntranceParam) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.SourceChainID, m.Height, m.Proof, m.Extra, m.Signature, m.Pub})
+	return rlp.Encode(w, []interface{}{m.SourceChainID, m.Height, m.Proof, m.Extra, m.Signature})
 }
 func (m *EntranceParam) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
@@ -68,15 +67,14 @@ func (m *EntranceParam) DecodeRLP(s *rlp.Stream) error {
 		Proof         []byte
 		Extra         []byte
 		Signature     []byte
-		Pub           []byte
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	m.SourceChainID, m.Height, m.Proof, m.Extra, m.Signature, m.Pub = data.SourceChainID, data.Height,
-		data.Proof, data.Extra, data.Signature, data.Pub
+	m.SourceChainID, m.Height, m.Proof, m.Extra, m.Signature = data.SourceChainID, data.Height,
+		data.Proof, data.Extra, data.Signature
 	return nil
 }
 
