@@ -47,25 +47,23 @@ type SyncRootInfoParam struct {
 	ChainID   uint64
 	RootInfos [][]byte
 	Signature []byte
-	Pub       []byte
 }
 
 func (m *SyncRootInfoParam) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ChainID, m.RootInfos, m.Signature, m.Pub})
+	return rlp.Encode(w, []interface{}{m.ChainID, m.RootInfos, m.Signature})
 }
 func (m *SyncRootInfoParam) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		ChainID   uint64
 		RootInfos [][]byte
 		Signature []byte
-		Pub       []byte
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	m.ChainID, m.RootInfos, m.Signature, m.Pub = data.ChainID, data.RootInfos, data.Signature, data.Pub
+	m.ChainID, m.RootInfos, m.Signature = data.ChainID, data.RootInfos, data.Signature
 	return nil
 }
 

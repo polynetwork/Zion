@@ -39,14 +39,14 @@ var (
 )
 
 // InfoSyncABI is the input ABI used to generate the binding from.
-const InfoSyncABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"height\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"BlockHeight\",\"type\":\"uint256\"}],\"name\":\"SyncRootInfoEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"height\",\"type\":\"uint32\"}],\"name\":\"getInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"getInfoHeight\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"rootInfos\",\"type\":\"bytes[]\"}],\"name\":\"syncRootInfo\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const InfoSyncABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"height\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"BlockHeight\",\"type\":\"uint256\"}],\"name\":\"SyncRootInfoEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"height\",\"type\":\"uint32\"}],\"name\":\"getInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"getInfoHeight\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"rootInfos\",\"type\":\"bytes[]\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"syncRootInfo\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // InfoSyncFuncSigs maps the 4-byte function signature to its string representation.
 var InfoSyncFuncSigs = map[string]string{
 	"6a4a9f5e": "getInfo(uint64,uint32)",
 	"16d80012": "getInfoHeight(uint64)",
 	"06fdde03": "name()",
-	"48c8f119": "syncRootInfo(uint64,bytes[])",
+	"1413cc01": "syncRootInfo(uint64,bytes[],bytes)",
 }
 
 // InfoSync is an auto generated Go binding around an Ethereum contract.
@@ -284,25 +284,25 @@ func (_InfoSync *InfoSyncCallerSession) Name() (string, error) {
 	return _InfoSync.Contract.Name(&_InfoSync.CallOpts)
 }
 
-// SyncRootInfo is a paid mutator transaction binding the contract method 0x48c8f119.
+// SyncRootInfo is a paid mutator transaction binding the contract method 0x1413cc01.
 //
-// Solidity: function syncRootInfo(uint64 chainID, bytes[] rootInfos) returns(bool)
-func (_InfoSync *InfoSyncTransactor) SyncRootInfo(opts *bind.TransactOpts, chainID uint64, rootInfos [][]byte) (*types.Transaction, error) {
-	return _InfoSync.contract.Transact(opts, "syncRootInfo", chainID, rootInfos)
+// Solidity: function syncRootInfo(uint64 chainID, bytes[] rootInfos, bytes signature) returns(bool)
+func (_InfoSync *InfoSyncTransactor) SyncRootInfo(opts *bind.TransactOpts, chainID uint64, rootInfos [][]byte, signature []byte) (*types.Transaction, error) {
+	return _InfoSync.contract.Transact(opts, "syncRootInfo", chainID, rootInfos, signature)
 }
 
-// SyncRootInfo is a paid mutator transaction binding the contract method 0x48c8f119.
+// SyncRootInfo is a paid mutator transaction binding the contract method 0x1413cc01.
 //
-// Solidity: function syncRootInfo(uint64 chainID, bytes[] rootInfos) returns(bool)
-func (_InfoSync *InfoSyncSession) SyncRootInfo(chainID uint64, rootInfos [][]byte) (*types.Transaction, error) {
-	return _InfoSync.Contract.SyncRootInfo(&_InfoSync.TransactOpts, chainID, rootInfos)
+// Solidity: function syncRootInfo(uint64 chainID, bytes[] rootInfos, bytes signature) returns(bool)
+func (_InfoSync *InfoSyncSession) SyncRootInfo(chainID uint64, rootInfos [][]byte, signature []byte) (*types.Transaction, error) {
+	return _InfoSync.Contract.SyncRootInfo(&_InfoSync.TransactOpts, chainID, rootInfos, signature)
 }
 
-// SyncRootInfo is a paid mutator transaction binding the contract method 0x48c8f119.
+// SyncRootInfo is a paid mutator transaction binding the contract method 0x1413cc01.
 //
-// Solidity: function syncRootInfo(uint64 chainID, bytes[] rootInfos) returns(bool)
-func (_InfoSync *InfoSyncTransactorSession) SyncRootInfo(chainID uint64, rootInfos [][]byte) (*types.Transaction, error) {
-	return _InfoSync.Contract.SyncRootInfo(&_InfoSync.TransactOpts, chainID, rootInfos)
+// Solidity: function syncRootInfo(uint64 chainID, bytes[] rootInfos, bytes signature) returns(bool)
+func (_InfoSync *InfoSyncTransactorSession) SyncRootInfo(chainID uint64, rootInfos [][]byte, signature []byte) (*types.Transaction, error) {
+	return _InfoSync.Contract.SyncRootInfo(&_InfoSync.TransactOpts, chainID, rootInfos, signature)
 }
 
 // InfoSyncSyncRootInfoEventIterator is returned from FilterSyncRootInfoEvent and is used to iterate over the raw logs and unpacked data for SyncRootInfoEvent events raised by the InfoSync contract.
@@ -440,3 +440,4 @@ func (_InfoSync *InfoSyncFilterer) ParseSyncRootInfoEvent(log types.Log) (*InfoS
 	event.Raw = log
 	return event, nil
 }
+
