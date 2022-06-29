@@ -28,7 +28,7 @@ import (
 )
 
 var (
-	this     = native.NativeContractAddrMap[native.NativeSideChainManager]
+	this     = native.NativeContractAddrMap[native.NativeSignatureManager]
 	gasTable = map[string]uint64{
 		// MethodContractName:             0,
 		signature_manager_abi.MethodAddSignature: 100000,
