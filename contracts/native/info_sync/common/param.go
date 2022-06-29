@@ -20,6 +20,7 @@ package common
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
 
@@ -33,7 +34,6 @@ const (
 	SYNC_ROOT_INFO_EVENT = "SyncRootInfoEvent"
 )
 
-
 type GetInfoParam struct {
 	ChainID uint64
 	Height  uint32
@@ -46,23 +46,41 @@ type GetInfoHeightParam struct {
 type SyncRootInfoParam struct {
 	ChainID   uint64
 	RootInfos [][]byte
+	Signature []byte
+	Pub       []byte
 }
 
 func (m *SyncRootInfoParam) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ChainID, m.RootInfos})
+	return rlp.Encode(w, []interface{}{m.ChainID, m.RootInfos, m.Signature, m.Pub})
 }
 func (m *SyncRootInfoParam) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
 		ChainID   uint64
 		RootInfos [][]byte
+		Signature []byte
+		Pub       []byte
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	m.ChainID, m.RootInfos = data.ChainID, data.RootInfos
+	m.ChainID, m.RootInfos, m.Signature, m.Pub = data.ChainID, data.RootInfos, data.Signature, data.Pub
 	return nil
+}
+
+//Digest Digest calculate the hash of param input
+func (m *SyncRootInfoParam) Digest() ([]byte, error) {
+	input := &SyncRootInfoParam{
+		ChainID:   m.ChainID,
+		RootInfos: m.RootInfos,
+	}
+	msg, err := rlp.EncodeToBytes(input)
+	if err != nil {
+		return nil, fmt.Errorf("SyncRootInfoParam, serialize input error: %v", err)
+	}
+	digest := crypto.Keccak256(msg)
+	return digest, nil
 }
 
 type RootInfo struct {

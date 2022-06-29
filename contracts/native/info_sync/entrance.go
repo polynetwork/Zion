@@ -21,6 +21,7 @@ package info_sync
 import (
 	"encoding/binary"
 	"fmt"
+	"github.com/ethereum/go-ethereum/crypto"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -57,7 +58,6 @@ func Name(s *native.NativeContract) ([]byte, error) {
 
 func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	caller := ctx.Caller
 	params := &iscommon.SyncRootInfoParam{}
 	if err := utils.UnpackMethod(iscommon.ABI, iscommon.MethodSyncRootInfo, params, ctx.Payload); err != nil {
 		return nil, err
@@ -73,6 +73,20 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 	if sideChain == nil {
 		return nil, fmt.Errorf("SyncRootInfo, side chain is not registered")
 	}
+
+	//verify signature
+	digest, err := params.Digest()
+	if err != nil {
+		return nil, fmt.Errorf("SyncRootInfo, digest input param error: %v", err)
+	}
+	if !crypto.VerifySignature(params.Pub, digest, params.Signature) {
+		return nil, fmt.Errorf("SyncRootInfo, verify input signature error: %v", err)
+	}
+	pub, err := crypto.DecompressPubkey(params.Pub)
+	if err != nil {
+		return nil, fmt.Errorf("SyncRootInfo, crypto.DecompressPubkey error: %v", err)
+	}
+	addr := crypto.PubkeyToAddress(*pub)
 
 	//sync root infos
 	for _, v := range params.RootInfos {
@@ -92,7 +106,7 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 			return nil, err
 		}
 
-		ok, err := node_manager.CheckVoterSigns(s, iscommon.MethodSyncRootInfo, blob, caller)
+		ok, err := node_manager.CheckVoterSigns(s, iscommon.MethodSyncRootInfo, blob, addr)
 		if err != nil {
 			return nil, fmt.Errorf("SyncRootInfo, CheckVoterSigns error: %v", err)
 		}
@@ -115,7 +129,9 @@ func GetInfoHeight(s *native.NativeContract) ([]byte, error) {
 	}
 
 	height, err := iscommon.GetCurrentHeight(s, params.ChainID)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	v := make([]byte, 4)
 	binary.LittleEndian.PutUint32(v, height)
 	return utils.PackOutputs(iscommon.ABI, iscommon.MethodGetInfoHeight, v)
@@ -128,6 +144,8 @@ func GetInfo(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 	info, err := iscommon.GetRootInfo(s, params.ChainID, params.Height)
-	if err != nil { return nil, err }
+	if err != nil {
+		return nil, err
+	}
 	return utils.PackOutputs(iscommon.ABI, iscommon.MethodGetInfo, info)
 }
