@@ -137,16 +137,10 @@ func withdrawStakeRewards(s *native.NativeContract, validator *Validator, stakeI
 }
 
 func CalculateStakeRewards(s *native.NativeContract, stakeAddress common.Address, dec []byte, endPeriod uint64) (*big.Int, error) {
-	height := s.ContractRef().BlockHeight()
 	// fetch starting info for delegation
 	startingInfo, err := GetStakeStartingInfo(s, stakeAddress, dec)
 	if err != nil {
 		return nil, fmt.Errorf("CalculateStakeRewards, GetStakeStartingInfo error: %v", err)
-	}
-
-	if startingInfo.Height.Cmp(height) == 0 {
-		// started this height, no rewards yet
-		return common.Big0, nil
 	}
 
 	startPeriod := startingInfo.StartPeriod
@@ -270,7 +264,7 @@ func allocateRewardsToValidator(s *native.NativeContract, validator *Validator, 
 	if err != nil {
 		return fmt.Errorf("allocateRewardsToValidator, GetValidatorOutstandingRewards error: %v", err)
 	}
-	outstanding.Rewards = new(big.Int).Add(outstanding.Rewards, stakeRewards)
+	outstanding.Rewards = new(big.Int).Add(outstanding.Rewards, rewards)
 	err = setValidatorOutstandingRewards(s, dec, outstanding)
 	if err != nil {
 		return fmt.Errorf("allocateRewardsToValidator, setValidatorOutstandingRewards error: %v", err)

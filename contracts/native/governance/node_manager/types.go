@@ -435,7 +435,7 @@ type StakeStartingInfo struct {
 }
 
 func (m *StakeStartingInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.StartPeriod, m.StartPeriod, m.Height})
+	return rlp.Encode(w, []interface{}{m.StartPeriod, m.Stake, m.Height})
 }
 
 func (m *StakeStartingInfo) DecodeRLP(s *rlp.Stream) error {

@@ -390,7 +390,7 @@ func TestStake(t *testing.T) {
 }
 
 func TestDistribute(t *testing.T) {
-	blockNumber := big.NewInt(1)
+	blockNumber := big.NewInt(400000)
 	extra := uint64(10)
 	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
 	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
@@ -439,7 +439,7 @@ func TestDistribute(t *testing.T) {
 	pkStake2, _ := crypto.GenerateKey()
 	staker2 := &pkStake2.PublicKey
 	stakeAddress2 := crypto.PubkeyToAddress(*staker2)
-	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+	sdb.SetBalance(stakeAddress2, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 	param2 := new(StakeParam)
 	param2.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
 	param2.Amount = new(big.Int).Mul(big.NewInt(20000), params.ZNT1)
@@ -456,8 +456,136 @@ func TestDistribute(t *testing.T) {
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
+	// here we have 4 validators with 100000 self stake, and validator 1 have 10000, 20000 user stake, and commission is 20%
+	// first add 1000 balance of node_manager contract to distribute
+	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
+	// call endblock
+	param3 := new(EndBlockParam)
+	input, err = param3.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
 
-	
+	// check
+	accumulatedCommission, err := GetAccumulatedCommission(contractQuery, validatorsKey[0].Dec)
+	assert.Nil(t, err)
+	assert.Equal(t, accumulatedCommission.Amount, new(big.Int).Mul(big.NewInt(50), params.ZNT1))
+	validatorAccumulatedRewards, err := GetValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
+	assert.Nil(t, err)
+	assert.Equal(t, validatorAccumulatedRewards.Rewards, new(big.Int).Mul(big.NewInt(200), params.ZNT1))
+
+	accumulatedCommission2, err := GetAccumulatedCommission(contractQuery, validatorsKey[1].Dec)
+	assert.Nil(t, err)
+	assert.Equal(t, accumulatedCommission2.Amount, new(big.Int).Mul(big.NewInt(50), params.ZNT1))
+	validatorAccumulatedRewards2, err := GetValidatorAccumulatedRewards(contractQuery, validatorsKey[1].Dec)
+	assert.Nil(t, err)
+	assert.Equal(t, validatorAccumulatedRewards2.Rewards, new(big.Int).Mul(big.NewInt(200), params.ZNT1))
+
+	// withdraw stake rewards and commission
+	param4 := new(WithdrawStakeRewardsParam)
+	param4.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	input, err = param4.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param5 := new(WithdrawStakeRewardsParam)
+	param5.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	input, err = param5.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress2, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress2, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param6 := new(WithdrawCommissionParam)
+	param6.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	input, err = param6.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check balance
+	b1, _ := new(big.Int).SetString("990015380000000000000000", 10)
+	b2, _ := new(big.Int).SetString("980030760000000000000000", 10)
+	assert.Equal(t, sdb.GetBalance(stakeAddress), b1)
+	assert.Equal(t, sdb.GetBalance(stakeAddress2), b2)
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].Address), new(big.Int).Mul(big.NewInt(900050), params.ZNT1))
+
+	// check states
+	validatorAccumulatedRewards, err = GetValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
+	assert.Nil(t, err)
+	assert.Equal(t, validatorAccumulatedRewards.Rewards, common.Big0)
+	assert.Equal(t, validatorAccumulatedRewards.Period, uint64(6))
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 0)
+	assert.NotNil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 1)
+	assert.Nil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 2)
+	assert.NotNil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 3)
+	assert.NotNil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 4)
+	assert.Nil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 5)
+	assert.Nil(t, err)
+
+	// withdraw validator stake rewards
+	param7 := new(WithdrawStakeRewardsParam)
+	param7.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	input, err = param7.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param8 := new(WithdrawStakeRewardsParam)
+	param8.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	input, err = param8.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	b3, _ := new(big.Int).SetString("900203800000000000000000", 10)
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].Address), b3)
+	validatorOutstandingRewards, err := GetValidatorOutstandingRewards(contractQuery, validatorsKey[0].Dec)
+	assert.Nil(t, err)
+	b4, _ := new(big.Int).SetString("60000000000000000", 10)
+	assert.Equal(t, validatorOutstandingRewards.Rewards, b4)
+	validatorAccumulatedRewards, err = GetValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
+	assert.Nil(t, err)
+	assert.Equal(t, validatorAccumulatedRewards.Rewards, common.Big0)
+	assert.Equal(t, validatorAccumulatedRewards.Period, uint64(8))
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 0)
+	assert.NotNil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 1)
+	assert.NotNil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 2)
+	assert.NotNil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 3)
+	assert.NotNil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 4)
+	assert.Nil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 5)
+	assert.Nil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 6)
+	assert.NotNil(t, err)
+	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 7)
+	assert.Nil(t, err)
+
+	// here we have 4 validators with 100000 self stake, and validator 1 have 10000, 20000 user stake, and commission is 20%
+	// add 2000 balance of node_manager contract to distribute
+	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
+	// call endblock
+	param9 := new(EndBlockParam)
+	input, err = param9.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+
 }
 
 // generateTestPeer ONLY used for testing
