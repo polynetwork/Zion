@@ -43,14 +43,14 @@ var (
 )
 
 // InfoSyncABI is the input ABI used to generate the binding from.
-const InfoSyncABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string[]\",\"name\":\"txHashes\",\"type\":\"string[]\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"ReplenishEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"height\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"BlockHeight\",\"type\":\"uint256\"}],\"name\":\"SyncRootInfoEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"height\",\"type\":\"uint32\"}],\"name\":\"getInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"getInfoHeight\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"string[]\",\"name\":\"txHashes\",\"type\":\"string[]\"}],\"name\":\"replenish\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"rootInfos\",\"type\":\"bytes[]\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"syncRootInfo\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const InfoSyncABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint32[]\",\"name\":\"heights\",\"type\":\"uint32[]\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"ReplenishEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"height\",\"type\":\"uint32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"BlockHeight\",\"type\":\"uint256\"}],\"name\":\"SyncRootInfoEvent\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"height\",\"type\":\"uint32\"}],\"name\":\"getInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"getInfoHeight\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32[]\",\"name\":\"heights\",\"type\":\"uint32[]\"}],\"name\":\"replenish\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"rootInfos\",\"type\":\"bytes[]\"},{\"internalType\":\"bytes\",\"name\":\"signature\",\"type\":\"bytes\"}],\"name\":\"syncRootInfo\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // InfoSyncFuncSigs maps the 4-byte function signature to its string representation.
 var InfoSyncFuncSigs = map[string]string{
 	"6a4a9f5e": "getInfo(uint64,uint32)",
 	"16d80012": "getInfoHeight(uint64)",
 	"06fdde03": "name()",
-	"f8bac498": "replenish(uint64,string[])",
+	"69ce93b4": "replenish(uint64,uint32[])",
 	"1413cc01": "syncRootInfo(uint64,bytes[],bytes)",
 }
 
@@ -229,16 +229,16 @@ func (_InfoSync *InfoSyncCallerSession) GetInfo(chainID uint64, height uint32) (
 
 // GetInfoHeight is a free data retrieval call binding the contract method 0x16d80012.
 //
-// Solidity: function getInfoHeight(uint64 chainID) view returns(bytes)
-func (_InfoSync *InfoSyncCaller) GetInfoHeight(opts *bind.CallOpts, chainID uint64) ([]byte, error) {
+// Solidity: function getInfoHeight(uint64 chainID) view returns(uint32)
+func (_InfoSync *InfoSyncCaller) GetInfoHeight(opts *bind.CallOpts, chainID uint64) (uint32, error) {
 	var out []interface{}
 	err := _InfoSync.contract.Call(opts, &out, "getInfoHeight", chainID)
 
 	if err != nil {
-		return *new([]byte), err
+		return *new(uint32), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+	out0 := *abi.ConvertType(out[0], new(uint32)).(*uint32)
 
 	return out0, err
 
@@ -246,15 +246,15 @@ func (_InfoSync *InfoSyncCaller) GetInfoHeight(opts *bind.CallOpts, chainID uint
 
 // GetInfoHeight is a free data retrieval call binding the contract method 0x16d80012.
 //
-// Solidity: function getInfoHeight(uint64 chainID) view returns(bytes)
-func (_InfoSync *InfoSyncSession) GetInfoHeight(chainID uint64) ([]byte, error) {
+// Solidity: function getInfoHeight(uint64 chainID) view returns(uint32)
+func (_InfoSync *InfoSyncSession) GetInfoHeight(chainID uint64) (uint32, error) {
 	return _InfoSync.Contract.GetInfoHeight(&_InfoSync.CallOpts, chainID)
 }
 
 // GetInfoHeight is a free data retrieval call binding the contract method 0x16d80012.
 //
-// Solidity: function getInfoHeight(uint64 chainID) view returns(bytes)
-func (_InfoSync *InfoSyncCallerSession) GetInfoHeight(chainID uint64) ([]byte, error) {
+// Solidity: function getInfoHeight(uint64 chainID) view returns(uint32)
+func (_InfoSync *InfoSyncCallerSession) GetInfoHeight(chainID uint64) (uint32, error) {
 	return _InfoSync.Contract.GetInfoHeight(&_InfoSync.CallOpts, chainID)
 }
 
@@ -289,25 +289,25 @@ func (_InfoSync *InfoSyncCallerSession) Name() (string, error) {
 	return _InfoSync.Contract.Name(&_InfoSync.CallOpts)
 }
 
-// Replenish is a paid mutator transaction binding the contract method 0xf8bac498.
+// Replenish is a paid mutator transaction binding the contract method 0x69ce93b4.
 //
-// Solidity: function replenish(uint64 chainID, string[] txHashes) returns(bool)
-func (_InfoSync *InfoSyncTransactor) Replenish(opts *bind.TransactOpts, chainID uint64, txHashes []string) (*types.Transaction, error) {
-	return _InfoSync.contract.Transact(opts, "replenish", chainID, txHashes)
+// Solidity: function replenish(uint64 chainID, uint32[] heights) returns(bool)
+func (_InfoSync *InfoSyncTransactor) Replenish(opts *bind.TransactOpts, chainID uint64, heights []uint32) (*types.Transaction, error) {
+	return _InfoSync.contract.Transact(opts, "replenish", chainID, heights)
 }
 
-// Replenish is a paid mutator transaction binding the contract method 0xf8bac498.
+// Replenish is a paid mutator transaction binding the contract method 0x69ce93b4.
 //
-// Solidity: function replenish(uint64 chainID, string[] txHashes) returns(bool)
-func (_InfoSync *InfoSyncSession) Replenish(chainID uint64, txHashes []string) (*types.Transaction, error) {
-	return _InfoSync.Contract.Replenish(&_InfoSync.TransactOpts, chainID, txHashes)
+// Solidity: function replenish(uint64 chainID, uint32[] heights) returns(bool)
+func (_InfoSync *InfoSyncSession) Replenish(chainID uint64, heights []uint32) (*types.Transaction, error) {
+	return _InfoSync.Contract.Replenish(&_InfoSync.TransactOpts, chainID, heights)
 }
 
-// Replenish is a paid mutator transaction binding the contract method 0xf8bac498.
+// Replenish is a paid mutator transaction binding the contract method 0x69ce93b4.
 //
-// Solidity: function replenish(uint64 chainID, string[] txHashes) returns(bool)
-func (_InfoSync *InfoSyncTransactorSession) Replenish(chainID uint64, txHashes []string) (*types.Transaction, error) {
-	return _InfoSync.Contract.Replenish(&_InfoSync.TransactOpts, chainID, txHashes)
+// Solidity: function replenish(uint64 chainID, uint32[] heights) returns(bool)
+func (_InfoSync *InfoSyncTransactorSession) Replenish(chainID uint64, heights []uint32) (*types.Transaction, error) {
+	return _InfoSync.Contract.Replenish(&_InfoSync.TransactOpts, chainID, heights)
 }
 
 // SyncRootInfo is a paid mutator transaction binding the contract method 0x1413cc01.
@@ -400,14 +400,14 @@ func (it *InfoSyncReplenishEventIterator) Close() error {
 
 // InfoSyncReplenishEvent represents a ReplenishEvent event raised by the InfoSync contract.
 type InfoSyncReplenishEvent struct {
-	TxHashes []string
-	ChainID  uint64
-	Raw      types.Log // Blockchain specific contextual infos
+	Heights []uint32
+	ChainID uint64
+	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterReplenishEvent is a free log retrieval operation binding the contract event 0xac3e52c0a7de47fbd0f9a52b8f205485cd725235d94d678f638e16d02404fb38.
+// FilterReplenishEvent is a free log retrieval operation binding the contract event 0x21af63b15a3c411234e8b1e975c9a0ea23ac5f43bca2f0a451042297560cd973.
 //
-// Solidity: event ReplenishEvent(string[] txHashes, uint64 chainID)
+// Solidity: event ReplenishEvent(uint32[] heights, uint64 chainID)
 func (_InfoSync *InfoSyncFilterer) FilterReplenishEvent(opts *bind.FilterOpts) (*InfoSyncReplenishEventIterator, error) {
 
 	logs, sub, err := _InfoSync.contract.FilterLogs(opts, "ReplenishEvent")
@@ -417,9 +417,9 @@ func (_InfoSync *InfoSyncFilterer) FilterReplenishEvent(opts *bind.FilterOpts) (
 	return &InfoSyncReplenishEventIterator{contract: _InfoSync.contract, event: "ReplenishEvent", logs: logs, sub: sub}, nil
 }
 
-// WatchReplenishEvent is a free log subscription operation binding the contract event 0xac3e52c0a7de47fbd0f9a52b8f205485cd725235d94d678f638e16d02404fb38.
+// WatchReplenishEvent is a free log subscription operation binding the contract event 0x21af63b15a3c411234e8b1e975c9a0ea23ac5f43bca2f0a451042297560cd973.
 //
-// Solidity: event ReplenishEvent(string[] txHashes, uint64 chainID)
+// Solidity: event ReplenishEvent(uint32[] heights, uint64 chainID)
 func (_InfoSync *InfoSyncFilterer) WatchReplenishEvent(opts *bind.WatchOpts, sink chan<- *InfoSyncReplenishEvent) (event.Subscription, error) {
 
 	logs, sub, err := _InfoSync.contract.WatchLogs(opts, "ReplenishEvent")
@@ -454,9 +454,9 @@ func (_InfoSync *InfoSyncFilterer) WatchReplenishEvent(opts *bind.WatchOpts, sin
 	}), nil
 }
 
-// ParseReplenishEvent is a log parse operation binding the contract event 0xac3e52c0a7de47fbd0f9a52b8f205485cd725235d94d678f638e16d02404fb38.
+// ParseReplenishEvent is a log parse operation binding the contract event 0x21af63b15a3c411234e8b1e975c9a0ea23ac5f43bca2f0a451042297560cd973.
 //
-// Solidity: event ReplenishEvent(string[] txHashes, uint64 chainID)
+// Solidity: event ReplenishEvent(uint32[] heights, uint64 chainID)
 func (_InfoSync *InfoSyncFilterer) ParseReplenishEvent(log types.Log) (*InfoSyncReplenishEvent, error) {
 	event := new(InfoSyncReplenishEvent)
 	if err := _InfoSync.contract.UnpackLog(event, "ReplenishEvent", log); err != nil {

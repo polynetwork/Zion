@@ -144,7 +144,7 @@ func (m *SyncRootInfoParam) Digest() ([]byte, error) {
 
 type ReplenishParam struct {
 	ChainID  uint64
-	TxHashes []string
+	Heights  []uint32
 }
 
 func (m *ReplenishParam) Encode() ([]byte, error) {
