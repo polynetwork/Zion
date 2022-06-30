@@ -19,7 +19,6 @@
 package info_sync
 
 import (
-	"encoding/binary"
 	"fmt"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -83,21 +82,6 @@ type GetInfoHeightParam struct {
 
 func (m *GetInfoHeightParam) Encode() ([]byte, error) {
 	return utils.PackMethodWithStruct(ABI, MethodGetInfoHeight, m)
-}
-
-type GetInfoHeightOutput struct {
-	Height uint32
-}
-
-func (m *GetInfoHeightOutput) Decode(payload []byte) error {
-	var data struct {
-		HeightB []byte
-	}
-	if err := utils.UnpackOutputs(ABI, MethodGetInfo, &data, payload); err != nil {
-		return err
-	}
-	m.Height = binary.LittleEndian.Uint32(data.HeightB)
-	return nil
 }
 
 type SyncRootInfoParam struct {
