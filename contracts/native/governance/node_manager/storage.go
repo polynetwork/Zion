@@ -152,7 +152,7 @@ func setOutstandingRewards(s *native.NativeContract, outstandingRewards *Outstan
 
 func GetOutstandingRewards(s *native.NativeContract) (*OutstandingRewards, error) {
 	outstandingRewards := &OutstandingRewards{
-		Rewards: common.Big0,
+		Rewards: new(big.Int),
 	}
 	key := outstandingRewardsKey()
 	store, err := get(s, key)
@@ -426,7 +426,7 @@ func GetTotalPool(s *native.NativeContract) (*big.Int, error) {
 	key := totalPoolKey()
 	store, err := get(s, key)
 	if err == ErrEof {
-		return common.Big0, nil
+		return new(big.Int), nil
 	}
 	if err != nil {
 		return nil, fmt.Errorf("GetTotalPool, get store error: %v", err)
@@ -462,7 +462,7 @@ func GetStakeInfo(s *native.NativeContract, stakeAddress common.Address, consens
 	stakeInfo := &StakeInfo{
 		StakeAddress:    stakeAddress,
 		ConsensusPubkey: consensusPk,
-		Amount:          common.Big0,
+		Amount:          new(big.Int),
 	}
 	dec, err := hexutil.Decode(stakeInfo.ConsensusPubkey)
 	if err != nil {
