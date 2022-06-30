@@ -21,14 +21,11 @@ package info_sync
 import (
 	"encoding/binary"
 	"fmt"
-	"github.com/ethereum/go-ethereum/crypto"
-
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	iscommon "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
-	"github.com/ethereum/go-ethereum/contracts/native/info_sync/consensus_vote"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -40,29 +37,29 @@ var (
 
 func InitInfoSync() {
 	native.Contracts[this] = RegisterInfoSyncContract
-	iscommon.ABI = iscommon.GetABI()
+	ABI = GetABI()
 }
 
 func RegisterInfoSyncContract(s *native.NativeContract) {
-	s.Prepare(iscommon.ABI, iscommon.GasTable)
+	s.Prepare(ABI, GasTable)
 
-	s.Register(iscommon.MethodContractName, Name)
-	s.Register(iscommon.MethodSyncRootInfo, SyncRootInfo)
-	s.Register(iscommon.MethodGetInfoHeight, GetInfoHeight)
-	s.Register(iscommon.MethodGetInfo, GetInfo)
+	s.Register(MethodContractName, Name)
+	s.Register(MethodSyncRootInfo, SyncRootInfo)
+	s.Register(MethodReplenish, Replenish)
+	s.Register(MethodGetInfoHeight, GetInfoHeight)
+	s.Register(MethodGetInfo, GetInfo)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
-	return utils.PackOutputs(iscommon.ABI, iscommon.MethodContractName, contractName)
+	return utils.PackOutputs(ABI, MethodContractName, contractName)
 }
 
 func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &iscommon.SyncRootInfoParam{}
-	if err := utils.UnpackMethod(iscommon.ABI, iscommon.MethodSyncRootInfo, params, ctx.Payload); err != nil {
+	params := &SyncRootInfoParam{}
+	if err := utils.UnpackMethod(ABI, MethodSyncRootInfo, params, ctx.Payload); err != nil {
 		return nil, err
 	}
-
 	chainID := params.ChainID
 
 	//check if chainid exist
@@ -87,13 +84,13 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 
 	//sync root infos
 	for _, v := range params.RootInfos {
-		var rootInfo *iscommon.RootInfo
+		var rootInfo *RootInfo
 		err := rlp.DecodeBytes(v, &rootInfo)
 		if err != nil {
 			return nil, fmt.Errorf("SyncRootInfo, decode root info error")
 		}
 		//use chain id, info key and value as unique id
-		unique := &consensus_vote.RootInfoUnique{
+		unique := &RootInfoUnique{
 			ChainID: params.ChainID,
 			Height:  rootInfo.Height,
 			Info:    rootInfo.Info,
@@ -103,46 +100,60 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 			return nil, err
 		}
 
-		ok, err := node_manager.CheckVoterSigns(s, iscommon.MethodSyncRootInfo, blob, addr)
+		ok, err := node_manager.CheckVoterSigns(s, MethodSyncRootInfo, blob, addr)
 		if err != nil {
 			return nil, fmt.Errorf("SyncRootInfo, CheckVoterSigns error: %v", err)
 		}
 		if ok {
-			err := iscommon.PutRootInfo(s, chainID, rootInfo.Height, rootInfo.Info)
+			err := PutRootInfo(s, chainID, rootInfo.Height, rootInfo.Info)
 			if err != nil {
 				return nil, fmt.Errorf("SyncRootInfo, PutCrossChainInfo error: %v", err)
 			}
 		}
 	}
 
-	return utils.PackOutputs(iscommon.ABI, iscommon.MethodSyncRootInfo, true)
+	return utils.PackOutputs(ABI, MethodSyncRootInfo, true)
+}
+
+func Replenish(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	params := &ReplenishParam{}
+	if err := utils.UnpackMethod(ABI, MethodReplenish, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("Replenish, unpack params error: %s", err)
+	}
+
+	err := NotifyReplenish(s, params.TxHashes, params.ChainID)
+	if err != nil {
+		return nil, fmt.Errorf("Replenish, NotifyReplenish error: %s", err)
+	}
+	return utils.BYTE_TRUE, nil
 }
 
 func GetInfoHeight(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &iscommon.GetInfoHeightParam{}
-	if err := utils.UnpackMethod(iscommon.ABI, iscommon.MethodGetInfoHeight, params, ctx.Payload); err != nil {
+	params := &GetInfoHeightParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetInfoHeight, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	height, err := iscommon.GetCurrentHeight(s, params.ChainID)
+	height, err := GetCurrentHeight(s, params.ChainID)
 	if err != nil {
 		return nil, err
 	}
 	v := make([]byte, 4)
 	binary.LittleEndian.PutUint32(v, height)
-	return utils.PackOutputs(iscommon.ABI, iscommon.MethodGetInfoHeight, v)
+	return utils.PackOutputs(ABI, MethodGetInfoHeight, v)
 }
 
 func GetInfo(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &iscommon.GetInfoParam{}
-	if err := utils.UnpackMethod(iscommon.ABI, iscommon.MethodGetInfo, params, ctx.Payload); err != nil {
+	params := &GetInfoParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetInfo, params, ctx.Payload); err != nil {
 		return nil, err
 	}
-	info, err := iscommon.GetRootInfo(s, params.ChainID, params.Height)
+	info, err := GetRootInfo(s, params.ChainID, params.Height)
 	if err != nil {
 		return nil, err
 	}
-	return utils.PackOutputs(iscommon.ABI, iscommon.MethodGetInfo, info)
+	return utils.PackOutputs(ABI, MethodGetInfo, info)
 }
