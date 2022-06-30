@@ -42,23 +42,6 @@ type AllValidators struct {
 	AllValidators []string
 }
 
-func (m *AllValidators) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.AllValidators})
-}
-
-func (m *AllValidators) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		AllValidators []string
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-
-	m.AllValidators = data.AllValidators
-	return nil
-}
-
 type Validator struct {
 	StakeAddress     common.Address
 	ConsensusPubkey  string
@@ -71,36 +54,6 @@ type Validator struct {
 	TotalStake       *big.Int
 	SelfStake        *big.Int
 	Desc             string
-}
-
-func (m *Validator) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.StakeAddress, m.ConsensusPubkey, m.ConsensusAddress,
-		m.ProposalAddress, m.Commission, m.Status, m.Jailed, m.UnlockHeight, m.TotalStake, m.SelfStake, m.Desc})
-}
-
-func (m *Validator) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		StakeAddress     common.Address
-		ConsensusPubkey  string
-		ConsensusAddress common.Address
-		ProposalAddress  common.Address
-		Commission       *Commission
-		Status           LockStatus
-		Jailed           bool
-		UnlockHeight     *big.Int
-		TotalStake       *big.Int
-		SelfStake        *big.Int
-		Desc             string
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.StakeAddress, m.ConsensusPubkey, m.ConsensusAddress, m.ProposalAddress, m.Commission, m.Status, m.Jailed,
-		m.UnlockHeight, m.TotalStake, m.SelfStake, m.Desc = data.StakeAddress, data.ConsensusPubkey, data.ConsensusAddress,
-		data.ProposalAddress, data.Commission, data.Status, data.Jailed, data.UnlockHeight, data.TotalStake,
-		data.SelfStake, data.Desc
-	return nil
 }
 
 // IsLocked checks if the validator status equals Locked
@@ -133,23 +86,6 @@ type Commission struct {
 	UpdateHeight *big.Int
 }
 
-func (m *Commission) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Rate, m.UpdateHeight})
-}
-
-func (m *Commission) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Rate         *big.Int
-		UpdateHeight *big.Int
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Rate, m.UpdateHeight = data.Rate, data.UpdateHeight
-	return nil
-}
-
 type GlobalConfig struct {
 	MaxCommission         *big.Int
 	MinInitialStake       *big.Int
@@ -157,30 +93,6 @@ type GlobalConfig struct {
 	BlockPerEpoch         *big.Int
 	ConsensusValidatorNum uint64
 	VoterValidatorNum     uint64
-}
-
-func (m *GlobalConfig) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.MaxCommission, m.MinInitialStake, m.MaxDescLength, m.BlockPerEpoch,
-		m.ConsensusValidatorNum, m.VoterValidatorNum})
-}
-
-func (m *GlobalConfig) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		MaxCommission         *big.Int
-		MinInitialStake       *big.Int
-		MaxDescLength         uint64
-		BlockPerEpoch         *big.Int
-		ConsensusValidatorNum uint64
-		VoterValidatorNum     uint64
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.MaxCommission, m.MinInitialStake, m.MaxDescLength, m.BlockPerEpoch, m.ConsensusValidatorNum,
-		m.VoterValidatorNum = data.MaxCommission, data.MinInitialStake, data.MaxDescLength, data.BlockPerEpoch,
-		data.ConsensusValidatorNum, data.VoterValidatorNum
-	return nil
 }
 
 func (m *GlobalConfig) Decode(payload []byte) error {
@@ -199,44 +111,9 @@ type StakeInfo struct {
 	Amount          *big.Int
 }
 
-func (m *StakeInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.StakeAddress, m.ConsensusPubkey, m.Amount})
-}
-
-func (m *StakeInfo) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		StakeAddress    common.Address
-		ConsensusPubkey string
-		Amount          *big.Int
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.StakeAddress, m.ConsensusPubkey, m.Amount = data.StakeAddress, data.ConsensusPubkey, data.Amount
-	return nil
-}
-
 type UnlockingInfo struct {
 	StakeAddress   common.Address
 	UnlockingStake []*UnlockingStake
-}
-
-func (m *UnlockingInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.StakeAddress, m.UnlockingStake})
-}
-
-func (m *UnlockingInfo) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		StakeAddress   common.Address
-		UnlockingStake []*UnlockingStake
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.StakeAddress, m.UnlockingStake = data.StakeAddress, data.UnlockingStake
-	return nil
 }
 
 type UnlockingStake struct {
@@ -270,23 +147,6 @@ type EpochInfo struct {
 	StartHeight *big.Int
 }
 
-func (m *EpochInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ID, m.Validators, m.Voters, m.StartHeight})
-}
-func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		ID          *big.Int
-		Validators  []*Peer
-		Voters      []*Peer
-		StartHeight *big.Int
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.ID, m.Validators, m.Voters, m.StartHeight = data.ID, data.Validators, data.Voters, data.StartHeight
-	return nil
-}
 func (m *EpochInfo) Decode(payload []byte) error {
 	var data struct {
 		EpochInfo []byte
@@ -328,104 +188,22 @@ type AccumulatedCommission struct {
 	Amount *big.Int
 }
 
-func (m *AccumulatedCommission) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Amount})
-}
-
-func (m *AccumulatedCommission) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Amount *big.Int
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Amount = data.Amount
-	return nil
-}
-
 type ValidatorAccumulatedRewards struct {
 	Rewards *big.Int
 	Period  uint64
-}
-
-func (m *ValidatorAccumulatedRewards) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Rewards, m.Period})
-}
-
-func (m *ValidatorAccumulatedRewards) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Rewards *big.Int
-		Period  uint64
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Rewards, m.Period = data.Rewards, data.Period
-	return nil
 }
 
 type ValidatorOutstandingRewards struct {
 	Rewards *big.Int
 }
 
-func (m *ValidatorOutstandingRewards) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Rewards})
-}
-
-func (m *ValidatorOutstandingRewards) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Rewards *big.Int
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Rewards = data.Rewards
-	return nil
-}
-
 type OutstandingRewards struct {
 	Rewards *big.Int
-}
-
-func (m *OutstandingRewards) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Rewards})
-}
-
-func (m *OutstandingRewards) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Rewards *big.Int
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Rewards = data.Rewards
-	return nil
 }
 
 type ValidatorSnapshotRewards struct {
 	AccumulatedRewardsRatio *big.Int // ratio already mul decimal
 	ReferenceCount          uint64
-}
-
-func (m *ValidatorSnapshotRewards) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.AccumulatedRewardsRatio, m.ReferenceCount})
-}
-
-func (m *ValidatorSnapshotRewards) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		AccumulatedRewardsRatio *big.Int
-		ReferenceCount          uint64
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.AccumulatedRewardsRatio, m.ReferenceCount = data.AccumulatedRewardsRatio, data.ReferenceCount
-	return nil
 }
 
 type StakeStartingInfo struct {
@@ -434,64 +212,13 @@ type StakeStartingInfo struct {
 	Height      *big.Int
 }
 
-func (m *StakeStartingInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.StartPeriod, m.Stake, m.Height})
-}
-
-func (m *StakeStartingInfo) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		StartPeriod uint64
-		Stake       *big.Int
-		Height      *big.Int
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.StartPeriod, m.Stake, m.Height = data.StartPeriod, data.Stake, data.Height
-	return nil
-}
-
 type Peer struct {
 	PubKey  string
 	Address common.Address
 }
 
-func (m *Peer) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.PubKey, m.Address})
-}
-
-func (m *Peer) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		ConsensusPubkey  string
-		ConsensusAddress common.Address
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.PubKey, m.Address = data.ConsensusPubkey, data.ConsensusAddress
-	return nil
-}
-
 type AddressList struct {
 	List []common.Address
-}
-
-func (m *AddressList) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.List})
-}
-
-func (m *AddressList) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		List []common.Address
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.List = data.List
-	return nil
 }
 
 type ConsensusSign struct {
@@ -500,21 +227,6 @@ type ConsensusSign struct {
 	hash   atomic.Value
 }
 
-func (m *ConsensusSign) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Method, m.Input})
-}
-func (m *ConsensusSign) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Method string
-		Input  []byte
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Method, m.Input = data.Method, data.Input
-	return nil
-}
 func (m *ConsensusSign) Hash() common.Hash {
 	if hash := m.hash.Load(); hash != nil {
 		return hash.(common.Hash)
@@ -536,21 +248,6 @@ type CommunityInfo struct {
 	CommunityAddress common.Address
 }
 
-func (m *CommunityInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.CommunityRate, m.CommunityAddress})
-}
-func (m *CommunityInfo) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		CommunityRate    *big.Int
-		CommunityAddress common.Address
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.CommunityRate, m.CommunityAddress = data.CommunityRate, data.CommunityAddress
-	return nil
-}
 func (m *CommunityInfo) Decode(payload []byte) error {
 	var data struct {
 		CommunityInfo []byte

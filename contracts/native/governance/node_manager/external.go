@@ -94,7 +94,7 @@ func StoreGenesisEpoch(s *state.StateDB, peers []*Peer) (*EpochInfo, error) {
 		ID:          StartEpochID,
 		Validators:  peers,
 		Voters:      peers,
-		StartHeight: common.Big0,
+		StartHeight: new(big.Int),
 	}
 
 	// store current epoch and epoch info
