@@ -390,7 +390,7 @@ func TestStake(t *testing.T) {
 }
 
 func TestDistribute(t *testing.T) {
-	blockNumber := big.NewInt(400000)
+	blockNumber := big.NewInt(399999)
 	extra := uint64(10)
 	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
 	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
@@ -585,7 +585,25 @@ func TestDistribute(t *testing.T) {
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
+	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
+	// call endblock
+	param10 := new(EndBlockParam)
+	input, err = param10.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
 
+	// cancel validator
+	param11 := new(CancelValidatorParam)
+	param11.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	input, err = param11.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	blockNumber = big.NewInt(799999)
 }
 
 // generateTestPeer ONLY used for testing

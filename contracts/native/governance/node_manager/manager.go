@@ -575,77 +575,82 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 			currentEpochInfo.StartHeight.String())
 	}
 
-	// get all validators
-	allValidators, err := GetAllValidators(s)
-	if err != nil {
-		return nil, fmt.Errorf("ChangeEpoch, GetAllValidators error: %v", err)
-	}
-	validatorList := make([]*Validator, 0, len(allValidators.AllValidators))
-	for _, v := range allValidators.AllValidators {
-		dec, err := hexutil.Decode(v)
-		if err != nil {
-			return nil, fmt.Errorf("ChangeEpoch, decode pubkey error: %v", err)
-		}
-		validator, found, err := GetValidator(s, dec)
-		if err != nil {
-			return nil, fmt.Errorf("ChangeEpoch, GetValidator error: %v", err)
-		}
-		if !found {
-			return nil, fmt.Errorf("ChangeEpoch, validator %s not found", v)
-		}
-		validatorList = append(validatorList, validator)
-	}
-
-	// sort by total stake desc, if equal, use the old slice order
-	sort.SliceStable(validatorList, func(i, j int) bool {
-		return validatorList[i].TotalStake.Cmp(validatorList[j].TotalStake) == 1
-	})
 	epochInfo := &EpochInfo{
 		ID:          new(big.Int).Add(currentEpochInfo.ID, common.Big1),
 		Validators:  make([]*Peer, 0, globalConfig.ConsensusValidatorNum),
 		Voters:      make([]*Peer, 0, globalConfig.VoterValidatorNum),
 		StartHeight: startHeight,
 	}
-	// update validator status
-	for i := 0; uint64(i) < globalConfig.ConsensusValidatorNum; i++ {
-		validator := validatorList[i]
-		switch {
-		case validator.IsLocked():
-		case validator.IsUnlocking(endHeight), validator.IsUnlocked(endHeight):
-			validator.Status = Lock
+	// get all validators
+	allValidators, err := GetAllValidators(s)
+	if err != nil {
+		return nil, fmt.Errorf("ChangeEpoch, GetAllValidators error: %v", err)
+	}
+	if uint64(len(allValidators.AllValidators)) < globalConfig.ConsensusValidatorNum {
+		epochInfo.Validators = currentEpochInfo.Validators
+		epochInfo.Voters = currentEpochInfo.Voters
+	} else {
+		validatorList := make([]*Validator, 0, len(allValidators.AllValidators))
+		for _, v := range allValidators.AllValidators {
+			dec, err := hexutil.Decode(v)
+			if err != nil {
+				return nil, fmt.Errorf("ChangeEpoch, decode pubkey error: %v", err)
+			}
+			validator, found, err := GetValidator(s, dec)
+			if err != nil {
+				return nil, fmt.Errorf("ChangeEpoch, GetValidator error: %v", err)
+			}
+			if !found {
+				return nil, fmt.Errorf("ChangeEpoch, validator %s not found", v)
+			}
+			validatorList = append(validatorList, validator)
 		}
 
-		peer := &Peer{
-			PubKey:  validator.ConsensusPubkey,
-			Address: validator.ConsensusAddress,
+		// sort by total stake desc, if equal, use the old slice order
+		sort.SliceStable(validatorList, func(i, j int) bool {
+			return validatorList[i].TotalStake.Cmp(validatorList[j].TotalStake) == 1
+		})
+		// update validator status
+		for i := 0; uint64(i) < globalConfig.ConsensusValidatorNum; i++ {
+			validator := validatorList[i]
+			switch {
+			case validator.IsLocked():
+			case validator.IsUnlocking(endHeight), validator.IsUnlocked(endHeight):
+				validator.Status = Lock
+			}
+
+			peer := &Peer{
+				PubKey:  validator.ConsensusPubkey,
+				Address: validator.ConsensusAddress,
+			}
+			epochInfo.Validators = append(epochInfo.Validators, peer)
+			err = setValidator(s, validator)
+			if err != nil {
+				return nil, fmt.Errorf("ChangeEpoch, set lock validator error: %v", err)
+			}
 		}
-		epochInfo.Validators = append(epochInfo.Validators, peer)
-		err = setValidator(s, validator)
-		if err != nil {
-			return nil, fmt.Errorf("ChangeEpoch, set lock validator error: %v", err)
+		for i := globalConfig.ConsensusValidatorNum; i < uint64(len(validatorList)); i++ {
+			validator := validatorList[i]
+			switch {
+			case validator.IsLocked():
+				validator.Status = Unlock
+				validator.UnlockHeight = new(big.Int).Add(startHeight, globalConfig.BlockPerEpoch)
+			case validator.IsUnlocking(endHeight), validator.IsUnlocked(endHeight):
+			}
+			err = setValidator(s, validator)
+			if err != nil {
+				return nil, fmt.Errorf("ChangeEpoch, set unlock validator error: %v", err)
+			}
 		}
-	}
-	for i := globalConfig.ConsensusValidatorNum; i < uint64(len(validatorList)); i++ {
-		validator := validatorList[i]
-		switch {
-		case validator.IsLocked():
-			validator.Status = Unlock
-			validator.UnlockHeight = new(big.Int).Add(startHeight, globalConfig.BlockPerEpoch)
-		case validator.IsUnlocking(endHeight), validator.IsUnlocked(endHeight):
+		//update voters
+		for i := 0; uint64(i) < globalConfig.VoterValidatorNum; i++ {
+			validator := validatorList[i]
+			peer := &Peer{
+				PubKey:  validator.ConsensusPubkey,
+				Address: validator.ConsensusAddress,
+			}
+			epochInfo.Voters = append(epochInfo.Voters, peer)
 		}
-		err = setValidator(s, validator)
-		if err != nil {
-			return nil, fmt.Errorf("ChangeEpoch, set unlock validator error: %v", err)
-		}
-	}
-	//update voters
-	for i := 0; uint64(i) < globalConfig.VoterValidatorNum; i++ {
-		validator := validatorList[i]
-		peer := &Peer{
-			PubKey:  validator.ConsensusPubkey,
-			Address: validator.ConsensusAddress,
-		}
-		epochInfo.Voters = append(epochInfo.Voters, peer)
 	}
 
 	// update epoch info
