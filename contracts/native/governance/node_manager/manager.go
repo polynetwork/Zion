@@ -560,7 +560,8 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 }
 
 func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
-	height := s.ContractRef().BlockHeight()
+	endHeight := s.ContractRef().BlockHeight()
+	startHeight := new(big.Int).Add(endHeight, common.Big1)
 
 	currentEpochInfo, err := GetCurrentEpochInfoImpl(s)
 	if err != nil {
@@ -569,7 +570,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	globalConfig, err := getGlobalConfig(s)
 
 	// anyone can call this if height reaches
-	if new(big.Int).Sub(height, currentEpochInfo.StartHeight).Cmp(globalConfig.BlockPerEpoch) == -1 {
+	if new(big.Int).Sub(startHeight, currentEpochInfo.StartHeight).Cmp(globalConfig.BlockPerEpoch) == -1 {
 		return nil, fmt.Errorf("ChangeEpoch, block height does not reach, current epoch start at %s",
 			currentEpochInfo.StartHeight.String())
 	}
@@ -603,14 +604,14 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		ID:          new(big.Int).Add(currentEpochInfo.ID, common.Big1),
 		Validators:  make([]*Peer, 0, globalConfig.ConsensusValidatorNum),
 		Voters:      make([]*Peer, 0, globalConfig.VoterValidatorNum),
-		StartHeight: height,
+		StartHeight: startHeight,
 	}
 	// update validator status
 	for i := 0; uint64(i) < globalConfig.ConsensusValidatorNum; i++ {
 		validator := validatorList[i]
 		switch {
 		case validator.IsLocked():
-		case validator.IsUnlocking(height), validator.IsUnlocked(height):
+		case validator.IsUnlocking(endHeight), validator.IsUnlocked(endHeight):
 			validator.Status = Lock
 		}
 
@@ -629,8 +630,8 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		switch {
 		case validator.IsLocked():
 			validator.Status = Unlock
-			validator.UnlockHeight = new(big.Int).Add(height, globalConfig.BlockPerEpoch)
-		case validator.IsUnlocking(height), validator.IsUnlocked(height):
+			validator.UnlockHeight = new(big.Int).Add(startHeight, globalConfig.BlockPerEpoch)
+		case validator.IsUnlocking(endHeight), validator.IsUnlocked(endHeight):
 		}
 		err = setValidator(s, validator)
 		if err != nil {
@@ -679,9 +680,6 @@ func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 	if !found {
 		return nil, fmt.Errorf("WithdrawStakeRewards, validator not found")
 	}
-	if caller != validator.StakeAddress {
-		return nil, fmt.Errorf("WithdrawStakeRewards, caller is not stake address error: %v", err)
-	}
 	stakeInfo, found, err := GetStakeInfo(s, caller, params.ConsensusPubkey)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawStakeRewards, GetStakeInfo error: %v", err)
@@ -692,7 +690,7 @@ func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 
 	rewards, err := withdrawStakeRewards(s, validator, stakeInfo)
 	if err != nil {
-		return nil, fmt.Errorf("WithdrawStakeRewards, withdrawDelegationRewards error: %v", err)
+		return nil, fmt.Errorf("WithdrawStakeRewards, withdrawStakeRewards error: %v", err)
 	}
 
 	// reinitialize the delegation
@@ -748,16 +746,16 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 }
 
 func EndBlock(s *native.NativeContract) ([]byte, error) {
-	// contract balance = lockpool + unlockpool + outstanding + new block reward
+	// contract balance = totalpool + outstanding + new block reward
 	balance := s.StateDB().GetBalance(this)
 
 	totalPool, err := GetTotalPool(s)
 	if err != nil {
-		return nil, fmt.Errorf("BeginBlock, GetTotalPool error: %v", err)
+		return nil, fmt.Errorf("EndBlock, GetTotalPool error: %v", err)
 	}
 	outstanding, err := GetOutstandingRewards(s)
 	if err != nil {
-		return nil, fmt.Errorf("BeginBlock, GetOutstandingRewards error: %v", err)
+		return nil, fmt.Errorf("EndBlock, GetOutstandingRewards error: %v", err)
 	}
 
 	// cal rewards
@@ -769,24 +767,24 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 
 	epochInfo, err := GetCurrentEpochInfoImpl(s)
 	if err != nil {
-		return nil, fmt.Errorf("BeginBlock, GetCurrentEpochInfoImpl error: %v", err)
+		return nil, fmt.Errorf("EndBlock, GetCurrentEpochInfoImpl error: %v", err)
 	}
 	validatorRewards := new(big.Int).Div(newRewards, new(big.Int).SetUint64(uint64(len(epochInfo.Validators))))
 	for _, v := range epochInfo.Validators {
 		dec, err := hexutil.Decode(v.PubKey)
 		if err != nil {
-			return nil, fmt.Errorf("BeginBlock, decode pubkey error: %v", err)
+			return nil, fmt.Errorf("EndBlock, decode pubkey error: %v", err)
 		}
 		validator, found, err := GetValidator(s, dec)
 		if err != nil {
-			return nil, fmt.Errorf("BeginBlock, GetValidator error: %v", err)
+			return nil, fmt.Errorf("EndBlock, GetValidator error: %v", err)
 		}
 		if !found {
 			panic("validator is not found")
 		}
 		err = allocateRewardsToValidator(s, validator, validatorRewards)
 		if err != nil {
-			return nil, fmt.Errorf("BeginBlock, allocateRewardsToValidator error: %v", err)
+			return nil, fmt.Errorf("EndBlock, allocateRewardsToValidator error: %v", err)
 		}
 	}
 
@@ -794,7 +792,7 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 	outstanding.Rewards = new(big.Int).Add(outstanding.Rewards, newRewards)
 	err = setOutstandingRewards(s, outstanding)
 	if err != nil {
-		return nil, fmt.Errorf("BeginBlock, setOutstandingRewards error: %v", err)
+		return nil, fmt.Errorf("EndBlock, setOutstandingRewards error: %v", err)
 	}
 
 	return utils.ByteSuccess, nil
