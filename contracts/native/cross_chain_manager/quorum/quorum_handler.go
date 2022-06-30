@@ -20,13 +20,12 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth/types"
-	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
-
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth/types"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 

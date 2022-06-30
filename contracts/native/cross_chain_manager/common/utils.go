@@ -18,10 +18,10 @@
 package common
 
 import (
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
-	"errors"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -52,6 +52,14 @@ func CheckDoneTx(native *native.NativeContract, crossChainID []byte, chainID uin
 
 func NotifyMakeProof(native *native.NativeContract, merkleValueHex string, key string) error {
 	return native.AddNotify(ABI, []string{NOTIFY_MAKE_PROOF_EVENT}, merkleValueHex, native.ContractRef().BlockHeight().Uint64(), key)
+}
+
+func NotifyReplenish(native *native.NativeContract, txHashes []string, chainId uint64) error {
+	err := native.AddNotify(ABI, []string{REPLENISH_EVENT}, txHashes, chainId)
+	if err != nil {
+		return fmt.Errorf("NotifyReplenish failed: %v", err)
+	}
+	return nil
 }
 
 func Uint256ToBytes(num *big.Int) []byte {

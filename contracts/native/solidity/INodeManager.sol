@@ -1,4 +1,4 @@
-pragma solidity =0.5.16;
+pragma solidity >=0.7.0 <0.9.0;
 
 contract INodeManager {
     function createValidator(string calldata consensusPubkey, address proposalAddress, int commission, int initStake, string calldata desc) external returns(bool success);

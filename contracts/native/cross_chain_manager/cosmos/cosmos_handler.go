@@ -24,7 +24,7 @@ import (
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
-	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	tm34types "github.com/switcheo/tendermint/types"
 	"github.com/tendermint/tendermint/crypto"

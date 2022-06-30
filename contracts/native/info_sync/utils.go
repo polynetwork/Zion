@@ -1,9 +1,17 @@
-package common
+package info_sync
 
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+)
+
+const (
+	//key prefix
+	ROOT_INFO            = "rootInfo"
+	CURRENT_HEIGHT       = "currentHeight"
+	SYNC_ROOT_INFO_EVENT = "SyncRootInfoEvent"
+	REPLENISH_EVENT      = "ReplenishEvent"
 )
 
 func PutRootInfo(native *native.NativeContract, chainID uint64, height uint32, info []byte) error {
@@ -20,7 +28,10 @@ func PutRootInfo(native *native.NativeContract, chainID uint64, height uint32, i
 	if currentHeight < height {
 		native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(CURRENT_HEIGHT), chainIDBytes), heightBytes)
 	}
-	NotifyPutRootInfo(native, chainID, height)
+	err = NotifyPutRootInfo(native, chainID, height)
+	if err != nil {
+		return fmt.Errorf("PutRootInfo, NotifyPutRootInfo error: %v", err)
+	}
 	return nil
 }
 
@@ -45,4 +56,20 @@ func GetCurrentHeight(native *native.NativeContract, chainID uint64) (uint32, er
 		return 0, fmt.Errorf("GetCurrentHeight, native.GetCacheDB().Get error: %v", err)
 	}
 	return utils.GetBytesUint32(r), nil
+}
+
+func NotifyPutRootInfo(native *native.NativeContract, chainID uint64, height uint32) error {
+	err := native.AddNotify(ABI, []string{SYNC_ROOT_INFO_EVENT}, chainID, height, native.ContractRef().BlockHeight())
+	if err != nil {
+		return fmt.Errorf("NotifyPutRootInfo failed: %v", err)
+	}
+	return nil
+}
+
+func NotifyReplenish(native *native.NativeContract, txHashes []string, chainId uint64) error {
+	err := native.AddNotify(ABI, []string{REPLENISH_EVENT}, txHashes, chainId)
+	if err != nil {
+		return fmt.Errorf("NotifyReplenish failed: %v", err)
+	}
+	return nil
 }

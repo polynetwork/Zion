@@ -25,10 +25,10 @@ import (
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth_common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/no_proof"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth_common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
@@ -51,6 +51,7 @@ var (
 		scom.MethodMultiSign:           100000,
 		scom.MethodBlackChain:          0,
 		scom.MethodWhiteChain:          0,
+		scom.MethodCheckDone:           0,
 	}
 )
 
@@ -65,6 +66,8 @@ func RegisterCrossChainManagerContract(s *native.NativeContract) {
 	s.Register(scom.MethodImportOuterTransfer, ImportOuterTransfer)
 	s.Register(scom.MethodBlackChain, BlackChain)
 	s.Register(scom.MethodWhiteChain, WhiteChain)
+	s.Register(scom.MethodCheckDone, CheckDone)
+	s.Register(scom.MethodReplenish, Replenish)
 }
 
 func GetChainHandler(router uint64) (scom.ChainHandler, error) {
@@ -210,4 +213,18 @@ func WhiteChain(s *native.NativeContract) ([]byte, error) {
 
 	RemoveBlackChain(s, params.ChainID)
 	return utils.PackOutputs(scom.ABI, scom.MethodWhiteChain, true)
+}
+
+func Replenish(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	params := &scom.ReplenishParam{}
+	if err := utils.UnpackMethod(scom.ABI, scom.MethodReplenish, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("Replenish, unpack params error: %s", err)
+	}
+
+	err := scom.NotifyReplenish(s, params.TxHashes, params.ChainID)
+	if err != nil {
+		return nil, fmt.Errorf("Replenish, NotifyReplenish error: %s", err)
+	}
+	return utils.BYTE_TRUE, nil
 }

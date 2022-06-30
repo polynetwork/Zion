@@ -16,52 +16,35 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package common
+package info_sync
 
 import (
-	"fmt"
 	"github.com/ethereum/go-ethereum/rlp"
 	"io"
-
-	"github.com/ethereum/go-ethereum/contracts/native"
 )
 
-const (
-	//key prefix
-	ROOT_INFO            = "rootInfo"
-	CURRENT_HEIGHT       = "currentHeight"
-	SYNC_ROOT_INFO_EVENT = "SyncRootInfoEvent"
-)
-
-
-type GetInfoParam struct {
+type RootInfoUnique struct {
 	ChainID uint64
 	Height  uint32
+	Info    []byte
 }
 
-type GetInfoHeightParam struct {
-	ChainID uint64
+func (d *RootInfoUnique) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{d.ChainID, d.Height, d.Info})
 }
 
-type SyncRootInfoParam struct {
-	ChainID   uint64
-	RootInfos [][]byte
-}
-
-func (m *SyncRootInfoParam) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ChainID, m.RootInfos})
-}
-func (m *SyncRootInfoParam) DecodeRLP(s *rlp.Stream) error {
+func (d *RootInfoUnique) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		ChainID   uint64
-		RootInfos [][]byte
+		ChainID uint64
+		Height  uint32
+		Info    []byte
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	m.ChainID, m.RootInfos = data.ChainID, data.RootInfos
+	d.ChainID, d.Height, d.Info = data.ChainID, data.Height, data.Info
 	return nil
 }
 
@@ -85,11 +68,4 @@ func (m *RootInfo) DecodeRLP(s *rlp.Stream) error {
 
 	m.Height, m.Info = data.Height, data.Info
 	return nil
-}
-
-func NotifyPutRootInfo(native *native.NativeContract, chainID uint64, height uint32) {
-	err := native.AddNotify(ABI, []string{SYNC_ROOT_INFO_EVENT}, chainID, height, native.ContractRef().BlockHeight())
-	if err != nil {
-		panic(fmt.Sprintf("NotifyPutRootInfo failed: %v", err))
-	}
 }

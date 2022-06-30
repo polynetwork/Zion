@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	iscom "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -41,8 +40,10 @@ import (
 var (
 	sdb              *state.StateDB
 	testGenesisNum   = 4
-	acct             *ecdsa.PublicKey
+	pub              *ecdsa.PublicKey
+	key              *ecdsa.PrivateKey
 	testGenesisPeers []*node_manager.Peer
+	testGenesisPri   []*ecdsa.PrivateKey
 )
 
 const (
@@ -50,15 +51,15 @@ const (
 )
 
 func init() {
-	key, _ := crypto.GenerateKey()
-	acct = &key.PublicKey
+	key, _ = crypto.GenerateKey()
+	pub = &key.PublicKey
 
 	node_manager.InitNodeManager()
 	side_chain_manager.InitSideChainManager()
 	InitInfoSync()
 	db := rawdb.NewMemoryDatabase()
 	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testGenesisPeers = generateTestPeers(testGenesisNum)
+	testGenesisPeers, testGenesisPri = generateTestPeers(testGenesisNum)
 	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers)
 
 	putSideChain()
@@ -91,20 +92,25 @@ func putSideChain() {
 
 func TestNoAuthSyncRootInfo(t *testing.T) {
 	var err error
-	param := new(iscom.SyncRootInfoParam)
+	param := new(SyncRootInfoParam)
 	param.ChainID = CHAIN_ID
-	rootInfo1 := &iscom.RootInfo{Height: 2, Info: []byte{0x01, 0x02}}
-	rootInfo2 := &iscom.RootInfo{Height: 3, Info: []byte{0x02, 0x03}}
+	rootInfo1 := &RootInfo{Height: 2, Info: []byte{0x01, 0x02}}
+	rootInfo2 := &RootInfo{Height: 3, Info: []byte{0x02, 0x03}}
 	b1, err := rlp.EncodeToBytes(rootInfo1)
 	assert.Nil(t, err)
 	b2, err := rlp.EncodeToBytes(rootInfo2)
 	assert.Nil(t, err)
 	param.RootInfos = [][]byte{b1, b2}
+	digest, err := param.Digest()
+	assert.Nil(t, err)
+	sig, err := crypto.Sign(digest, key)
+	assert.Nil(t, err)
+	param.Signature = sig
 
-	input, err := utils.PackMethodWithStruct(iscom.ABI, iscom.MethodSyncRootInfo, param)
+	input, err := param.Encode()
 	assert.Nil(t, err)
 
-	caller := crypto.PubkeyToAddress(*acct)
+	caller := crypto.PubkeyToAddress(*pub)
 	blockNumber := big.NewInt(1)
 	extra := uint64(1000)
 	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, 0+extra, nil)
@@ -114,27 +120,32 @@ func TestNoAuthSyncRootInfo(t *testing.T) {
 
 func TestNormalSyncRootInfo(t *testing.T) {
 	var err error
-	param := new(iscom.SyncRootInfoParam)
+	param := new(SyncRootInfoParam)
 	param.ChainID = CHAIN_ID
-	rootInfo1 := &iscom.RootInfo{Height: 100, Info: []byte{0x01, 0x02}}
-	rootInfo2 := &iscom.RootInfo{Height: 98, Info: []byte{0x02, 0x03}}
+	rootInfo1 := &RootInfo{Height: 100, Info: []byte{0x01, 0x02}}
+	rootInfo2 := &RootInfo{Height: 98, Info: []byte{0x02, 0x03}}
 	b1, err := rlp.EncodeToBytes(rootInfo1)
 	assert.Nil(t, err)
 	b2, err := rlp.EncodeToBytes(rootInfo2)
 	assert.Nil(t, err)
 	param.RootInfos = [][]byte{b1, b2}
 
-	input, err := utils.PackMethodWithStruct(iscom.ABI, iscom.MethodSyncRootInfo, param)
-	assert.Nil(t, err)
-
 	for i := 0; i < testGenesisNum; i++ {
 		caller := testGenesisPeers[i].Address
 		blockNumber := big.NewInt(1)
 		extra := uint64(1000)
+		digest, err := param.Digest()
+		assert.Nil(t, err)
+		sig, err := crypto.Sign(digest, testGenesisPri[i])
+		assert.Nil(t, err)
+		param.Signature = sig
+
+		input, err := param.Encode()
+		assert.Nil(t, err)
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, 0+extra, nil)
 		ret, _, err := contractRef.NativeCall(caller, utils.InfoSyncContractAddress, input)
 		assert.Nil(t, err)
-		result, err := utils.PackOutputs(iscom.ABI, iscom.MethodSyncRootInfo, true)
+		result, err := utils.PackOutputs(ABI, MethodSyncRootInfo, true)
 		assert.Nil(t, err)
 		assert.Equal(t, ret, result)
 	}
@@ -142,30 +153,70 @@ func TestNormalSyncRootInfo(t *testing.T) {
 	extra := uint64(10)
 	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
 	contract := native.NewNativeContract(sdb, contractRef)
-	rootInfo, err := iscom.GetRootInfo(contract, CHAIN_ID, 100)
+	rootInfo, err := GetRootInfo(contract, CHAIN_ID, 100)
 	assert.Nil(t, err)
 	assert.Equal(t, rootInfo, []byte{0x01, 0x02})
-	rootInfo, err = iscom.GetRootInfo(contract, CHAIN_ID, 98)
+	rootInfo, err = GetRootInfo(contract, CHAIN_ID, 98)
 	assert.Nil(t, err)
 	assert.Equal(t, rootInfo, []byte{0x02, 0x03})
-	h, err := iscom.GetCurrentHeight(contract, CHAIN_ID)
+	h, err := GetCurrentHeight(contract, CHAIN_ID)
 	assert.Nil(t, err)
 	assert.Equal(t, h, uint32(100))
+
+	param2 := &GetInfoParam{
+		ChainID: CHAIN_ID,
+		Height: 100,
+	}
+	input, err := param2.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, 0+extra, nil)
+	ret2, _, err := contractRef.NativeCall(common.EmptyAddress, utils.InfoSyncContractAddress, input)
+	assert.Nil(t, err)
+	result2 := new(GetInfoOutput)
+	err = result2.Decode(ret2)
+	assert.Nil(t, err)
+	assert.Equal(t, result2.Info, []byte{0x01, 0x02})
+
+	param3 := &GetInfoHeightParam{
+		ChainID: CHAIN_ID,
+	}
+	input, err = param3.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, 0+extra, nil)
+	ret3, _, err := contractRef.NativeCall(common.EmptyAddress, utils.InfoSyncContractAddress, input)
+	assert.Nil(t, err)
+	result3 := new(GetInfoHeightOutput)
+	err = result3.Decode(ret3)
+	assert.Nil(t, err)
+	assert.Equal(t, result3.Height, uint32(100))
+}
+
+func TestReplenish(t *testing.T) {
+	param := &ReplenishParam{
+		ChainID: CHAIN_ID,
+		TxHashes: []string{"a", "b"},
+	}
+	input, err := param.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, big.NewInt(1), common.Hash{}, 1000, nil)
+	_, _, err = contractRef.NativeCall(common.EmptyAddress, utils.InfoSyncContractAddress, input)
+	assert.Nil(t, err)
 }
 
 // generateTestPeer ONLY used for testing
-func generateTestPeer() *node_manager.Peer {
+func generateTestPeer() (*node_manager.Peer, *ecdsa.PrivateKey) {
 	pk, _ := crypto.GenerateKey()
 	return &node_manager.Peer{
 		PubKey:  hexutil.Encode(crypto.CompressPubkey(&pk.PublicKey)),
 		Address: crypto.PubkeyToAddress(pk.PublicKey),
-	}
+	}, pk
 }
 
-func generateTestPeers(n int) []*node_manager.Peer {
+func generateTestPeers(n int) ([]*node_manager.Peer, []*ecdsa.PrivateKey) {
 	peers := make([]*node_manager.Peer, n)
+	pris := make([]*ecdsa.PrivateKey, n)
 	for i := 0; i < n; i++ {
-		peers[i] = generateTestPeer()
+		peers[i], pris[i] = generateTestPeer()
 	}
-	return peers
+	return peers, pris
 }
