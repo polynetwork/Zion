@@ -163,7 +163,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		Commission:       &Commission{Rate: params.Commission, UpdateHeight: height},
 		Status:           Unlock,
 		Jailed:           false,
-		UnlockHeight:     common.Big0,
+		UnlockHeight:     new(big.Int),
 		TotalStake:       params.InitStake,
 		SelfStake:        params.InitStake,
 		Desc:             params.Desc,
@@ -529,8 +529,8 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	validator.TotalStake = new(big.Int).Sub(validator.TotalStake, validator.SelfStake)
-	validator.SelfStake = common.Big0
-	if validator.TotalStake == common.Big0 {
+	validator.SelfStake = new(big.Int)
+	if validator.TotalStake == new(big.Int) {
 		err = delValidator(s, params.ConsensusPubkey)
 		if err != nil {
 			return nil, fmt.Errorf("WithdrawValidator, delValidator error: %v", err)
@@ -733,7 +733,7 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, withdrawCommission error: %v", err)
 	}
-	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{common.Big0})
+	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{new(big.Int)})
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, setAccumulatedCommission error: %v", err)
 	}

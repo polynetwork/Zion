@@ -180,7 +180,7 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, validator.SelfStake, new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
 	assert.Equal(t, validator.Status, Unlock)
 	assert.Equal(t, validator.Commission.Rate, new(big.Int).SetUint64(20))
-	assert.Equal(t, validator.UnlockHeight, common.Big0)
+	assert.Equal(t, validator.UnlockHeight, new(big.Int))
 	totalPool, err := GetTotalPool(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, totalPool, new(big.Int).Mul(big.NewInt(610000), params.ZNT1))
@@ -201,7 +201,7 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, validator.TotalStake, new(big.Int).Mul(big.NewInt(109000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake, new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
 	assert.Equal(t, validator.Status, Unlock)
-	assert.Equal(t, validator.UnlockHeight, common.Big0)
+	assert.Equal(t, validator.UnlockHeight, new(big.Int))
 	totalPool, err = GetTotalPool(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, totalPool, new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
@@ -244,7 +244,7 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, validator.TotalStake, new(big.Int).Mul(big.NewInt(108000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake, new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
 	assert.Equal(t, validator.Status, Lock)
-	assert.Equal(t, validator.UnlockHeight, common.Big0)
+	assert.Equal(t, validator.UnlockHeight, new(big.Int))
 
 	// withdraw
 	input, err = utils.PackMethod(ABI, MethodWithdraw)
@@ -290,7 +290,7 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, validator.Status, Lock)
 	assert.Equal(t, validator.Commission.Rate, new(big.Int).SetUint64(30))
 	assert.Equal(t, validator.Commission.UpdateHeight, new(big.Int).SetUint64(800000))
-	assert.Equal(t, validator.UnlockHeight, common.Big0)
+	assert.Equal(t, validator.UnlockHeight, new(big.Int))
 	assert.Equal(t, validator.Desc, "test2")
 
 	// cancel validator && unstake && withdraw validator
@@ -515,7 +515,7 @@ func TestDistribute(t *testing.T) {
 	// check states
 	validatorAccumulatedRewards, err = GetValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
-	assert.Equal(t, validatorAccumulatedRewards.Rewards, common.Big0)
+	assert.Equal(t, validatorAccumulatedRewards.Rewards, new(big.Int))
 	assert.Equal(t, validatorAccumulatedRewards.Period, uint64(6))
 	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 0)
 	assert.NotNil(t, err)
@@ -555,7 +555,7 @@ func TestDistribute(t *testing.T) {
 	assert.Equal(t, validatorOutstandingRewards.Rewards, b4)
 	validatorAccumulatedRewards, err = GetValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
-	assert.Equal(t, validatorAccumulatedRewards.Rewards, common.Big0)
+	assert.Equal(t, validatorAccumulatedRewards.Rewards, new(big.Int))
 	assert.Equal(t, validatorAccumulatedRewards.Period, uint64(8))
 	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 0)
 	assert.NotNil(t, err)
