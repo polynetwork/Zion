@@ -125,7 +125,7 @@ func TestCheckGenesis(t *testing.T) {
 }
 
 func TestStake(t *testing.T) {
-	blockNumber := big.NewInt(400000)
+	blockNumber := big.NewInt(399999)
 	extra := uint64(10)
 	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
 	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
@@ -333,7 +333,7 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(992000), params.ZNT1))
 
 	// add block num
-	blockNumber = new(big.Int).SetUint64(1300000)
+	blockNumber = new(big.Int).SetUint64(1299999)
 	input, err = utils.PackMethod(ABI, MethodWithdraw)
 	assert.Nil(t, err)
 	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)

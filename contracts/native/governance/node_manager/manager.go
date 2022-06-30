@@ -560,7 +560,8 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 }
 
 func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
-	height := s.ContractRef().BlockHeight()
+	endHeight := s.ContractRef().BlockHeight()
+	startHeight := new(big.Int).Add(endHeight, common.Big1)
 
 	currentEpochInfo, err := GetCurrentEpochInfoImpl(s)
 	if err != nil {
@@ -569,7 +570,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	globalConfig, err := getGlobalConfig(s)
 
 	// anyone can call this if height reaches
-	if new(big.Int).Sub(height, currentEpochInfo.StartHeight).Cmp(globalConfig.BlockPerEpoch) == -1 {
+	if new(big.Int).Sub(startHeight, currentEpochInfo.StartHeight).Cmp(globalConfig.BlockPerEpoch) == -1 {
 		return nil, fmt.Errorf("ChangeEpoch, block height does not reach, current epoch start at %s",
 			currentEpochInfo.StartHeight.String())
 	}
@@ -603,14 +604,14 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		ID:          new(big.Int).Add(currentEpochInfo.ID, common.Big1),
 		Validators:  make([]*Peer, 0, globalConfig.ConsensusValidatorNum),
 		Voters:      make([]*Peer, 0, globalConfig.VoterValidatorNum),
-		StartHeight: height,
+		StartHeight: startHeight,
 	}
 	// update validator status
 	for i := 0; uint64(i) < globalConfig.ConsensusValidatorNum; i++ {
 		validator := validatorList[i]
 		switch {
 		case validator.IsLocked():
-		case validator.IsUnlocking(height), validator.IsUnlocked(height):
+		case validator.IsUnlocking(endHeight), validator.IsUnlocked(endHeight):
 			validator.Status = Lock
 		}
 
@@ -629,8 +630,8 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		switch {
 		case validator.IsLocked():
 			validator.Status = Unlock
-			validator.UnlockHeight = new(big.Int).Add(height, globalConfig.BlockPerEpoch)
-		case validator.IsUnlocking(height), validator.IsUnlocked(height):
+			validator.UnlockHeight = new(big.Int).Add(startHeight, globalConfig.BlockPerEpoch)
+		case validator.IsUnlocking(endHeight), validator.IsUnlocked(endHeight):
 		}
 		err = setValidator(s, validator)
 		if err != nil {
