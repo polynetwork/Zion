@@ -775,6 +775,7 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("EndBlock, GetCurrentEpochInfoImpl error: %v", err)
 	}
 	validatorRewards := new(big.Int).Div(newRewards, new(big.Int).SetUint64(uint64(len(epochInfo.Validators))))
+	allocateSum := new(big.Int)
 	for _, v := range epochInfo.Validators {
 		dec, err := hexutil.Decode(v.PubKey)
 		if err != nil {
@@ -784,17 +785,17 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("EndBlock, GetValidator error: %v", err)
 		}
-		if !found {
-			panic("validator is not found")
-		}
-		err = allocateRewardsToValidator(s, validator, validatorRewards)
-		if err != nil {
-			return nil, fmt.Errorf("EndBlock, allocateRewardsToValidator error: %v", err)
+		if found {
+			err = allocateRewardsToValidator(s, validator, validatorRewards)
+			if err != nil {
+				return nil, fmt.Errorf("EndBlock, allocateRewardsToValidator error: %v", err)
+			}
+			allocateSum = new(big.Int).Add(allocateSum, validatorRewards)
 		}
 	}
 
 	// update outstanding rewards
-	outstanding.Rewards = new(big.Int).Add(outstanding.Rewards, newRewards)
+	outstanding.Rewards = new(big.Int).Add(outstanding.Rewards, allocateSum)
 	err = setOutstandingRewards(s, outstanding)
 	if err != nil {
 		return nil, fmt.Errorf("EndBlock, setOutstandingRewards error: %v", err)
