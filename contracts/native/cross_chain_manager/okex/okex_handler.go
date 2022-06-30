@@ -20,13 +20,12 @@ package okex
 import (
 	"bytes"
 	"fmt"
-	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
-
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/tendermint/tendermint/crypto/merkle"
