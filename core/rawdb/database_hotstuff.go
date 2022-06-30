@@ -26,34 +26,21 @@ import (
 )
 
 var (
-	keyCurEpoch    = []byte("hs-cur-ep-ht")
 	keyEpochPrefix = []byte("hs-ep")
 )
 
-func WriteCurrentEpochHeight(db ethdb.KeyValueWriter, height uint64) error {
-	return db.Put(keyCurEpoch, uint64Bytes(height))
-}
-
-func ReadCurrentEpochHeight(db ethdb.Reader) (uint64, error) {
-	blob, err := db.Get(keyCurEpoch)
-	if err != nil {
-		return 0, err
-	}
-	return bytes2uint64(blob), nil
-}
-
-func WriteEpoch(db ethdb.KeyValueWriter, height uint64, blob []byte) error {
-	key := keyHeight(height)
+func WriteEpoch(db ethdb.KeyValueWriter, id uint64, blob []byte) error {
+	key := keyId(id)
 	return db.Put(key, blob)
 }
 
-func ReadEpoch(db ethdb.Reader, height uint64) ([]byte, error) {
-	key := keyHeight(height)
+func ReadEpoch(db ethdb.Reader, id uint64) ([]byte, error) {
+	key := keyId(id)
 	return db.Get(key)
 }
 
-func keyHeight(height uint64) []byte {
-	dat := uint64Bytes(height)
+func keyId(id uint64) []byte {
+	dat := uint64Bytes(id)
 	return append(keyEpochPrefix, dat...)
 }
 

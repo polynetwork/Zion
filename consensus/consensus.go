@@ -155,11 +155,10 @@ type HotStuff interface {
 	// Stop stops the engine
 	Stop() error
 
-	// ChangeEpoch save validators and start height for next epoch
-	ChangeEpoch(epochStartHeight uint64, list []common.Address) error
+	// CheckPoint retrieve the flags of whether epoch change and next validator set.
+	CheckPoint(height uint64) (bool, bool, bool)
 
-	// GetEpochChangeInfo retrieve the flags of whether epoch change and next validator set.
-	GetEpochChangeInfo(state *state.StateDB, height *big.Int) (bool, bool, []common.Address, error)
+	ValidatorList(height uint64) []common.Address
 
 	// IsSystemCall whether the method id is the governance tx method
 	IsSystemTransaction(tx *types.Transaction, header *types.Header) (bool, error)
@@ -192,3 +191,9 @@ type PoW interface {
 }
 
 type StaticNodesEvent struct{ Validators []common.Address }
+
+type EpochChainConfig struct {
+	StartHeight uint64
+	EndHeight uint64
+	Validators []common.Address
+}

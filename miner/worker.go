@@ -705,8 +705,7 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) {
 	engine, ok := w.engine.(consensus.HotStuff)
 	if !ok {
-		// todo(fuk): allow clique and ethhash
-		panic("invalid consensus engine")
+		return
 	}
 
 	// todo(fuk): need state.Copy()??
@@ -714,14 +713,12 @@ func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) {
 		return
 	}
 
-	beforeChange, changingEpoch, nextValidators, err := engine.GetEpochChangeInfo(w.current.state, header.Number)
-	if err != nil {
-		//log.Error("Failed to get epoch change info", "err", err)
-		//return
-	}
+	height := header.Number.Uint64()
+	_, changingEpoch, resetVals := engine.CheckPoint(height)
 
 	if needFillHeader {
-		if beforeChange {
+		if changingEpoch {
+			nextValidators := engine.ValidatorList(height)
 			types.HotstuffHeaderFillWithValidators(header, nextValidators)
 		} else {
 			types.HotstuffHeaderFillWithValidators(header, nil)
@@ -729,16 +726,10 @@ func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) {
 		w.current.header = header
 	}
 
-	if !changingEpoch {
-		return
+	if w.IsRunning() && resetVals {
+		log.Debug("Restart consensus engine")
+		w.Stop()
+		time.Sleep(30 * time.Second)
+		w.Start()
 	}
-
-	log.Debug("Restart consensus engine")
-	w.Stop()
-	if err := engine.ChangeEpoch(header.Number.Uint64(), nextValidators); err != nil {
-		log.Error("Change Epoch", "change failed", err)
-		return
-	}
-	time.Sleep(30 * time.Second)
-	w.Start()
 }

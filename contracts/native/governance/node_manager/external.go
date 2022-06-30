@@ -35,7 +35,7 @@ var (
 	GenesisMaxCommission                = new(big.Int).SetUint64(50)
 	GenesisMinInitialStake              = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	GenesisMaxDescLength         uint64 = 2048
-	GenesisBlockPerEpoch                = new(big.Int).SetUint64(400000)
+	GenesisBlockPerEpoch                = new(big.Int).SetUint64(200)
 	GenesisConsensusValidatorNum uint64 = 4
 	GenesisVoterValidatorNum     uint64 = 4
 )

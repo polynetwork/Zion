@@ -20,7 +20,6 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -59,8 +58,8 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	epochs              map[uint64]*Epoch // map epoch start height to epochs
-	maxEpochStartHeight uint64
+	epochs  []*snapshot // store epochs in desc order according to epoch start height
+	epochMu sync.Mutex
 
 	// The channels for hotstuff engine notifications
 	sealMu            sync.Mutex
@@ -99,14 +98,14 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		signer:         signer,
 		recentMessages: recentMessages,
 		knownMessages:  knownMessages,
+		epochs:         make([]*snapshot, 0),
 		recents:        recents,
 		proposals:      make(map[common.Address]bool),
 	}
 
 	backend.core = core.New(backend, config, signer)
-	if err := backend.LoadEpoch(); err != nil {
-		panic(fmt.Sprintf("load epoch failed, err: %v", err))
-	}
+	backend.LoadEpochs()
+
 	return backend
 }
 
@@ -249,7 +248,7 @@ func (s *backend) Commit(proposal hotstuff.Proposal) error {
 		s.logger.Error("Committed to miner worker", "proposal", "not block")
 		return errInvalidProposal
 	}
-	
+
 	s.logger.Info("Committed", "address", s.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
 	// - if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.

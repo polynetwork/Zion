@@ -34,6 +34,7 @@ const (
 	inmemorySnapshots = 128 // Number of recent vote snapshots to keep in memory
 	inmemoryPeers     = 1000
 	inmemoryMessages  = 1024
+	inmemoryEpochs    = 18
 )
 
 // HotStuff protocol constants.
@@ -112,22 +113,26 @@ func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Head
 		return err
 	}
 
-	ctx := &systemTxContext{
-		chain:    chain,
-		state:    state,
-		header:   header,
-		chainCtx: chainContext{Chain: chain, engine: s},
-		txs:      txs,
-		sysTxs:   systemTxs,
-		receipts: receipts,
-		usedGas:  usedGas,
-		mining:   true,
+	// todo(fuk): `CheckPoint`与state_processor.process中使用到的IsSystemTx应该能对应上，就是说后者发现该交易时将其进行过滤，进入到finalize时才真正执行。
+	if beforeChanging, _, _ := s.CheckPoint(header.Number.Uint64()); beforeChanging {
+		ctx := &systemTxContext{
+			chain:    chain,
+			state:    state,
+			header:   header,
+			chainCtx: chainContext{Chain: chain, engine: s},
+			txs:      txs,
+			sysTxs:   systemTxs,
+			receipts: receipts,
+			usedGas:  usedGas,
+			mining:   true,
+		}
+		if err := s.execEpochChange(ctx); err != nil {
+			return err
+		}
+		if err := s.SavePoint(state, header.Number, false); err != nil {
+			return err
+		}
 	}
-	if err := s.execEpochChange(ctx); err != nil {
-		// todo(fuk): return err
-		//return fmt.Errorf("danger, execute node_manager.epochChangeFailed, err: %v", err)
-	}
-	// s.execEndBlock()
 
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
@@ -147,22 +152,26 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 	if receipts == nil {
 		receipts = make([]*types.Receipt, 0)
 	}
-	ctx := &systemTxContext{
-		chain:    chain,
-		state:    state,
-		header:   header,
-		chainCtx: chainContext{Chain: chain, engine: s},
-		txs:      &txs,
-		sysTxs:   nil,
-		receipts: &receipts,
-		usedGas:  &header.GasUsed,
-		mining:   true,
+
+	if beforeChange, _, _ := s.CheckPoint(header.Number.Uint64()); beforeChange {
+		ctx := &systemTxContext{
+			chain:    chain,
+			state:    state,
+			header:   header,
+			chainCtx: chainContext{Chain: chain, engine: s},
+			txs:      &txs,
+			sysTxs:   nil,
+			receipts: &receipts,
+			usedGas:  &header.GasUsed,
+			mining:   true,
+		}
+		if err := s.execEpochChange(ctx); err != nil {
+			return nil, nil, err
+		}
+		if err := s.SavePoint(state, header.Number, true); err != nil {
+			return nil, nil, err
+		}
 	}
-	if err := s.execEpochChange(ctx); err != nil {
-		// todo(fuk): return err
-		//return nil, nil, fmt.Errorf("danger, execute node_manager.epochChangeFailed, err: %v", err)
-	}
-	// s.execEndBlock()
 
 	// Assemble and return the final block for sealing
 	block := packBlock(state, chain, header, txs, receipts)
@@ -314,7 +323,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidTimestamp
 	}
 
-	if err := s.UpdateEpoch(parent, header); err != nil {
+	if err := s.SyncEpoch(parent, header); err != nil {
 		return err
 	}
 
