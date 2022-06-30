@@ -226,5 +226,5 @@ func Replenish(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Replenish, NotifyReplenish error: %s", err)
 	}
-	return utils.BYTE_TRUE, nil
+	return utils.PackOutputs(scom.ABI, scom.MethodReplenish, true)
 }
