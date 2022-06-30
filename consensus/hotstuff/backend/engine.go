@@ -140,9 +140,10 @@ func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Head
 		}
 		if err := s.execEpochChange(ctx); err != nil {
 			s.logger.Debug("FinalizeAndAssemble", "hash", header.Hash(), "execute `epochChange` failed", err)
-		}
-		if err := s.applySnapshot(state, header.Number, false); err != nil {
-			return err
+		} else {
+			if err := s.applySnapshot(state, header.Number, false); err != nil {
+				return err
+			}
 		}
 	}
 
@@ -191,12 +192,13 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 			receipts: &receipts,
 			usedGas:  &header.GasUsed,
 			mining:   true,
-		}); err == nil {
+		}); err != nil {
 			// todo(fuk): governance forbid execute error
 			s.logger.Debug("FinalizeAndAssemble", "hash", header.Hash(), "execute `epochChange` failed", err)
-		}
-		if err := s.applySnapshot(state, header.Number, true); err != nil {
-			return nil, nil, err
+		} else {
+			if err := s.applySnapshot(state, header.Number, true); err != nil {
+				return nil, nil, err
+			}
 		}
 	}
 
