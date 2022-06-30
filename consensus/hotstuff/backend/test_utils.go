@@ -142,7 +142,7 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
 	b, _ := New(config, nodeKeys[0], memDB).(*backend)
-	b.epochs = []*snapshot{
+	b.snaps = []*snapshot{
 		{Start: 0, ValSet: valset},
 	}
 	genesis.MustCommit(memDB)

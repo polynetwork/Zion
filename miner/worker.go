@@ -714,10 +714,9 @@ func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) {
 	}
 
 	height := header.Number.Uint64()
-	_, changingEpoch, resetVals := engine.CheckPoint(height)
-
+	_, change, retVals := engine.CheckPoint(height)
 	if needFillHeader {
-		if changingEpoch {
+		if change {
 			nextValidators := engine.ValidatorList(height)
 			types.HotstuffHeaderFillWithValidators(header, nextValidators)
 		} else {
@@ -726,7 +725,7 @@ func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) {
 		w.current.header = header
 	}
 
-	if w.IsRunning() && resetVals {
+	if w.IsRunning() && retVals {
 		log.Debug("Restart consensus engine")
 		w.Stop()
 		time.Sleep(30 * time.Second)

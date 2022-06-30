@@ -91,8 +91,8 @@ func (s *backend) applyTransaction(
 	state *state.StateDB,
 	header *types.Header,
 	chainContext core.ChainContext,
-	txs *[]*types.Transaction, receipts *[]*types.Receipt,
-	receivedTxs *[]*types.Transaction, usedGas *uint64, mining bool,
+	commonTxs *[]*types.Transaction, receipts *[]*types.Receipt,
+	sysTxs *[]*types.Transaction, usedGas *uint64, mining bool,
 ) (err error) {
 	nonce := state.GetNonce(msg.From())
 
@@ -108,10 +108,10 @@ func (s *backend) applyTransaction(
 			return err
 		}
 	} else {
-		if receivedTxs == nil || len(*receivedTxs) == 0 || (*receivedTxs)[0] == nil {
+		if sysTxs == nil || len(*sysTxs) == 0 || (*sysTxs)[0] == nil {
 			return errors.New("supposed to get a actual transaction, but get none")
 		}
-		actualTx := (*receivedTxs)[0]
+		actualTx := (*sysTxs)[0]
 		if !bytes.Equal(signer.Hash(actualTx).Bytes(), expectedHash.Bytes()) {
 			return fmt.Errorf("expected tx hash %v, get %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s",
 				expectedHash.String(),
@@ -126,14 +126,14 @@ func (s *backend) applyTransaction(
 		}
 		expectedTx = actualTx
 		// move to next
-		*receivedTxs = (*receivedTxs)[1:]
+		*sysTxs = (*sysTxs)[1:]
 	}
-	state.Prepare(expectedTx.Hash(), common.Hash{}, len(*txs))
+	state.Prepare(expectedTx.Hash(), common.Hash{}, len(*commonTxs))
 	gasUsed, err := applyMessage(msg, state, header, chain.Config(), chainContext)
 	if err != nil {
 		return err
 	}
-	*txs = append(*txs, expectedTx)
+	*commonTxs = append(*commonTxs, expectedTx)
 	var root []byte
 	if chain.Config().IsByzantium(header.Number) {
 		state.Finalise(true)
@@ -156,7 +156,7 @@ func (s *backend) applyTransaction(
 	return nil
 }
 
-// apply message
+// applySnapshot message
 func applyMessage(
 	msg callmsg,
 	state *state.StateDB,
@@ -178,7 +178,7 @@ func applyMessage(
 		msg.Value(),
 	)
 	if err != nil {
-		log.Error("apply message failed", "msg", string(ret), "err", err)
+		log.Error("applySnapshot message failed", "msg", string(ret), "err", err)
 	}
 	return msg.Gas() - returnGas, err
 }

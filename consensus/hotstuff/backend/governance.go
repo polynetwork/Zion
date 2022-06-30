@@ -28,10 +28,7 @@ import (
 	nmabi "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -44,26 +41,8 @@ import (
 // 那么，在根据epoch读取validators验证时，应该避开endHeight的查询。其他的接口可以继续使用endHeight。
 
 var (
-	contractAddr       = utils.NodeManagerContractAddress
-	startEpochID       = nm.StartEpochID.Uint64()
-	genesisEpochStart  = uint64(0)
-	genesisEpochLength = nm.GenesisBlockPerEpoch.Uint64()
+	contractAddr = utils.NodeManagerContractAddress
 )
-
-func init() {
-	core.StoreGenesis = func(db ethdb.Database, header *types.Header) error {
-		extra, err := types.ExtractHotstuffExtra(header)
-		if err != nil {
-			return err
-		}
-		epoch := &snapshot{
-			ID:     startEpochID,
-			Start:  genesisEpochStart,
-			ValSet: NewDefaultValSet(extra.Validators),
-		}
-		return epoch.store(db)
-	}
-}
 
 // CheckPoint get `epochInfo` and `globalConfig` from governance contract and judge 2 things:
 // 1.whether the block height is the right number to set new validators in block header while mining.
@@ -72,28 +51,37 @@ func init() {
 func (s *backend) CheckPoint(height uint64) (beforeChange, changing, resetValidators bool) {
 	if height <= 1 {
 		return
-	} else if height == s.maxEnd() {
+	} else if height == s.snaps.end() {
 		beforeChange = true
-	} else if height == s.nextStart() {
+	} else if height == s.snaps.start() {
 		changing = true
-	} else if height == s.maxStart() + 1 {
+	} else if height == s.snaps.start()+1 {
 		resetValidators = true
 	}
 	return
 }
 
-// miner checkpoint，在epoch start添加新的validators
+func (s *backend) Validators(height uint64) hotstuff.ValidatorSet {
+	epoch := s.snaps.get(height)
+	return epoch.ValSet.Copy()
+}
 
-func (s *backend) SavePoint(state *state.StateDB, height *big.Int, mining bool) error {
+func (s *backend) ValidatorList(height uint64) []common.Address {
+	return s.Validators(height).AddressList()
+}
+
+// miner checkpoint，在epoch start添加新的validators
+// 查询并存储snapshot
+func (s *backend) applySnapshot(state *state.StateDB, height *big.Int, mining bool) error {
 	govEpoch, err := s.getEpoch(state, height)
 	if err != nil {
 		return err
 	}
-	if start := govEpoch.StartHeight.Uint64(); start != s.nextStart() {
-		return fmt.Errorf("expect start height %d, got %d", s.nextStart(), start)
+	if start := govEpoch.StartHeight.Uint64(); start != s.snaps.nextStart() {
+		return fmt.Errorf("expect start height %d, got %d", s.snaps.nextStart(), start)
 	}
 	// epoch id saved in chain data should be equal to epoch.maxId
-	id := s.nextId()
+	id := s.snaps.nextId()
 	if govEpochID := govEpoch.ID.Uint64(); id != govEpochID {
 		return fmt.Errorf("expect nextID to be %d, actual got %d", govEpochID, id)
 	}
@@ -103,26 +91,21 @@ func (s *backend) SavePoint(state *state.StateDB, height *big.Int, mining bool) 
 		return err
 	}
 
-	epoch := &snapshot{
-		ID:     id,
-		Start:  govEpoch.StartHeight.Uint64(),
-		End:    govEpoch.StartHeight.Uint64() + config.BlockPerEpoch.Uint64(),
-		ValSet: NewDefaultValSet(govEpoch.MemberList()),
-	}
-	if !s.appendEpoch(epoch) {
-		return fmt.Errorf("epoch already exist, %s", epoch.String())
+	snap := newSnapshot(id, govEpoch.StartHeight.Uint64(), config.BlockPerEpoch.Uint64(), govEpoch.MemberList())
+	if !s.snaps.append(snap) {
+		return fmt.Errorf("epoch already exist, %s", snap.String())
 	}
 
-	if err := epoch.store(s.db); err != nil {
+	if err := snap.store(s.db); err != nil {
 		return err
 	}
 
 	// todo(fuk): event should be sent by miner but not consensus.
 	if mining {
-		s.SendValidatorsChange(epoch.ValSet.AddressList())
+		s.SendValidatorsChange(snap.ValSet.AddressList())
 	}
 
-	log.Info("[epoch]", "check point", epoch.String())
+	log.Info("[epoch]", "check point", snap.String())
 	return nil
 }
 
@@ -197,136 +180,4 @@ func (s *backend) execEndBlock(ctx *systemTxContext) error {
 	}
 
 	return s.executeSystemTx(ctx, contractAddr, payload)
-}
-
-// LoadEpochs read epoch from database and append in slice cache while consensus engine started.
-func (s *backend) LoadEpochs() {
-	id := startEpochID
-
-	for {
-		epoch := new(snapshot)
-		if err := epoch.load(s.db, id); err != nil {
-			return
-		}
-		s.appendEpoch(epoch)
-		id = s.nextId()
-		log.Info("[epoch]", "load epoch", epoch.String())
-	}
-}
-
-func (s *backend) GetEpoch(height uint64) *snapshot {
-	for _, epoch := range s.epochs {
-		if height >= epoch.Start {
-			return epoch
-		}
-	}
-	// `height` is an uint number, and the min epoch height is 0, so the function will return in above loop
-	return nil
-}
-
-func (s *backend) Validators(height uint64) hotstuff.ValidatorSet {
-	epoch := s.GetEpoch(height)
-	return epoch.ValSet.Copy()
-}
-
-func (s *backend) ValidatorList(height uint64) []common.Address {
-	return s.Validators(height).AddressList()
-}
-
-// SyncEpoch light mode
-func (s *backend) SyncEpoch(parent, header *types.Header) error {
-	if parent.Number.Uint64() == 0 {
-		return nil
-	}
-
-	parentExt, err := types.ExtractHotstuffExtra(parent)
-	if err != nil {
-		return err
-	}
-	if parentExt.Validators == nil || len(parentExt.Validators) == 0 {
-		return nil
-	}
-
-	epoch := &snapshot{
-		ID:     s.nextId(),
-		Start:  header.Number.Uint64(),
-		ValSet: NewDefaultValSet(parentExt.Validators),
-	}
-
-	if s.appendEpoch(epoch) {
-		if err := epoch.store(s.db); err != nil {
-			return err
-		}
-		log.Info("[epoch]", "sync epoch", epoch.String())
-	}
-
-	return nil
-}
-
-func (s *backend) DumpEpochs() string {
-	str := ""
-	for _, v := range s.epochs {
-		str += v.String() + "\r\n"
-	}
-	return str
-}
-
-// -----------------------------------------------------------------
-// epoch store and read functions
-// -----------------------------------------------------------------
-
-// s.epochs is an desc list
-func (s *backend) appendEpoch(epoch *snapshot) bool {
-	s.epochMu.Lock()
-	defer s.epochMu.Unlock()
-
-	if len(s.epochs) == 0 {
-		s.epochs = append(s.epochs, epoch)
-		return true
-	}
-
-	// already exist
-	if epoch.ID <= s.maxID() || epoch.Start <= s.maxStart() {
-		return false
-	}
-
-	s.epochs = append(s.epochs, epoch)
-	s.epochs[0], s.epochs[len(s.epochs)-1] = s.epochs[len(s.epochs)-1], s.epochs[0]
-
-	return true
-}
-
-func (s *backend) maxID() uint64 {
-	if s.epochs == nil {
-		return startEpochID
-	}
-	return s.epochs[0].ID
-}
-
-func (s *backend) maxStart() uint64 {
-	if s.epochs == nil {
-		return genesisEpochStart
-	}
-	return s.epochs[0].Start
-}
-
-func (s *backend) maxEnd() uint64 {
-	if s.epochs == nil {
-		return genesisEpochLength
-	}
-	return s.epochs[0].End
-}
-
-func (s *backend) nextStart() uint64 {
-	if s.epochs == nil {
-		return genesisEpochStart
-	}
-	return s.epochs[0].End + 1
-}
-
-func (s *backend) nextId() uint64 {
-	if s.epochs == nil {
-		return startEpochID
-	}
-	return s.maxID() + 1
 }

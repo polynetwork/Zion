@@ -58,8 +58,7 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	epochs  []*snapshot // store epochs in desc order according to epoch start height
-	epochMu sync.Mutex
+	snaps *snapshots // store snaps in desc order according to epoch start height
 
 	// The channels for hotstuff engine notifications
 	sealMu            sync.Mutex
@@ -98,13 +97,13 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		signer:         signer,
 		recentMessages: recentMessages,
 		knownMessages:  knownMessages,
-		epochs:         make([]*snapshot, 0),
+		snaps:          newSnapshots(),
 		recents:        recents,
 		proposals:      make(map[common.Address]bool),
 	}
 
 	backend.core = core.New(backend, config, signer)
-	backend.LoadEpochs()
+	backend.snaps.load(backend.db)
 
 	return backend
 }
