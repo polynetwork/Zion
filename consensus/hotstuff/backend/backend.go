@@ -388,12 +388,3 @@ func (s *backend) AskMiningProposalWithParent(parent *types.Block) {
 func (s *backend) SendValidatorsChange(list []common.Address) {
 	s.nodesFeed.Send(consensus.StaticNodesEvent{Validators: list})
 }
-
-func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) (bool, error) {
-	if tx == nil || len(tx.Data()) < 4 {
-		return false, nil
-	}
-	id := common.Bytes2Hex(tx.Data()[:4])
-	// todo: get method id collection from governance contract
-	return len(id) > 4, nil
-}

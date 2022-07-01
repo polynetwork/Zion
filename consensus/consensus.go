@@ -161,7 +161,7 @@ type HotStuff interface {
 	ValidatorList(height uint64) []common.Address
 
 	// IsSystemCall whether the method id is the governance tx method
-	IsSystemTransaction(tx *types.Transaction, header *types.Header) (bool, error)
+	IsSystemTransaction(tx *types.Transaction, header *types.Header) bool
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message

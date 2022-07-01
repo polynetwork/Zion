@@ -113,15 +113,22 @@ func (s *backend) applyTransaction(
 		}
 		actualTx := (*sysTxs)[0]
 		if !bytes.Equal(signer.Hash(actualTx).Bytes(), expectedHash.Bytes()) {
-			return fmt.Errorf("expected tx hash %v, get %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s",
+			return fmt.Errorf("expected tx hash %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s;"+
+				"get tx hash %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s",
 				expectedHash.String(),
-				actualTx.Hash().String(),
 				expectedTx.Nonce(),
 				expectedTx.To().String(),
 				expectedTx.Value().String(),
 				expectedTx.Gas(),
 				expectedTx.GasPrice().String(),
 				hex.EncodeToString(expectedTx.Data()),
+				actualTx.Hash().String(),
+				actualTx.Nonce(),
+				actualTx.To().String(),
+				actualTx.Value().String(),
+				actualTx.Gas(),
+				actualTx.GasPrice().String(),
+				hex.EncodeToString(actualTx.Data()),
 			)
 		}
 		expectedTx = actualTx

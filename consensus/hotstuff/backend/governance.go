@@ -29,6 +29,7 @@ import (
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -42,6 +43,7 @@ import (
 
 var (
 	contractAddr = utils.NodeManagerContractAddress
+	specMethod   = nmabi.GetSpecMethodID()
 )
 
 // CheckPoint get `epochInfo` and `globalConfig` from governance contract and judge 2 things:
@@ -68,6 +70,20 @@ func (s *backend) Validators(height uint64) hotstuff.ValidatorSet {
 
 func (s *backend) ValidatorList(height uint64) []common.Address {
 	return s.Validators(height).AddressList()
+}
+
+func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) bool {
+	if tx == nil || len(tx.Data()) < 4 {
+		return false
+	}
+	if *tx.To() != contractAddr {
+		return false
+	}
+	id := common.Bytes2Hex(tx.Data()[:4])
+	if _, exist := specMethod[id]; !exist {
+		return false
+	}
+	return true
 }
 
 // miner checkpoint，在epoch start添加新的validators
