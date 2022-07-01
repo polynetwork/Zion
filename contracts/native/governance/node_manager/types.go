@@ -23,7 +23,6 @@ import (
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
-	"io"
 	"math"
 	"math/big"
 	"sync/atomic"
@@ -51,8 +50,8 @@ type Validator struct {
 	Status           LockStatus
 	Jailed           bool
 	UnlockHeight     *big.Int
-	TotalStake       *big.Int
-	SelfStake        *big.Int
+	TotalStake       Dec
+	SelfStake        Dec
 	Desc             string
 }
 
@@ -82,7 +81,7 @@ func (m Validator) IsRemoving(height *big.Int) bool {
 }
 
 type Commission struct {
-	Rate         *big.Int
+	Rate         Dec
 	UpdateHeight *big.Int
 }
 
@@ -108,7 +107,7 @@ func (m *GlobalConfig) Decode(payload []byte) error {
 type StakeInfo struct {
 	StakeAddress    common.Address
 	ConsensusPubkey string
-	Amount          *big.Int
+	Amount          Dec
 }
 
 type UnlockingInfo struct {
@@ -119,25 +118,7 @@ type UnlockingInfo struct {
 type UnlockingStake struct {
 	Height         *big.Int
 	CompleteHeight *big.Int
-	Amount         *big.Int
-}
-
-func (m *UnlockingStake) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Height, m.CompleteHeight, m.Amount})
-}
-
-func (m *UnlockingStake) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Height         *big.Int
-		CompleteHeight *big.Int
-		Amount         *big.Int
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Height, m.CompleteHeight, m.Amount = data.Height, data.CompleteHeight, data.Amount
-	return nil
+	Amount         Dec
 }
 
 type EpochInfo struct {
@@ -185,30 +166,30 @@ func (m *EpochInfo) MemberList() []common.Address {
 }
 
 type AccumulatedCommission struct {
-	Amount *big.Int
+	Amount Dec
 }
 
 type ValidatorAccumulatedRewards struct {
-	Rewards *big.Int
+	Rewards Dec
 	Period  uint64
 }
 
 type ValidatorOutstandingRewards struct {
-	Rewards *big.Int
+	Rewards Dec
 }
 
 type OutstandingRewards struct {
-	Rewards *big.Int
+	Rewards Dec
 }
 
 type ValidatorSnapshotRewards struct {
-	AccumulatedRewardsRatio *big.Int // ratio already mul decimal
+	AccumulatedRewardsRatio Dec // ratio already mul decimal
 	ReferenceCount          uint64
 }
 
 type StakeStartingInfo struct {
 	StartPeriod uint64
-	Stake       *big.Int
+	Stake       Dec
 	Height      *big.Int
 }
 

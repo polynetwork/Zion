@@ -160,12 +160,12 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		ConsensusPubkey:  params.ConsensusPubkey,
 		ConsensusAddress: addr,
 		ProposalAddress:  params.ProposalAddress,
-		Commission:       &Commission{Rate: params.Commission, UpdateHeight: height},
+		Commission:       &Commission{Rate: NewDecFromBigInt(params.Commission), UpdateHeight: height},
 		Status:           Unlock,
 		Jailed:           false,
 		UnlockHeight:     new(big.Int),
-		TotalStake:       params.InitStake,
-		SelfStake:        params.InitStake,
+		TotalStake:       NewDecFromBigInt(params.InitStake),
+		SelfStake:        NewDecFromBigInt(params.InitStake),
 		Desc:             params.Desc,
 	}
 	err = setValidator(s, validator)
@@ -185,7 +185,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// deposit native token
-	err = deposit(s, caller, params.InitStake, validator)
+	err = deposit(s, caller, NewDecFromBigInt(params.InitStake), validator)
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, deposit error: %v", err)
 	}
@@ -293,7 +293,7 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("UpdateCommission, commission can not changed in one epoch twice")
 	}
 
-	validator.Commission = &Commission{Rate: params.Commission, UpdateHeight: height}
+	validator.Commission = &Commission{Rate: NewDecFromBigInt(params.Commission), UpdateHeight: height}
 
 	err = setValidator(s, validator)
 	if err != nil {
@@ -319,6 +319,7 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Stake, decode pubkey error: %v", err)
 	}
+	amount := NewDecFromBigInt(params.Amount)
 
 	// check to see if the pubkey has been registered
 	validator, found, err := GetValidator(s, dec)
@@ -330,16 +331,22 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// deposit native token
-	err = deposit(s, caller, params.Amount, validator)
+	err = deposit(s, caller, amount, validator)
 	if err != nil {
 		return nil, fmt.Errorf("Stake, deposit error: %v", err)
 	}
 
 	// update validator
 	if validator.StakeAddress == caller {
-		validator.SelfStake = new(big.Int).Add(validator.SelfStake, params.Amount)
+		validator.SelfStake, err = validator.SelfStake.Add(amount)
+		if err != nil {
+			return nil, fmt.Errorf("Stake, validator.SelfStake.Add error: %v", err)
+		}
 	} else {
-		validator.TotalStake = new(big.Int).Add(validator.TotalStake, params.Amount)
+		validator.TotalStake, err = validator.TotalStake.Add(amount)
+		if err != nil {
+			return nil, fmt.Errorf("Stake, validator.TotalStake.Add error: %v", err)
+		}
 	}
 	err = setValidator(s, validator)
 	if err != nil {
@@ -365,6 +372,7 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UnStake, decode pubkey error: %v", err)
 	}
+	amount := NewDecFromBigInt(params.Amount)
 
 	// check to see if the pubkey has been registered
 	validator, found, err := GetValidator(s, dec)
@@ -376,7 +384,7 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// unStake native token
-	err = unStake(s, caller, params.Amount, validator)
+	err = unStake(s, caller, amount, validator)
 	if err != nil {
 		return nil, fmt.Errorf("UnStake, unStake error: %v", err)
 	}
@@ -385,12 +393,12 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 	if validator.StakeAddress == caller {
 		return nil, fmt.Errorf("UnStake, stake address can not unstake")
 	} else {
-		if validator.TotalStake.Cmp(params.Amount) == -1 {
-			return nil, fmt.Errorf("UnStake, total stake of validator is less than amount")
+		validator.TotalStake, err = validator.TotalStake.Sub(amount)
+		if err != nil {
+			return nil, fmt.Errorf("UnStake, validator.TotalStake.Sub error: %v", err)
 		}
-		validator.TotalStake = new(big.Int).Sub(validator.TotalStake, params.Amount)
 	}
-	if validator.TotalStake.Sign() == 0 && validator.SelfStake.Sign() == 0 {
+	if validator.TotalStake.IsZero() && validator.SelfStake.IsZero() {
 		err = delValidator(s, params.ConsensusPubkey)
 		if err != nil {
 			return nil, fmt.Errorf("UnStake, delValidator error: %v", err)
@@ -422,18 +430,18 @@ func Withdraw(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("Withdraw, filterExpiredUnlockingInfo error: %v", err)
 	}
 
-	if amount.Sign() == 1 {
+	if amount.IsPositive() {
 		err = withdrawTotalPool(s, amount)
 		if err != nil {
 			return nil, fmt.Errorf("Withdraw, withdrawTotalPool error: %v", err)
 		}
-		err = nativeTransfer(s, this, caller, amount)
+		err = nativeTransfer(s, this, caller, amount.BigInt())
 		if err != nil {
 			return nil, fmt.Errorf("Withdraw, nativeTransfer error: %v", err)
 		}
 	}
 
-	err = s.AddNotify(ABI, []string{WITHDRAW_EVENT}, caller.Hex(), amount.String())
+	err = s.AddNotify(ABI, []string{WITHDRAW_EVENT}, caller.Hex(), amount.BigInt().String())
 	if err != nil {
 		return nil, fmt.Errorf("Withdraw, AddNotify error: %v", err)
 	}
@@ -528,9 +536,12 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawValidator, unStake error: %v", err)
 	}
 
-	validator.TotalStake = new(big.Int).Sub(validator.TotalStake, validator.SelfStake)
-	validator.SelfStake = new(big.Int)
-	if validator.TotalStake == new(big.Int) {
+	validator.TotalStake, err = validator.TotalStake.Sub(validator.SelfStake)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawValidator, validator.TotalStake.Sub error: %v", err)
+	}
+	validator.SelfStake = NewDecFromBigInt(new(big.Int))
+	if validator.TotalStake.IsZero() {
 		err = delValidator(s, params.ConsensusPubkey)
 		if err != nil {
 			return nil, fmt.Errorf("WithdrawValidator, delValidator error: %v", err)
@@ -552,7 +563,7 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	}
 	delAccumulatedCommission(s, dec)
 
-	err = s.AddNotify(ABI, []string{WITHDRAW_VALIDATOR_EVENT}, params.ConsensusPubkey, validator.SelfStake.String())
+	err = s.AddNotify(ABI, []string{WITHDRAW_VALIDATOR_EVENT}, params.ConsensusPubkey, validator.SelfStake.BigInt().String())
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, AddNotify error: %v", err)
 	}
@@ -608,7 +619,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 
 		// sort by total stake desc, if equal, use the old slice order
 		sort.SliceStable(validatorList, func(i, j int) bool {
-			return validatorList[i].TotalStake.Cmp(validatorList[j].TotalStake) == 1
+			return validatorList[i].TotalStake.GT(validatorList[j].TotalStake)
 		})
 		// update validator status
 		for i := 0; uint64(i) < globalConfig.ConsensusValidatorNum; i++ {
@@ -704,7 +715,7 @@ func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawStakeRewards, initializeStake error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{WITHDRAW_STAKE_REWARDS_EVENT}, rewards.String())
+	err = s.AddNotify(ABI, []string{WITHDRAW_STAKE_REWARDS_EVENT}, rewards.BigInt().String())
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawStakeRewards, AddNotify error: %v", err)
 	}
@@ -738,12 +749,12 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, withdrawCommission error: %v", err)
 	}
-	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{new(big.Int)})
+	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{NewDecFromBigInt(new(big.Int))})
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, setAccumulatedCommission error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{WITHDRAW_COMMISSION_EVENT}, params.ConsensusPubkey, commission.String())
+	err = s.AddNotify(ABI, []string{WITHDRAW_COMMISSION_EVENT}, params.ConsensusPubkey, commission.BigInt().String())
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, AddNotify error: %v", err)
 	}
@@ -752,7 +763,7 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 
 func EndBlock(s *native.NativeContract) ([]byte, error) {
 	// contract balance = totalpool + outstanding + new block reward
-	balance := s.StateDB().GetBalance(this)
+	balance := NewDecFromBigInt(s.StateDB().GetBalance(this))
 
 	totalPool, err := GetTotalPool(s)
 	if err != nil {
@@ -764,18 +775,24 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// cal rewards
-	temp := new(big.Int).Add(outstanding.Rewards, totalPool)
-	newRewards := new(big.Int).Sub(balance, temp)
-	if newRewards.Sign() < 0 {
-		panic("new block rewards is negative")
+	temp, err := outstanding.Rewards.Add(totalPool)
+	if err != nil {
+		return nil, fmt.Errorf("EndBlock, outstanding.Rewards.Add error: %v", err)
+	}
+	newRewards, err := balance.Sub(temp)
+	if err != nil {
+		return nil, fmt.Errorf("EndBlock, balance.Sub error: %v", err)
 	}
 
 	epochInfo, err := GetCurrentEpochInfoImpl(s)
 	if err != nil {
 		return nil, fmt.Errorf("EndBlock, GetCurrentEpochInfoImpl error: %v", err)
 	}
-	validatorRewards := new(big.Int).Div(newRewards, new(big.Int).SetUint64(uint64(len(epochInfo.Validators))))
-	allocateSum := new(big.Int)
+	validatorRewards, err := newRewards.DivUint64(uint64(len(epochInfo.Validators)))
+	if err != nil {
+		return nil, fmt.Errorf("EndBlock, newRewards.DivUint64 error: %v", err)
+	}
+	allocateSum := NewDecFromBigInt(new(big.Int))
 	for _, v := range epochInfo.Validators {
 		dec, err := hexutil.Decode(v.PubKey)
 		if err != nil {
@@ -790,12 +807,18 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 			if err != nil {
 				return nil, fmt.Errorf("EndBlock, allocateRewardsToValidator error: %v", err)
 			}
-			allocateSum = new(big.Int).Add(allocateSum, validatorRewards)
+			allocateSum, err = allocateSum.Add(validatorRewards)
+			if err != nil {
+				return nil, fmt.Errorf("EndBlock, allocateSum.Add error: %v", err)
+			}
 		}
 	}
 
 	// update outstanding rewards
-	outstanding.Rewards = new(big.Int).Add(outstanding.Rewards, allocateSum)
+	outstanding.Rewards, err = outstanding.Rewards.Add(allocateSum)
+	if err != nil {
+		return nil, fmt.Errorf("EndBlock, outstanding.Rewards.Add error: %v", err)
+	}
 	err = setOutstandingRewards(s, outstanding)
 	if err != nil {
 		return nil, fmt.Errorf("EndBlock, setOutstandingRewards error: %v", err)
