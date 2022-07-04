@@ -611,6 +611,49 @@ func TestDistribute(t *testing.T) {
 	assert.Nil(t, err)
 
 	blockNumber = big.NewInt(799999)
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	blockNumber = big.NewInt(900000)
+	// withdraw validator
+	param12 := new(WithdrawValidatorParam)
+	param12.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	input, err = param12.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	b5, _ := new(big.Int).SetString("1000611538461538461400000", 10) // include commission and stake rewards
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].Address), b5)
+
+	// unstake
+	param13 := new(UnStakeParam)
+	param13.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param13.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
+	input, err = param13.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param14 := new(UnStakeParam)
+	param14.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param14.Amount = new(big.Int).Mul(big.NewInt(20000), params.ZNT1)
+	input, err = param14.Encode()
+	contractRef = native.NewContractRef(sdb, stakeAddress2, stakeAddress2, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress2, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	b6, _ := new(big.Int).SetString("1000046153846153846140000", 10)
+	b7, _ := new(big.Int).SetString("1000092307692307692280000", 10)
+	assert.Equal(t, sdb.GetBalance(stakeAddress), b6)
+	assert.Equal(t, sdb.GetBalance(stakeAddress2), b7)
 }
 
 // generateTestPeer ONLY used for testing
