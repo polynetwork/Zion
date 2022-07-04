@@ -32,25 +32,25 @@ func AfterValidatorCreated(s *native.NativeContract, validator *Validator) error
 	}
 
 	// set initial historical rewards (period 0) with reference count of 1
-	err = setValidatorSnapshotRewards(s, dec, 0, &ValidatorSnapshotRewards{new(big.Int), 1})
+	err = setValidatorSnapshotRewards(s, dec, 0, &ValidatorSnapshotRewards{NewDecFromBigInt(new(big.Int)), 1})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorSnapshotRewards error: %v", err)
 	}
 
 	// set accumulate rewards (starting at period 1)
-	err = setValidatorAccumulatedRewards(s, dec, &ValidatorAccumulatedRewards{new(big.Int), 1})
+	err = setValidatorAccumulatedRewards(s, dec, &ValidatorAccumulatedRewards{NewDecFromBigInt(new(big.Int)), 1})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorAccumulatedRewards error: %v", err)
 	}
 
 	// set accumulated commission
-	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{new(big.Int)})
+	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{NewDecFromBigInt(new(big.Int))})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setAccumulatedCommission error: %v", err)
 	}
 
 	// set outstanding rewards
-	err = setValidatorOutstandingRewards(s, dec, &ValidatorOutstandingRewards{Rewards: new(big.Int)})
+	err = setValidatorOutstandingRewards(s, dec, &ValidatorOutstandingRewards{Rewards: NewDecFromBigInt(new(big.Int))})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorOutstandingRewards error: %v", err)
 	}
