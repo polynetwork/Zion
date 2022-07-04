@@ -19,7 +19,6 @@ package native_client
 import (
 	"errors"
 	"math/big"
-	"strconv"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -33,7 +32,6 @@ var ErrAccountBlocked = errors.New("account is in blacklist")
 var ErrNotGasManager = errors.New("address is not in gas manager list")
 
 func IsBlocked(state *state.StateDB, address *common.Address) bool {
-	log.Debug("### isBlocked called")
 	if address == nil {
 		return false
 	}
@@ -55,7 +53,6 @@ func IsBlocked(state *state.StateDB, address *common.Address) bool {
 		return false
 	}
 
-	log.Debug("IsBlocked: " + address.String() + ", " + strconv.FormatBool(output.Success))
 	return output.Success
 }
 
