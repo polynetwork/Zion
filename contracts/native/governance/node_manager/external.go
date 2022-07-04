@@ -32,9 +32,11 @@ import (
 )
 
 var (
-	GenesisMaxCommission, _             = new(big.Int).SetString("5000", 10) // 50%
-	GenesisMinInitialStake              = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
-	GenesisMaxDescLength         uint64 = 2048
+	GenesisMaxCommission, _ = new(big.Int).SetString("5000", 10) // 50%
+	// todo(fuk): reset the initial stake amount to be 100000
+	GenesisMinInitialStake        = new(big.Int).Mul(big.NewInt(100), params.ZNT1)
+	GenesisMaxDescLength   uint64 = 2048
+	// todo(fuk): reset the block per epoch to be 400000
 	GenesisBlockPerEpoch                = new(big.Int).SetUint64(200)
 	GenesisConsensusValidatorNum uint64 = 4
 	GenesisVoterValidatorNum     uint64 = 4
