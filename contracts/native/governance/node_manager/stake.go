@@ -26,7 +26,7 @@ import (
 	"math/big"
 )
 
-func deposit(s *native.NativeContract, from common.Address, amount *big.Int, validator *Validator) error {
+func deposit(s *native.NativeContract, from common.Address, amount Dec, validator *Validator) error {
 	dec, err := hexutil.Decode(validator.ConsensusPubkey)
 	if err != nil {
 		return fmt.Errorf("deposit, decode pubkey error: %v", err)
@@ -49,14 +49,17 @@ func deposit(s *native.NativeContract, from common.Address, amount *big.Int, val
 		}
 	}
 	// update stake info
-	stakeInfo.Amount = new(big.Int).Add(stakeInfo.Amount, amount)
+	stakeInfo.Amount, err = stakeInfo.Amount.Add(amount)
+	if err != nil {
+		return fmt.Errorf("deposit, stakeInfo.Amount.Add error: %v", err)
+	}
 	err = setStakeInfo(s, stakeInfo)
 	if err != nil {
 		return fmt.Errorf("deposit, setStakeInfo error: %v", err)
 	}
 
 	// transfer native token
-	err = nativeTransfer(s, from, this, amount)
+	err = nativeTransfer(s, from, this, amount.BigInt())
 	if err != nil {
 		return fmt.Errorf("deposit, nativeTransfer error: %v", err)
 	}
@@ -75,7 +78,7 @@ func deposit(s *native.NativeContract, from common.Address, amount *big.Int, val
 	return nil
 }
 
-func unStake(s *native.NativeContract, from common.Address, amount *big.Int, validator *Validator) error {
+func unStake(s *native.NativeContract, from common.Address, amount Dec, validator *Validator) error {
 	height := s.ContractRef().BlockHeight()
 	dec, err := hexutil.Decode(validator.ConsensusPubkey)
 	if err != nil {
@@ -118,7 +121,7 @@ func unStake(s *native.NativeContract, from common.Address, amount *big.Int, val
 			return fmt.Errorf("unStake, withdrawTotalPool error: %v", err)
 		}
 		// transfer native token
-		err = nativeTransfer(s, this, from, amount)
+		err = nativeTransfer(s, this, from, amount.BigInt())
 		if err != nil {
 			return fmt.Errorf("unStake, nativeTransfer error: %v", err)
 		}
@@ -136,11 +139,11 @@ func unStake(s *native.NativeContract, from common.Address, amount *big.Int, val
 		}
 	}
 
-	if stakeInfo.Amount.Cmp(amount) == -1 {
-		return fmt.Errorf("unStake, stake info is less than amount")
+	stakeInfo.Amount, err = stakeInfo.Amount.Sub(amount)
+	if err != nil {
+		return fmt.Errorf("unStake, stakeInfo.Amount.Sub error: %v", err)
 	}
-	stakeInfo.Amount = new(big.Int).Sub(stakeInfo.Amount, amount)
-	if stakeInfo.Amount.Sign() == 0 {
+	if stakeInfo.Amount.IsZero() {
 		err = delStakeInfo(s, from, validator.ConsensusPubkey)
 		if err != nil {
 			return fmt.Errorf("unStake, delete stake info error: %v", err)

@@ -152,7 +152,7 @@ func setOutstandingRewards(s *native.NativeContract, outstandingRewards *Outstan
 
 func GetOutstandingRewards(s *native.NativeContract) (*OutstandingRewards, error) {
 	outstandingRewards := &OutstandingRewards{
-		Rewards: new(big.Int),
+		Rewards: NewDecFromBigInt(new(big.Int)),
 	}
 	key := outstandingRewardsKey()
 	store, err := get(s, key)
@@ -394,44 +394,47 @@ func GetAllValidators(s *native.NativeContract) (*AllValidators, error) {
 	return allValidators, nil
 }
 
-func depositTotalPool(s *native.NativeContract, amount *big.Int) error {
-	lockPool, err := GetTotalPool(s)
+func depositTotalPool(s *native.NativeContract, amount Dec) error {
+	totalPool, err := GetTotalPool(s)
 	if err != nil {
 		return fmt.Errorf("depositTotalPool, get total pool error: %v", err)
 	}
-	lockPool = new(big.Int).Add(lockPool, amount)
-	setTotalPool(s, lockPool)
+	totalPool, err = totalPool.Add(amount)
+	if err != nil {
+		return fmt.Errorf("depositTotalPool, totalPool.Add error: %v", err)
+	}
+	setTotalPool(s, totalPool)
 	return nil
 }
 
-func withdrawTotalPool(s *native.NativeContract, amount *big.Int) error {
-	lockPool, err := GetTotalPool(s)
+func withdrawTotalPool(s *native.NativeContract, amount Dec) error {
+	totalPool, err := GetTotalPool(s)
 	if err != nil {
 		return fmt.Errorf("withdrawTotalPool, get total pool error: %v", err)
 	}
-	lockPool = new(big.Int).Sub(lockPool, amount)
-	if lockPool.Sign() < 0 {
-		return fmt.Errorf("withdrawTotalPool, total pool is less than amount, please check")
+	totalPool, err = totalPool.Sub(amount)
+	if err != nil {
+		return fmt.Errorf("depositTotalPool, totalPool.Sub error: %v", err)
 	}
-	setTotalPool(s, lockPool)
+	setTotalPool(s, totalPool)
 	return nil
 }
 
-func setTotalPool(s *native.NativeContract, amount *big.Int) {
+func setTotalPool(s *native.NativeContract, amount Dec) {
 	key := totalPoolKey()
-	set(s, key, amount.Bytes())
+	set(s, key, amount.BigInt().Bytes())
 }
 
-func GetTotalPool(s *native.NativeContract) (*big.Int, error) {
+func GetTotalPool(s *native.NativeContract) (Dec, error) {
 	key := totalPoolKey()
 	store, err := get(s, key)
 	if err == ErrEof {
-		return new(big.Int), nil
+		return NewDecFromBigInt(new(big.Int)), nil
 	}
 	if err != nil {
-		return nil, fmt.Errorf("GetTotalPool, get store error: %v", err)
+		return Dec{nil}, fmt.Errorf("GetTotalPool, get store error: %v", err)
 	}
-	return new(big.Int).SetBytes(store), nil
+	return NewDecFromBigInt(new(big.Int).SetBytes(store)), nil
 }
 
 func setStakeInfo(s *native.NativeContract, stakeInfo *StakeInfo) error {
@@ -462,7 +465,7 @@ func GetStakeInfo(s *native.NativeContract, stakeAddress common.Address, consens
 	stakeInfo := &StakeInfo{
 		StakeAddress:    stakeAddress,
 		ConsensusPubkey: consensusPk,
-		Amount:          new(big.Int),
+		Amount:          NewDecFromBigInt(new(big.Int)),
 	}
 	dec, err := hexutil.Decode(stakeInfo.ConsensusPubkey)
 	if err != nil {
@@ -495,20 +498,23 @@ func addUnlockingInfo(s *native.NativeContract, stakeAddress common.Address, unl
 	return nil
 }
 
-func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (*big.Int, error) {
+func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (Dec, error) {
 	height := s.ContractRef().BlockHeight()
 	unlockingInfo, err := getUnlockingInfo(s, stakeAddress)
 	if err != nil {
-		return nil, fmt.Errorf("filterExpiredUnlockingInfo, GetUnlockingInfo error: %v", err)
+		return Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, GetUnlockingInfo error: %v", err)
 	}
 	j := 0
-	expiredSum := new(big.Int)
+	expiredSum := NewDecFromBigInt(new(big.Int))
 	for _, unlockingStake := range unlockingInfo.UnlockingStake {
 		if unlockingStake.CompleteHeight.Cmp(height) == 1 {
 			unlockingInfo.UnlockingStake[j] = unlockingStake
 			j++
 		} else {
-			expiredSum = new(big.Int).Add(expiredSum, unlockingStake.Amount)
+			expiredSum, err = expiredSum.Add(unlockingStake.Amount)
+			if err != nil {
+				return Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, expiredSum.Add error: %v", err)
+			}
 		}
 	}
 	unlockingInfo.UnlockingStake = unlockingInfo.UnlockingStake[:j]
@@ -517,7 +523,7 @@ func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Ad
 	} else {
 		err = setUnlockingInfo(s, unlockingInfo)
 		if err != nil {
-			return nil, fmt.Errorf("filterExpiredUnlockingInfo, setUnlockingInfo error: %v", err)
+			return Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, setUnlockingInfo error: %v", err)
 		}
 	}
 	return expiredSum, nil

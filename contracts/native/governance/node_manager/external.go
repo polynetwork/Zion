@@ -32,7 +32,7 @@ import (
 )
 
 var (
-	GenesisMaxCommission                = new(big.Int).SetUint64(50)
+	GenesisMaxCommission, _             = new(big.Int).SetString("5000", 10) // 50%
 	GenesisMinInitialStake              = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	GenesisMaxDescLength         uint64 = 2048
 	GenesisBlockPerEpoch                = new(big.Int).SetUint64(200)
