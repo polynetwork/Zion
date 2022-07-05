@@ -32,9 +32,9 @@ func deposit(s *native.NativeContract, from common.Address, amount Dec, validato
 		return fmt.Errorf("deposit, decode pubkey error: %v", err)
 	}
 	// get deposit info
-	stakeInfo, found, err := GetStakeInfo(s, from, validator.ConsensusPubkey)
+	stakeInfo, found, err := getStakeInfo(s, from, validator.ConsensusPubkey)
 	if err != nil {
-		return fmt.Errorf("deposit, GetStakeInfo error: %v", err)
+		return fmt.Errorf("deposit, getStakeInfo error: %v", err)
 	}
 	// call the appropriate hook if present
 	if found {
@@ -89,7 +89,7 @@ func unStake(s *native.NativeContract, from common.Address, amount Dec, validato
 		return fmt.Errorf("unStake, GetGlobalConfig error: %v", err)
 	}
 
-	stakeInfo, found, err := GetStakeInfo(s, from, validator.ConsensusPubkey)
+	stakeInfo, found, err := getStakeInfo(s, from, validator.ConsensusPubkey)
 	if err != nil {
 		return fmt.Errorf("unStake, get stake info error: %v", err)
 	}

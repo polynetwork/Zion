@@ -48,21 +48,36 @@ const (
 
 var (
 	gasTable = map[string]uint64{
-		MethodCreateValidator:      0,
-		MethodUpdateValidator:      0,
-		MethodUpdateCommission:     0,
-		MethodStake:                0,
-		MethodUnStake:              0,
-		MethodWithdraw:             0,
-		MethodCancelValidator:      0,
-		MethodWithdrawValidator:    0,
-		MethodChangeEpoch:          0,
-		MethodWithdrawStakeRewards: 0,
-		MethodWithdrawCommission:   0,
-		MethodEndBlock:             0,
-		MethodGetGlobalConfig:      0,
-		MethodGetCommunityInfo:     0,
-		MethodGetCurrentEpochInfo:  0,
+		MethodCreateValidator:                0,
+		MethodUpdateValidator:                0,
+		MethodUpdateCommission:               0,
+		MethodStake:                          0,
+		MethodUnStake:                        0,
+		MethodWithdraw:                       0,
+		MethodCancelValidator:                0,
+		MethodWithdrawValidator:              0,
+		MethodChangeEpoch:                    0,
+		MethodWithdrawStakeRewards:           0,
+		MethodWithdrawCommission:             0,
+		MethodEndBlock:                       0,
+		MethodGetGlobalConfig:                0,
+		MethodGetCommunityInfo:               0,
+		MethodGetCurrentEpochInfo:            0,
+		MethodGetGlobalConfig:                0,
+		MethodGetCommunityInfo:               0,
+		MethodGetCurrentEpochInfo:            0,
+		MethodGetEpochInfo:                   0,
+		MethodGetAllValidators:               0,
+		MethodGetValidator:                   0,
+		MethodGetStakeInfo:                   0,
+		MethodGetUnlockingInfo:               0,
+		MethodGetStakeStartingInfo:           0,
+		MethodGetAccumulatedCommission:       0,
+		MethodGetValidatorSnapshotRewards:    0,
+		MethodGetValidatorAccumulatedRewards: 0,
+		MethodGetValidatorOutstandingRewards: 0,
+		MethodGetTotalPool:                   0,
+		MethodGetOutstandingRewards:          0,
 	}
 )
 
@@ -92,6 +107,18 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Register(MethodGetGlobalConfig, GetGlobalConfig)
 	s.Register(MethodGetCommunityInfo, GetCommunityInfo)
 	s.Register(MethodGetCurrentEpochInfo, GetCurrentEpochInfo)
+	s.Register(MethodGetEpochInfo, GetEpochInfo)
+	s.Register(MethodGetAllValidators, GetAllValidators)
+	s.Register(MethodGetValidator, GetValidator)
+	s.Register(MethodGetStakeInfo, GetStakeInfo)
+	s.Register(MethodGetUnlockingInfo, GetUnlockingInfo)
+	s.Register(MethodGetStakeStartingInfo, GetStakeStartingInfo)
+	s.Register(MethodGetAccumulatedCommission, GetAccumulatedCommission)
+	s.Register(MethodGetValidatorSnapshotRewards, GetValidatorSnapshotRewards)
+	s.Register(MethodGetValidatorAccumulatedRewards, GetValidatorAccumulatedRewards)
+	s.Register(MethodGetValidatorOutstandingRewards, GetValidatorOutstandingRewards)
+	s.Register(MethodGetTotalPool, GetTotalPool)
+	s.Register(MethodGetOutstandingRewards, GetOutstandingRewards)
 }
 
 func CreateValidator(s *native.NativeContract) ([]byte, error) {
@@ -140,9 +167,9 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// check to see if the pubkey has been registered before
-	_, found, err := GetValidator(s, dec)
+	_, found, err := getValidator(s, dec)
 	if err != nil {
-		return nil, fmt.Errorf("CreateValidator, GetValidator error: %v", err)
+		return nil, fmt.Errorf("CreateValidator, getValidator error: %v", err)
 	}
 	if found {
 		return nil, fmt.Errorf("CreateValidator, validator already exist")
@@ -194,7 +221,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodCreateValidator, true)
 }
 
 func UpdateValidator(s *native.NativeContract) ([]byte, error) {
@@ -210,7 +237,7 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UpdateValidator, decode pubkey error: %v", err)
 	}
-	validator, found, err := GetValidator(s, dec)
+	validator, found, err := getValidator(s, dec)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateValidator, get validator error: %v", err)
 	}
@@ -246,7 +273,7 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UpdateValidator, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodUpdateValidator, true)
 }
 
 func UpdateCommission(s *native.NativeContract) ([]byte, error) {
@@ -263,7 +290,7 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UpdateCommission, decode pubkey error: %v", err)
 	}
-	validator, found, err := GetValidator(s, dec)
+	validator, found, err := getValidator(s, dec)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateCommission, get validator error: %v", err)
 	}
@@ -304,7 +331,7 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UpdateCommission, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodUpdateCommission, true)
 }
 
 func Stake(s *native.NativeContract) ([]byte, error) {
@@ -322,9 +349,9 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 	amount := NewDecFromBigInt(params.Amount)
 
 	// check to see if the pubkey has been registered
-	validator, found, err := GetValidator(s, dec)
+	validator, found, err := getValidator(s, dec)
 	if err != nil {
-		return nil, fmt.Errorf("Stake, GetValidator error: %v", err)
+		return nil, fmt.Errorf("Stake, getValidator error: %v", err)
 	}
 	if !found {
 		return nil, fmt.Errorf("Stake, validator is not exist")
@@ -357,7 +384,7 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Stake, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodStake, true)
 }
 
 func UnStake(s *native.NativeContract) ([]byte, error) {
@@ -375,9 +402,9 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 	amount := NewDecFromBigInt(params.Amount)
 
 	// check to see if the pubkey has been registered
-	validator, found, err := GetValidator(s, dec)
+	validator, found, err := getValidator(s, dec)
 	if err != nil {
-		return nil, fmt.Errorf("UnStake, GetValidator error: %v", err)
+		return nil, fmt.Errorf("UnStake, getValidator error: %v", err)
 	}
 	if !found {
 		return nil, fmt.Errorf("UnStake, validator is not exist")
@@ -418,7 +445,7 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UnStake, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodUnStake, true)
 }
 
 func Withdraw(s *native.NativeContract) ([]byte, error) {
@@ -445,7 +472,7 @@ func Withdraw(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("Withdraw, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodWithdraw, true)
 }
 
 func CancelValidator(s *native.NativeContract) ([]byte, error) {
@@ -466,8 +493,15 @@ func CancelValidator(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, GetGlobalConfig error: %v", err)
 	}
+	allValidators, err := getAllValidators(s)
+	if err != nil {
+		return nil, fmt.Errorf("CancelValidator, getAllValidators error: %v", err)
+	}
+	if uint64(len(allValidators.AllValidators)) <= globalConfig.ConsensusValidatorNum {
+		return nil, fmt.Errorf("CancelValidator, validator num is less than consensus node num error: %v", err)
+	}
 
-	validator, found, err := GetValidator(s, dec)
+	validator, found, err := getValidator(s, dec)
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, GetValidator error: %v", err)
 	}
@@ -500,7 +534,7 @@ func CancelValidator(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodCancelValidator, true)
 }
 
 func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
@@ -516,9 +550,9 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawValidator, decode pubkey error: %v", err)
 	}
-	validator, found, err := GetValidator(s, dec)
+	validator, found, err := getValidator(s, dec)
 	if err != nil {
-		return nil, fmt.Errorf("WithdrawValidator, GetValidator error: %v", err)
+		return nil, fmt.Errorf("WithdrawValidator, getValidator error: %v", err)
 	}
 	if !found {
 		return nil, fmt.Errorf("WithdrawValidator, validator is not created")
@@ -567,7 +601,7 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodWithdrawValidator, true)
 }
 
 func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
@@ -593,9 +627,9 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		StartHeight: startHeight,
 	}
 	// get all validators
-	allValidators, err := GetAllValidators(s)
+	allValidators, err := getAllValidators(s)
 	if err != nil {
-		return nil, fmt.Errorf("ChangeEpoch, GetAllValidators error: %v", err)
+		return nil, fmt.Errorf("ChangeEpoch, getAllValidators error: %v", err)
 	}
 	if uint64(len(allValidators.AllValidators)) < globalConfig.ConsensusValidatorNum {
 		epochInfo.Validators = currentEpochInfo.Validators
@@ -607,9 +641,9 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 			if err != nil {
 				return nil, fmt.Errorf("ChangeEpoch, decode pubkey error: %v", err)
 			}
-			validator, found, err := GetValidator(s, dec)
+			validator, found, err := getValidator(s, dec)
 			if err != nil {
-				return nil, fmt.Errorf("ChangeEpoch, GetValidator error: %v", err)
+				return nil, fmt.Errorf("ChangeEpoch, getValidator error: %v", err)
 			}
 			if !found {
 				return nil, fmt.Errorf("ChangeEpoch, validator %s not found", v)
@@ -673,7 +707,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ChangeEpoch, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodChangeEpoch, true)
 }
 
 func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
@@ -689,16 +723,16 @@ func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawStakeRewards, decode pubkey error: %v", err)
 	}
 
-	validator, found, err := GetValidator(s, dec)
+	validator, found, err := getValidator(s, dec)
 	if err != nil {
-		return nil, fmt.Errorf("WithdrawStakeRewards, node_manager.GetValidator error: %v", err)
+		return nil, fmt.Errorf("WithdrawStakeRewards, node_manager.getValidator error: %v", err)
 	}
 	if !found {
 		return nil, fmt.Errorf("WithdrawStakeRewards, validator not found")
 	}
-	stakeInfo, found, err := GetStakeInfo(s, caller, params.ConsensusPubkey)
+	stakeInfo, found, err := getStakeInfo(s, caller, params.ConsensusPubkey)
 	if err != nil {
-		return nil, fmt.Errorf("WithdrawStakeRewards, GetStakeInfo error: %v", err)
+		return nil, fmt.Errorf("WithdrawStakeRewards, getStakeInfo error: %v", err)
 	}
 	if !found {
 		return nil, fmt.Errorf("WithdrawStakeRewards, stake info not found")
@@ -719,7 +753,7 @@ func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawStakeRewards, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodWithdrawStakeRewards, true)
 }
 
 func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
@@ -734,9 +768,9 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, decode pubkey error: %v", err)
 	}
-	validator, found, err := GetValidator(s, dec)
+	validator, found, err := getValidator(s, dec)
 	if err != nil {
-		return nil, fmt.Errorf("WithdrawCommission, GetValidator error: %v", err)
+		return nil, fmt.Errorf("WithdrawCommission, getValidator error: %v", err)
 	}
 	if !found {
 		return nil, fmt.Errorf("WithdrawCommission, can not find validator")
@@ -758,24 +792,24 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, AddNotify error: %v", err)
 	}
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodWithdrawCommission, true)
 }
 
 func EndBlock(s *native.NativeContract) ([]byte, error) {
 	// contract balance = totalpool + outstanding + new block reward
 	balance := NewDecFromBigInt(s.StateDB().GetBalance(this))
 
-	totalPool, err := GetTotalPool(s)
+	totalPool, err := getTotalPool(s)
 	if err != nil {
-		return nil, fmt.Errorf("EndBlock, GetTotalPool error: %v", err)
+		return nil, fmt.Errorf("EndBlock, getTotalPool error: %v", err)
 	}
-	outstanding, err := GetOutstandingRewards(s)
+	outstanding, err := getOutstandingRewards(s)
 	if err != nil {
-		return nil, fmt.Errorf("EndBlock, GetOutstandingRewards error: %v", err)
+		return nil, fmt.Errorf("EndBlock, getOutstandingRewards error: %v", err)
 	}
 
 	// cal rewards
-	temp, err := outstanding.Rewards.Add(totalPool)
+	temp, err := outstanding.Rewards.Add(totalPool.TotalPool)
 	if err != nil {
 		return nil, fmt.Errorf("EndBlock, outstanding.Rewards.Add error: %v", err)
 	}
@@ -798,9 +832,9 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("EndBlock, decode pubkey error: %v", err)
 		}
-		validator, found, err := GetValidator(s, dec)
+		validator, found, err := getValidator(s, dec)
 		if err != nil {
-			return nil, fmt.Errorf("EndBlock, GetValidator error: %v", err)
+			return nil, fmt.Errorf("EndBlock, getValidator error: %v", err)
 		}
 		if found {
 			err = allocateRewardsToValidator(s, validator, validatorRewards)
@@ -824,7 +858,7 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("EndBlock, setOutstandingRewards error: %v", err)
 	}
 
-	return utils.ByteSuccess, nil
+	return utils.PackOutputs(ABI, MethodEndBlock, true)
 }
 
 func GetGlobalConfig(s *native.NativeContract) ([]byte, error) {
@@ -863,4 +897,241 @@ func GetCurrentEpochInfo(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("GetCurrentEpochInfo, serialize current epoch info error: %v", err)
 	}
 	return utils.PackOutputs(ABI, MethodGetCurrentEpochInfo, enc)
+}
+
+func GetEpochInfo(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	params := &GetEpochInfoParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetEpochInfo, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("GetEpochInfo, unpack params error: %v", err)
+	}
+
+	epochInfo, err := getEpochInfo(s, params.ID)
+	if err != nil {
+		return nil, fmt.Errorf("GetEpochInfo, getEpochInfo error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(epochInfo)
+	if err != nil {
+		return nil, fmt.Errorf("GetEpochInfo, serialize epoch info error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetEpochInfo, enc)
+}
+
+func GetAllValidators(s *native.NativeContract) ([]byte, error) {
+	allValidators, err := getAllValidators(s)
+	if err != nil {
+		return nil, fmt.Errorf("GetAllValidators, getAllValidators error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(allValidators)
+	if err != nil {
+		return nil, fmt.Errorf("GetAllValidators, serialize all validators error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetAllValidators, enc)
+}
+
+func GetValidator(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	params := &GetValidatorParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetValidator, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("GetValidator, unpack params error: %v", err)
+	}
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidator, decode pubkey error: %v", err)
+	}
+
+	validator, found, err := getValidator(s, dec)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidator, getValidator error: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("GetValidator, no record")
+	}
+	enc, err := rlp.EncodeToBytes(validator)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidator, serialize validator error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetValidator, enc)
+}
+
+func GetStakeInfo(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	params := &GetStakeInfoParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetStakeInfo, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("GetStakeInfo, unpack params error: %v", err)
+	}
+
+	stakeInfo, found, err := getStakeInfo(s, params.StakeAddress, params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeInfo, getStakeInfo error: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("GetStakeInfo, no record")
+	}
+	enc, err := rlp.EncodeToBytes(stakeInfo)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeInfo, serialize stakeInfo error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetStakeInfo, enc)
+}
+
+func GetUnlockingInfo(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	params := &GetUnlockingInfoParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetUnlockingInfo, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("GetUnlockingInfo, unpack params error: %v", err)
+	}
+
+	unlockingInfo, err := getUnlockingInfo(s, params.StakeAddress)
+	if err != nil {
+		return nil, fmt.Errorf("GetUnlockingInfo, getUnlockingInfo error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(unlockingInfo)
+	if err != nil {
+		return nil, fmt.Errorf("GetUnlockingInfo, serialize unlockingInfo error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetUnlockingInfo, enc)
+}
+
+func GetStakeStartingInfo(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	params := &GetStakeStartingInfoParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetStakeStartingInfo, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("GetStakeStartingInfo, unpack params error: %v", err)
+	}
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeStartingInfo, decode pubkey error: %v", err)
+	}
+
+	stakeStartingInfo, err := getStakeStartingInfo(s, params.StakeAddress, dec)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeStartingInfo, getStakeStartingInfo error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(stakeStartingInfo)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeStartingInfo, serialize stakeStartingInfo error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetStakeStartingInfo, enc)
+}
+
+func GetAccumulatedCommission(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	params := &GetAccumulatedCommissionParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetAccumulatedCommission, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("GetAccumulatedCommission, unpack params error: %v", err)
+	}
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccumulatedCommission, decode pubkey error: %v", err)
+	}
+
+	accumulatedCommission, err := getAccumulatedCommission(s, dec)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccumulatedCommission, getAccumulatedCommission error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(accumulatedCommission)
+	if err != nil {
+		return nil, fmt.Errorf("GetAccumulatedCommission, serialize accumulatedCommission error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetAccumulatedCommission, enc)
+}
+
+func GetValidatorSnapshotRewards(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	params := &GetValidatorSnapshotRewardsParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetValidatorSnapshotRewards, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("GetValidatorSnapshotRewards, unpack params error: %v", err)
+	}
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorSnapshotRewards, decode pubkey error: %v", err)
+	}
+
+	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, dec, params.Period)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorSnapshotRewards, getValidatorSnapshotRewards error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(validatorSnapshotRewards)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorSnapshotRewards, serialize validatorSnapshotRewards error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetValidatorSnapshotRewards, enc)
+}
+
+func GetValidatorAccumulatedRewards(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	params := &GetValidatorAccumulatedRewardsParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetValidatorAccumulatedRewards, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, unpack params error: %v", err)
+	}
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, decode pubkey error: %v", err)
+	}
+
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(s, dec)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, getValidatorAccumulatedRewards error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(validatorAccumulatedRewards)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, serialize validatorAccumulatedRewards error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetValidatorAccumulatedRewards, enc)
+}
+
+func GetValidatorOutstandingRewards(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	params := &GetValidatorOutstandingRewardsParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetValidatorOutstandingRewards, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("GetValidatorOutstandingRewards, unpack params error: %v", err)
+	}
+	dec, err := hexutil.Decode(params.ConsensusPubkey)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorOutstandingRewards, decode pubkey error: %v", err)
+	}
+
+	validatorOutstandingRewards, err := getValidatorOutstandingRewards(s, dec)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorOutstandingRewards, getValidatorOutstandingRewards error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(validatorOutstandingRewards)
+	if err != nil {
+		return nil, fmt.Errorf("GetValidatorOutstandingRewards, serialize validatorOutstandingRewards error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetValidatorOutstandingRewards, enc)
+}
+
+func GetTotalPool(s *native.NativeContract) ([]byte, error) {
+	totalPool, err := getTotalPool(s)
+	if err != nil {
+		return nil, fmt.Errorf("GetTotalPool, getTotalPool error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(totalPool)
+	if err != nil {
+		return nil, fmt.Errorf("GetTotalPool, serialize totalPool error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetTotalPool, enc)
+}
+
+func GetOutstandingRewards(s *native.NativeContract) ([]byte, error) {
+	outstandingRewards, err := getOutstandingRewards(s)
+	if err != nil {
+		return nil, fmt.Errorf("GetOutstandingRewards, getOutstandingRewards error: %v", err)
+	}
+	enc, err := rlp.EncodeToBytes(outstandingRewards)
+	if err != nil {
+		return nil, fmt.Errorf("GetOutstandingRewards, serialize outstandingRewards error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetOutstandingRewards, enc)
 }

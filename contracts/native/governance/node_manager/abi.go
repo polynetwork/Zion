@@ -142,20 +142,113 @@ func (m *EndBlockParam) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodEndBlock)
 }
 
-type GetGlobalConfigParam struct {}
+type GetGlobalConfigParam struct{}
 
 func (m *GetGlobalConfigParam) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodGetGlobalConfig)
 }
 
-type GetCommunityInfoParam struct {}
+type GetCommunityInfoParam struct{}
 
 func (m *GetCommunityInfoParam) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodGetCommunityInfo)
 }
 
-type GetCurrentEpochInfoParam struct {}
+type GetCurrentEpochInfoParam struct{}
 
 func (m *GetCurrentEpochInfoParam) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodGetCurrentEpochInfo)
+}
+
+type GetEpochInfoParam struct {
+	ID *big.Int
+}
+
+func (m *GetEpochInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetEpochInfo, m)
+}
+
+type GetAllValidatorsParam struct{}
+
+func (m *GetAllValidatorsParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetAllValidators)
+}
+
+type GetValidatorParam struct {
+	ConsensusPubkey string
+}
+
+func (m *GetValidatorParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetValidator, m)
+}
+
+type GetStakeInfoParam struct {
+	ConsensusPubkey string
+	StakeAddress    common.Address
+}
+
+func (m *GetStakeInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetStakeInfo, m)
+}
+
+type GetUnlockingInfoParam struct {
+	StakeAddress common.Address
+}
+
+func (m *GetUnlockingInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetUnlockingInfo, m)
+}
+
+type GetStakeStartingInfoParam struct {
+	ConsensusPubkey string
+	StakeAddress    common.Address
+}
+
+func (m *GetStakeStartingInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetStakeStartingInfo, m)
+}
+
+type GetAccumulatedCommissionParam struct {
+	ConsensusPubkey string
+}
+
+func (m *GetAccumulatedCommissionParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetAccumulatedCommission, m)
+}
+
+type GetValidatorSnapshotRewardsParam struct {
+	ConsensusPubkey string
+	Period          uint64
+}
+
+func (m *GetValidatorSnapshotRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetValidatorSnapshotRewards, m)
+}
+
+type GetValidatorAccumulatedRewardsParam struct {
+	ConsensusPubkey string
+}
+
+func (m *GetValidatorAccumulatedRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetValidatorAccumulatedRewards, m)
+}
+
+type GetValidatorOutstandingRewardsParam struct {
+	ConsensusPubkey string
+}
+
+func (m *GetValidatorOutstandingRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetValidatorOutstandingRewards, m)
+}
+
+type GetTotalPoolParam struct{}
+
+func (m *GetTotalPoolParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetTotalPool)
+}
+
+type GetOutstandingRewardsParam struct{}
+
+func (m *GetOutstandingRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetOutstandingRewards)
 }
