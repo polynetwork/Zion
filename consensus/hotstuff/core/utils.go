@@ -247,6 +247,10 @@ func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address,
 }
 
 func (c *core) preExecuteBlock(proposal hotstuff.Proposal) error {
+	if c.IsProposer() {
+		return nil
+	}
+
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		return errInvalidProposal

@@ -18,6 +18,7 @@ package miner
 
 import (
 	"errors"
+	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -654,7 +655,9 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 			return
 		}
 	}
-	w.commit(true, tstart)
+	if err := w.commit(true, tstart); err != nil {
+		log.Errorf("[miner]", "commit failed", err)
+	}
 }
 
 // commit runs any post-transaction state modifications, assembles the final block
@@ -702,33 +705,40 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
 }
 
-func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) {
+func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) error {
 	engine, ok := w.engine.(consensus.HotStuff)
 	if !ok {
-		return
+		return fmt.Errorf("invalid engine")
 	}
 
-	// todo(fuk): need state.Copy()??
 	if w.current == nil || w.current.state == nil {
-		return
+		return fmt.Errorf("current environment nil")
 	}
 
-	height := header.Number.Uint64()
-	_, change, retVals := engine.CheckPoint(height)
+	status, epochStartHeight, err := engine.CheckPoint(w.current.state, header)
+	if err != nil {
+		return err
+	}
+
 	if needFillHeader {
-		if change {
-			nextValidators := engine.ValidatorList(height)
-			types.HotstuffHeaderFillWithValidators(header, nextValidators)
+		if status == consensus.CheckPointStateStart {
+			if nextValidators, err := engine.ValidatorList(w.current.state, header.Number); err != nil {
+				return err
+			} else {
+				types.HotstuffHeaderFillWithValidators(header, nextValidators, epochStartHeight)
+			}
 		} else {
-			types.HotstuffHeaderFillWithValidators(header, nil)
+			types.HotstuffHeaderFillWithValidators(header, nil, epochStartHeight)
 		}
 		w.current.header = header
 	}
 
-	if w.IsRunning() && retVals {
+	if w.IsRunning() && status == consensus.CheckPointStateChange {
 		log.Debug("Restart consensus engine")
 		w.Stop()
 		time.Sleep(30 * time.Second)
 		w.Start()
 	}
+
+	return nil
 }

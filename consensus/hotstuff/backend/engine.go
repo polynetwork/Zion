@@ -108,45 +108,9 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
 	uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
 
-	if err := s.reward(state, header.Number); err != nil {
+	if err := s.executeSystemTxs(chain, header, state, txs, receipts, systemTxs, usedGas, false); err != nil {
 		return err
 	}
-
-	if err := s.execEndBlock(&systemTxContext{
-		chain:    chain,
-		state:    state,
-		header:   header,
-		chainCtx: chainContext{Chain: chain, engine: s},
-		txs:      txs,
-		sysTxs:   systemTxs,
-		receipts: receipts,
-		usedGas:  usedGas,
-		mining:   true,
-	}); err != nil {
-		s.logger.Debug("FinalizeAndAssemble", "hash", header.Hash(), "execute `endBlock` failed", err)
-	}
-
-	if beforeChange, _, _ := s.CheckPoint(header.Number.Uint64()); beforeChange {
-		ctx := &systemTxContext{
-			chain:    chain,
-			state:    state,
-			header:   header,
-			chainCtx: chainContext{Chain: chain, engine: s},
-			txs:      txs,
-			sysTxs:   systemTxs,
-			receipts: receipts,
-			usedGas:  usedGas,
-			mining:   true,
-		}
-		if err := s.execEpochChange(ctx); err != nil {
-			s.logger.Debug("FinalizeAndAssemble", "hash", header.Hash(), "execute `epochChange` failed", err)
-		} else {
-			if err := s.applySnapshot(state, header.Number, false); err != nil {
-				return err
-			}
-		}
-	}
-
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 	return nil
@@ -155,10 +119,7 @@ func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Head
 func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
 	txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, []*types.Receipt, error) {
 
-	if err := s.reward(state, header.Number); err != nil {
-		return nil, nil, err
-	}
-
+	// allow empty block in miner worker
 	if txs == nil {
 		txs = make([]*types.Transaction, 0)
 	}
@@ -166,45 +127,53 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 		receipts = make([]*types.Receipt, 0)
 	}
 
-	if err := s.execEndBlock(&systemTxContext{
+	if err := s.executeSystemTxs(chain, header, state, &txs, &receipts, nil, &header.GasUsed, true); err != nil {
+		return nil, nil, err
+	}
+	// Assemble and return the final block for sealing
+	block := packBlock(state, chain, header, txs, receipts)
+	return block, receipts, nil
+}
+
+// executeSystemTxs governance tx execution do not allow failure, the consensus will halt if tx failed and return error.
+func (s *backend) executeSystemTxs(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
+	txs *[]*types.Transaction, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64, mining bool) error {
+
+	if header.Number.Uint64() < 1 {
+		return nil
+	}
+
+	if err := s.reward(state, header.Number); err != nil {
+		return err
+	}
+
+	ctx := &systemTxContext{
 		chain:    chain,
 		state:    state,
 		header:   header,
 		chainCtx: chainContext{Chain: chain, engine: s},
-		txs:      &txs,
-		sysTxs:   nil,
-		receipts: &receipts,
-		usedGas:  &header.GasUsed,
-		mining:   true,
-	}); err != nil {
-		// todo(fuk): governance forbid execute error
-		s.logger.Debug("FinalizeAndAssemble", "hash", header.Hash(), "execute `endBlock` failed", err)
+		txs:      txs,
+		sysTxs:   systemTxs,
+		receipts: receipts,
+		usedGas:  usedGas,
+		mining:   mining,
+	}
+	if err := s.execEndBlock(ctx); err != nil {
+		return err
 	}
 
-	if beforeChange, _, _ := s.CheckPoint(header.Number.Uint64()); beforeChange {
-		if err := s.execEpochChange(&systemTxContext{
-			chain:    chain,
-			state:    state,
-			header:   header,
-			chainCtx: chainContext{Chain: chain, engine: s},
-			txs:      &txs,
-			sysTxs:   nil,
-			receipts: &receipts,
-			usedGas:  &header.GasUsed,
-			mining:   true,
-		}); err != nil {
-			// todo(fuk): governance forbid execute error
-			s.logger.Debug("FinalizeAndAssemble", "hash", header.Hash(), "execute `epochChange` failed", err)
-		} else {
-			if err := s.applySnapshot(state, header.Number, true); err != nil {
-				return nil, nil, err
-			}
-		}
+	status, _, err := s.CheckPoint(state, header)
+	if err != nil {
+		return err
 	}
-
-	// Assemble and return the final block for sealing
-	block := packBlock(state, chain, header, txs, receipts)
-	return block, receipts, nil
+	switch status {
+	case consensus.CheckPointStatePrepare:
+		return s.execEpochChange(ctx)
+	case consensus.CheckPointStateStart:
+		return s.applySnapshot(state, header, mining)
+	default:
+		return nil
+	}
 }
 
 func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {

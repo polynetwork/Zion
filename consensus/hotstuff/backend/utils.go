@@ -21,7 +21,6 @@ package backend
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -84,7 +83,7 @@ func (s *backend) getSystemMessage(from, toAddress common.Address, data []byte, 
 	}
 }
 
-// applyTransaction execute transaction without miner worker.
+// applyTransaction execute transaction without miner worker, and only succeed tx will be packed in block.
 func (s *backend) applyTransaction(
 	chain consensus.ChainHeaderReader,
 	msg callmsg,
@@ -97,8 +96,7 @@ func (s *backend) applyTransaction(
 	nonce := state.GetNonce(msg.From())
 
 	expectedTx := types.NewTransaction(nonce, *msg.To(), msg.Value(), msg.Gas(), msg.GasPrice(), msg.Data())
-	signer := types.NewEIP155Signer(chain.Config().ChainID)
-	expectedHash := signer.Hash(expectedTx)
+	signer := types.MakeSigner(chain.Config(), header.Number)
 
 	// miner worker use finalizeAndAssemble in which the param of `mining` is true,  it's denote
 	// that this tx comes from miner. `validator` send governance tx in the same nonce is forbidden.
@@ -109,10 +107,12 @@ func (s *backend) applyTransaction(
 		}
 	} else {
 		if sysTxs == nil || len(*sysTxs) == 0 || (*sysTxs)[0] == nil {
-			return errors.New("supposed to get a actual transaction, but get none")
+			//return errors.New("supposed to get a actual transaction, but get none")
+			// allow empty system contract
+			return nil
 		}
 		actualTx := (*sysTxs)[0]
-		if !bytes.Equal(signer.Hash(actualTx).Bytes(), expectedHash.Bytes()) {
+		if expectedHash := signer.Hash(expectedTx); !bytes.Equal(signer.Hash(actualTx).Bytes(), expectedHash.Bytes()) {
 			return fmt.Errorf("expected tx hash %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s;"+
 				"get tx hash %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s",
 				expectedHash.String(),
@@ -163,7 +163,7 @@ func (s *backend) applyTransaction(
 	return nil
 }
 
-// applySnapshot message
+// applyMessage
 func applyMessage(
 	msg callmsg,
 	state *state.StateDB,
@@ -185,7 +185,7 @@ func applyMessage(
 		msg.Value(),
 	)
 	if err != nil {
-		log.Error("applySnapshot message failed", "msg", string(ret), "err", err)
+		log.Error("apply message failed", "msg", string(ret), "err", err)
 	}
 	return msg.Gas() - returnGas, err
 }
@@ -229,7 +229,7 @@ type systemTxContext struct {
 	mining   bool
 }
 
-func (s *backend) executeSystemTx(ctx *systemTxContext, contract common.Address, payload []byte) error {
+func (s *backend) executeTransaction(ctx *systemTxContext, contract common.Address, payload []byte) error {
 	msg := s.getSystemMessage(ctx.header.Coinbase, contract, payload, common.Big0)
 	return s.applyTransaction(ctx.chain, msg, ctx.state, ctx.header, ctx.chainCtx, ctx.txs, ctx.receipts, ctx.sysTxs, ctx.usedGas, ctx.mining)
 }

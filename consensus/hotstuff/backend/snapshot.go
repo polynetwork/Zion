@@ -35,9 +35,8 @@ import (
 )
 
 var (
-	startSnapID       = nm.StartEpochID.Uint64()
-	genesisSnapStart  = uint64(0)
-	genesisSnapLength = nm.GenesisBlockPerEpoch.Uint64()
+	startSnapID      = nm.StartEpochID.Uint64()
+	genesisSnapStart = uint64(0)
 )
 
 func init() {
@@ -49,7 +48,6 @@ func init() {
 		snap := &snapshot{
 			ID:     startSnapID,
 			Start:  genesisSnapStart,
-			End:    calcEnd(genesisSnapStart, genesisSnapLength),
 			ValSet: NewDefaultValSet(extra.Validators),
 		}
 		return snap.store(db)
@@ -168,20 +166,11 @@ func (s *snapshots) start() uint64 {
 	return s.list[0].Start
 }
 
-// end retrieve current snapshot end height
-func (s *snapshots) end() uint64 {
-	if s.list == nil {
-		return genesisSnapLength
+func (s *snapshots) lastStart() uint64 {
+	if s.list == nil || len(s.list) < 2 {
+		return 0
 	}
-	return s.list[0].End
-}
-
-// nextStart retrieve next snapshot start height, which should be equal to current end + 1
-func (s *snapshots) nextStart() uint64 {
-	if s.list == nil {
-		return genesisSnapStart
-	}
-	return s.list[0].End + 1
+	return s.list[1].Start
 }
 
 // nextId retrieve next snapshot identity
@@ -195,15 +184,13 @@ func (s *snapshots) nextId() uint64 {
 type snapshot struct {
 	ID     uint64 // id started from 1
 	Start  uint64 // start block height
-	End    uint64 // end block height
 	ValSet hotstuff.ValidatorSet
 }
 
-func newSnapshot(id, start, end uint64, list []common.Address) *snapshot {
+func newSnapshot(id, start uint64, list []common.Address) *snapshot {
 	return &snapshot{
 		ID:     id,
 		Start:  start,
-		End:    end,
 		ValSet: NewDefaultValSet(list),
 	}
 }
@@ -228,13 +215,12 @@ func (e *snapshot) copy() *snapshot {
 	return &snapshot{
 		ID:     e.ID,
 		Start:  e.Start,
-		End:    e.End,
 		ValSet: e.ValSet.Copy(),
 	}
 }
 
 func (e *snapshot) String() string {
-	return fmt.Sprintf("{ID: %d, Start: %d, End: %d, Size: %d, Valset: %v}", e.ID, e.Start, e.End, e.ValSet.Size(), e.ValSet.AddressList())
+	return fmt.Sprintf("{ID: %d, Start: %d, Size: %d, Valset: %v}", e.ID, e.Start, e.ValSet.Size(), e.ValSet.AddressList())
 }
 
 type epochJSON struct {
@@ -248,7 +234,6 @@ func (e *snapshot) toJSONStruct() *epochJSON {
 	return &epochJSON{
 		ID:         e.ID,
 		Start:      e.Start,
-		End:        e.End,
 		Validators: e.ValSet.AddressList(),
 	}
 }
@@ -262,7 +247,6 @@ func (e *snapshot) UnmarshalJSON(b []byte) error {
 
 	e.ID = j.ID
 	e.Start = j.Start
-	e.End = j.End
 	e.ValSet = NewDefaultValSet(j.Validators)
 	return nil
 }

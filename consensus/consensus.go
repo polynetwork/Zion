@@ -156,9 +156,9 @@ type HotStuff interface {
 	Stop() error
 
 	// CheckPoint retrieve the flags of whether epoch change and next validator set.
-	CheckPoint(height uint64) (bool, bool, bool)
+	CheckPoint(state *state.StateDB, header *types.Header) (CheckPointStatus, uint64, error)
 
-	ValidatorList(height uint64) []common.Address
+	ValidatorList(state *state.StateDB, height *big.Int) ([]common.Address, error)
 
 	// IsSystemCall whether the method id is the governance tx method
 	IsSystemTransaction(tx *types.Transaction, header *types.Header) bool
@@ -194,6 +194,15 @@ type StaticNodesEvent struct{ Validators []common.Address }
 
 type EpochChainConfig struct {
 	StartHeight uint64
-	EndHeight uint64
-	Validators []common.Address
+	EndHeight   uint64
+	Validators  []common.Address
 }
+
+type CheckPointStatus uint8
+
+const (
+	CheckPointStateUnknown CheckPointStatus = iota
+	CheckPointStatePrepare                  // before epoch change start
+	CheckPointStateStart                    // set new validators in header extra
+	CheckPointStateChange                   // restart worker and engine
+)

@@ -127,7 +127,7 @@ func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types
 	header := makeHeader(parent, engine.config)
 	engine.Prepare(chain, header)
 	state, _ := chain.StateAt(parent.Root())
-	block, _,  _ := engine.FinalizeAndAssemble(chain, header, state, nil, nil, nil)
+	block, _, _ := engine.FinalizeAndAssemble(chain, header, state, nil, nil, nil)
 	return block
 }
 
@@ -144,7 +144,7 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	b, _ := New(config, nodeKeys[0], memDB).(*backend)
 	b.snaps = &snapshots{
 		list: []*snapshot{
-			{ID: 1, Start: 0, End: 200, ValSet: valset},
+			{ID: 1, Start: 0, ValSet: valset},
 		},
 	}
 	genesis.MustCommit(memDB)
