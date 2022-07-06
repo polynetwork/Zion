@@ -88,7 +88,7 @@ func (s *SignerImpl) SigHash(header *types.Header) (hash common.Hash) {
 	hasher := sha3.NewLegacyKeccak256()
 
 	// Clean seal is required for calculating proposer seal.
-	rlp.Encode(hasher, types.HotstuffFilteredHeader(header, false))
+	rlp.Encode(hasher, types.HotstuffFilteredHeader(header))
 	hasher.Sum(hash[:0])
 	return hash
 }
