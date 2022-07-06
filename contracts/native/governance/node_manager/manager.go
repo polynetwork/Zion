@@ -156,9 +156,8 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	if params.Commission.Sign() == -1 {
 		return nil, fmt.Errorf("CreateValidator, commission must be positive")
 	}
-	if params.Commission.Cmp(globalConfig.MaxCommission) == 1 {
-		return nil, fmt.Errorf("CreateValidator, commission can not greater than globalConfig.MaxCommission: %s",
-			globalConfig.MaxCommission.String())
+	if params.Commission.Cmp(new(big.Int).SetUint64(10000)) == 1 {
+		return nil, fmt.Errorf("CreateValidator, commission can not greater than 100 percent")
 	}
 
 	// check desc
@@ -309,12 +308,13 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 	if params.Commission.Sign() == -1 {
 		return nil, fmt.Errorf("UpdateCommission, commission must be positive")
 	}
-	if params.Commission.Cmp(new(big.Int).SetUint64(100)) == 1 {
-		return nil, fmt.Errorf("UpdateCommission, commission can not more than 100")
+	if params.Commission.Cmp(new(big.Int).SetUint64(10000)) == 1 {
+		return nil, fmt.Errorf("UpdateCommission, commission can not more than 100 percent")
 	}
-	if params.Commission.Cmp(globalConfig.MaxCommission) == 1 {
-		return nil, fmt.Errorf("UpdateCommission, commission can not greater than globalConfig.MaxCommission: %s",
-			globalConfig.MaxCommission.String())
+	// abs(old commission - new commission)
+	if new(big.Int).Abs(new(big.Int).Sub(validator.Commission.Rate.BigInt(), params.Commission)).Cmp(globalConfig.MaxCommissionChange) == 1 {
+		return nil, fmt.Errorf("UpdateCommission, commission change can not greater than globalConfig.MaxCommissionChange: %s",
+			globalConfig.MaxCommissionChange.String())
 	}
 	if height.Cmp(new(big.Int).Add(validator.Commission.UpdateHeight, globalConfig.BlockPerEpoch)) < 0 {
 		return nil, fmt.Errorf("UpdateCommission, commission can not changed in one epoch twice")

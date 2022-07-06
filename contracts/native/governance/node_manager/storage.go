@@ -293,6 +293,21 @@ func getGlobalConfig(s *native.NativeContract) (*GlobalConfig, error) {
 	return globalConfig, nil
 }
 
+func GetGlobalConfigFromDB(s *state.StateDB) (*GlobalConfig, error) {
+	cache := (*state.CacheDB)(s)
+
+	globalConfig := new(GlobalConfig)
+	key := globalConfigKey()
+	store, err := customGet(cache, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetGlobalConfigFromDB, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, globalConfig); err != nil {
+		return nil, fmt.Errorf("GetGlobalConfigFromDB, deserialize globalConfig error: %v", err)
+	}
+	return globalConfig, nil
+}
+
 func addToAllValidators(s *native.NativeContract, consensusPk string) error {
 	allValidators, err := getAllValidators(s)
 	if err != nil {
@@ -629,6 +644,29 @@ func GetCurrentEpochInfoImpl(s *native.NativeContract) (*EpochInfo, error) {
 	return epochInfo, nil
 }
 
+func GetCurrentEpochInfoFromDB(s *state.StateDB) (*EpochInfo, error) {
+	cache := (*state.CacheDB)(s)
+	key := currentEpochKey()
+	store, err := customGet(cache, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get store error: %v", err)
+	}
+	ID := new(big.Int).SetBytes(store)
+
+	epochInfo := &EpochInfo{
+		Validators: make([]*Peer, 0),
+	}
+	key = epochInfoKey(ID)
+	store, err = customGet(cache, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, epochInfo); err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, deserialize epoch info error: %v", err)
+	}
+	return epochInfo, nil
+}
+
 func setEpochInfo(s *native.NativeContract, epochInfo *EpochInfo) error {
 	key := epochInfoKey(epochInfo.ID)
 	store, err := rlp.EncodeToBytes(epochInfo)
@@ -650,6 +688,23 @@ func getEpochInfo(s *native.NativeContract, ID *big.Int) (*EpochInfo, error) {
 	}
 	if err := rlp.DecodeBytes(store, epochInfo); err != nil {
 		return nil, fmt.Errorf("GetEpochInfo, deserialize epoch info error: %v", err)
+	}
+	return epochInfo, nil
+}
+
+func GetEpochInfoFromDB(s *state.StateDB, ID *big.Int) (*EpochInfo, error) {
+	cache := (*state.CacheDB)(s)
+
+	epochInfo := &EpochInfo{
+		Validators: make([]*Peer, 0),
+	}
+	key := epochInfoKey(ID)
+	store, err := customGet(cache, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetEpochInfoFromDB, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, epochInfo); err != nil {
+		return nil, fmt.Errorf("GetEpochInfoFromDB, deserialize epoch info error: %v", err)
 	}
 	return epochInfo, nil
 }

@@ -106,7 +106,7 @@ type Commission struct {
 }
 
 type GlobalConfig struct {
-	MaxCommission         *big.Int
+	MaxCommissionChange   *big.Int
 	MinInitialStake       *big.Int
 	MaxDescLength         uint64
 	BlockPerEpoch         *big.Int
@@ -156,9 +156,10 @@ func (m *UnlockingInfo) Decode(payload []byte) error {
 }
 
 type UnlockingStake struct {
-	Height         *big.Int
-	CompleteHeight *big.Int
-	Amount         Dec
+	Height          *big.Int
+	CompleteHeight  *big.Int
+	ConsensusPubkey string
+	Amount          Dec
 }
 
 type EpochInfo struct {

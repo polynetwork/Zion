@@ -105,9 +105,10 @@ func unStake(s *native.NativeContract, from common.Address, amount Dec, validato
 	// update lock and unlock token pool
 	if validator.IsLocked() {
 		unlockingStake := &UnlockingStake{
-			Height:         height,
-			CompleteHeight: new(big.Int).Add(height, globalConfig.BlockPerEpoch),
-			Amount:         amount,
+			Height:          height,
+			CompleteHeight:  new(big.Int).Add(height, globalConfig.BlockPerEpoch),
+			ConsensusPubkey: validator.ConsensusPubkey,
+			Amount:          amount,
 		}
 		err = addUnlockingInfo(s, from, unlockingStake)
 		if err != nil {
@@ -129,9 +130,10 @@ func unStake(s *native.NativeContract, from common.Address, amount Dec, validato
 
 	if validator.IsUnlocking(height) || validator.IsRemoving(height) {
 		unlockingStake := &UnlockingStake{
-			Height:         height,
-			CompleteHeight: validator.UnlockHeight,
-			Amount:         amount,
+			Height:          height,
+			CompleteHeight:  validator.UnlockHeight,
+			ConsensusPubkey: validator.ConsensusPubkey,
+			Amount:          amount,
 		}
 		err = addUnlockingInfo(s, from, unlockingStake)
 		if err != nil {
