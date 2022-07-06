@@ -27,12 +27,12 @@ import (
 )
 
 const (
-	TokenPrecision = 18
+	TokenPrecision   = 18
 	PercentPrecision = 4
 )
 
 var (
-	TokenDecimal = new(big.Int).Exp(big.NewInt(10), big.NewInt(TokenPrecision), nil)
+	TokenDecimal   = new(big.Int).Exp(big.NewInt(10), big.NewInt(TokenPrecision), nil)
 	PercentDecimal = new(big.Int).Exp(big.NewInt(10), big.NewInt(PercentPrecision), nil)
 )
 
@@ -44,9 +44,9 @@ func IncreaseValidatorPeriod(s *native.NativeContract, validator *Validator) (ui
 	}
 
 	// fetch current rewards
-	validatorAccumulatedRewards, err := GetValidatorAccumulatedRewards(s, dec)
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(s, dec)
 	if err != nil {
-		return 0, fmt.Errorf("IncreaseValidatorPeriod, GetValidatorAccumulatedRewards error: %v", err)
+		return 0, fmt.Errorf("IncreaseValidatorPeriod, getValidatorAccumulatedRewards error: %v", err)
 	}
 
 	// calculate current ratio
@@ -54,9 +54,9 @@ func IncreaseValidatorPeriod(s *native.NativeContract, validator *Validator) (ui
 	ratio, err := validatorAccumulatedRewards.Rewards.DivWithTokenDecimal(validator.TotalStake)
 
 	// fetch snapshot rewards for last period
-	validatorSnapshotRewards, err := GetValidatorSnapshotRewards(s, dec, validatorAccumulatedRewards.Period-1)
+	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, dec, validatorAccumulatedRewards.Period-1)
 	if err != nil {
-		return 0, fmt.Errorf("IncreaseValidatorPeriod, GetValidatorSnapshotRewards error: %v", err)
+		return 0, fmt.Errorf("IncreaseValidatorPeriod, getValidatorSnapshotRewards error: %v", err)
 	}
 
 	// decrement reference count
@@ -114,13 +114,13 @@ func withdrawStakeRewards(s *native.NativeContract, validator *Validator, stakeI
 	}
 
 	// update the outstanding rewards
-	outstanding, err := GetOutstandingRewards(s)
+	outstanding, err := getOutstandingRewards(s)
 	if err != nil {
-		return Dec{nil}, fmt.Errorf("withdrawStakeRewards, GetOutstandingRewards error: %v", err)
+		return Dec{nil}, fmt.Errorf("withdrawStakeRewards, getOutstandingRewards error: %v", err)
 	}
-	validatorOutstanding, err := GetValidatorOutstandingRewards(s, dec)
+	validatorOutstanding, err := getValidatorOutstandingRewards(s, dec)
 	if err != nil {
-		return Dec{nil}, fmt.Errorf("withdrawStakeRewards, GetValidatorOutstandingRewards error: %v", err)
+		return Dec{nil}, fmt.Errorf("withdrawStakeRewards, getValidatorOutstandingRewards error: %v", err)
 	}
 	newOutstandingRewards, err := outstanding.Rewards.Sub(rewards)
 	if err != nil {
@@ -140,9 +140,9 @@ func withdrawStakeRewards(s *native.NativeContract, validator *Validator, stakeI
 	}
 
 	// decrement reference count of starting period
-	startingInfo, err := GetStakeStartingInfo(s, stakeInfo.StakeAddress, dec)
+	startingInfo, err := getStakeStartingInfo(s, stakeInfo.StakeAddress, dec)
 	if err != nil {
-		return Dec{nil}, fmt.Errorf("withdrawStakeRewards, GetStakeStartingInfo error: %v", err)
+		return Dec{nil}, fmt.Errorf("withdrawStakeRewards, getStakeStartingInfo error: %v", err)
 	}
 	startPeriod := startingInfo.StartPeriod
 	err = decreaseReferenceCount(s, dec, startPeriod)
@@ -157,9 +157,9 @@ func withdrawStakeRewards(s *native.NativeContract, validator *Validator, stakeI
 
 func CalculateStakeRewards(s *native.NativeContract, stakeAddress common.Address, dec []byte, endPeriod uint64) (Dec, error) {
 	// fetch starting info for delegation
-	startingInfo, err := GetStakeStartingInfo(s, stakeAddress, dec)
+	startingInfo, err := getStakeStartingInfo(s, stakeAddress, dec)
 	if err != nil {
-		return Dec{nil}, fmt.Errorf("CalculateStakeRewards, GetStakeStartingInfo error: %v", err)
+		return Dec{nil}, fmt.Errorf("CalculateStakeRewards, getStakeStartingInfo error: %v", err)
 	}
 
 	startPeriod := startingInfo.StartPeriod
@@ -171,13 +171,13 @@ func CalculateStakeRewards(s *native.NativeContract, stakeAddress common.Address
 	}
 
 	// return staking * (ending - starting)
-	starting, err := GetValidatorSnapshotRewards(s, dec, startPeriod)
+	starting, err := getValidatorSnapshotRewards(s, dec, startPeriod)
 	if err != nil {
-		return Dec{nil}, fmt.Errorf("CalculateStakeRewards, GetValidatorSnapshotRewards start error: %v", err)
+		return Dec{nil}, fmt.Errorf("CalculateStakeRewards, getValidatorSnapshotRewards start error: %v", err)
 	}
-	ending, err := GetValidatorSnapshotRewards(s, dec, endPeriod)
+	ending, err := getValidatorSnapshotRewards(s, dec, endPeriod)
 	if err != nil {
-		return Dec{nil}, fmt.Errorf("CalculateStakeRewards, GetValidatorSnapshotRewards end error: %v", err)
+		return Dec{nil}, fmt.Errorf("CalculateStakeRewards, getValidatorSnapshotRewards end error: %v", err)
 	}
 	difference, err := ending.AccumulatedRewardsRatio.Sub(starting.AccumulatedRewardsRatio)
 	if err != nil {
@@ -192,9 +192,9 @@ func CalculateStakeRewards(s *native.NativeContract, stakeAddress common.Address
 
 func initializeStake(s *native.NativeContract, stakeInfo *StakeInfo, dec []byte) error {
 	// period has already been incremented
-	validatorAccumulatedRewards, err := GetValidatorAccumulatedRewards(s, dec)
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(s, dec)
 	if err != nil {
-		return fmt.Errorf("initializeStake, GetValidatorAccumulatedRewards start error: %v", err)
+		return fmt.Errorf("initializeStake, getValidatorAccumulatedRewards start error: %v", err)
 	}
 	previousPeriod := validatorAccumulatedRewards.Period - 1
 
@@ -214,19 +214,19 @@ func initializeStake(s *native.NativeContract, stakeInfo *StakeInfo, dec []byte)
 }
 
 func withdrawCommission(s *native.NativeContract, stakeAddress common.Address, dec []byte) (Dec, error) {
-	accumulatedCommission, err := GetAccumulatedCommission(s, dec)
+	accumulatedCommission, err := getAccumulatedCommission(s, dec)
 	if err != nil {
-		return Dec{nil}, fmt.Errorf("withdrawCommission, GetAccumulatedCommission error: %v", err)
+		return Dec{nil}, fmt.Errorf("withdrawCommission, getAccumulatedCommission error: %v", err)
 	}
 
 	// update the outstanding rewards
-	outstanding, err := GetOutstandingRewards(s)
+	outstanding, err := getOutstandingRewards(s)
 	if err != nil {
-		return Dec{nil}, fmt.Errorf("withdrawCommission, GetOutstandingRewards error: %v", err)
+		return Dec{nil}, fmt.Errorf("withdrawCommission, getOutstandingRewards error: %v", err)
 	}
-	validatorOutstanding, err := GetValidatorOutstandingRewards(s, dec)
+	validatorOutstanding, err := getValidatorOutstandingRewards(s, dec)
 	if err != nil {
-		return Dec{nil}, fmt.Errorf("withdrawCommission, GetValidatorOutstandingRewards error: %v", err)
+		return Dec{nil}, fmt.Errorf("withdrawCommission, getValidatorOutstandingRewards error: %v", err)
 	}
 	newOutstandingRewards, err := outstanding.Rewards.Sub(accumulatedCommission.Amount)
 	if err != nil {
@@ -269,9 +269,9 @@ func allocateRewardsToValidator(s *native.NativeContract, validator *Validator, 
 	}
 
 	// update accumulate commission
-	currentCommission, err := GetAccumulatedCommission(s, dec)
+	currentCommission, err := getAccumulatedCommission(s, dec)
 	if err != nil {
-		return fmt.Errorf("allocateRewardsToValidator, GetAccumulatedCommission error: %v", err)
+		return fmt.Errorf("allocateRewardsToValidator, getAccumulatedCommission error: %v", err)
 	}
 	currentCommission.Amount, err = currentCommission.Amount.Add(commission)
 	if err != nil {
@@ -283,9 +283,9 @@ func allocateRewardsToValidator(s *native.NativeContract, validator *Validator, 
 	}
 
 	// update accumulate rewards
-	validatorAccumulatedRewards, err := GetValidatorAccumulatedRewards(s, dec)
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(s, dec)
 	if err != nil {
-		return fmt.Errorf("allocateRewardsToValidator, GetValidatorAccumulatedRewards error: %v", err)
+		return fmt.Errorf("allocateRewardsToValidator, getValidatorAccumulatedRewards error: %v", err)
 	}
 	validatorAccumulatedRewards.Rewards, err = validatorAccumulatedRewards.Rewards.Add(stakeRewards)
 	if err != nil {
@@ -297,9 +297,9 @@ func allocateRewardsToValidator(s *native.NativeContract, validator *Validator, 
 	}
 
 	// update validator outstanding
-	outstanding, err := GetValidatorOutstandingRewards(s, dec)
+	outstanding, err := getValidatorOutstandingRewards(s, dec)
 	if err != nil {
-		return fmt.Errorf("allocateRewardsToValidator, GetValidatorOutstandingRewards error: %v", err)
+		return fmt.Errorf("allocateRewardsToValidator, getValidatorOutstandingRewards error: %v", err)
 	}
 	outstanding.Rewards, err = outstanding.Rewards.Add(rewards)
 	if err != nil {

@@ -1,6 +1,6 @@
-pragma solidity =0.5.16;
+pragma solidity >=0.7.0 <0.9.0;
 
-contract INodeManager {
+interface INodeManager {
     function createValidator(string calldata consensusPubkey, address proposalAddress, int commission, int initStake, string calldata desc) external returns(bool success);
     function updateValidator(string calldata consensusPubkey, address proposalAddress, string calldata desc) external returns(bool success);
     function updateCommission(string calldata consensusPubkey, int commission) external returns(bool success);
@@ -16,6 +16,18 @@ contract INodeManager {
     function getGlobalConfig() external view returns (bytes memory);
     function getCommunityInfo() external view returns (bytes memory);
     function getCurrentEpochInfo() external view returns (bytes memory);
+    function getEpochInfo(int id) external view returns (bytes memory);
+    function getAllValidators() external view returns (bytes memory);
+    function getValidator(string calldata consensusPubkey) external view returns (bytes memory);
+    function getStakeInfo(string calldata consensusPubkey, address stakeAddress) external view returns (bytes memory);
+    function getUnlockingInfo(address stakeAddress) external view returns (bytes memory);
+    function getStakeStartingInfo(string calldata consensusPubkey, address stakeAddress) external view returns (bytes memory);
+    function getAccumulatedCommission(string calldata consensusPubkey) external view returns (bytes memory);
+    function getValidatorSnapshotRewards(string calldata consensusPubkey, uint64 period) external view returns (bytes memory);
+    function getValidatorAccumulatedRewards(string calldata consensusPubkey) external view returns (bytes memory);
+    function getValidatorOutstandingRewards(string calldata consensusPubkey) external view returns (bytes memory);
+    function getTotalPool() external view returns (bytes memory);
+    function getOutstandingRewards() external view returns (bytes memory);
 
     event CreateValidator(string consensusPubkey);
     event UpdateValidator(string consensusPubkey);

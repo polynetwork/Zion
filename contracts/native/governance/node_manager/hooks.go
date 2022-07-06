@@ -64,9 +64,9 @@ func AfterValidatorRemoved(s *native.NativeContract, validator *Validator) error
 	}
 
 	// fetch outstanding
-	//outstanding, err := GetValidatorOutstandingRewards(s, dec)
+	//outstanding, err := getValidatorOutstandingRewards(s, dec)
 	//if err != nil {
-	//	return fmt.Errorf("AfterValidatorRemoved, GetValidatorOutstandingRewards error: %v", err)
+	//	return fmt.Errorf("AfterValidatorRemoved, getValidatorOutstandingRewards error: %v", err)
 	//}
 	//TODO: transfer outstanding dust to community pool
 
@@ -76,9 +76,9 @@ func AfterValidatorRemoved(s *native.NativeContract, validator *Validator) error
 	// remove commission record
 	delAccumulatedCommission(s, dec)
 
-	validatorAccumulatedRewards, err := GetValidatorAccumulatedRewards(s, dec)
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(s, dec)
 	if err != nil {
-		return fmt.Errorf("AfterValidatorRemoved, GetValidatorAccumulatedRewards error: %v", err)
+		return fmt.Errorf("AfterValidatorRemoved, getValidatorAccumulatedRewards error: %v", err)
 	}
 
 	// clear accumulate rewards

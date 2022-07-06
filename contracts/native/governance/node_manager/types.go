@@ -41,6 +41,16 @@ type AllValidators struct {
 	AllValidators []string
 }
 
+func (m *AllValidators) Decode(payload []byte) error {
+	var data struct {
+		AllValidators []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetAllValidators, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.AllValidators, m)
+}
+
 type Validator struct {
 	StakeAddress     common.Address
 	ConsensusPubkey  string
@@ -53,6 +63,16 @@ type Validator struct {
 	TotalStake       Dec
 	SelfStake        Dec
 	Desc             string
+}
+
+func (m *Validator) Decode(payload []byte) error {
+	var data struct {
+		Validator []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetValidator, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.Validator, m)
 }
 
 // IsLocked checks if the validator status equals Locked
@@ -86,7 +106,7 @@ type Commission struct {
 }
 
 type GlobalConfig struct {
-	MaxCommission         *big.Int
+	MaxCommissionChange   *big.Int
 	MinInitialStake       *big.Int
 	MaxDescLength         uint64
 	BlockPerEpoch         *big.Int
@@ -110,15 +130,36 @@ type StakeInfo struct {
 	Amount          Dec
 }
 
+func (m *StakeInfo) Decode(payload []byte) error {
+	var data struct {
+		StakeInfo []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetStakeInfo, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.StakeInfo, m)
+}
+
 type UnlockingInfo struct {
 	StakeAddress   common.Address
 	UnlockingStake []*UnlockingStake
 }
 
+func (m *UnlockingInfo) Decode(payload []byte) error {
+	var data struct {
+		UnlockingInfo []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetUnlockingInfo, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.UnlockingInfo, m)
+}
+
 type UnlockingStake struct {
-	Height         *big.Int
-	CompleteHeight *big.Int
-	Amount         Dec
+	Height          *big.Int
+	CompleteHeight  *big.Int
+	ConsensusPubkey string
+	Amount          Dec
 }
 
 type EpochInfo struct {
@@ -169,17 +210,57 @@ type AccumulatedCommission struct {
 	Amount Dec
 }
 
+func (m *AccumulatedCommission) Decode(payload []byte) error {
+	var data struct {
+		AccumulatedCommission []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetAccumulatedCommission, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.AccumulatedCommission, m)
+}
+
 type ValidatorAccumulatedRewards struct {
 	Rewards Dec
 	Period  uint64
+}
+
+func (m *ValidatorAccumulatedRewards) Decode(payload []byte) error {
+	var data struct {
+		ValidatorAccumulatedRewards []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetValidatorAccumulatedRewards, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.ValidatorAccumulatedRewards, m)
 }
 
 type ValidatorOutstandingRewards struct {
 	Rewards Dec
 }
 
+func (m *ValidatorOutstandingRewards) Decode(payload []byte) error {
+	var data struct {
+		ValidatorOutstandingRewards []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetValidatorOutstandingRewards, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.ValidatorOutstandingRewards, m)
+}
+
 type OutstandingRewards struct {
 	Rewards Dec
+}
+
+func (m *OutstandingRewards) Decode(payload []byte) error {
+	var data struct {
+		OutstandingRewards []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetOutstandingRewards, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.OutstandingRewards, m)
 }
 
 type ValidatorSnapshotRewards struct {
@@ -187,10 +268,30 @@ type ValidatorSnapshotRewards struct {
 	ReferenceCount          uint64
 }
 
+func (m *ValidatorSnapshotRewards) Decode(payload []byte) error {
+	var data struct {
+		ValidatorSnapshotRewards []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetValidatorSnapshotRewards, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.ValidatorSnapshotRewards, m)
+}
+
 type StakeStartingInfo struct {
 	StartPeriod uint64
 	Stake       Dec
 	Height      *big.Int
+}
+
+func (m *StakeStartingInfo) Decode(payload []byte) error {
+	var data struct {
+		StakeStartingInfo []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetStakeStartingInfo, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.StakeStartingInfo, m)
 }
 
 type Peer struct {
@@ -237,4 +338,18 @@ func (m *CommunityInfo) Decode(payload []byte) error {
 		return err
 	}
 	return rlp.DecodeBytes(data.CommunityInfo, m)
+}
+
+type TotalPool struct {
+	TotalPool Dec
+}
+
+func (m *TotalPool) Decode(payload []byte) error {
+	var data struct {
+		TotalPool []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetTotalPool, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.TotalPool, m)
 }

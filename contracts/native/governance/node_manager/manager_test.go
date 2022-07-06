@@ -69,14 +69,14 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, globalConfig.MaxDescLength, GenesisMaxDescLength)
 	assert.Equal(t, globalConfig.BlockPerEpoch, GenesisBlockPerEpoch)
-	assert.Equal(t, globalConfig.MaxCommission, GenesisMaxCommission)
+	assert.Equal(t, globalConfig.MaxCommissionChange, GenesisMaxCommissionChange)
 	assert.Equal(t, globalConfig.MinInitialStake, GenesisMinInitialStake)
 	assert.Equal(t, globalConfig.VoterValidatorNum, GenesisVoterValidatorNum)
 	assert.Equal(t, globalConfig.ConsensusValidatorNum, GenesisConsensusValidatorNum)
 
 	communityInfo, err := getCommunityInfo(contract)
 	assert.Nil(t, err)
-	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(20))
+	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(2000))
 	assert.Equal(t, communityInfo.CommunityAddress, common.EmptyAddress)
 
 	epochInfo, err := GetCurrentEpochInfoImpl(contract)
@@ -94,7 +94,7 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, globalConfig2.MaxDescLength, GenesisMaxDescLength)
 	assert.Equal(t, globalConfig2.BlockPerEpoch, GenesisBlockPerEpoch)
-	assert.Equal(t, globalConfig2.MaxCommission, GenesisMaxCommission)
+	assert.Equal(t, globalConfig2.MaxCommissionChange, GenesisMaxCommissionChange)
 	assert.Equal(t, globalConfig2.MinInitialStake, GenesisMinInitialStake)
 	assert.Equal(t, globalConfig2.VoterValidatorNum, GenesisVoterValidatorNum)
 	assert.Equal(t, globalConfig2.ConsensusValidatorNum, GenesisConsensusValidatorNum)
@@ -107,7 +107,7 @@ func TestCheckGenesis(t *testing.T) {
 	communityInfo2 := new(CommunityInfo)
 	err = communityInfo2.Decode(ret)
 	assert.Nil(t, err)
-	assert.Equal(t, communityInfo2.CommunityRate, big.NewInt(20))
+	assert.Equal(t, communityInfo2.CommunityRate, big.NewInt(2000))
 	assert.Equal(t, communityInfo2.CommunityAddress, common.EmptyAddress)
 
 	param3 := new(GetCurrentEpochInfoParam)
@@ -156,10 +156,10 @@ func TestStake(t *testing.T) {
 		assert.Nil(t, err)
 	}
 	// check
-	allValidators, err := GetAllValidators(contractQuery)
+	allValidators, err := getAllValidators(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, len(allValidators.AllValidators), loop)
-	validator, _, err := GetValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err := getValidator(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
@@ -181,16 +181,16 @@ func TestStake(t *testing.T) {
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	// check
-	validator, _, err = GetValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(110000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
 	assert.Equal(t, validator.Status, Unlock)
 	assert.Equal(t, validator.Commission.Rate.BigInt(), new(big.Int).SetUint64(2000))
 	assert.Equal(t, validator.UnlockHeight, new(big.Int))
-	totalPool, err := GetTotalPool(contractQuery)
+	totalPool, err := getTotalPool(contractQuery)
 	assert.Nil(t, err)
-	assert.Equal(t, totalPool.BigInt(), new(big.Int).Mul(big.NewInt(610000), params.ZNT1))
+	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(610000), params.ZNT1))
 
 	// unstake
 	param2 := new(UnStakeParam)
@@ -203,15 +203,15 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	validator, _, err = GetValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(109000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
 	assert.Equal(t, validator.Status, Unlock)
 	assert.Equal(t, validator.UnlockHeight, new(big.Int))
-	totalPool, err = GetTotalPool(contractQuery)
+	totalPool, err = getTotalPool(contractQuery)
 	assert.Nil(t, err)
-	assert.Equal(t, totalPool.BigInt(), new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
+	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
 	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(991000), params.ZNT1))
 
 	// change epoch
@@ -228,12 +228,12 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(400000))
 	assert.Equal(t, len(epochInfo.Validators), 4)
 	assert.Equal(t, len(epochInfo.Voters), 4)
-	validator, _, err = GetValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.Status, Lock)
-	totalPool, err = GetTotalPool(contractQuery)
+	totalPool, err = getTotalPool(contractQuery)
 	assert.Nil(t, err)
-	assert.Equal(t, totalPool.BigInt(), new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
+	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
 
 	// unstake
 	param3 := new(UnStakeParam)
@@ -246,7 +246,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	validator, _, err = GetValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(108000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
@@ -259,16 +259,16 @@ func TestStake(t *testing.T) {
 	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
-	totalPool, err = GetTotalPool(contractQuery)
+	totalPool, err = getTotalPool(contractQuery)
 	assert.Nil(t, err)
-	assert.Equal(t, totalPool.BigInt(), new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
+	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
 	blockNumber = big.NewInt(800000)
 	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
-	totalPool, err = GetTotalPool(contractQuery)
+	totalPool, err = getTotalPool(contractQuery)
 	assert.Nil(t, err)
-	assert.Equal(t, totalPool.BigInt(), new(big.Int).Mul(big.NewInt(608000), params.ZNT1))
+	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(608000), params.ZNT1))
 
 	// update validator
 	param4 := new(UpdateValidatorParam)
@@ -281,7 +281,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 	param5 := new(UpdateCommissionParam)
 	param5.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
-	param5.Commission = new(big.Int).SetUint64(30)
+	param5.Commission = new(big.Int).SetUint64(2500)
 	input, err = param5.Encode()
 	assert.Nil(t, err)
 	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
@@ -289,13 +289,13 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	validator, _, err = GetValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(108000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
 	assert.Equal(t, validator.ProposalAddress, validatorsKey[0].Address)
 	assert.Equal(t, validator.Status, Lock)
-	assert.Equal(t, validator.Commission.Rate.BigInt(), new(big.Int).SetUint64(30))
+	assert.Equal(t, validator.Commission.Rate.BigInt(), new(big.Int).SetUint64(2500))
 	assert.Equal(t, validator.Commission.UpdateHeight, new(big.Int).SetUint64(800000))
 	assert.Equal(t, validator.UnlockHeight, new(big.Int))
 	assert.Equal(t, validator.Desc, "test2")
@@ -329,12 +329,12 @@ func TestStake(t *testing.T) {
 	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
 	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
 	assert.NotNil(t, err)
-	allValidators, err = GetAllValidators(contractQuery)
+	allValidators, err = getAllValidators(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, len(allValidators.AllValidators), loop-1)
 
 	// check
-	validator, _, err = GetValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.Status, Remove)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(992000), params.ZNT1))
@@ -355,7 +355,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	validator, _, err = GetValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.Status, Remove)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(993000), params.ZNT1))
@@ -372,7 +372,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	validator, found, err := GetValidator(contractQuery, validatorsKey[0].Dec)
+	validator, found, err := getValidator(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, found, false)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
@@ -391,7 +391,7 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(1300000))
 	assert.Equal(t, len(epochInfo.Validators), 4)
 	assert.Equal(t, len(epochInfo.Voters), 4)
-	validator, _, err = GetValidator(contractQuery, validatorsKey[4].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[4].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.Status, Lock)
 }
@@ -475,19 +475,175 @@ func TestDistribute(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	accumulatedCommission, err := GetAccumulatedCommission(contractQuery, validatorsKey[0].Dec)
+	accumulatedCommission, err := getAccumulatedCommission(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, accumulatedCommission.Amount.BigInt(), new(big.Int).Mul(big.NewInt(50), params.ZNT1))
-	validatorAccumulatedRewards, err := GetValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validatorAccumulatedRewards.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(200), params.ZNT1))
 
-	accumulatedCommission2, err := GetAccumulatedCommission(contractQuery, validatorsKey[1].Dec)
+	accumulatedCommission2, err := getAccumulatedCommission(contractQuery, validatorsKey[1].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, accumulatedCommission2.Amount.BigInt(), new(big.Int).Mul(big.NewInt(50), params.ZNT1))
-	validatorAccumulatedRewards2, err := GetValidatorAccumulatedRewards(contractQuery, validatorsKey[1].Dec)
+	validatorAccumulatedRewards2, err := getValidatorAccumulatedRewards(contractQuery, validatorsKey[1].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validatorAccumulatedRewards2.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(200), params.ZNT1))
+
+	// test query method
+	{
+		p1 := &GetEpochInfoParam{
+			ID: common.Big1,
+		}
+		input, err = p1.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err := contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		epochInfo := new(EpochInfo)
+		err = epochInfo.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, epochInfo.ID, common.Big1)
+
+		p2 := &GetAllValidatorsParam{}
+		input, err = p2.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		allValidators := new(AllValidators)
+		err = allValidators.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, len(allValidators.AllValidators), loop)
+
+		p3 := &GetValidatorParam{
+			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+		}
+		input, err = p3.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		validator := new(Validator)
+		err = validator.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, validator.ConsensusPubkey, validatorsKey[0].ConsensusPubkey)
+
+		p4 := &GetStakeInfoParam{
+			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+			StakeAddress:    stakeAddress,
+		}
+		input, err = p4.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		stakeInfo := new(StakeInfo)
+		err = stakeInfo.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, stakeInfo.ConsensusPubkey, validatorsKey[0].ConsensusPubkey)
+
+		p5 := &GetUnlockingInfoParam{
+			StakeAddress: stakeAddress,
+		}
+		input, err = p5.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		unlockingInfo := new(UnlockingInfo)
+		err = unlockingInfo.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, unlockingInfo.StakeAddress, stakeAddress)
+
+		p6 := &GetStakeStartingInfoParam{
+			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+			StakeAddress:    stakeAddress,
+		}
+		input, err = p6.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		stakeStartingInfo := new(StakeStartingInfo)
+		err = stakeStartingInfo.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, stakeStartingInfo.Stake.BigInt(), new(big.Int).Mul(big.NewInt(10000), params.ZNT1))
+
+		p7 := &GetAccumulatedCommissionParam{
+			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+		}
+		input, err = p7.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		accumulatedCommission = new(AccumulatedCommission)
+		err = accumulatedCommission.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, accumulatedCommission.Amount.BigInt(), new(big.Int).Mul(big.NewInt(50), params.ZNT1))
+
+		p8 := &GetValidatorSnapshotRewardsParam{
+			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+			Period:          3,
+		}
+		input, err = p8.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		validatorSnapshotRewards := new(ValidatorSnapshotRewards)
+		err = validatorSnapshotRewards.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, validatorSnapshotRewards.ReferenceCount, uint64(2))
+
+		p9 := &GetValidatorAccumulatedRewardsParam{
+			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+		}
+		input, err = p9.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		validatorAccumulatedRewards = new(ValidatorAccumulatedRewards)
+		err = validatorAccumulatedRewards.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, validatorAccumulatedRewards.Period, uint64(4))
+
+		p10 := &GetValidatorOutstandingRewardsParam{
+			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+		}
+		input, err = p10.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		validatorOutstandingRewards := new(ValidatorOutstandingRewards)
+		err = validatorOutstandingRewards.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, validatorOutstandingRewards.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(250), params.ZNT1))
+
+		p11 := &GetTotalPoolParam{}
+		input, err = p11.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		totalPool := new(TotalPool)
+		err = totalPool.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(630000), params.ZNT1))
+
+		p12 := &GetOutstandingRewardsParam{}
+		input, err = p12.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		outstandingRewards := new(OutstandingRewards)
+		err = outstandingRewards.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, outstandingRewards.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
+	}
 
 	// withdraw stake rewards and commission
 	param4 := new(WithdrawStakeRewardsParam)
@@ -520,21 +676,21 @@ func TestDistribute(t *testing.T) {
 	assert.Equal(t, sdb.GetBalance(validatorsKey[0].Address), new(big.Int).Mul(big.NewInt(900050), params.ZNT1))
 
 	// check states
-	validatorAccumulatedRewards, err = GetValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
+	validatorAccumulatedRewards, err = getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validatorAccumulatedRewards.Rewards.BigInt(), new(big.Int))
 	assert.Equal(t, validatorAccumulatedRewards.Period, uint64(6))
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 0)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 0)
 	assert.NotNil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 1)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 1)
 	assert.Nil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 2)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 2)
 	assert.NotNil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 3)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 3)
 	assert.NotNil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 4)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 4)
 	assert.Nil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 5)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 5)
 	assert.Nil(t, err)
 
 	// withdraw validator stake rewards
@@ -556,29 +712,29 @@ func TestDistribute(t *testing.T) {
 	// check
 	b3, _ := new(big.Int).SetString("900203846153846153800000", 10)
 	assert.Equal(t, sdb.GetBalance(validatorsKey[0].Address), b3)
-	validatorOutstandingRewards, err := GetValidatorOutstandingRewards(contractQuery, validatorsKey[0].Dec)
+	validatorOutstandingRewards, err := getValidatorOutstandingRewards(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	b4, _ := new(big.Int).SetString("60000", 10)
 	assert.Equal(t, validatorOutstandingRewards.Rewards.BigInt(), b4)
-	validatorAccumulatedRewards, err = GetValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
+	validatorAccumulatedRewards, err = getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
 	assert.Nil(t, err)
 	assert.Equal(t, validatorAccumulatedRewards.Rewards.BigInt(), new(big.Int))
 	assert.Equal(t, validatorAccumulatedRewards.Period, uint64(8))
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 0)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 0)
 	assert.NotNil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 1)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 1)
 	assert.NotNil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 2)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 2)
 	assert.NotNil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 3)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 3)
 	assert.NotNil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 4)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 4)
 	assert.Nil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 5)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 5)
 	assert.Nil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 6)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 6)
 	assert.NotNil(t, err)
-	_, err = GetValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 7)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 7)
 	assert.Nil(t, err)
 
 	// here we have 4 validators with 100000 self stake, and validator 1 have 10000, 20000 user stake, and commission is 20%
@@ -645,6 +801,7 @@ func TestDistribute(t *testing.T) {
 	param14.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
 	param14.Amount = new(big.Int).Mul(big.NewInt(20000), params.ZNT1)
 	input, err = param14.Encode()
+	assert.Nil(t, err)
 	contractRef = native.NewContractRef(sdb, stakeAddress2, stakeAddress2, blockNumber, common.Hash{}, extra, nil)
 	_, _, err = contractRef.NativeCall(stakeAddress2, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
