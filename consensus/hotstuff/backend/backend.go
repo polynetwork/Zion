@@ -48,7 +48,7 @@ type backend struct {
 	db             ethdb.Database // Database to store and retrieve necessary information
 	core           hotstuff.CoreEngine
 	signer         hotstuff.Signer
-	chain          consensus.ChainState
+	chain          consensus.ChainReader
 	currentBlock   func() *types.Block
 	getBlockByHash func(hash common.Hash) *types.Block
 	hasBadBlock    func(hash common.Hash) bool
@@ -336,11 +336,7 @@ func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Durat
 }
 
 func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
-	if s.currentBlock == nil {
-		return nil, common.Address{}
-	}
-
-	block := s.currentBlock()
+	block := s.chain.CurrentBlock()
 	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
 		var err error
@@ -356,7 +352,7 @@ func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 }
 
 func (s *backend) GetProposal(hash common.Hash) hotstuff.Proposal {
-	return s.getBlockByHash(hash)
+	return s.chain.GetBlockByHash(hash)
 }
 
 // HasProposal implements hotstuff.Backend.HashBlock

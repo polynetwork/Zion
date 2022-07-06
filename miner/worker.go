@@ -218,7 +218,7 @@ func (w *worker) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) Start() {
 	if engine, ok := w.engine.(consensus.HotStuff); ok {
-		if err := engine.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
+		if err := engine.Start(w.chain, nil); err != nil {
 			log.Warn("Failed to start hotstuff basic engine", "err", err)
 			return
 		}

@@ -239,7 +239,7 @@ func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 }
 
 // Start implements consensus.Istanbul.Start
-func (s *backend) Start(chain consensus.ChainState, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error {
+func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(hash common.Hash) bool) error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 
@@ -254,12 +254,10 @@ func (s *backend) Start(chain consensus.ChainState, currentBlock func() *types.B
 	s.commitCh = make(chan *types.Block, 1)
 
 	s.chain = chain
-	s.currentBlock = currentBlock
-	s.getBlockByHash = getBlockByHash
 	s.hasBadBlock = hasBadBlock
 
 	// init validator set
-	current := s.currentBlock()
+	current := s.chain.CurrentBlock()
 	startHeight, vs, err := s.CurrentEpoch()
 	if err != nil {
 		return err

@@ -61,10 +61,8 @@ type ChainReader interface {
 
 	// PreExecuteBlock pre-execute block transactions and validate states
 	PreExecuteBlock(block *types.Block) error
-}
 
-type ChainState interface {
-	ChainReader
+	CurrentBlock() *types.Block
 
 	// State returns a new mutable state based on the current HEAD block.
 	State() (*state.StateDB, error)
@@ -157,7 +155,7 @@ type HotStuff interface {
 
 	// Authorize(signer common.Address, signFn func(accounts.Account, string, []byte) ([]byte, error))
 	// Start starts the engine
-	Start(chain ChainState, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
+	Start(chain ChainReader, hasBadBlock func(hash common.Hash) bool) error
 
 	// Stop stops the engine
 	Stop() error
