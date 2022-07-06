@@ -51,11 +51,35 @@ var (
 
 	MethodWithdrawValidator = "withdrawValidator"
 
+	MethodGetAccumulatedCommission = "getAccumulatedCommission"
+
+	MethodGetAllValidators = "getAllValidators"
+
 	MethodGetCommunityInfo = "getCommunityInfo"
 
 	MethodGetCurrentEpochInfo = "getCurrentEpochInfo"
 
+	MethodGetEpochInfo = "getEpochInfo"
+
 	MethodGetGlobalConfig = "getGlobalConfig"
+
+	MethodGetOutstandingRewards = "getOutstandingRewards"
+
+	MethodGetStakeInfo = "getStakeInfo"
+
+	MethodGetStakeStartingInfo = "getStakeStartingInfo"
+
+	MethodGetTotalPool = "getTotalPool"
+
+	MethodGetUnlockingInfo = "getUnlockingInfo"
+
+	MethodGetValidator = "getValidator"
+
+	MethodGetValidatorAccumulatedRewards = "getValidatorAccumulatedRewards"
+
+	MethodGetValidatorOutstandingRewards = "getValidatorOutstandingRewards"
+
+	MethodGetValidatorSnapshotRewards = "getValidatorSnapshotRewards"
 
 	EventCancelValidator = "CancelValidator"
 
@@ -81,7 +105,7 @@ var (
 )
 
 // INodeManagerABI is the input ABI used to generate the binding from.
-const INodeManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CancelValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"epochID\",\"type\":\"string\"}],\"name\":\"ChangeEpoch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CreateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Stake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"UnStake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Withdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"commission\",\"type\":\"string\"}],\"name\":\"WithdrawCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rewards\",\"type\":\"string\"}],\"name\":\"WithdrawStakeRewards\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"selfStake\",\"type\":\"string\"}],\"name\":\"WithdrawValidator\",\"type\":\"event\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"cancelValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"changeEpoch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"initStake\",\"type\":\"int256\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"createValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"endBlock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getCommunityInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getCurrentEpochInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":true,\"inputs\":[],\"name\":\"getGlobalConfig\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"payable\":false,\"stateMutability\":\"view\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"stake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"unStake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"}],\"name\":\"updateCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"updateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawStakeRewards\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"constant\":false,\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"payable\":false,\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const INodeManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CancelValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"epochID\",\"type\":\"string\"}],\"name\":\"ChangeEpoch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CreateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Stake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"UnStake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Withdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"commission\",\"type\":\"string\"}],\"name\":\"WithdrawCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rewards\",\"type\":\"string\"}],\"name\":\"WithdrawStakeRewards\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"selfStake\",\"type\":\"string\"}],\"name\":\"WithdrawValidator\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"cancelValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"changeEpoch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"initStake\",\"type\":\"int256\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"createValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"endBlock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"getAccumulatedCommission\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllValidators\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCommunityInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentEpochInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"id\",\"type\":\"int256\"}],\"name\":\"getEpochInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getGlobalConfig\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOutstandingRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"stakeAddress\",\"type\":\"address\"}],\"name\":\"getStakeInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"stakeAddress\",\"type\":\"address\"}],\"name\":\"getStakeStartingInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTotalPool\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"stakeAddress\",\"type\":\"address\"}],\"name\":\"getUnlockingInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"getValidator\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"getValidatorAccumulatedRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"getValidatorOutstandingRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"period\",\"type\":\"uint64\"}],\"name\":\"getValidatorSnapshotRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"stake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"unStake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"}],\"name\":\"updateCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"updateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawStakeRewards\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // INodeManagerFuncSigs maps the 4-byte function signature to its string representation.
 var INodeManagerFuncSigs = map[string]string{
@@ -89,9 +113,21 @@ var INodeManagerFuncSigs = map[string]string{
 	"fe6f86f8": "changeEpoch()",
 	"afa1d242": "createValidator(string,address,int256,int256,string)",
 	"083c6323": "endBlock()",
+	"fc84eb97": "getAccumulatedCommission(string)",
+	"f3513a37": "getAllValidators()",
 	"6e10ffd0": "getCommunityInfo()",
 	"babc394f": "getCurrentEpochInfo()",
+	"1af10a9c": "getEpochInfo(int256)",
 	"cda92be4": "getGlobalConfig()",
+	"fef97e4c": "getOutstandingRewards()",
+	"b5cec9f0": "getStakeInfo(string,address)",
+	"170a8c12": "getStakeStartingInfo(string,address)",
+	"75f4d677": "getTotalPool()",
+	"5e45511e": "getUnlockingInfo(address)",
+	"8fa111a5": "getValidator(string)",
+	"a2d3988a": "getValidatorAccumulatedRewards(string)",
+	"d3f831be": "getValidatorOutstandingRewards(string)",
+	"ca0d5cd4": "getValidatorSnapshotRewards(string,uint64)",
 	"102fc25a": "stake(string,int256)",
 	"6b2e7c4e": "unStake(string,int256)",
 	"9b079ff7": "updateCommission(string,int256)",
@@ -249,6 +285,68 @@ func (_INodeManager *INodeManagerTransactorRaw) Transact(opts *bind.TransactOpts
 	return _INodeManager.Contract.contract.Transact(opts, method, params...)
 }
 
+// GetAccumulatedCommission is a free data retrieval call binding the contract method 0xfc84eb97.
+//
+// Solidity: function getAccumulatedCommission(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetAccumulatedCommission(opts *bind.CallOpts, consensusPubkey string) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getAccumulatedCommission", consensusPubkey)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetAccumulatedCommission is a free data retrieval call binding the contract method 0xfc84eb97.
+//
+// Solidity: function getAccumulatedCommission(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetAccumulatedCommission(consensusPubkey string) ([]byte, error) {
+	return _INodeManager.Contract.GetAccumulatedCommission(&_INodeManager.CallOpts, consensusPubkey)
+}
+
+// GetAccumulatedCommission is a free data retrieval call binding the contract method 0xfc84eb97.
+//
+// Solidity: function getAccumulatedCommission(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetAccumulatedCommission(consensusPubkey string) ([]byte, error) {
+	return _INodeManager.Contract.GetAccumulatedCommission(&_INodeManager.CallOpts, consensusPubkey)
+}
+
+// GetAllValidators is a free data retrieval call binding the contract method 0xf3513a37.
+//
+// Solidity: function getAllValidators() view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetAllValidators(opts *bind.CallOpts) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getAllValidators")
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetAllValidators is a free data retrieval call binding the contract method 0xf3513a37.
+//
+// Solidity: function getAllValidators() view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetAllValidators() ([]byte, error) {
+	return _INodeManager.Contract.GetAllValidators(&_INodeManager.CallOpts)
+}
+
+// GetAllValidators is a free data retrieval call binding the contract method 0xf3513a37.
+//
+// Solidity: function getAllValidators() view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetAllValidators() ([]byte, error) {
+	return _INodeManager.Contract.GetAllValidators(&_INodeManager.CallOpts)
+}
+
 // GetCommunityInfo is a free data retrieval call binding the contract method 0x6e10ffd0.
 //
 // Solidity: function getCommunityInfo() view returns(bytes)
@@ -311,6 +409,37 @@ func (_INodeManager *INodeManagerCallerSession) GetCurrentEpochInfo() ([]byte, e
 	return _INodeManager.Contract.GetCurrentEpochInfo(&_INodeManager.CallOpts)
 }
 
+// GetEpochInfo is a free data retrieval call binding the contract method 0x1af10a9c.
+//
+// Solidity: function getEpochInfo(int256 id) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetEpochInfo(opts *bind.CallOpts, id *big.Int) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getEpochInfo", id)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetEpochInfo is a free data retrieval call binding the contract method 0x1af10a9c.
+//
+// Solidity: function getEpochInfo(int256 id) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetEpochInfo(id *big.Int) ([]byte, error) {
+	return _INodeManager.Contract.GetEpochInfo(&_INodeManager.CallOpts, id)
+}
+
+// GetEpochInfo is a free data retrieval call binding the contract method 0x1af10a9c.
+//
+// Solidity: function getEpochInfo(int256 id) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetEpochInfo(id *big.Int) ([]byte, error) {
+	return _INodeManager.Contract.GetEpochInfo(&_INodeManager.CallOpts, id)
+}
+
 // GetGlobalConfig is a free data retrieval call binding the contract method 0xcda92be4.
 //
 // Solidity: function getGlobalConfig() view returns(bytes)
@@ -340,6 +469,285 @@ func (_INodeManager *INodeManagerSession) GetGlobalConfig() ([]byte, error) {
 // Solidity: function getGlobalConfig() view returns(bytes)
 func (_INodeManager *INodeManagerCallerSession) GetGlobalConfig() ([]byte, error) {
 	return _INodeManager.Contract.GetGlobalConfig(&_INodeManager.CallOpts)
+}
+
+// GetOutstandingRewards is a free data retrieval call binding the contract method 0xfef97e4c.
+//
+// Solidity: function getOutstandingRewards() view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetOutstandingRewards(opts *bind.CallOpts) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getOutstandingRewards")
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetOutstandingRewards is a free data retrieval call binding the contract method 0xfef97e4c.
+//
+// Solidity: function getOutstandingRewards() view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetOutstandingRewards() ([]byte, error) {
+	return _INodeManager.Contract.GetOutstandingRewards(&_INodeManager.CallOpts)
+}
+
+// GetOutstandingRewards is a free data retrieval call binding the contract method 0xfef97e4c.
+//
+// Solidity: function getOutstandingRewards() view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetOutstandingRewards() ([]byte, error) {
+	return _INodeManager.Contract.GetOutstandingRewards(&_INodeManager.CallOpts)
+}
+
+// GetStakeInfo is a free data retrieval call binding the contract method 0xb5cec9f0.
+//
+// Solidity: function getStakeInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetStakeInfo(opts *bind.CallOpts, consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getStakeInfo", consensusPubkey, stakeAddress)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetStakeInfo is a free data retrieval call binding the contract method 0xb5cec9f0.
+//
+// Solidity: function getStakeInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetStakeInfo(consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetStakeInfo(&_INodeManager.CallOpts, consensusPubkey, stakeAddress)
+}
+
+// GetStakeInfo is a free data retrieval call binding the contract method 0xb5cec9f0.
+//
+// Solidity: function getStakeInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetStakeInfo(consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetStakeInfo(&_INodeManager.CallOpts, consensusPubkey, stakeAddress)
+}
+
+// GetStakeStartingInfo is a free data retrieval call binding the contract method 0x170a8c12.
+//
+// Solidity: function getStakeStartingInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetStakeStartingInfo(opts *bind.CallOpts, consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getStakeStartingInfo", consensusPubkey, stakeAddress)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetStakeStartingInfo is a free data retrieval call binding the contract method 0x170a8c12.
+//
+// Solidity: function getStakeStartingInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetStakeStartingInfo(consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetStakeStartingInfo(&_INodeManager.CallOpts, consensusPubkey, stakeAddress)
+}
+
+// GetStakeStartingInfo is a free data retrieval call binding the contract method 0x170a8c12.
+//
+// Solidity: function getStakeStartingInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetStakeStartingInfo(consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetStakeStartingInfo(&_INodeManager.CallOpts, consensusPubkey, stakeAddress)
+}
+
+// GetTotalPool is a free data retrieval call binding the contract method 0x75f4d677.
+//
+// Solidity: function getTotalPool() view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetTotalPool(opts *bind.CallOpts) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getTotalPool")
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetTotalPool is a free data retrieval call binding the contract method 0x75f4d677.
+//
+// Solidity: function getTotalPool() view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetTotalPool() ([]byte, error) {
+	return _INodeManager.Contract.GetTotalPool(&_INodeManager.CallOpts)
+}
+
+// GetTotalPool is a free data retrieval call binding the contract method 0x75f4d677.
+//
+// Solidity: function getTotalPool() view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetTotalPool() ([]byte, error) {
+	return _INodeManager.Contract.GetTotalPool(&_INodeManager.CallOpts)
+}
+
+// GetUnlockingInfo is a free data retrieval call binding the contract method 0x5e45511e.
+//
+// Solidity: function getUnlockingInfo(address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetUnlockingInfo(opts *bind.CallOpts, stakeAddress common.Address) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getUnlockingInfo", stakeAddress)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetUnlockingInfo is a free data retrieval call binding the contract method 0x5e45511e.
+//
+// Solidity: function getUnlockingInfo(address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetUnlockingInfo(stakeAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetUnlockingInfo(&_INodeManager.CallOpts, stakeAddress)
+}
+
+// GetUnlockingInfo is a free data retrieval call binding the contract method 0x5e45511e.
+//
+// Solidity: function getUnlockingInfo(address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetUnlockingInfo(stakeAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetUnlockingInfo(&_INodeManager.CallOpts, stakeAddress)
+}
+
+// GetValidator is a free data retrieval call binding the contract method 0x8fa111a5.
+//
+// Solidity: function getValidator(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetValidator(opts *bind.CallOpts, consensusPubkey string) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getValidator", consensusPubkey)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetValidator is a free data retrieval call binding the contract method 0x8fa111a5.
+//
+// Solidity: function getValidator(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetValidator(consensusPubkey string) ([]byte, error) {
+	return _INodeManager.Contract.GetValidator(&_INodeManager.CallOpts, consensusPubkey)
+}
+
+// GetValidator is a free data retrieval call binding the contract method 0x8fa111a5.
+//
+// Solidity: function getValidator(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetValidator(consensusPubkey string) ([]byte, error) {
+	return _INodeManager.Contract.GetValidator(&_INodeManager.CallOpts, consensusPubkey)
+}
+
+// GetValidatorAccumulatedRewards is a free data retrieval call binding the contract method 0xa2d3988a.
+//
+// Solidity: function getValidatorAccumulatedRewards(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetValidatorAccumulatedRewards(opts *bind.CallOpts, consensusPubkey string) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getValidatorAccumulatedRewards", consensusPubkey)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetValidatorAccumulatedRewards is a free data retrieval call binding the contract method 0xa2d3988a.
+//
+// Solidity: function getValidatorAccumulatedRewards(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetValidatorAccumulatedRewards(consensusPubkey string) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorAccumulatedRewards(&_INodeManager.CallOpts, consensusPubkey)
+}
+
+// GetValidatorAccumulatedRewards is a free data retrieval call binding the contract method 0xa2d3988a.
+//
+// Solidity: function getValidatorAccumulatedRewards(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetValidatorAccumulatedRewards(consensusPubkey string) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorAccumulatedRewards(&_INodeManager.CallOpts, consensusPubkey)
+}
+
+// GetValidatorOutstandingRewards is a free data retrieval call binding the contract method 0xd3f831be.
+//
+// Solidity: function getValidatorOutstandingRewards(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetValidatorOutstandingRewards(opts *bind.CallOpts, consensusPubkey string) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getValidatorOutstandingRewards", consensusPubkey)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetValidatorOutstandingRewards is a free data retrieval call binding the contract method 0xd3f831be.
+//
+// Solidity: function getValidatorOutstandingRewards(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetValidatorOutstandingRewards(consensusPubkey string) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorOutstandingRewards(&_INodeManager.CallOpts, consensusPubkey)
+}
+
+// GetValidatorOutstandingRewards is a free data retrieval call binding the contract method 0xd3f831be.
+//
+// Solidity: function getValidatorOutstandingRewards(string consensusPubkey) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetValidatorOutstandingRewards(consensusPubkey string) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorOutstandingRewards(&_INodeManager.CallOpts, consensusPubkey)
+}
+
+// GetValidatorSnapshotRewards is a free data retrieval call binding the contract method 0xca0d5cd4.
+//
+// Solidity: function getValidatorSnapshotRewards(string consensusPubkey, uint64 period) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetValidatorSnapshotRewards(opts *bind.CallOpts, consensusPubkey string, period uint64) ([]byte, error) {
+	var out []interface{}
+	err := _INodeManager.contract.Call(opts, &out, "getValidatorSnapshotRewards", consensusPubkey, period)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetValidatorSnapshotRewards is a free data retrieval call binding the contract method 0xca0d5cd4.
+//
+// Solidity: function getValidatorSnapshotRewards(string consensusPubkey, uint64 period) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetValidatorSnapshotRewards(consensusPubkey string, period uint64) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorSnapshotRewards(&_INodeManager.CallOpts, consensusPubkey, period)
+}
+
+// GetValidatorSnapshotRewards is a free data retrieval call binding the contract method 0xca0d5cd4.
+//
+// Solidity: function getValidatorSnapshotRewards(string consensusPubkey, uint64 period) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetValidatorSnapshotRewards(consensusPubkey string, period uint64) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorSnapshotRewards(&_INodeManager.CallOpts, consensusPubkey, period)
 }
 
 // CancelValidator is a paid mutator transaction binding the contract method 0xd087b01b.
