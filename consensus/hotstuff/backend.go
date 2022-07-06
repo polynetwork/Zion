@@ -33,7 +33,7 @@ type Backend interface {
 	Address() common.Address
 
 	// Validators returns current epoch participants
-	Validators(height uint64) ValidatorSet
+	Validators(hash common.Hash, inConsensus bool) ValidatorSet
 
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux

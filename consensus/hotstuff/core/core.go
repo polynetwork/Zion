@@ -146,7 +146,7 @@ catchup:
 	}
 
 	// calculate new proposal and init round state
-	c.valSet = c.backend.Validators(newView.Height.Uint64())
+	c.valSet = c.backend.Validators(common.EmptyHash, true)
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 	prepareQC := proposal2QC(lastProposal, common.Big0)
 	c.current = newRoundState(newView, c.valSet, prepareQC)

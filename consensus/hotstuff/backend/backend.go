@@ -48,7 +48,7 @@ type backend struct {
 	db             ethdb.Database // Database to store and retrieve necessary information
 	core           hotstuff.CoreEngine
 	signer         hotstuff.Signer
-	chain          consensus.ChainReader
+	chain          consensus.ChainState
 	currentBlock   func() *types.Block
 	getBlockByHash func(hash common.Hash) *types.Block
 	hasBadBlock    func(hash common.Hash) bool
@@ -58,7 +58,8 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	snaps *snapshots // store snaps in desc order according to epoch start height
+	//snaps *snapshots // store snaps in desc order according to epoch start height
+	vals hotstuff.ValidatorSet
 
 	// The channels for hotstuff engine notifications
 	sealMu            sync.Mutex
@@ -97,13 +98,11 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		signer:         signer,
 		recentMessages: recentMessages,
 		knownMessages:  knownMessages,
-		snaps:          newSnapshots(),
 		recents:        recents,
 		proposals:      make(map[common.Address]bool),
 	}
 
 	backend.core = core.New(backend, config, signer)
-	backend.snaps.load(backend.db)
 
 	return backend
 }

@@ -63,6 +63,13 @@ type ChainReader interface {
 	PreExecuteBlock(block *types.Block) error
 }
 
+type ChainState interface {
+	ChainReader
+
+	// State returns a new mutable state based on the current HEAD block.
+	State() (*state.StateDB, error)
+}
+
 // Engine is an algorithm agnostic consensus engine.
 type Engine interface {
 	// Author retrieves the Ethereum address of the account that minted the given
@@ -150,7 +157,7 @@ type HotStuff interface {
 
 	// Authorize(signer common.Address, signFn func(accounts.Account, string, []byte) ([]byte, error))
 	// Start starts the engine
-	Start(chain ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
+	Start(chain ChainState, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
 
 	// Stop stops the engine
 	Stop() error
@@ -158,7 +165,7 @@ type HotStuff interface {
 	// CheckPoint retrieve the flags of whether epoch change and next validator set.
 	CheckPoint(state *state.StateDB, header *types.Header) (CheckPointStatus, uint64, error)
 
-	ValidatorList(state *state.StateDB, height *big.Int) ([]common.Address, error)
+	CurrentEpoch() (uint64, []common.Address, error)
 
 	// IsSystemCall whether the method id is the governance tx method
 	IsSystemTransaction(tx *types.Transaction, header *types.Header) bool
@@ -203,6 +210,6 @@ type CheckPointStatus uint8
 const (
 	CheckPointStateUnknown CheckPointStatus = iota
 	CheckPointStatePrepare                  // before epoch change start
-	CheckPointStateStart                    // set new validators in header extra
-	CheckPointStateChange                   // restart worker and engine
+	CheckPointStateChange                   // set new validators in header extra
+	CheckPointStateStarted                  // restart worker and engine
 )

@@ -29,6 +29,8 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -232,4 +234,37 @@ type systemTxContext struct {
 func (s *backend) executeTransaction(ctx *systemTxContext, contract common.Address, payload []byte) error {
 	msg := s.getSystemMessage(ctx.header.Coinbase, contract, payload, common.Big0)
 	return s.applyTransaction(ctx.chain, msg, ctx.state, ctx.header, ctx.chainCtx, ctx.txs, ctx.receipts, ctx.sysTxs, ctx.usedGas, ctx.mining)
+}
+
+func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain consensus.ChainHeaderReader) (hotstuff.ValidatorSet, error) {
+	var epoch *types.Header
+
+	// todo(fuk): add LRU
+	extra, err := types.ExtractHotstuffExtraPayload(header.Extra)
+	if err != nil {
+		return nil, err
+	}
+
+	if extra.Height != header.Number.Uint64() {
+		epoch = chain.GetHeaderByNumber(extra.Height)
+	} else {
+		if parent == nil {
+			parent = chain.GetHeaderByHash(header.ParentHash)
+		}
+		if extra, err = types.ExtractHotstuffExtra(parent); err != nil {
+			return nil, err
+		} else {
+			epoch = chain.GetHeaderByNumber(extra.Height)
+		}
+	}
+
+	if extra, err = types.ExtractHotstuffExtraPayload(epoch.Extra); err != nil {
+		return nil, err
+	} else {
+		return NewDefaultValSet(extra.Validators), nil
+	}
+}
+
+func NewDefaultValSet(list []common.Address) hotstuff.ValidatorSet {
+	return validator.NewSet(list, hotstuff.RoundRobin)
 }

@@ -137,16 +137,16 @@ func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types
 func singleNodeChain() (*core.BlockChain, *backend) {
 	testLogger.SetHandler(elog.StdoutHandler)
 
-	genesis, nodeKeys, valset := getGenesisAndKeys(1)
+	genesis, nodeKeys, _ := getGenesisAndKeys(1)
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
 	b, _ := New(config, nodeKeys[0], memDB).(*backend)
-	b.snaps = &snapshots{
-		list: []*snapshot{
-			{ID: 1, Start: 0, ValSet: valset},
-		},
-	}
+	//b.snaps = &snapshots{
+	//	list: []*snapshot{
+	//		{ID: 1, Start: 0, ValSet: valset},
+	//	},
+	//}
 	genesis.MustCommit(memDB)
 
 	txLookUpLimit := uint64(100)

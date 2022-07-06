@@ -19,6 +19,7 @@
 package backend
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -162,16 +163,11 @@ func (s *backend) executeSystemTxs(chain consensus.ChainHeaderReader, header *ty
 		return err
 	}
 
-	status, _, err := s.CheckPoint(state, header)
-	if err != nil {
+	if status, _, err := s.CheckPoint(state, header); err != nil {
 		return err
-	}
-	switch status {
-	case consensus.CheckPointStatePrepare:
+	} else if status == consensus.CheckPointStatePrepare {
 		return s.execEpochChange(ctx)
-	case consensus.CheckPointStateStart:
-		return s.applySnapshot(state, header, mining)
-	default:
+	} else {
 		return nil
 	}
 }
@@ -243,7 +239,7 @@ func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 }
 
 // Start implements consensus.Istanbul.Start
-func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error {
+func (s *backend) Start(chain consensus.ChainState, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 
@@ -261,6 +257,17 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	s.currentBlock = currentBlock
 	s.getBlockByHash = getBlockByHash
 	s.hasBadBlock = hasBadBlock
+
+	// init validator set
+	current := s.currentBlock()
+	startHeight, vs, err := s.CurrentEpoch()
+	if err != nil {
+		return err
+	}
+	if height := current.NumberU64(); height <= startHeight {
+		return fmt.Errorf("engine started failed, current block %v is higher than valid epoch start height %v", height, startHeight)
+	}
+	s.vals = NewDefaultValSet(vs)
 
 	if err := s.core.Start(chain); err != nil {
 		return err
@@ -293,14 +300,26 @@ func (s *backend) Close() error {
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
 func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header, seal bool) error {
-	if err := CustomVerifyHeader(header); err != nil {
-		return err
+	if header.Number == nil {
+		return errUnknownBlock
+	}
+	// Ensure that the mix digest is zero as we don't have fork protection currently
+	if header.MixDigest != types.HotstuffDigest {
+		return errInvalidMixDigest
+	}
+	// Ensure that extra info is not nil
+	if header.Extra == nil {
+		return errUnknownBlock
+	}
+	// Ensure that the block doesn't contain any uncles which are meaningless in Istanbul
+	if header.UncleHash != nilUncleHash {
+		return errInvalidUncleHash
+	}
+	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
+	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
+		return errInvalidDifficulty
 	}
 
-	// verifyCascadingFields verifies all the header fields that are not standalone,
-	// rather depend on a batch of previous headers. The caller may optionally pass
-	// in a batch of parents (ascending order) to avoid looking those up from the
-	// database. This is useful for concurrently verifying a batch of new headers.
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -308,7 +327,9 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	}
 
 	// Ensure that the block's timestamp isn't too close to it's parent
-	var parent *types.Header
+	var (
+		parent *types.Header
+	)
 	if len(parents) > 0 {
 		parent = parents[len(parents)-1]
 	} else {
@@ -321,35 +342,16 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidTimestamp
 	}
 
-	if err := s.snaps.sync(s.db, parent, header); err != nil {
+	// Get validator set
+	vals, err := s.getValidatorsByHeader(header, parent, s.chain)
+	if err != nil {
 		return err
 	}
 
-	vals := s.Validators(number)
+	// recover and verify signatures
 	if _, err := s.signer.VerifyHeader(header, vals, seal); err != nil {
 		return err
 	}
-	return nil
-}
-
-func CustomVerifyHeader(header *types.Header) error {
-	if header.Number == nil {
-		return errUnknownBlock
-	}
-
-	// Ensure that the mix digest is zero as we don't have fork protection currently
-	if header.MixDigest != types.HotstuffDigest {
-		return errInvalidMixDigest
-	}
-	// Ensure that the block doesn't contain any uncles which are meaningless in Istanbul
-	if header.UncleHash != nilUncleHash {
-		return errInvalidUncleHash
-	}
-	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
-	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
-		return errInvalidDifficulty
-	}
-
 	return nil
 }
 

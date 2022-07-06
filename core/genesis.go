@@ -263,8 +263,9 @@ var (
 	// RegGenesis store genesis validators and public keys in governance contract
 	RegGenesis func(db *state.StateDB, genesis *Genesis) error
 
+	// todo(fuk): delete after test
 	// StoreGenesis store genesis validators in consensus snapshot
-	StoreGenesis func(db ethdb.Database, header *types.Header) error
+	// StoreGenesis func(db ethdb.Database, header *types.Header) error
 )
 
 // ToBlock creates the genesis block and writes state of a genesis specification
@@ -312,7 +313,10 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true, nil)
-	StoreGenesis(db, head)
+
+	// todo(fuk): delete after test
+	// StoreGenesis(db, head)
+
 	return types.NewBlock(head, nil, nil, nil, trie.NewStackTrie(nil))
 }
 
@@ -411,9 +415,10 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 	RegGenesis = func(db *state.StateDB, genesis *Genesis) error {
 		return nil
 	}
-	StoreGenesis = func(db ethdb.Database, header *types.Header) error {
-		return nil
-	}
+	// todo(fuk): delete after test
+	//StoreGenesis = func(db ethdb.Database, header *types.Header) error {
+	//	return nil
+	//}
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
 	g.Config = &params.ChainConfig{
 		ChainID:  new(big.Int).SetUint64(params.MainnetMainChainID),

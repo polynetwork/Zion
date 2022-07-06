@@ -134,7 +134,7 @@ func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
 // verifyCrossEpochQC verify quorum certificate with current validator set or
 // last epoch's val set if current height equals to epoch start height
 func (c *core) verifyCrossEpochQC(qc *hotstuff.QuorumCert) error {
-	valset := c.backend.Validators(qc.HeightU64())
+	valset := c.backend.Validators(qc.Hash, false)
 	if err := c.signer.VerifyQC(qc, valset); err != nil {
 		return err
 	}

@@ -292,7 +292,9 @@ func (w *worker) newWorkLoop() {
 				h.NewChainHead(head.Block.Header())
 			}
 			clearPending(head.Block.NumberU64())
-			w.changeEpoch(head.Block.Header(), false)
+			if err := w.changeEpoch(head.Block.Header(), false); err != nil {
+				log.Errorf("Failed to execute `changeEpoch` at chainHead subscribe, err: %v", err)
+			}
 
 		case <-w.exitCh:
 			return
@@ -617,7 +619,10 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 		log.Error("Failed to create mining context", "err", err)
 		return
 	}
-	w.changeEpoch(header, true)
+	if err := w.changeEpoch(header, true); err != nil {
+		log.Errorf("Failed to execute `changeEpoch`, err: %v", err)
+		return
+	}
 
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
 	if w.IsRunning() {
@@ -705,7 +710,7 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
 }
 
-func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) error {
+func (w *worker) changeEpoch(header *types.Header, fill bool) error {
 	engine, ok := w.engine.(consensus.HotStuff)
 	if !ok {
 		return fmt.Errorf("invalid engine")
@@ -720,12 +725,17 @@ func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) error {
 		return err
 	}
 
-	if needFillHeader {
-		if status == consensus.CheckPointStateStart {
-			if nextValidators, err := engine.ValidatorList(w.current.state, header.Number); err != nil {
+	if fill {
+		if status == consensus.CheckPointStateChange {
+			if height := header.Number.Uint64(); epochStartHeight != height {
+				return fmt.Errorf("checkPoint, expect start height %v, got %v", epochStartHeight, height)
+			}
+			if startHeight, nextValidators, err := engine.CurrentEpoch(); err != nil {
 				return err
+			} else if startHeight != epochStartHeight {
+				return fmt.Errorf("currentEpoch, expect start height %v, got %v", epochStartHeight, startHeight)
 			} else {
-				types.HotstuffHeaderFillWithValidators(header, nextValidators, epochStartHeight)
+				types.HotstuffHeaderFillWithValidators(header, nextValidators, header.Number.Uint64())
 			}
 		} else {
 			types.HotstuffHeaderFillWithValidators(header, nil, epochStartHeight)
@@ -733,7 +743,7 @@ func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) error {
 		w.current.header = header
 	}
 
-	if w.IsRunning() && status == consensus.CheckPointStateChange {
+	if w.IsRunning() && status == consensus.CheckPointStateStarted {
 		log.Debug("Restart consensus engine")
 		w.Stop()
 		time.Sleep(30 * time.Second)

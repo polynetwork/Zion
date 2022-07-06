@@ -19,20 +19,16 @@
 package backend
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/contracts/native"
 	nmabi "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 // 不会有api接口调用verifyHeader这种接口导致epoch顺序错乱。epoch可以使用slice而非map。
@@ -58,51 +54,64 @@ func (s *backend) CheckPoint(state *state.StateDB, header *types.Header) (consen
 	}
 
 	// todo(fuk): 随时生效还是周期末生效
-	globalConfig, err := s.getGlobalConfig(state, header.Number)
+	height := header.Number.Uint64()
+	globalConfig, err := nm.GetGlobalConfigFromDB(state)
 	if err != nil {
 		return status, 0, err
 	}
-
-	start := s.snaps.start()
-	height := header.Number.Uint64()
-	epochLength := globalConfig.BlockPerEpoch.Uint64()
-	if height == start && s.snaps.lastStart() != 0 {
-		start = s.snaps.lastStart()
+	currentEp, err := nm.GetCurrentEpochInfoFromDB(state)
+	if err != nil {
+		return status, 0, err
 	}
+	start := currentEp.StartHeight.Uint64()
+	epochLength := globalConfig.BlockPerEpoch.Uint64()
 
 	if height == start+epochLength-1 {
 		status = consensus.CheckPointStatePrepare
-	} else if height == start+epochLength { // apply new snapshot and start height is new.
-		status = consensus.CheckPointStateStart
-	} else if height == start+1 {
+	} else if height == start {
 		status = consensus.CheckPointStateChange
+	} else if height == start+1 {
+		status = consensus.CheckPointStateStarted
 	}
-	return status, 0, nil
+
+	return status, start, nil
 }
 
-func (s *backend) Validators(height uint64) (vals hotstuff.ValidatorSet) {
-	header := s.chain.GetHeaderByNumber(height)
-	if header == nil {
-		header = s.chain.GetHeaderByNumber(height - 1)
+func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSet {
+	if mining {
+		return s.vals.Copy()
 	}
-	for vals == nil {
-		extra, err := types.ExtractHotstuffExtraPayload(header.Extra)
-		if err != nil {
-			return nil
-		}
-		epochStartHeight := extra.Height
-		s.chain.GetHeaderByNumber(epochStartHeight)
-		vals = NewDefaultValSet(extra.Validators)
-	}
-	return
-}
 
-func (s *backend) ValidatorList(state *state.StateDB, height *big.Int) ([]common.Address, error) {
-	epoch, err := s.getEpoch(state, height)
+	header := s.chain.GetHeaderByHash(hash)
+	vals, err := s.getValidatorsByHeader(header, nil, s.chain)
 	if err != nil {
-		return nil, err
+		return nil
 	}
-	return epoch.MemberList(), nil
+	return vals
+}
+
+func (s *backend) CurrentEpoch() (uint64, []common.Address, error) {
+	statedb, err := s.chain.State()
+	if err != nil {
+		return 0, nil, err
+	}
+
+	current := s.chain.CurrentHeader()
+	epoch, err := nm.GetCurrentEpochInfoFromDB(statedb)
+	if err != nil {
+		return 0, nil, err
+	}
+	height := current.Number.Uint64()
+	start := epoch.StartHeight.Uint64()
+
+	// if consensus change epoch not finished, just read last epoch as validator
+	if start == height || start - height == 1 {
+		if epoch, err = nm.GetEpochInfoFromDB(statedb, new(big.Int).Sub(epoch.ID, big.NewInt(1))); err != nil {
+			return 0, nil, err
+		}
+	}
+
+	return epoch.StartHeight.Uint64(), epoch.MemberList(), nil
 }
 
 func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) bool {
@@ -119,98 +128,50 @@ func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Heade
 	return true
 }
 
-// miner checkpoint，在epoch start添加新的validators
-// 查询并存储snapshot
-func (s *backend) applySnapshot(state *state.StateDB, header *types.Header, mining bool) error {
-	height := header.Number
-	govEpoch, err := s.getEpoch(state, height)
-	if err != nil {
-		return err
-	}
-
-	if govEpoch.StartHeight.Cmp(height) <= 0 {
-		return fmt.Errorf("invalid height, expect %v, got %v", height.Uint64()+1, govEpoch.StartHeight)
-	}
-
-	// epoch id saved in chain data should be equal to epoch.maxId
-	id := s.snaps.nextId()
-	if govEpochID := govEpoch.ID.Uint64(); id != govEpochID {
-		return fmt.Errorf("expect nextID to be %d, actual got %d", govEpochID, id)
-	}
-
-	snap := newSnapshot(id, govEpoch.StartHeight.Uint64(), govEpoch.MemberList())
-	if !s.snaps.append(snap) {
-		return fmt.Errorf("epoch already exist, %s", snap.String())
-	}
-
-	if err := snap.store(s.db); err != nil {
-		return err
-	}
-
-	// todo(fuk): event should be sent by miner but not consensus.
-	//if mining {
-	//	s.SendValidatorsChange(snap.ValSet.AddressList())
-	//}
-
-	log.Info("[epoch]", "check point", snap.String())
-	return nil
-}
-
-func (s *backend) getGlobalConfig(state *state.StateDB, height *big.Int) (*nm.GlobalConfig, error) {
-
-	caller := s.signer.Address()
-	ref := native.NewContractRef(state, caller, caller, height, common.EmptyHash, 0, nil)
-	payload, err := new(nm.GetGlobalConfigParam).Encode()
-	if err != nil {
-		return nil, fmt.Errorf("encode GetGlobalConfig input failed: %v", err)
-	}
-	output, _, err := ref.NativeCall(caller, contractAddr, payload)
-	if err != nil {
-		return nil, fmt.Errorf("GetGlobalConfig native call failed: %v", err)
-	}
-
-	var (
-		raw    []byte
-		config = new(nm.GlobalConfig)
-	)
-	if err := utils.UnpackOutputs(nm.ABI, nmabi.MethodGetGlobalConfig, &raw, output); err != nil {
-		return nil, err
-	}
-	if err := rlp.DecodeBytes(raw, config); err != nil {
-		return nil, err
-	}
-
-	log.Info("getGlobalConfig", "config.blockPerEpoch", config.BlockPerEpoch,
-		"config.ConsensusValidatorNum", config.ConsensusValidatorNum)
-
-	return config, nil
-}
-
-func (s *backend) getEpoch(state *state.StateDB, height *big.Int) (*nm.EpochInfo, error) {
-	caller := s.signer.Address()
-	ref := native.NewContractRef(state, caller, caller, height, common.EmptyHash, 0, nil)
-	payload, err := new(nm.GetCurrentEpochInfoParam).Encode()
-	if err != nil {
-		return nil, fmt.Errorf("encode GetGlobalConfig input failed: %v", err)
-	}
-	output, _, err := ref.NativeCall(caller, contractAddr, payload)
-	if err != nil {
-		return nil, fmt.Errorf("GetGlobalConfig native call failed: %v", err)
-	}
-
-	var (
-		raw   []byte
-		epoch = new(nm.EpochInfo)
-	)
-	if err := utils.UnpackOutputs(nm.ABI, nmabi.MethodGetCurrentEpochInfo, &raw, output); err != nil {
-		return nil, err
-	}
-	if err := rlp.DecodeBytes(raw, epoch); err != nil {
-		return nil, err
-	}
-
-	return epoch, nil
-}
+//// miner checkpoint，在epoch start添加新的validators
+//// 查询并存储snapshot
+//func (s *backend) applySnapshot(state *state.StateDB, header *types.Header, mining bool) error {
+//	height := header.Number
+//	govEpoch, err := s.getEpoch(state, height)
+//	if err != nil {
+//		return err
+//	}
+//
+//	if govEpoch.StartHeight.Cmp(height) <= 0 {
+//		return fmt.Errorf("invalid height, expect %v, got %v", height.Uint64()+1, govEpoch.StartHeight)
+//	}
+//
+//	// epoch id saved in chain data should be equal to epoch.maxId
+//	id := s.snaps.nextId()
+//	if govEpochID := govEpoch.ID.Uint64(); id != govEpochID {
+//		return fmt.Errorf("expect nextID to be %d, actual got %d", govEpochID, id)
+//	}
+//
+//	snap := newSnapshot(id, govEpoch.StartHeight.Uint64(), govEpoch.MemberList())
+//	if !s.snaps.append(snap) {
+//		return fmt.Errorf("epoch already exist, %s", snap.String())
+//	}
+//
+//	if err := snap.store(s.db); err != nil {
+//		return err
+//	}
+//
+//	// todo(fuk): event should be sent by miner but not consensus.
+//	//if mining {
+//	//	s.SendValidatorsChange(snap.ValSet.AddressList())
+//	//}
+//
+//	log.Info("[epoch]", "check point", snap.String())
+//	return nil
+//}
+//
+//func (s *backend) getGlobalConfig(state *state.StateDB) (*nm.GlobalConfig, error) {
+//	return nm.GetGlobalConfigFromDB(state)
+//}
+//
+//func (s *backend) getEpoch(state *state.StateDB, id *big.Int) (*nm.EpochInfo, error) {
+//	return nm.GetEpochInfoFromDB(state, id)
+//}
 
 func (s *backend) execEndBlock(ctx *systemTxContext) error {
 	payload, err := new(nm.EndBlockParam).Encode()
