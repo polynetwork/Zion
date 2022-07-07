@@ -77,6 +77,8 @@ type Backend interface {
 	// AskMiningProposalWithParent ask for mining proposal with parent block as parameters.
 	AskMiningProposalWithParent(parent *types.Block)
 
+	CheckPoint(height uint64)
+
 	Close() error
 }
 

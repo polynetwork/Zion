@@ -18,7 +18,6 @@ package miner
 
 import (
 	"errors"
-	"fmt"
 	"math/big"
 	"sync"
 	"sync/atomic"
@@ -221,6 +220,8 @@ func (w *worker) Start() {
 		if err := engine.Start(w.chain, nil); err != nil {
 			log.Warn("Failed to start hotstuff basic engine", "err", err)
 			return
+		} else {
+			log.Info("Start hotstuff engine succeed!")
 		}
 	}
 	atomic.StoreInt32(&w.running, 1)
@@ -231,6 +232,8 @@ func (w *worker) Stop() {
 	if engine, ok := w.engine.(consensus.HotStuff); ok {
 		if err := engine.Stop(); err != nil {
 			log.Warn("Failed to stop hotstuff basic engine", "err", err)
+		} else {
+			log.Info("Stop hotstuff engine succeed!")
 		}
 	}
 	atomic.StoreInt32(&w.running, 0)
@@ -292,9 +295,6 @@ func (w *worker) newWorkLoop() {
 				h.NewChainHead(head.Block.Header())
 			}
 			clearPending(head.Block.NumberU64())
-			if err := w.changeEpoch(head.Block.Header(), false); err != nil {
-				log.Errorf("Failed to execute `changeEpoch` at chainHead subscribe, err: %v", err)
-			}
 
 		case <-w.exitCh:
 			return
@@ -614,14 +614,16 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 	}
 
 	// Could potentially happen if starting to mine in an odd state.
-	err := w.makeCurrent(parent, header)
-	if err != nil {
+	if err := w.makeCurrent(parent, header); err != nil {
 		log.Error("Failed to create mining context", "err", err)
 		return
 	}
-	if err := w.changeEpoch(header, true); err != nil {
-		log.Errorf("Failed to execute `changeEpoch`, err: %v", err)
-		return
+	// fulfill hotstuff extra fields of `height` and `validators` in header
+	if engine, ok := w.engine.(consensus.HotStuff); ok {
+		if err := engine.FillHeader(w.current.state, header); err != nil {
+			log.Error("Failed to fill hotstuff header", "err", err)
+			return
+		}
 	}
 
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
@@ -710,45 +712,35 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
 }
 
-func (w *worker) changeEpoch(header *types.Header, fill bool) error {
-	engine, ok := w.engine.(consensus.HotStuff)
-	if !ok {
-		return fmt.Errorf("invalid engine")
-	}
-
-	if w.current == nil || w.current.state == nil {
-		return fmt.Errorf("current environment nil")
-	}
-
-	status, epochStartHeight, err := engine.CheckPoint(w.current.state, header)
-	if err != nil {
-		return err
-	}
-
-	if fill {
-		if status == consensus.CheckPointStateChange {
-			if height := header.Number.Uint64(); epochStartHeight != height {
-				return fmt.Errorf("checkPoint, expect start height %v, got %v", epochStartHeight, height)
-			}
-			if startHeight, nextValidators, err := engine.CurrentEpoch(); err != nil {
-				return err
-			} else if startHeight != epochStartHeight {
-				return fmt.Errorf("currentEpoch, expect start height %v, got %v", epochStartHeight, startHeight)
-			} else {
-				types.HotstuffHeaderFillWithValidators(header, nextValidators, header.Number.Uint64())
-			}
-		} else {
-			types.HotstuffHeaderFillWithValidators(header, nil, epochStartHeight)
-		}
-		w.current.header = header
-	}
-
-	if w.IsRunning() && status == consensus.CheckPointStateStarted {
-		log.Debug("Restart consensus engine")
-		w.Stop()
-		time.Sleep(30 * time.Second)
-		w.Start()
-	}
-
-	return nil
-}
+//func (w *worker) checkPoint(header *types.Header, mining bool) (err error) {
+//	engine, ok := w.engine.(consensus.HotStuff)
+//	if !ok {
+//		return fmt.Errorf("invalid engine")
+//	}
+//
+//	var (
+//		state *state.StateDB
+//		restart bool
+//	)
+//	if mining {
+//		state = w.current.state
+//	} else {
+//		parent := w.chain.GetHeaderByHash(header.ParentHash)
+//		if state, err = w.chain.StateAt(parent.Root); err != nil {
+//			return
+//		}
+//	}
+//
+//	if restart, err = engine.CheckPoint(state, header, mining); err != nil {
+//		return err
+//	}
+//
+//	if w.IsRunning() && restart {
+//		log.Debug("Restart consensus engine")
+//		w.Stop()
+//		time.Sleep(30 * time.Second)
+//		w.Start()
+//	}
+//
+//	return nil
+//}

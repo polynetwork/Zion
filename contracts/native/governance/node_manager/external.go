@@ -38,7 +38,7 @@ var (
 	//GenesisMinInitialStake               = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	GenesisMaxDescLength          uint64 = 2048
 	// todo(fuk): reset the block per epoch to be 400000
-	GenesisBlockPerEpoch                = new(big.Int).SetUint64(200)
+	GenesisBlockPerEpoch                = new(big.Int).SetUint64(30)
 	GenesisConsensusValidatorNum  uint64 = 4
 	GenesisVoterValidatorNum      uint64 = 4
 )

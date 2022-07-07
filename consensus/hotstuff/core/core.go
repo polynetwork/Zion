@@ -135,6 +135,10 @@ catchup:
 		newView.Round = new(big.Int).Set(round)
 	}
 
+	if newView.Round.Uint64() == 0 {
+		c.backend.CheckPoint(newView.Height.Uint64())
+	}
+
 	var (
 		lastProposalLocked bool
 		lastLockedProposal hotstuff.Proposal

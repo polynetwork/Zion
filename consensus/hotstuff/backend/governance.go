@@ -19,8 +19,6 @@
 package backend
 
 import (
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -29,6 +27,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 )
 
 // 不会有api接口调用verifyHeader这种接口导致epoch顺序错乱。epoch可以使用slice而非map。
@@ -43,38 +42,49 @@ var (
 	specMethod   = nmabi.GetSpecMethodID()
 )
 
+func (s *backend) FillHeader(state *state.StateDB, header *types.Header) error {
+	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
+	if err != nil {
+		return err
+	}
+
+	start := epoch.StartHeight.Uint64()
+	height := header.Number.Uint64()
+	if start == height {
+		valset := NewDefaultValSet(epoch.MemberList())
+		types.HotstuffHeaderFillWithValidators(header, valset.AddressList(), header.Number.Uint64())
+		log.Info("CheckPoint fill header", "start", start, "current", height, "state", s.chain.CurrentHeader().Number, "next validators", valset.String())
+	} else {
+		types.HotstuffHeaderFillWithValidators(header, nil, start)
+	}
+	return nil
+}
+
 // CheckPoint get `epochInfo` and `globalConfig` from governance contract and judge 2 things:
 // 1.whether the block height is the right number to set new validators in block header while mining.
 // 2.whether the block height is the right number to change epoch.
 // return the flags and save epoch in lru cache.
-func (s *backend) CheckPoint(state *state.StateDB, header *types.Header) (consensus.CheckPointStatus, uint64, error) {
-	status := consensus.CheckPointStateUnknown
-	if header.Number.Uint64() <= 1 {
-		return status, 0, nil
+// 矿工打包新区块时填充区块并判断是否需要重启共识, 此时state高度落后header高度1个区块。
+// todo: globalConfig.epochLength should at least 3 block.
+func (s *backend) CheckPoint(height uint64) {
+	if height <= 1 {
+		return
 	}
 
-	// todo(fuk): 随时生效还是周期末生效
-	height := header.Number.Uint64()
-	globalConfig, err := nm.GetGlobalConfigFromDB(state)
+	state, err := s.chain.State()
 	if err != nil {
-		return status, 0, err
+		log.Warn("CheckPoint", "get state failed", err)
+		return
 	}
-	currentEp, err := nm.GetCurrentEpochInfoFromDB(state)
+	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
 	if err != nil {
-		return status, 0, err
+		log.Warn("CheckPoint", "get current epoch info, height", height, "err", err)
+		return
 	}
-	start := currentEp.StartHeight.Uint64()
-	epochLength := globalConfig.BlockPerEpoch.Uint64()
-
-	if height == start+epochLength-1 {
-		status = consensus.CheckPointStatePrepare
-	} else if height == start {
-		status = consensus.CheckPointStateChange
-	} else if height == start+1 {
-		status = consensus.CheckPointStateStarted
+	start := epoch.StartHeight.Uint64()
+	if height == start+1 {
+		s.restart()
 	}
-
-	return status, start, nil
 }
 
 func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSet {
@@ -90,29 +100,29 @@ func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSe
 	return vals
 }
 
-func (s *backend) CurrentEpoch() (uint64, []common.Address, error) {
-	statedb, err := s.chain.State()
-	if err != nil {
-		return 0, nil, err
-	}
-
-	current := s.chain.CurrentHeader()
-	epoch, err := nm.GetCurrentEpochInfoFromDB(statedb)
-	if err != nil {
-		return 0, nil, err
-	}
-	height := current.Number.Uint64()
-	start := epoch.StartHeight.Uint64()
-
-	// if consensus change epoch not finished, just read last epoch as validator
-	if start == height || start - height == 1 {
-		if epoch, err = nm.GetEpochInfoFromDB(statedb, new(big.Int).Sub(epoch.ID, big.NewInt(1))); err != nil {
-			return 0, nil, err
-		}
-	}
-
-	return epoch.StartHeight.Uint64(), epoch.MemberList(), nil
-}
+//func (s *backend) CurrentEpoch() (uint64, []common.Address, error) {
+//	statedb, err := s.chain.State()
+//	if err != nil {
+//		return 0, nil, err
+//	}
+//
+//	current := s.chain.CurrentHeader()
+//	epoch, err := nm.GetCurrentEpochInfoFromDB(statedb)
+//	if err != nil {
+//		return 0, nil, err
+//	}
+//	height := current.Number.Uint64()
+//	start := epoch.StartHeight.Uint64()
+//
+//	// if consensus change epoch not finished, just read last epoch as validator
+//	if epoch.ID.Uint64() > nm.StartEpochID.Uint64() && height > 1 && (start == height || start-height == 1) {
+//		if epoch, err = nm.GetEpochInfoFromDB(statedb, new(big.Int).Sub(epoch.ID, big.NewInt(1))); err != nil {
+//			return 0, nil, err
+//		}
+//	}
+//
+//	return epoch.StartHeight.Uint64(), epoch.MemberList(), nil
+//}
 
 func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) bool {
 	if tx == nil || len(tx.Data()) < 4 {
@@ -128,50 +138,44 @@ func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Heade
 	return true
 }
 
-//// miner checkpoint，在epoch start添加新的validators
-//// 查询并存储snapshot
-//func (s *backend) applySnapshot(state *state.StateDB, header *types.Header, mining bool) error {
-//	height := header.Number
-//	govEpoch, err := s.getEpoch(state, height)
-//	if err != nil {
-//		return err
-//	}
-//
-//	if govEpoch.StartHeight.Cmp(height) <= 0 {
-//		return fmt.Errorf("invalid height, expect %v, got %v", height.Uint64()+1, govEpoch.StartHeight)
-//	}
-//
-//	// epoch id saved in chain data should be equal to epoch.maxId
-//	id := s.snaps.nextId()
-//	if govEpochID := govEpoch.ID.Uint64(); id != govEpochID {
-//		return fmt.Errorf("expect nextID to be %d, actual got %d", govEpochID, id)
-//	}
-//
-//	snap := newSnapshot(id, govEpoch.StartHeight.Uint64(), govEpoch.MemberList())
-//	if !s.snaps.append(snap) {
-//		return fmt.Errorf("epoch already exist, %s", snap.String())
-//	}
-//
-//	if err := snap.store(s.db); err != nil {
-//		return err
-//	}
-//
-//	// todo(fuk): event should be sent by miner but not consensus.
-//	//if mining {
-//	//	s.SendValidatorsChange(snap.ValSet.AddressList())
-//	//}
-//
-//	log.Info("[epoch]", "check point", snap.String())
-//	return nil
-//}
-//
-//func (s *backend) getGlobalConfig(state *state.StateDB) (*nm.GlobalConfig, error) {
-//	return nm.GetGlobalConfigFromDB(state)
-//}
-//
-//func (s *backend) getEpoch(state *state.StateDB, id *big.Int) (*nm.EpochInfo, error) {
-//	return nm.GetEpochInfoFromDB(state, id)
-//}
+// header height infront of state height
+func (s *backend) execEpochChange(state *state.StateDB, header *types.Header, ctx *systemTxContext) error {
+
+	config, epoch, err := s.getGovernanceInfo(state)
+	if err != nil {
+		return err
+	}
+
+	start := epoch.StartHeight.Uint64()
+	height := header.Number.Uint64()
+	epochLength := config.BlockPerEpoch.Uint64()
+	if height != start+epochLength-1 {
+		return nil
+	}
+
+	payload, err := new(nm.ChangeEpochParam).Encode()
+	if err != nil {
+		return err
+	}
+	if err := s.executeTransaction(ctx, contractAddr, payload); err != nil {
+		return err
+	}
+
+	log.Info("EpochChange", "start", start, "current", height, "state", s.chain.CurrentHeader().Number.Uint64())
+	return nil
+}
+
+func (s *backend) getGovernanceInfo(state *state.StateDB) (*nm.GlobalConfig, *nm.EpochInfo, error) {
+	config, err := nm.GetGlobalConfigFromDB(state)
+	if err != nil {
+		return nil, nil, err
+	}
+	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
+	if err != nil {
+		return nil, nil, err
+	}
+	return config, epoch, nil
+}
 
 func (s *backend) execEndBlock(ctx *systemTxContext) error {
 	payload, err := new(nm.EndBlockParam).Encode()
@@ -181,10 +185,37 @@ func (s *backend) execEndBlock(ctx *systemTxContext) error {
 	return s.executeTransaction(ctx, contractAddr, payload)
 }
 
-func (s *backend) execEpochChange(ctx *systemTxContext) error {
-	payload, err := new(nm.ChangeEpochParam).Encode()
+func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain consensus.ChainHeaderReader) (hotstuff.ValidatorSet, error) {
+	var epoch *types.Header
+
+	// todo(fuk): add LRU
+	// todo logic error
+	extra, err := types.ExtractHotstuffExtraPayload(header.Extra)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	return s.executeTransaction(ctx, contractAddr, payload)
+	log.Info("---x1", "height", header.Number, "extra", extra.Validators)
+
+	if header.Number.Uint64() == 0 {
+		return NewDefaultValSet(extra.Validators), nil
+	}
+
+	if extra.Height != header.Number.Uint64() {
+		epoch = chain.GetHeaderByNumber(extra.Height)
+	} else {
+		if parent == nil {
+			parent = chain.GetHeaderByHash(header.ParentHash)
+		}
+		if extra, err = types.ExtractHotstuffExtra(parent); err != nil {
+			return nil, err
+		} else {
+			epoch = chain.GetHeaderByNumber(extra.Height)
+		}
+	}
+
+	if extra, err = types.ExtractHotstuffExtraPayload(epoch.Extra); err != nil {
+		return nil, err
+	} else {
+		return NewDefaultValSet(extra.Validators), nil
+	}
 }

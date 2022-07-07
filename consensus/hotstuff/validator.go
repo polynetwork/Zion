@@ -87,6 +87,8 @@ type ValidatorSet interface {
 	Policy() SelectProposerPolicy
 	// Cmp compare with another validator set, return false if not the same
 	Cmp(src ValidatorSet) bool
+	// String retrieve the address hex slice
+	String() string
 }
 
 // ----------------------------------------------------------------------------

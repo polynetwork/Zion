@@ -161,9 +161,9 @@ type HotStuff interface {
 	Stop() error
 
 	// CheckPoint retrieve the flags of whether epoch change and next validator set.
-	CheckPoint(state *state.StateDB, header *types.Header) (CheckPointStatus, uint64, error)
+	//CheckPoint(state *state.StateDB, header *types.Header, fillHeader bool) (restart bool, err error)
 
-	CurrentEpoch() (uint64, []common.Address, error)
+	FillHeader(state *state.StateDB, header *types.Header) error
 
 	// IsSystemCall whether the method id is the governance tx method
 	IsSystemTransaction(tx *types.Transaction, header *types.Header) bool

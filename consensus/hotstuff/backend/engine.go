@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -140,7 +141,8 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 func (s *backend) executeSystemTxs(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
 	txs *[]*types.Transaction, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64, mining bool) error {
 
-	if header.Number.Uint64() < 1 {
+	// genesis block DONT need to execute system transaction
+	if header.Number.Uint64() == 0 {
 		return nil
 	}
 
@@ -162,14 +164,7 @@ func (s *backend) executeSystemTxs(chain consensus.ChainHeaderReader, header *ty
 	if err := s.execEndBlock(ctx); err != nil {
 		return err
 	}
-
-	if status, _, err := s.CheckPoint(state, header); err != nil {
-		return err
-	} else if status == consensus.CheckPointStatePrepare {
-		return s.execEpochChange(ctx)
-	} else {
-		return nil
-	}
+	return s.execEpochChange(state, header, ctx)
 }
 
 func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
@@ -257,15 +252,11 @@ func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(hash commo
 	s.hasBadBlock = hasBadBlock
 
 	// init validator set
-	current := s.chain.CurrentBlock()
-	startHeight, vs, err := s.CurrentEpoch()
+	vals, err := s.getValidatorsByHeader(s.chain.CurrentHeader(), nil, s.chain)
 	if err != nil {
-		return err
+		return fmt.Errorf("get validators failed, err: %v", err)
 	}
-	if height := current.NumberU64(); height <= startHeight {
-		return fmt.Errorf("engine started failed, current block %v is higher than valid epoch start height %v", height, startHeight)
-	}
-	s.vals = NewDefaultValSet(vs)
+	s.vals = vals
 
 	if err := s.core.Start(chain); err != nil {
 		return err
@@ -291,6 +282,15 @@ func (s *backend) Stop() error {
 
 func (s *backend) Close() error {
 	return nil
+}
+
+func (s *backend) restart() {
+	if s.coreStarted {
+		s.Stop()
+		log.Debug("Restart consensus engine")
+		time.Sleep(30 * time.Second)
+		s.Start(s.chain, s.hasBadBlock)
+	}
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The
