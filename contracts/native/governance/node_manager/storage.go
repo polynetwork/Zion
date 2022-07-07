@@ -650,7 +650,7 @@ func GetCurrentEpochInfoFromDB(s *state.StateDB) (*EpochInfo, error) {
 	key := currentEpochKey()
 	store, err := customGet(cache, key)
 	if err != nil {
-		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get store error: %v", err)
+		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get key store error: %v", err)
 	}
 	ID := new(big.Int).SetBytes(store)
 
@@ -660,7 +660,7 @@ func GetCurrentEpochInfoFromDB(s *state.StateDB) (*EpochInfo, error) {
 	key = epochInfoKey(ID)
 	store, err = customGet(cache, key)
 	if err != nil {
-		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get store error: %v", err)
+		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get info store error: %v", err)
 	}
 	if err := rlp.DecodeBytes(store, epochInfo); err != nil {
 		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, deserialize epoch info error: %v", err)

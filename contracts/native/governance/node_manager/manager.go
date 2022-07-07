@@ -516,14 +516,14 @@ func CancelValidator(s *native.NativeContract) ([]byte, error) {
 	case validator.IsLocked():
 		validator.Status = Remove
 		validator.UnlockHeight = new(big.Int).Add(height, globalConfig.BlockPerEpoch)
-		err = setValidator(s, validator)
-		if err != nil {
-			return nil, fmt.Errorf("CancelValidator, setValidator error: %v", err)
-		}
 	case validator.IsUnlocking(height), validator.IsUnlocked(height):
 		validator.Status = Remove
 	default:
 		return nil, fmt.Errorf("CancelValidator, unsupported validator status")
+	}
+	err = setValidator(s, validator)
+	if err != nil {
+		return nil, fmt.Errorf("CancelValidator, setValidator error: %v", err)
 	}
 	err = removeFromAllValidators(s, params.ConsensusPubkey)
 	if err != nil {
@@ -542,7 +542,7 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	caller := ctx.Caller
 	height := s.ContractRef().BlockHeight()
 
-	params := &CancelValidatorParam{}
+	params := &WithdrawValidatorParam{}
 	if err := utils.UnpackMethod(ABI, MethodWithdrawValidator, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("WithdrawValidator, unpack params error: %v", err)
 	}
@@ -564,13 +564,14 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawValidator, validator is not removed")
 	}
 
+	amount := validator.SelfStake
 	// unStake native token
-	err = unStake(s, caller, validator.SelfStake, validator)
+	err = unStake(s, caller, amount, validator)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawValidator, unStake error: %v", err)
 	}
 
-	validator.TotalStake, err = validator.TotalStake.Sub(validator.SelfStake)
+	validator.TotalStake, err = validator.TotalStake.Sub(amount)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawValidator, validator.TotalStake.Sub error: %v", err)
 	}
@@ -597,7 +598,7 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	}
 	delAccumulatedCommission(s, dec)
 
-	err = s.AddNotify(ABI, []string{WITHDRAW_VALIDATOR_EVENT}, params.ConsensusPubkey, validator.SelfStake.BigInt().String())
+	err = s.AddNotify(ABI, []string{WITHDRAW_VALIDATOR_EVENT}, params.ConsensusPubkey, amount.BigInt().String())
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, AddNotify error: %v", err)
 	}

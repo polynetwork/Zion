@@ -122,6 +122,14 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Equal(t, currentEpochInfo.StartHeight, big.NewInt(0))
 	assert.Equal(t, uint64(len(currentEpochInfo.Validators)), GenesisConsensusValidatorNum)
 	assert.Equal(t, uint64(len(currentEpochInfo.Voters)), GenesisVoterValidatorNum)
+
+	currentEpochInfo, err = GetCurrentEpochInfoFromDB(sdb)
+	assert.Nil(t, err)
+	assert.Equal(t, currentEpochInfo.ID, big.NewInt(1))
+
+	globalConfig, err = GetGlobalConfigFromDB(sdb)
+	assert.Nil(t, err)
+	assert.Equal(t, globalConfig.BlockPerEpoch, GenesisBlockPerEpoch)
 }
 
 func TestStake(t *testing.T) {
