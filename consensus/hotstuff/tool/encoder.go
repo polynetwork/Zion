@@ -27,23 +27,34 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// Encode generate hotstuff genesis extra
-func Encode(validators []common.Address) (string, error) {
+// EncodeGenesisExtra generate hotstuff genesis extra
+func EncodeGenesisExtra(validators []common.Address) (string, error) {
+
+	// 1. sort validators
+	valset := validator.NewSet(validators, hotstuff.RoundRobin)
+	validators = valset.AddressList()
+
+	// 2. set vanity
 	var vanity []byte
 	vanity = append(vanity, bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity)...)
 
+	// 3. construct extra
 	ist := &types.HotstuffExtra{
+		Height:        0,
 		Validators:    validators,
 		Seal:          make([]byte, types.HotstuffExtraSeal),
 		CommittedSeal: [][]byte{},
 	}
 
+	// 4. serialization
 	payload, err := rlp.EncodeToBytes(&ist)
 	if err != nil {
 		return "", err

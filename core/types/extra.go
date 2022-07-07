@@ -61,16 +61,16 @@ func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
 func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	var extra struct {
-		EpochStartHeight uint64
-		Validators       []common.Address
-		Seal             []byte
-		CommittedSeal    [][]byte
-		Salt             []byte
+		Height        uint64
+		Validators    []common.Address
+		Seal          []byte
+		CommittedSeal [][]byte
+		Salt          []byte
 	}
 	if err := s.Decode(&extra); err != nil {
 		return err
 	}
-	ist.Height, ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.EpochStartHeight, extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
+	ist.Height, ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.Height, extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
 	return nil
 }
 
@@ -80,7 +80,7 @@ func (ist *HotstuffExtra) Dump() string {
 	for _, v := range ist.CommittedSeal {
 		seals = append(seals, hexutil.Encode(v))
 	}
-	return fmt.Sprintf("{Height: %v, Validators: %v, Seal: %s, CommittedSeal: %v}", ist.Height, ist.Validators, hexutil.Encode(ist.Seal), seals)
+	return fmt.Sprintf("{EpochStartHeight: %v, Validators: %v, Seal: %s, CommittedSeal: %v}", ist.Height, ist.Validators, hexutil.Encode(ist.Seal), seals)
 }
 
 // ExtractHotstuffExtra extracts all values of the HotstuffExtra from the header. It returns an
