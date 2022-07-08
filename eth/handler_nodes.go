@@ -43,8 +43,9 @@ import (
 //
 
 var (
+	// // todo(fuk): update parameters as below, it should be a bit longer in mainnet.
 	broadcastDuration   = 3 * time.Second // Time duration for broadcast static-nodes
-	broadcastLastTime   = 24 * time.Hour  // Last time for broadcast static-nodes
+	broadcastLastTime   = 10 * time.Minute  // Last time for broadcast static-nodes
 	broadcastChCapacity = 10              // Capacity for broadcast channel, is a low frequency action
 )
 
