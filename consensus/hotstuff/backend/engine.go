@@ -252,11 +252,15 @@ func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(hash commo
 	s.hasBadBlock = hasBadBlock
 
 	// init validator set
-	vals, err := s.getValidatorsByHeader(s.chain.CurrentHeader(), nil, s.chain)
-	if err != nil {
+	if err := s.initValidators(); err != nil {
 		return fmt.Errorf("get validators failed, err: %v", err)
 	}
-	s.vals = vals
+
+	// waiting for p2p connected
+	if s.changing {
+		s.SendValidatorsChange(s.vals.AddressList())
+		time.Sleep(60 * time.Second)
+	}
 
 	if err := s.core.Start(chain); err != nil {
 		return err
@@ -287,9 +291,10 @@ func (s *backend) Close() error {
 func (s *backend) restart() {
 	if s.coreStarted {
 		s.Stop()
-		log.Debug("Restart consensus engine")
-		time.Sleep(30 * time.Second)
+		log.Debug("Restart consensus engine...")
+		s.changing = true
 		s.Start(s.chain, s.hasBadBlock)
+		s.changing = false
 	}
 }
 

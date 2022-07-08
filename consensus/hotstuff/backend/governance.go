@@ -100,30 +100,6 @@ func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSe
 	return vals
 }
 
-//func (s *backend) CurrentEpoch() (uint64, []common.Address, error) {
-//	statedb, err := s.chain.State()
-//	if err != nil {
-//		return 0, nil, err
-//	}
-//
-//	current := s.chain.CurrentHeader()
-//	epoch, err := nm.GetCurrentEpochInfoFromDB(statedb)
-//	if err != nil {
-//		return 0, nil, err
-//	}
-//	height := current.Number.Uint64()
-//	start := epoch.StartHeight.Uint64()
-//
-//	// if consensus change epoch not finished, just read last epoch as validator
-//	if epoch.ID.Uint64() > nm.StartEpochID.Uint64() && height > 1 && (start == height || start-height == 1) {
-//		if epoch, err = nm.GetEpochInfoFromDB(statedb, new(big.Int).Sub(epoch.ID, big.NewInt(1))); err != nil {
-//			return 0, nil, err
-//		}
-//	}
-//
-//	return epoch.StartHeight.Uint64(), epoch.MemberList(), nil
-//}
-
 func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) bool {
 	if tx == nil || len(tx.Data()) < 4 {
 		return false
@@ -161,7 +137,7 @@ func (s *backend) execEpochChange(state *state.StateDB, header *types.Header, ct
 		return err
 	}
 
-	log.Info("EpochChange", "start", start, "current", height, "state", s.chain.CurrentHeader().Number.Uint64())
+	log.Info("Execute governance EpochChange", "start", start, "current", height, "state", s.chain.CurrentHeader().Number.Uint64())
 	return nil
 }
 
@@ -194,7 +170,6 @@ func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain cons
 	if err != nil {
 		return nil, err
 	}
-	log.Info("---x1", "height", header.Number, "extra", extra.Validators)
 
 	if header.Number.Uint64() == 0 {
 		return NewDefaultValSet(extra.Validators), nil
@@ -218,4 +193,26 @@ func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain cons
 	} else {
 		return NewDefaultValSet(extra.Validators), nil
 	}
+}
+
+// initValidators prepare validators for next block.
+func (s *backend) initValidators() (err error) {
+	var (
+		header = s.chain.CurrentHeader()
+		extra *types.HotstuffExtra
+	)
+
+start:
+	if extra, err = types.ExtractHotstuffExtra(header); err != nil {
+		return
+	}
+
+	// the next block use parent extra.validators as valset
+	if extra.Height == header.Number.Uint64() {
+		s.vals = NewDefaultValSet(extra.Validators)
+		return
+	}
+
+	header = s.chain.GetHeaderByNumber(extra.Height)
+	goto start
 }

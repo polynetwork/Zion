@@ -79,6 +79,7 @@ type backend struct {
 
 	eventMux *event.TypeMux
 	point uint64
+	changing bool
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
