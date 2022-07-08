@@ -50,9 +50,6 @@ type Backend interface {
 	// PreCommit write seal to header and assemble new qc
 	PreCommit(proposal Proposal, seals [][]byte) (Proposal, error)
 
-	// ForwardCommit assemble unsealed block and sealed extra into an new full block
-	ForwardCommit(proposal Proposal, extra []byte) (Proposal, error)
-
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
 	Commit(proposal Proposal) error

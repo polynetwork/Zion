@@ -227,20 +227,6 @@ func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuf
 	return block, nil
 }
 
-func (s *backend) ForwardCommit(proposal hotstuff.Proposal, extra []byte) (hotstuff.Proposal, error) {
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
-		return nil, errInvalidProposal
-	}
-
-	h := block.Header()
-	h.Extra = extra
-	block = block.WithSeal(h)
-
-	return block, nil
-}
-
 func (s *backend) Commit(proposal hotstuff.Proposal) error {
 	// Check if the proposal is a valid block
 	block, ok := proposal.(*types.Block)

@@ -346,7 +346,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	}
 
 	// Get validator set
-	vals, err := s.getValidatorsByHeader(header, parent, s.chain)
+	vals, err := s.getValidatorsByHeader(header, parent, chain)
 	if err != nil {
 		return err
 	}
