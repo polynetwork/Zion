@@ -98,7 +98,6 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Register(MethodCancelValidator, CancelValidator)
 	s.Register(MethodWithdrawValidator, WithdrawValidator)
 	s.Register(MethodChangeEpoch, ChangeEpoch)
-
 	s.Register(MethodWithdrawStakeRewards, WithdrawStakeRewards)
 	s.Register(MethodWithdrawCommission, WithdrawCommission)
 	s.Register(MethodEndBlock, EndBlock)
@@ -149,7 +148,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// check commission
-	globalConfig, err := getGlobalConfig(s)
+	globalConfig, err := GetGlobalConfigImpl(s)
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, GetGlobalConfig error: %v", err)
 	}
@@ -246,7 +245,7 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 	if validator.StakeAddress != caller {
 		return nil, fmt.Errorf("UpdateValidator, stake address is not caller")
 	}
-	globalConfig, err := getGlobalConfig(s)
+	globalConfig, err := GetGlobalConfigImpl(s)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateValidator, GetGlobalConfig error: %v", err)
 	}
@@ -299,7 +298,7 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 	if validator.StakeAddress != caller {
 		return nil, fmt.Errorf("UpdateCommission, stake address is not caller")
 	}
-	globalConfig, err := getGlobalConfig(s)
+	globalConfig, err := GetGlobalConfigImpl(s)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateCommission, GetGlobalConfig error: %v", err)
 	}
@@ -489,7 +488,7 @@ func CancelValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("CancelValidator, decode pubkey error: %v", err)
 	}
 
-	globalConfig, err := getGlobalConfig(s)
+	globalConfig, err := GetGlobalConfigImpl(s)
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, GetGlobalConfig error: %v", err)
 	}
@@ -613,7 +612,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("ChangeEpoch, GetCurrentEpochInfoImpl error: %v", err)
 	}
-	globalConfig, err := getGlobalConfig(s)
+	globalConfig, err := GetGlobalConfigImpl(s)
 
 	// anyone can call this if height reaches
 	if new(big.Int).Sub(startHeight, currentEpochInfo.StartHeight).Cmp(globalConfig.BlockPerEpoch) == -1 {
@@ -863,9 +862,9 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 }
 
 func GetGlobalConfig(s *native.NativeContract) ([]byte, error) {
-	globalConfig, err := getGlobalConfig(s)
+	globalConfig, err := GetGlobalConfigImpl(s)
 	if err != nil {
-		return nil, fmt.Errorf("GetGlobalConfig, getGlobalConfig error: %v", err)
+		return nil, fmt.Errorf("GetGlobalConfig, GetGlobalConfigImpl error: %v", err)
 	}
 
 	enc, err := rlp.EncodeToBytes(globalConfig)

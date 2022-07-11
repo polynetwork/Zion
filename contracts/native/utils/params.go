@@ -42,6 +42,7 @@ var (
 	RelayerManagerContractAddress    = common.HexToAddress("0x0000000000000000000000000000000000001005")
 	Neo3StateManagerContractAddress  = common.HexToAddress("0x0000000000000000000000000000000000001006")
 	SignatureManagerContractAddress  = common.HexToAddress("0x0000000000000000000000000000000000001007")
+	ProposalManagerContractAddress   = common.HexToAddress("0x0000000000000000000000000000000000001008")
 
 	NO_PROOF_ROUTER    = uint64(0)
 	BTC_ROUTER         = uint64(1)

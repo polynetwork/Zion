@@ -261,7 +261,7 @@ func delStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address,
 	del(s, key)
 }
 
-func setGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error {
+func SetGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error {
 	key := globalConfigKey()
 	store, err := rlp.EncodeToBytes(globalConfig)
 	if err != nil {
@@ -281,15 +281,15 @@ func setGenesisGlobalConfig(s *state.CacheDB, globalConfig *GlobalConfig) error 
 	return nil
 }
 
-func getGlobalConfig(s *native.NativeContract) (*GlobalConfig, error) {
+func GetGlobalConfigImpl(s *native.NativeContract) (*GlobalConfig, error) {
 	key := globalConfigKey()
 	store, err := get(s, key)
 	if err != nil {
-		return nil, fmt.Errorf("GetGlobalConfig, get store error: %v", err)
+		return nil, fmt.Errorf("GetGlobalConfigImpl, get store error: %v", err)
 	}
 	globalConfig := new(GlobalConfig)
 	if err := rlp.DecodeBytes(store, globalConfig); err != nil {
-		return nil, fmt.Errorf("GetGlobalConfig, deserialize globalConfig error: %v", err)
+		return nil, fmt.Errorf("GetGlobalConfigImpl, deserialize globalConfig error: %v", err)
 	}
 	return globalConfig, nil
 }
