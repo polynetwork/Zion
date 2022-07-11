@@ -100,8 +100,11 @@ func (h *ethHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 	case *eth.PooledTransactionsPacket:
 		return h.txFetcher.Enqueue(peer.ID(), *packet, true)
 
+	case *eth.GetStaticNodesPacket:
+		return h.nodeFetcher.handleGetStaticNodesMsg(peer, packet.Local, packet.Remotes)
+
 	case *eth.StaticNodesPacket:
-		return h.handleStaticNodesMsg(peer, packet)
+		return h.nodeFetcher.handleStaticNodesMsg(peer, packet.List)
 
 	default:
 		return fmt.Errorf("unexpected eth packet type: %T", packet)

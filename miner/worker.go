@@ -711,36 +711,3 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 	}
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
 }
-
-//func (w *worker) checkPoint(header *types.Header, mining bool) (err error) {
-//	engine, ok := w.engine.(consensus.HotStuff)
-//	if !ok {
-//		return fmt.Errorf("invalid engine")
-//	}
-//
-//	var (
-//		state *state.StateDB
-//		restart bool
-//	)
-//	if mining {
-//		state = w.current.state
-//	} else {
-//		parent := w.chain.GetHeaderByHash(header.ParentHash)
-//		if state, err = w.chain.StateAt(parent.Root); err != nil {
-//			return
-//		}
-//	}
-//
-//	if restart, err = engine.CheckPoint(state, header, mining); err != nil {
-//		return err
-//	}
-//
-//	if w.IsRunning() && restart {
-//		log.Debug("Restart consensus engine")
-//		w.Stop()
-//		time.Sleep(30 * time.Second)
-//		w.Start()
-//	}
-//
-//	return nil
-//}

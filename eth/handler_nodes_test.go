@@ -27,52 +27,50 @@ import (
 func TestGoroutineManage(t *testing.T) {
 	rand.Seed(time.Now().UnixNano())
 
-	type Halt struct {
-		Waiting chan struct{}
-		Done    chan struct{}
+	type task struct {
+		id      int
+		randnum int
+		halt    chan struct{}
+		done    chan struct{}
 	}
-	type Signal struct {
+	type signal struct {
+		id      int
 		randNum int
 	}
 
-	sigCh := make(chan *Signal, 100)
-	haltCh := make(chan *Halt, 10)
+	sigCh := make(chan *signal, 100)
+	taskCh := make(chan *task, 10)
 	stop := make(chan struct{})
-	round := int64(0)
 
-	process := func(halt *Halt, randNum int) {
-		cur := round
-		round += 1
-
-		t.Log(cur, "rand number", randNum)
+	process := func(task *task) {
+		t.Logf("start the %d task, rand number %d", task.id, task.randnum)
 		done := make(chan struct{})
 		timer := time.NewTimer(1 * time.Second)
 
 		defer func() {
 			timer.Stop()
 			t.Log("-------------------------------------")
-			halt.Done <- struct{}{}
+			task.done <- struct{}{}
 		}()
 
-		time.AfterFunc(5*time.Second, func() {
+		time.AfterFunc(100*time.Second, func() {
 			close(done)
 		})
-		n := 0
-
+		n := 1
 		for {
 			select {
 			case <-timer.C:
-				t.Log(cur, "number", n)
+				t.Log("number", n)
 				timer.Reset(1 * time.Second)
 				n += 1
-			case <-halt.Waiting:
-				t.Log(cur, "halt")
+			case <-task.halt:
+				t.Log("halt")
 				return
 			case <-done:
-				t.Log(cur, "done")
+				t.Log("done")
 				return
 			case <-stop:
-				t.Log(cur, "system stopped!")
+				t.Log("system stopped!")
 				return
 			}
 		}
@@ -82,17 +80,19 @@ func TestGoroutineManage(t *testing.T) {
 		for {
 			select {
 			case sig := <-sigCh:
-				if round > 0 {
-					halt := <-haltCh
-					close(halt.Waiting)
-					<-halt.Done
+				if len(taskCh) > 0 {
+					halt := <-taskCh
+					close(halt.halt)
+					<-halt.done
 				}
-				halt := &Halt{
-					Waiting: make(chan struct{}),
-					Done:    make(chan struct{}),
+				task := &task{
+					id:      sig.id,
+					randnum: sig.randNum,
+					halt:    make(chan struct{}),
+					done:    make(chan struct{}),
 				}
-				haltCh <- halt
-				go process(halt, sig.randNum)
+				taskCh <- task
+				go process(task)
 
 			case <-stop:
 				t.Log("system stopped!")
@@ -102,10 +102,12 @@ func TestGoroutineManage(t *testing.T) {
 	}()
 
 	for i := 0; i < 50; i++ {
-		num := rand.Intn(8)
-		sigCh <- &Signal{
-			randNum: num,
+		num := rand.Intn(6)
+		sig := &signal{
+			id:      i,
+			randNum: 3 + num,
 		}
-		time.Sleep(time.Duration(num) * time.Second)
+		sigCh <- sig
+		time.Sleep(time.Duration(sig.randNum) * time.Second)
 	}
 }
