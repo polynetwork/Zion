@@ -61,6 +61,11 @@ type ChainReader interface {
 
 	// PreExecuteBlock pre-execute block transactions and validate states
 	PreExecuteBlock(block *types.Block) error
+
+	CurrentBlock() *types.Block
+
+	// State returns a new mutable state based on the current HEAD block.
+	State() (*state.StateDB, error)
 }
 
 // Engine is an algorithm agnostic consensus engine.
@@ -150,19 +155,18 @@ type HotStuff interface {
 
 	// Authorize(signer common.Address, signFn func(accounts.Account, string, []byte) ([]byte, error))
 	// Start starts the engine
-	Start(chain ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
+	Start(chain ChainReader, hasBadBlock func(hash common.Hash) bool) error
 
 	// Stop stops the engine
 	Stop() error
 
-	// ChangeEpoch save validators and start height for next epoch
-	ChangeEpoch(epochStartHeight uint64, list []common.Address) error
+	// CheckPoint retrieve the flags of whether epoch change and next validator set.
+	//CheckPoint(state *state.StateDB, header *types.Header, fillHeader bool) (restart bool, err error)
 
-	// GetEpochChangeInfo retrieve the flags of whether epoch change and next validator set.
-	GetEpochChangeInfo(state *state.StateDB, height *big.Int) (bool, bool, []common.Address, error)
+	FillHeader(state *state.StateDB, header *types.Header) error
 
 	// IsSystemCall whether the method id is the governance tx method
-	IsSystemTransaction(tx *types.Transaction, header *types.Header) (bool, error)
+	IsSystemTransaction(tx *types.Transaction, header *types.Header) bool
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message
@@ -192,3 +196,18 @@ type PoW interface {
 }
 
 type StaticNodesEvent struct{ Validators []common.Address }
+
+type EpochChainConfig struct {
+	StartHeight uint64
+	EndHeight   uint64
+	Validators  []common.Address
+}
+
+type CheckPointStatus uint8
+
+const (
+	CheckPointStateUnknown CheckPointStatus = iota
+	CheckPointStatePrepare                  // before epoch change start
+	CheckPointStateChange                   // set new validators in header extra
+	CheckPointStateStarted                  // restart worker and engine
+)

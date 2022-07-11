@@ -21,6 +21,7 @@ package common
 import (
 	"encoding/hex"
 	"fmt"
+	"github.com/ethereum/go-ethereum/core/state"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -46,7 +47,7 @@ func MakeTransaction(service *native.NativeContract, params *MakeTxParam, fromCh
 		return fmt.Errorf("MakeTransaction, putRequest error:%s", err)
 	}
 	chainIDBytes := utils.GetUint64Bytes(params.ToChainID)
-	key := hex.EncodeToString(utils.ConcatKey(utils.CrossChainManagerContractAddress, []byte(REQUEST), chainIDBytes, merkleValue.TxHash))
+	key := state.Key2Slot(append([]byte(REQUEST), append(chainIDBytes, merkleValue.TxHash...)...)).String()
 	if err := NotifyMakeProof(service, hex.EncodeToString(value), key); err != nil {
 		return fmt.Errorf("MakeTransaction, NotifyMakeProof error:%s", err)
 	}

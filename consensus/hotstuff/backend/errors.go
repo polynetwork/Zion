@@ -53,4 +53,6 @@ var (
 	errDecodeFailed = errors.New("decode p2p message failed")
 	// errBadProposal
 	errBADProposal = errors.New("bad proposal")
+	// errSnapNotExist
+	errSnapNotExist = errors.New("snap not exist")
 )

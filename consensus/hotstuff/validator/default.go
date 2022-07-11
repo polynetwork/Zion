@@ -145,6 +145,15 @@ func (valSet *defaultSet) CalcProposerByIndex(index uint64) {
 	valSet.proposer = valSet.validators[index]
 }
 
+func (valSet *defaultSet) String() string {
+	str := "["
+	for _, v := range valSet.validators {
+		str += v.Address().Hex() + " "
+	}
+	str += "]"
+	return str
+}
+
 func calcSeed(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) uint64 {
 	offset := 0
 	if idx, val := valSet.GetByAddress(proposer); val != nil {

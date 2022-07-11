@@ -217,9 +217,11 @@ func (w *worker) SubscribePendingLogs(ch chan<- []*types.Log) event.Subscription
 // start sets the running status as 1 and triggers new work submitting.
 func (w *worker) Start() {
 	if engine, ok := w.engine.(consensus.HotStuff); ok {
-		if err := engine.Start(w.chain, w.chain.CurrentBlock, w.chain.GetBlockByHash, nil); err != nil {
+		if err := engine.Start(w.chain, nil); err != nil {
 			log.Warn("Failed to start hotstuff basic engine", "err", err)
 			return
+		} else {
+			log.Info("Start hotstuff engine succeed!")
 		}
 	}
 	atomic.StoreInt32(&w.running, 1)
@@ -230,6 +232,8 @@ func (w *worker) Stop() {
 	if engine, ok := w.engine.(consensus.HotStuff); ok {
 		if err := engine.Stop(); err != nil {
 			log.Warn("Failed to stop hotstuff basic engine", "err", err)
+		} else {
+			log.Info("Stop hotstuff engine succeed!")
 		}
 	}
 	atomic.StoreInt32(&w.running, 0)
@@ -291,7 +295,6 @@ func (w *worker) newWorkLoop() {
 				h.NewChainHead(head.Block.Header())
 			}
 			clearPending(head.Block.NumberU64())
-			w.changeEpoch(head.Block.Header(), false)
 
 		case <-w.exitCh:
 			return
@@ -611,12 +614,17 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 	}
 
 	// Could potentially happen if starting to mine in an odd state.
-	err := w.makeCurrent(parent, header)
-	if err != nil {
+	if err := w.makeCurrent(parent, header); err != nil {
 		log.Error("Failed to create mining context", "err", err)
 		return
 	}
-	w.changeEpoch(header, true)
+	// fulfill hotstuff extra fields of `height` and `validators` in header
+	if engine, ok := w.engine.(consensus.HotStuff); ok {
+		if err := engine.FillHeader(w.current.state, header); err != nil {
+			log.Error("Failed to fill hotstuff header", "err", err)
+			return
+		}
+	}
 
 	// Only set the coinbase if our consensus engine is running (avoid spurious block rewards)
 	if w.IsRunning() {
@@ -654,7 +662,9 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 			return
 		}
 	}
-	w.commit(true, tstart)
+	if err := w.commit(true, tstart); err != nil {
+		log.Errorf("[miner]", "commit failed", err)
+	}
 }
 
 // commit runs any post-transaction state modifications, assembles the final block
@@ -702,43 +712,35 @@ func totalFees(block *types.Block, receipts []*types.Receipt) *big.Float {
 	return new(big.Float).Quo(new(big.Float).SetInt(feesWei), new(big.Float).SetInt(big.NewInt(params.Ether)))
 }
 
-func (w *worker) changeEpoch(header *types.Header, needFillHeader bool) {
-	engine, ok := w.engine.(consensus.HotStuff)
-	if !ok {
-		// todo(fuk): allow clique and ethhash
-		panic("invalid consensus engine")
-	}
-
-	// todo(fuk): need state.Copy()??
-	if w.current == nil || w.current.state == nil {
-		return
-	}
-
-	beforeChange, changingEpoch, nextValidators, err := engine.GetEpochChangeInfo(w.current.state, header.Number)
-	if err != nil {
-		//log.Error("Failed to get epoch change info", "err", err)
-		//return
-	}
-
-	if needFillHeader {
-		if beforeChange {
-			types.HotstuffHeaderFillWithValidators(header, nextValidators)
-		} else {
-			types.HotstuffHeaderFillWithValidators(header, nil)
-		}
-		w.current.header = header
-	}
-
-	if !changingEpoch {
-		return
-	}
-
-	log.Debug("Restart consensus engine")
-	w.Stop()
-	if err := engine.ChangeEpoch(header.Number.Uint64(), nextValidators); err != nil {
-		log.Error("Change Epoch", "change failed", err)
-		return
-	}
-	time.Sleep(30 * time.Second)
-	w.Start()
-}
+//func (w *worker) checkPoint(header *types.Header, mining bool) (err error) {
+//	engine, ok := w.engine.(consensus.HotStuff)
+//	if !ok {
+//		return fmt.Errorf("invalid engine")
+//	}
+//
+//	var (
+//		state *state.StateDB
+//		restart bool
+//	)
+//	if mining {
+//		state = w.current.state
+//	} else {
+//		parent := w.chain.GetHeaderByHash(header.ParentHash)
+//		if state, err = w.chain.StateAt(parent.Root); err != nil {
+//			return
+//		}
+//	}
+//
+//	if restart, err = engine.CheckPoint(state, header, mining); err != nil {
+//		return err
+//	}
+//
+//	if w.IsRunning() && restart {
+//		log.Debug("Restart consensus engine")
+//		w.Stop()
+//		time.Sleep(30 * time.Second)
+//		w.Start()
+//	}
+//
+//	return nil
+//}

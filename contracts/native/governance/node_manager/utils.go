@@ -95,9 +95,6 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 }
 
 func CheckVoterSigns(s *native.NativeContract, method string, input []byte, signer common.Address) (bool, error) {
-	ctx := s.ContractRef().CurrentContext()
-	caller := ctx.Caller
-
 	log.Trace("CheckVoterSigns", "method", method, "input", hexutil.Encode(input), "signer", signer.Hex())
 
 	// get epoch info
@@ -107,7 +104,7 @@ func CheckVoterSigns(s *native.NativeContract, method string, input []byte, sign
 	}
 
 	// check authority
-	if err := CheckVoterAuthority(signer, caller, epoch); err != nil {
+	if err := CheckVoterAuthority(signer, epoch); err != nil {
 		return false, fmt.Errorf("CheckVoterSigns, CheckValidatorAuthority error: %v", err)
 	}
 
@@ -167,22 +164,19 @@ func CheckValidatorAuthority(origin, caller common.Address, epoch *EpochInfo) er
 	return fmt.Errorf("tx origin %s is not valid validator", origin.Hex())
 }
 
-func CheckVoterAuthority(origin, caller common.Address, epoch *EpochInfo) error {
+func CheckVoterAuthority(addr common.Address, epoch *EpochInfo) error {
 	if epoch == nil || epoch.Voters == nil {
 		return fmt.Errorf("invalid epoch")
 	}
-	if origin == common.EmptyAddress || caller == common.EmptyAddress {
-		return fmt.Errorf("origin/caller is empty address")
-	}
-	if origin != caller {
-		return fmt.Errorf("origin must be caller")
+	if addr == common.EmptyAddress {
+		return fmt.Errorf("addr is empty address")
 	}
 	for _, v := range epoch.Voters {
-		if v.Address == origin {
+		if v.Address == addr {
 			return nil
 		}
 	}
-	return fmt.Errorf("tx origin %s is not valid validator", origin.Hex())
+	return fmt.Errorf("addr %s is not valid validator", addr.Hex())
 }
 
 func EpochChangeAtNextBlock(curHeight, epochStartHeight uint64) bool {

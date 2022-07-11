@@ -81,9 +81,7 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 	// Iterate over and process the individual transactions
 	for i, tx := range block.Transactions() {
 		if isHotstuff {
-			if isSystemTx, err := engine.IsSystemTransaction(tx, block.Header()); err != nil {
-				return nil, nil, 0, err
-			} else if isSystemTx {
+			if isSystemTx := engine.IsSystemTransaction(tx, block.Header()); isSystemTx {
 				systemTxs = append(systemTxs, tx)
 				continue
 			}

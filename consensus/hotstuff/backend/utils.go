@@ -21,7 +21,6 @@ package backend
 import (
 	"bytes"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -30,6 +29,8 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -84,21 +85,20 @@ func (s *backend) getSystemMessage(from, toAddress common.Address, data []byte, 
 	}
 }
 
-// applyTransaction execute transaction without miner worker.
+// applyTransaction execute transaction without miner worker, and only succeed tx will be packed in block.
 func (s *backend) applyTransaction(
 	chain consensus.ChainHeaderReader,
 	msg callmsg,
 	state *state.StateDB,
 	header *types.Header,
 	chainContext core.ChainContext,
-	txs *[]*types.Transaction, receipts *[]*types.Receipt,
-	receivedTxs *[]*types.Transaction, usedGas *uint64, mining bool,
+	commonTxs *[]*types.Transaction, receipts *[]*types.Receipt,
+	sysTxs *[]*types.Transaction, usedGas *uint64, mining bool,
 ) (err error) {
 	nonce := state.GetNonce(msg.From())
 
 	expectedTx := types.NewTransaction(nonce, *msg.To(), msg.Value(), msg.Gas(), msg.GasPrice(), msg.Data())
-	signer := types.NewEIP155Signer(chain.Config().ChainID)
-	expectedHash := signer.Hash(expectedTx)
+	signer := types.MakeSigner(chain.Config(), header.Number)
 
 	// miner worker use finalizeAndAssemble in which the param of `mining` is true,  it's denote
 	// that this tx comes from miner. `validator` send governance tx in the same nonce is forbidden.
@@ -108,32 +108,41 @@ func (s *backend) applyTransaction(
 			return err
 		}
 	} else {
-		if receivedTxs == nil || len(*receivedTxs) == 0 || (*receivedTxs)[0] == nil {
-			return errors.New("supposed to get a actual transaction, but get none")
+		if sysTxs == nil || len(*sysTxs) == 0 || (*sysTxs)[0] == nil {
+			//return errors.New("supposed to get a actual transaction, but get none")
+			// allow empty system contract
+			return nil
 		}
-		actualTx := (*receivedTxs)[0]
-		if !bytes.Equal(signer.Hash(actualTx).Bytes(), expectedHash.Bytes()) {
-			return fmt.Errorf("expected tx hash %v, get %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s",
+		actualTx := (*sysTxs)[0]
+		if expectedHash := signer.Hash(expectedTx); !bytes.Equal(signer.Hash(actualTx).Bytes(), expectedHash.Bytes()) {
+			return fmt.Errorf("expected tx hash %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s;"+
+				"get tx hash %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s",
 				expectedHash.String(),
-				actualTx.Hash().String(),
 				expectedTx.Nonce(),
 				expectedTx.To().String(),
 				expectedTx.Value().String(),
 				expectedTx.Gas(),
 				expectedTx.GasPrice().String(),
 				hex.EncodeToString(expectedTx.Data()),
+				actualTx.Hash().String(),
+				actualTx.Nonce(),
+				actualTx.To().String(),
+				actualTx.Value().String(),
+				actualTx.Gas(),
+				actualTx.GasPrice().String(),
+				hex.EncodeToString(actualTx.Data()),
 			)
 		}
 		expectedTx = actualTx
 		// move to next
-		*receivedTxs = (*receivedTxs)[1:]
+		*sysTxs = (*sysTxs)[1:]
 	}
-	state.Prepare(expectedTx.Hash(), common.Hash{}, len(*txs))
+	state.Prepare(expectedTx.Hash(), common.Hash{}, len(*commonTxs))
 	gasUsed, err := applyMessage(msg, state, header, chain.Config(), chainContext)
 	if err != nil {
 		return err
 	}
-	*txs = append(*txs, expectedTx)
+	*commonTxs = append(*commonTxs, expectedTx)
 	var root []byte
 	if chain.Config().IsByzantium(header.Number) {
 		state.Finalise(true)
@@ -156,7 +165,7 @@ func (s *backend) applyTransaction(
 	return nil
 }
 
-// apply message
+// applyMessage
 func applyMessage(
 	msg callmsg,
 	state *state.StateDB,
@@ -222,7 +231,11 @@ type systemTxContext struct {
 	mining   bool
 }
 
-func (s *backend) executeSystemTx(ctx *systemTxContext, contract common.Address, payload []byte) error {
+func (s *backend) executeTransaction(ctx *systemTxContext, contract common.Address, payload []byte) error {
 	msg := s.getSystemMessage(ctx.header.Coinbase, contract, payload, common.Big0)
 	return s.applyTransaction(ctx.chain, msg, ctx.state, ctx.header, ctx.chainCtx, ctx.txs, ctx.receipts, ctx.sysTxs, ctx.usedGas, ctx.mining)
+}
+
+func NewDefaultValSet(list []common.Address) hotstuff.ValidatorSet {
+	return validator.NewSet(list, hotstuff.RoundRobin)
 }

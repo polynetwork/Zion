@@ -20,7 +20,6 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -59,8 +58,8 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	epochs              map[uint64]*Epoch // map epoch start height to epochs
-	maxEpochStartHeight uint64
+	//snaps *snapshots // store snaps in desc order according to epoch start height
+	vals hotstuff.ValidatorSet
 
 	// The channels for hotstuff engine notifications
 	sealMu            sync.Mutex
@@ -79,6 +78,8 @@ type backend struct {
 	nodesFeed event.Feed
 
 	eventMux *event.TypeMux
+	point uint64
+	changing bool
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }
@@ -104,9 +105,7 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 	}
 
 	backend.core = core.New(backend, config, signer)
-	if err := backend.LoadEpoch(); err != nil {
-		panic(fmt.Sprintf("load epoch failed, err: %v", err))
-	}
+
 	return backend
 }
 
@@ -228,20 +227,6 @@ func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuf
 	return block, nil
 }
 
-func (s *backend) ForwardCommit(proposal hotstuff.Proposal, extra []byte) (hotstuff.Proposal, error) {
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
-		return nil, errInvalidProposal
-	}
-
-	h := block.Header()
-	h.Extra = extra
-	block = block.WithSeal(h)
-
-	return block, nil
-}
-
 func (s *backend) Commit(proposal hotstuff.Proposal) error {
 	// Check if the proposal is a valid block
 	block, ok := proposal.(*types.Block)
@@ -249,7 +234,7 @@ func (s *backend) Commit(proposal hotstuff.Proposal) error {
 		s.logger.Error("Committed to miner worker", "proposal", "not block")
 		return errInvalidProposal
 	}
-	
+
 	s.logger.Info("Committed", "address", s.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
 	// - if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.
@@ -339,11 +324,7 @@ func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Durat
 }
 
 func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
-	if s.currentBlock == nil {
-		return nil, common.Address{}
-	}
-
-	block := s.currentBlock()
+	block := s.chain.CurrentBlock()
 	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
 		var err error
@@ -359,7 +340,7 @@ func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 }
 
 func (s *backend) GetProposal(hash common.Hash) hotstuff.Proposal {
-	return s.getBlockByHash(hash)
+	return s.chain.GetBlockByHash(hash)
 }
 
 // HasProposal implements hotstuff.Backend.HashBlock
@@ -389,13 +370,4 @@ func (s *backend) AskMiningProposalWithParent(parent *types.Block) {
 
 func (s *backend) SendValidatorsChange(list []common.Address) {
 	s.nodesFeed.Send(consensus.StaticNodesEvent{Validators: list})
-}
-
-func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) (bool, error) {
-	if tx == nil || len(tx.Data()) < 4 {
-		return false, nil
-	}
-	id := common.Bytes2Hex(tx.Data()[:4])
-	// todo: get method id collection from governance contract
-	return len(id) > 4, nil
 }

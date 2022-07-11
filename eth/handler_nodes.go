@@ -43,9 +43,10 @@ import (
 //
 
 var (
-	broadcastDuration   = 60 * time.Second // Time duration for broadcast static-nodes
-	broadcastLastTime   = 24 * time.Hour   // Last time for broadcast static-nodes
-	broadcastChCapacity = 10               // Capacity for broadcast channel, is a low frequency action
+	// // todo(fuk): update parameters as below, it should be a bit longer in mainnet.
+	broadcastDuration   = 3 * time.Second // Time duration for broadcast static-nodes
+	broadcastLastTime   = 10 * time.Minute  // Last time for broadcast static-nodes
+	broadcastChCapacity = 10              // Capacity for broadcast channel, is a low frequency action
 )
 
 // staticNodeServer defines the methods need from a p2p server implementation to
@@ -159,9 +160,9 @@ func (h *nodeBroadcaster) handleTask(validators []common.Address, task *haltTask
 	h.setValidators(validators)
 
 	// do not need to broadcast static-nodes if miner is not validator
-	if _, exist := h.validators[h.miner]; !exist {
-		return
-	}
+	//if _, exist := h.validators[h.miner]; !exist {
+	//	return
+	//}
 
 	for {
 		select {
@@ -222,6 +223,7 @@ func (h *nodeBroadcaster) addNode(node *enode.Node) (id string, exist bool) {
 	id = node.ID().String()
 	if _, exist = h.nodesMap[id]; !exist {
 		h.nodesMap[id] = node
+		log.Trace("add node", "")
 	}
 	return
 }
@@ -270,11 +272,12 @@ func (h *ethHandler) handleStaticNodesMsg(peer *eth.Peer, packet *eth.StaticNode
 	}
 
 	// filter validator's message
-	if _, exist := broadcaster.isValidator(peer.Node()); !exist {
-		log.Debug("handleStaticNodesMsg", "from", peer.Node().TCP(), "err", "node is not validator",
-			"list", broadcaster.validators)
-		return nil
-	}
+	// 允许老validator将新validator信息转发给节点
+	//if _, exist := broadcaster.isValidator(peer.Node()); !exist {
+	//	log.Trace("handleStaticNodesMsg", "from", peer.Node().TCP(), "err", "node is not validator",
+	//		"list", broadcaster.validators)
+	//	return nil
+	//}
 
 	// `packet.Local` is the `urlv4` string of the message sender, which needs to be parsed into a `enode` structure.
 	// in addition, this node must be placed at the end of the `packet.remote` list, because there is deduplication
@@ -288,20 +291,10 @@ func (h *ethHandler) handleStaticNodesMsg(peer *eth.Peer, packet *eth.StaticNode
 
 	// collect all static nodes
 	for _, node := range packet.Remotes {
-		log.Debug("handleStaticNodesMsg", "from", peer.Node().TCP(), "receive tcp", node.TCP())
+		log.Trace("handleStaticNodesMsg", "from", peer.Node().TCP(), "receive tcp", node.TCP())
 		if _, exist := broadcaster.isValidator(node); exist {
 			broadcaster.addNode(node)
-			log.Debug("handleStaticNodesMsg", "from", peer.Node().TCP(), "add tcp", node.TCP())
-		}
-	}
-
-	// filter old validators
-	olds := make(map[enode.ID]*enode.Node)
-	for _, node := range broadcaster.nodesMap {
-		if _, exist := broadcaster.isValidator(node); !exist {
-			olds[node.ID()] = node
-			broadcaster.delNode(node)
-			log.Debug("handleStaticNodesMsg", "from", peer.Node().TCP(), "remove old tcp", node.TCP())
+			log.Trace("handleStaticNodesMsg", "from", peer.Node().TCP(), "add tcp", node.TCP())
 		}
 	}
 
@@ -312,12 +305,22 @@ func (h *ethHandler) handleStaticNodesMsg(peer *eth.Peer, packet *eth.StaticNode
 		}
 	}
 
-	// remove old peer in p2p server
-	for _, node := range olds {
-		if _, exist := h.peers.peers[node.ID().String()]; exist {
-			broadcaster.server.RemovePeer(node)
-		}
-	}
+	// filter old validators
+	//olds := make(map[enode.ID]*enode.Node)
+	//for _, node := range broadcaster.nodesMap {
+	//	if _, exist := broadcaster.isValidator(node); !exist {
+	//		olds[node.ID()] = node
+	//		broadcaster.delNode(node)
+	//		log.Debug("handleStaticNodesMsg", "from", peer.Node().TCP(), "remove old tcp", node.TCP())
+	//	}
+	//}
+
+	//// remove old peer in p2p server
+	//for _, node := range olds {
+	//	if _, exist := h.peers.peers[node.ID().String()]; exist {
+	//		broadcaster.server.RemovePeer(node)
+	//	}
+	//}
 
 	return nil
 }

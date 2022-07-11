@@ -23,7 +23,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
-	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"math/big"
 
 	ecommon "github.com/ethereum/go-ethereum/common"

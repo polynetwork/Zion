@@ -6,12 +6,13 @@ contract cross_chain_manager {
     event btcTxToRelayEvent(uint64 FromChainID, uint64 ChainID, string buf, string FromTxHash, string RedeemKey);
     event makeBtcTxEvent(string rk, string buf, uint64[] amts);
     event makeProof(string merkleValueHex, uint64 BlockHeight, string key);
+    event ReplenishEvent(string[] txHashes, uint64 chainID);
 
     function name() public returns(string memory Name) {
         return Name;
     }
     
-    function importOuterTransfer(uint64 SourceChainID, uint32 Height, bytes memory Proof, bytes memory RelayerAddress, bytes memory Extra, bytes memory HeaderOrCrossChainMsg) public returns(bool success) {
+    function importOuterTransfer(uint64 SourceChainID, uint32 Height, bytes memory Proof, bytes memory Extra, bytes memory Signature) public returns(bool success) {
         return success;
     }
 
@@ -29,6 +30,10 @@ contract cross_chain_manager {
     }
     
     function WhiteChain(uint64 ChainID) public returns(bool success) {
+        return success;
+    }
+
+    function replenish(uint64 chainID, string[] calldata txHashes) external returns(bool success) {
         return success;
     }
 }

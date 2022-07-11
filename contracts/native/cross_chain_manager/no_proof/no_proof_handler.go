@@ -22,8 +22,9 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
-	iscommon "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 type NoProofHandler struct {
@@ -40,19 +41,34 @@ func (this *NoProofHandler) MakeDepositProposal(service *native.NativeContract) 
 		return nil, err
 	}
 
-	value, err := iscommon.GetRootInfo(service, params.SourceChainID, params.Height)
+	//verify signature
+	digest, err := params.Digest()
 	if err != nil {
-		return nil, fmt.Errorf("no proof MakeDepositProposal, verifyFromEthTx error: %s", err)
+		return nil, fmt.Errorf("no proof MakeDepositProposal, digest input param error: %v", err)
 	}
-	makeTxParam, err := scom.DecodeTxParam(value)
+	pub, err := crypto.SigToPub(digest, params.Signature)
 	if err != nil {
-		return nil, fmt.Errorf("no proof MakeDepositProposal, deserialize MakeTxParam error:%s", err)
+		return nil, fmt.Errorf("no proof MakeDepositProposal, crypto.SigToPub error: %v", err)
 	}
-	if err := scom.CheckDoneTx(service, makeTxParam.CrossChainID, params.SourceChainID); err != nil {
-		return nil, fmt.Errorf("no proof MakeDepositProposal, check done transaction error:%s", err)
+	addr := crypto.PubkeyToAddress(*pub)
+
+	ok, err := node_manager.CheckVoterSigns(service, scom.MethodImportOuterTransfer, digest, addr)
+	if err != nil {
+		return nil, fmt.Errorf("no proof MakeDepositProposal, CheckVoterSigns error: %v", err)
 	}
-	if err := scom.PutDoneTx(service, makeTxParam.CrossChainID, params.SourceChainID); err != nil {
-		return nil, fmt.Errorf("no proof MakeDepositProposal, PutDoneTx error:%s", err)
+
+	if ok {
+		makeTxParam, err := scom.DecodeTxParam(params.Extra)
+		if err != nil {
+			return nil, fmt.Errorf("no proof MakeDepositProposal, deserialize MakeTxParam error:%s", err)
+		}
+		if err := scom.CheckDoneTx(service, makeTxParam.CrossChainID, params.SourceChainID); err != nil {
+			return nil, fmt.Errorf("no proof MakeDepositProposal, check done transaction error:%s", err)
+		}
+		if err := scom.PutDoneTx(service, makeTxParam.CrossChainID, params.SourceChainID); err != nil {
+			return nil, fmt.Errorf("no proof MakeDepositProposal, PutDoneTx error:%s", err)
+		}
+		return makeTxParam, nil
 	}
-	return makeTxParam, nil
+	return nil, nil
 }

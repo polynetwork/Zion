@@ -19,6 +19,7 @@
 package backend
 
 import (
+	"fmt"
 	"math/big"
 	"time"
 
@@ -27,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 )
 
@@ -108,6 +110,42 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
 	uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
 
+	if err := s.executeSystemTxs(chain, header, state, txs, receipts, systemTxs, usedGas, false); err != nil {
+		return err
+	}
+	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
+	header.UncleHash = nilUncleHash
+	return nil
+}
+
+func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
+	txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, []*types.Receipt, error) {
+
+	// allow empty block in miner worker
+	if txs == nil {
+		txs = make([]*types.Transaction, 0)
+	}
+	if receipts == nil {
+		receipts = make([]*types.Receipt, 0)
+	}
+
+	if err := s.executeSystemTxs(chain, header, state, &txs, &receipts, nil, &header.GasUsed, true); err != nil {
+		return nil, nil, err
+	}
+	// Assemble and return the final block for sealing
+	block := packBlock(state, chain, header, txs, receipts)
+	return block, receipts, nil
+}
+
+// executeSystemTxs governance tx execution do not allow failure, the consensus will halt if tx failed and return error.
+func (s *backend) executeSystemTxs(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
+	txs *[]*types.Transaction, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64, mining bool) error {
+
+	// genesis block DONT need to execute system transaction
+	if header.Number.Uint64() == 0 {
+		return nil
+	}
+
 	if err := s.reward(state, header.Number); err != nil {
 		return err
 	}
@@ -121,52 +159,12 @@ func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Head
 		sysTxs:   systemTxs,
 		receipts: receipts,
 		usedGas:  usedGas,
-		mining:   true,
+		mining:   mining,
 	}
-	if err := s.execEpochChange(ctx); err != nil {
-		// todo(fuk): return err
-		//return fmt.Errorf("danger, execute node_manager.epochChangeFailed, err: %v", err)
+	if err := s.execEndBlock(ctx); err != nil {
+		return err
 	}
-	// s.execEndBlock()
-
-	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
-	header.UncleHash = nilUncleHash
-	return nil
-}
-
-func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
-	txs []*types.Transaction, uncles []*types.Header, receipts []*types.Receipt) (*types.Block, []*types.Receipt, error) {
-
-	if err := s.reward(state, header.Number); err != nil {
-		return nil, nil, err
-	}
-
-	if txs == nil {
-		txs = make([]*types.Transaction, 0)
-	}
-	if receipts == nil {
-		receipts = make([]*types.Receipt, 0)
-	}
-	ctx := &systemTxContext{
-		chain:    chain,
-		state:    state,
-		header:   header,
-		chainCtx: chainContext{Chain: chain, engine: s},
-		txs:      &txs,
-		sysTxs:   nil,
-		receipts: &receipts,
-		usedGas:  &header.GasUsed,
-		mining:   true,
-	}
-	if err := s.execEpochChange(ctx); err != nil {
-		// todo(fuk): return err
-		//return nil, nil, fmt.Errorf("danger, execute node_manager.epochChangeFailed, err: %v", err)
-	}
-	// s.execEndBlock()
-
-	// Assemble and return the final block for sealing
-	block := packBlock(state, chain, header, txs, receipts)
-	return block, receipts, nil
+	return s.execEpochChange(state, header, ctx)
 }
 
 func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {
@@ -236,7 +234,7 @@ func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 }
 
 // Start implements consensus.Istanbul.Start
-func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error {
+func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(hash common.Hash) bool) error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 
@@ -251,9 +249,18 @@ func (s *backend) Start(chain consensus.ChainReader, currentBlock func() *types.
 	s.commitCh = make(chan *types.Block, 1)
 
 	s.chain = chain
-	s.currentBlock = currentBlock
-	s.getBlockByHash = getBlockByHash
 	s.hasBadBlock = hasBadBlock
+
+	// init validator set
+	if err := s.initValidators(); err != nil {
+		return fmt.Errorf("get validators failed, err: %v", err)
+	}
+
+	// waiting for p2p connected
+	if s.changing {
+		s.SendValidatorsChange(s.vals.AddressList())
+		time.Sleep(60 * time.Second)
+	}
 
 	if err := s.core.Start(chain); err != nil {
 		return err
@@ -281,19 +288,41 @@ func (s *backend) Close() error {
 	return nil
 }
 
+func (s *backend) restart() {
+	if s.coreStarted {
+		s.Stop()
+		log.Debug("Restart consensus engine...")
+		s.changing = true
+		s.Start(s.chain, s.hasBadBlock)
+		s.changing = false
+	}
+}
+
 // verifyHeader checks whether a header conforms to the consensus rules.The
 // caller may optionally pass in a batch of parents (ascending order) to avoid
 // looking those up from the database. This is useful for concurrently verifying
 // a batch of new headers.
 func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.Header, parents []*types.Header, seal bool) error {
-	if err := CustomVerifyHeader(header); err != nil {
-		return err
+	if header.Number == nil {
+		return errUnknownBlock
+	}
+	// Ensure that the mix digest is zero as we don't have fork protection currently
+	if header.MixDigest != types.HotstuffDigest {
+		return errInvalidMixDigest
+	}
+	// Ensure that extra info is not nil
+	if header.Extra == nil {
+		return errUnknownBlock
+	}
+	// Ensure that the block doesn't contain any uncles which are meaningless in Istanbul
+	if header.UncleHash != nilUncleHash {
+		return errInvalidUncleHash
+	}
+	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
+	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
+		return errInvalidDifficulty
 	}
 
-	// verifyCascadingFields verifies all the header fields that are not standalone,
-	// rather depend on a batch of previous headers. The caller may optionally pass
-	// in a batch of parents (ascending order) to avoid looking those up from the
-	// database. This is useful for concurrently verifying a batch of new headers.
 	// The genesis block is the always valid dead-end
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -301,7 +330,9 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	}
 
 	// Ensure that the block's timestamp isn't too close to it's parent
-	var parent *types.Header
+	var (
+		parent *types.Header
+	)
 	if len(parents) > 0 {
 		parent = parents[len(parents)-1]
 	} else {
@@ -314,35 +345,16 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return errInvalidTimestamp
 	}
 
-	if err := s.UpdateEpoch(parent, header); err != nil {
+	// Get validator set
+	vals, err := s.getValidatorsByHeader(header, parent, chain)
+	if err != nil {
 		return err
 	}
 
-	vals := s.Validators(number)
+	// recover and verify signatures
 	if _, err := s.signer.VerifyHeader(header, vals, seal); err != nil {
 		return err
 	}
-	return nil
-}
-
-func CustomVerifyHeader(header *types.Header) error {
-	if header.Number == nil {
-		return errUnknownBlock
-	}
-
-	// Ensure that the mix digest is zero as we don't have fork protection currently
-	if header.MixDigest != types.HotstuffDigest {
-		return errInvalidMixDigest
-	}
-	// Ensure that the block doesn't contain any uncles which are meaningless in Istanbul
-	if header.UncleHash != nilUncleHash {
-		return errInvalidUncleHash
-	}
-	// Ensure that the block's difficulty is meaningful (may not be correct at this point)
-	if header.Difficulty == nil || header.Difficulty.Cmp(defaultDifficulty) != 0 {
-		return errInvalidDifficulty
-	}
-
 	return nil
 }
 

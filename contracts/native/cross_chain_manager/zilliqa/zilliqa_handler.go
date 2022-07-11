@@ -26,7 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync/common"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 	"strings"
