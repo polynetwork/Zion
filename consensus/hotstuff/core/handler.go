@@ -93,7 +93,7 @@ func (c *core) handleEvents() {
 		select {
 		case event, ok := <-c.events.Chan():
 			if !ok {
-				logger.Error("Failed to receive msg Event")
+				logger.Error("Failed to receive msg Event", "err", "subscribe event chan out empty")
 				return
 			}
 			// A real Event arrived, process interesting content

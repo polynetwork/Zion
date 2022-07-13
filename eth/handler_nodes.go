@@ -43,7 +43,7 @@ import (
 //
 
 var (
-	nodeFetcherDuration   = 10 * time.Second
+	nodeFetcherDuration   = 2 * time.Second
 	nodeFetchingLastTime  = 1 * time.Minute
 	nodeFetcherChCapacity = 10 // Capacity for broadcast channel, is a low frequency action
 )

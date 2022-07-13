@@ -33,7 +33,7 @@ import (
 )
 
 const (
-	inmemorySnapshots = 128 // Number of recent vote snapshots to keep in memory
+	inmemorySnapshots = 128 // Number of recent epoch header
 	inmemoryPeers     = 1000
 	inmemoryMessages  = 1024
 )
@@ -257,10 +257,8 @@ func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(hash commo
 	}
 
 	// waiting for p2p connected
-	if s.changing {
-		s.SendValidatorsChange(s.vals.AddressList())
-		time.Sleep(60 * time.Second)
-	}
+	s.SendValidatorsChange(s.vals.AddressList())
+	time.Sleep(60 * time.Second)
 
 	if err := s.core.Start(chain); err != nil {
 		return err
@@ -292,9 +290,7 @@ func (s *backend) restart() {
 	if s.coreStarted {
 		s.Stop()
 		log.Debug("Restart consensus engine...")
-		s.changing = true
 		s.Start(s.chain, s.hasBadBlock)
-		s.changing = false
 	}
 }
 
@@ -346,7 +342,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	}
 
 	// Get validator set
-	vals, err := s.getValidatorsByHeader(header, parent, chain)
+	isEpoch, vals, err := s.getValidatorsByHeader(header, parent, chain)
 	if err != nil {
 		return err
 	}
@@ -355,6 +351,12 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if _, err := s.signer.VerifyHeader(header, vals, seal); err != nil {
 		return err
 	}
+
+	// save validators in lru cache
+	if isEpoch {
+		s.saveRecentHeader(header)
+	}
+
 	return nil
 }
 
