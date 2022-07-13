@@ -171,6 +171,7 @@ func (h *nodeFetcher) handleTask(task *task) {
 		close(done)
 	})
 	defer func() {
+		// todo: remove all nodes which is not validator
 		timer.Stop()
 		task.done <- struct{}{}
 	}()
@@ -185,7 +186,7 @@ func (h *nodeFetcher) handleTask(task *task) {
 		return
 	}
 
-	log.Debug("handleTask", "miner", h.miner, "validators", task.validators)
+	log.Trace("nodeFetcher", "task", h.miner, "validators", task.validators)
 
 	for {
 		select {
@@ -224,44 +225,53 @@ func (h *nodeFetcher) fullConnectSeedNodes() {
 
 func (h *nodeFetcher) batchRequest() {
 	for _, peer := range h.seeds {
-		peer.RequestStaticNodes(h.local, []common.Address{})
+		if err := peer.RequestStaticNodes(h.local); err != nil {
+			log.Trace("nodeFetcher", "request static node", identity(peer.Node()), "err", err)
+		} else {
+			log.Trace("nodeFetcher", "request static node", identity(peer.Node()), "local", identity(h.local))
+		}
 	}
 }
 
-func (h *nodeFetcher) handleGetStaticNodesMsg(peer *eth.Peer, from *enode.Node, remote []common.Address) error {
+func (h *nodeFetcher) handleGetStaticNodesMsg(peer *eth.Peer, from *enode.Node) error {
 	if !h.isSeedNode() {
-		log.Trace("handleGetStaticNodesMsg", "from", peer.Node().TCP(), "err", "node is not seed node")
+		log.Trace("nodeFetcher", "handleGetStaticNodesMsg", identity(h.local), "err", "node is not seed node")
 		return nil
 	}
 
 	validator := nodeAddress(peer.Node())
 	if !h.checkValidator(validator) {
-		log.Trace("handleGetStaticNodesMsg", "from", peer.Node().TCP(), "err", "node is not validator")
+		log.Trace("nodeFetcher", "handleGetStaticNodesMsg", identity(peer.Node()), "err", "node is not validator")
 		return nil
 	}
 
 	// todo: ensure that peer.node pubkey and ip is the same with `from` node
 	node, err := enode.CopyUrlv4(from.URLv4(), from.IP(), from.TCP(), from.UDP())
 	if err != nil {
-		return err
+		log.Trace("nodeFetcher", "handleGetStaticNodesMsg", identity(peer.Node()), "err", err)
+		return nil
 	}
 	h.setValidator(validator, node)
 
 	list := h.validatorList()
-	return peer.ReplyGetStaticNodes(list)
+	if err := peer.ReplyGetStaticNodes(list); err != nil {
+		log.Trace("nodeFetcher", "handleGetStaticNodesMsg", identity(peer.Node()), "err", err)
+		return nil
+	}
+	return nil
 }
 
 func (h *nodeFetcher) handleStaticNodesMsg(peer *eth.Peer, list []*enode.Node) error {
 	if list == nil || len(list) == 0 {
-		log.Trace("handleStaticNodesMsg", "from", peer.Node().TCP(), "err", "list is empty")
+		log.Trace("nodeFetcher", "handleStaticNodesMsg", identity(peer.Node()), "err", "list is empty")
 		return nil
 	}
 
 	for _, node := range list {
 		validator := nodeAddress(node)
 		if h.setValidator(validator, node) {
+			log.Trace("nodeFetcher", "handleStaticNodesMsg", identity(peer.Node()), "addr", validator.Hex())
 			h.server.AddPeer(node)
-			log.Trace("handleStaticNodesMsg", "add", peer.Node().TCP(), "addr", validator.Hex())
 		}
 	}
 
@@ -276,6 +286,7 @@ func (h *nodeFetcher) resetValidators(validators []common.Address) {
 	for _, v := range validators {
 		h.validators[v] = nil
 	}
+	log.Trace("nodeFetcher", "reset validators", validators)
 }
 
 func (h *nodeFetcher) setValidator(validator common.Address, node *enode.Node) bool {
@@ -284,6 +295,7 @@ func (h *nodeFetcher) setValidator(validator common.Address, node *enode.Node) b
 
 	if data, exist := h.validators[validator]; exist && data == nil {
 		h.validators[validator] = node
+		log.Trace("nodeFetcher", "set validator node", validator.Hex(), "node", identity(node))
 		return true
 	}
 	return false
@@ -307,7 +319,9 @@ func (h *nodeFetcher) validatorList() []*enode.Node {
 
 	list := make([]*enode.Node, 0)
 	for _, v := range h.validators {
-		list = append(list, v)
+		if v != nil {
+			list = append(list, v)
+		}
 	}
 	return list
 }
@@ -318,4 +332,11 @@ func (h *nodeFetcher) isSeedNode() bool {
 
 func nodeAddress(node *enode.Node) common.Address {
 	return crypto.PubkeyToAddress(*node.Pubkey())
+}
+
+func identity(node *enode.Node) interface{} {
+	if node == nil {
+		return 0
+	}
+	return node.TCP()
 }

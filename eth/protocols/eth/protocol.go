@@ -332,14 +332,36 @@ type PooledTransactionsRLPPacket66 struct {
 type GetStaticNodesPacket struct {
 	RequestId uint64
 	Local     *enode.Node
-	Remotes   []common.Address
+}
+
+func (p *GetStaticNodesPacket) EncodeRLP(w io.Writer) error {
+	enc, err := p.Local.MarshalText()
+	if err != nil {
+		return err
+	}
+	return rlp.Encode(w, []interface{}{p.RequestId, enc})
+}
+
+func (p *GetStaticNodesPacket) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		RequestId uint64
+		Local     []byte
+	}
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+
+	node := new(enode.Node)
+	if err := node.UnmarshalText(data.Local); err != nil {
+		return err
+	}
+	p.RequestId, p.Local = data.RequestId, node
+	return nil
 }
 
 type StaticNodesPacket struct {
 	List []*enode.Node
 }
-
-type StaticNodesRLPPacket []rlp.RawValue
 
 func (p *StaticNodesPacket) EncodeRLP(w io.Writer) error {
 	remotes := make([][]byte, 0)
@@ -354,12 +376,14 @@ func (p *StaticNodesPacket) EncodeRLP(w io.Writer) error {
 }
 
 func (p *StaticNodesPacket) DecodeRLP(s *rlp.Stream) error {
-	var data [][]byte
+	var data struct{
+		List [][]byte
+	}
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 	p.List = make([]*enode.Node, 0)
-	for _, v := range data {
+	for _, v := range data.List {
 		node := new(enode.Node)
 		if err := node.UnmarshalText(v); err != nil {
 			return err

@@ -544,8 +544,7 @@ func (p *Peer) RequestTxs(hashes []common.Hash) error {
 }
 
 // RequestStaticNodes fetches a batch of static nodes from a remote node
-func (p *Peer) RequestStaticNodes(local *enode.Node, addrs []common.Address) error {
-	p.Log().Debug("Fetching batch of static nodes", "count", len(addrs))
+func (p *Peer) RequestStaticNodes(local *enode.Node) error {
 	if p.Version() == HOTSTUFF {
 		id := rand.Uint64()
 
@@ -553,16 +552,18 @@ func (p *Peer) RequestStaticNodes(local *enode.Node, addrs []common.Address) err
 		return p2p.Send(p.rw, GetStaticNodesMsg, &GetStaticNodesPacket{
 			RequestId: id,
 			Local:     local,
-			Remotes:   addrs,
 		})
 	}
 	return nil
 }
 
 func (p *Peer) ReplyGetStaticNodes(list []*enode.Node) error {
-	return p2p.Send(p.rw, StaticNodesMsg, &StaticNodesPacket{
-		List: list,
-	})
+	if p.Version() == HOTSTUFF {
+		return p2p.Send(p.rw, StaticNodesMsg, &StaticNodesPacket{
+			List: list,
+		})
+	}
+	return nil
 }
 
 // Send writes an RLP-encoded message with the given code.
