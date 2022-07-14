@@ -103,7 +103,8 @@ func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSe
 }
 
 func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) bool {
-	if tx == nil || len(tx.Data()) < 4 {
+	// consider that tx is deploy transaction, so the tx.to will be nil
+	if tx == nil || len(tx.Data()) < 4 || tx.To() == nil {
 		return false
 	}
 	if *tx.To() != contractAddr {
