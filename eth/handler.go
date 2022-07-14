@@ -128,7 +128,7 @@ type handler struct {
 	wg        sync.WaitGroup
 	peerWG    sync.WaitGroup
 
-	nodeBroadcaster *nodeBroadcaster
+	nodeFetcher *nodeFetcher
 
 	// hotstuff
 	engine consensus.Engine
@@ -154,7 +154,7 @@ func newHandler(config *handlerConfig, engine consensus.Engine, manager staticNo
 		engine:     engine,
 	}
 
-	h.nodeBroadcaster = newNodeBroadcaster(config.Miner, manager, h)
+	h.nodeFetcher = newNodeBroadcaster(config.Miner, manager, h)
 
 	if config.Sync == downloader.FullSync {
 		// The database seems empty as the current block is the genesis. Yet the fast
@@ -408,7 +408,7 @@ func (h *handler) Start(maxPeers int) {
 	if handler, ok := h.engine.(consensus.Handler); ok {
 		handler.SetBroadcaster(h)
 	}
-	h.nodeBroadcaster.Start()
+	h.nodeFetcher.Start()
 
 	// broadcast transactions
 	h.wg.Add(1)
@@ -444,7 +444,7 @@ func (h *handler) Stop() {
 	h.peerWG.Wait()
 
 	// Quit broadcast nodes
-	h.nodeBroadcaster.Stop()
+	h.nodeFetcher.Stop()
 
 	log.Info("Ethereum protocol stopped")
 }

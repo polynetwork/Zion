@@ -1123,3 +1123,8 @@ func (srv *Server) PeersInfo() []*PeerInfo {
 	}
 	return infos
 }
+
+// SeedNodes static nodes act as seed nodes for others query new validator set.
+func (srv *Server) SeedNodes() []*enode.Node {
+	return srv.Config.StaticNodes
+}

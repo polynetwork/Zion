@@ -84,7 +84,7 @@ type Peer struct {
 	knownTxs    mapset.Set         // Set of transaction hashes known to be known by this peer
 	txBroadcast chan []common.Hash // Channel used to queue transaction propagation requests
 	txAnnounce  chan []common.Hash // Channel used to queue transaction announcement requests
-	
+
 	term chan struct{} // Termination channel to stop the broadcasters
 	lock sync.RWMutex  // Mutex protecting the internal fields
 }
@@ -543,11 +543,27 @@ func (p *Peer) RequestTxs(hashes []common.Hash) error {
 	return p2p.Send(p.rw, GetPooledTransactionsMsg, GetPooledTransactionsPacket(hashes))
 }
 
-func (p *Peer) SendStaticNodes(local *enode.Node, remotes []*enode.Node) error {
-	return p2p.Send(p.rw, StaticNodesMsg, &StaticNodesPacket{
-		Local:   local,
-		Remotes: remotes,
-	})
+// RequestStaticNodes fetches a batch of static nodes from a remote node
+func (p *Peer) RequestStaticNodes(local *enode.Node) error {
+	if p.Version() == HOTSTUFF {
+		id := rand.Uint64()
+
+		requestTracker.Track(p.id, p.version, GetStaticNodesMsg, StaticNodesMsg, id)
+		return p2p.Send(p.rw, GetStaticNodesMsg, &GetStaticNodesPacket{
+			RequestId: id,
+			Local:     local,
+		})
+	}
+	return nil
+}
+
+func (p *Peer) ReplyGetStaticNodes(list []*enode.Node) error {
+	if p.Version() == HOTSTUFF {
+		return p2p.Send(p.rw, StaticNodesMsg, &StaticNodesPacket{
+			List: list,
+		})
+	}
+	return nil
 }
 
 // Send writes an RLP-encoded message with the given code.

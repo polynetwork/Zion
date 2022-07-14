@@ -19,6 +19,8 @@
 package backend
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -93,7 +95,7 @@ func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSe
 	}
 
 	header := s.chain.GetHeaderByHash(hash)
-	vals, err := s.getValidatorsByHeader(header, nil, s.chain)
+	_, vals, err := s.getValidatorsByHeader(header, nil, s.chain)
 	if err != nil {
 		return nil
 	}
@@ -101,7 +103,8 @@ func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSe
 }
 
 func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) bool {
-	if tx == nil || len(tx.Data()) < 4 {
+	// consider that tx is deploy transaction, so the tx.to will be nil
+	if tx == nil || len(tx.Data()) < 4 || tx.To() == nil {
 		return false
 	}
 	if *tx.To() != contractAddr {
@@ -161,45 +164,68 @@ func (s *backend) execEndBlock(ctx *systemTxContext) error {
 	return s.executeTransaction(ctx, contractAddr, payload)
 }
 
-func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain consensus.ChainHeaderReader) (hotstuff.ValidatorSet, error) {
-	var epoch *types.Header
+func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain consensus.ChainHeaderReader) (
+	bool, hotstuff.ValidatorSet, error) {
 
-	// todo(fuk): add LRU
-	// todo logic error
-	extra, err := types.ExtractHotstuffExtraPayload(header.Extra)
+	extra, err := types.ExtractHotstuffExtra(header)
 	if err != nil {
-		return nil, err
+		return false, nil, err
 	}
 
 	if header.Number.Uint64() == 0 {
-		return NewDefaultValSet(extra.Validators), nil
+		return true, NewDefaultValSet(extra.Validators), nil
 	}
 
-	if extra.Height != header.Number.Uint64() {
-		epoch = chain.GetHeaderByNumber(extra.Height)
-	} else {
+	isEpoch := extra.Height == header.Number.Uint64()
+	if isEpoch {
 		if parent == nil {
 			parent = chain.GetHeaderByHash(header.ParentHash)
 		}
 		if extra, err = types.ExtractHotstuffExtra(parent); err != nil {
-			return nil, err
-		} else {
-			epoch = chain.GetHeaderByNumber(extra.Height)
+			return isEpoch, nil, err
 		}
 	}
 
-	if extra, err = types.ExtractHotstuffExtraPayload(epoch.Extra); err != nil {
-		return nil, err
-	} else {
-		return NewDefaultValSet(extra.Validators), nil
+	epoch := s.getRecentHeader(extra.Height, chain)
+	if epoch == nil {
+		return isEpoch, nil, fmt.Errorf("header %d neither on chain nor in lru cache", extra.Height)
 	}
+	if extra, err = types.ExtractHotstuffExtra(epoch); err != nil {
+		return isEpoch, nil, err
+	}
+
+	return isEpoch, NewDefaultValSet(extra.Validators), nil
+}
+
+func (s *backend) saveRecentHeader(header *types.Header) {
+	s.recents.Add(header.Number.Uint64(), header)
+}
+
+// todo(fuk): translate 同步时批量获取区块头，但是不会直接将区块头落账，等到所有的区块body执行完之后才会落账。
+// 所以，这里有可能在chain上拿不到区块头，这时候就要从lru cache获取区块头
+func (s *backend) getRecentHeader(height uint64, chain consensus.ChainHeaderReader) *types.Header {
+	header := chain.GetHeaderByNumber(height)
+	if header != nil {
+		return header
+	}
+
+	data, ok := s.recents.Get(height)
+	if !ok {
+		return nil
+	}
+
+	header, ok = data.(*types.Header)
+	if !ok {
+		return nil
+	}
+	return header
 }
 
 // initValidators prepare validators for next block.
 func (s *backend) initValidators() (err error) {
 	var (
 		header = s.chain.CurrentHeader()
-		extra *types.HotstuffExtra
+		extra  *types.HotstuffExtra
 	)
 
 start:

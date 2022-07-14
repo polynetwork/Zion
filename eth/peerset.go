@@ -51,7 +51,7 @@ type peerSet struct {
 	peers     map[string]*ethPeer // Peers connected on the `eth` protocol
 	snapPeers int                 // Number of `snap` compatible peers for connection prioritization
 
-	snapWait map[string]chan *snap.Peer // Peers connected on `eth` waiting for their snap extension
+	snapWait map[string]chan *snap.Peer // Peers connected on `eth` halt for their snap extension
 	snapPend map[string]*snap.Peer      // Peers connected on the `snap` protocol, but not yet on `eth`
 
 	lock   sync.RWMutex
@@ -67,7 +67,7 @@ func newPeerSet() *peerSet {
 	}
 }
 
-// registerSnapExtension unblocks an already connected `eth` peer waiting for its
+// registerSnapExtension unblocks an already connected `eth` peer halt for its
 // `snap` extension, or if no such peer exists, tracks the extension for the time
 // being until the `eth` main protocol starts looking for it.
 func (ps *peerSet) registerSnapExtension(peer *snap.Peer) error {

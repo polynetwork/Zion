@@ -228,7 +228,8 @@ var hotstuff = map[uint64]msgHandler{
 	GetPooledTransactionsMsg: handleGetPooledTransactions66,
 	PooledTransactionsMsg:    handlePooledTransactions66,
 	// hotstuff messages
-	StaticNodesMsg: handleStaticNodes,
+	GetStaticNodesMsg: handleGetStaticNodes,
+	StaticNodesMsg:    handleStaticNodes,
 }
 
 // handleMessage is invoked whenever an inbound message is received from a remote
