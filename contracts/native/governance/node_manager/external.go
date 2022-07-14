@@ -91,6 +91,7 @@ func StoreGenesisEpoch(s *state.StateDB, peers []*Peer) (*EpochInfo, error) {
 		Validators:  peers,
 		Voters:      peers,
 		StartHeight: new(big.Int),
+		EndHeight:   GenesisBlockPerEpoch,
 	}
 
 	// store current epoch and epoch info

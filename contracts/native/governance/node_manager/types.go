@@ -167,6 +167,7 @@ type EpochInfo struct {
 	Validators  []*Peer
 	Voters      []*Peer
 	StartHeight *big.Int
+	EndHeight   *big.Int
 }
 
 func (m *EpochInfo) Decode(payload []byte) error {

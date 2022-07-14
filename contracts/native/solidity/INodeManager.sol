@@ -38,6 +38,6 @@ interface INodeManager {
     event CancelValidator(string consensusPubkey);
     event WithdrawValidator(string consensusPubkey, string selfStake);
     event ChangeEpoch(string epochID);
-    event WithdrawStakeRewards(string rewards);
+    event WithdrawStakeRewards(string consensusPubkey, string caller, string rewards);
     event WithdrawCommission(string consensusPubkey, string commission);
 }

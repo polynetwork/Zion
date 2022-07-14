@@ -52,6 +52,9 @@ func IncreaseValidatorPeriod(s *native.NativeContract, validator *Validator) (ui
 	// calculate current ratio
 	// mul decimal
 	ratio, err := validatorAccumulatedRewards.Rewards.DivWithTokenDecimal(validator.TotalStake)
+	if err != nil {
+		return 0, fmt.Errorf("IncreaseValidatorPeriod, validatorAccumulatedRewards.Rewards.DivWithTokenDecimal error: %v", err)
+	}
 
 	// fetch snapshot rewards for last period
 	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, dec, validatorAccumulatedRewards.Period-1)

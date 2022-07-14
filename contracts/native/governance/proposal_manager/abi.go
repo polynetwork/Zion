@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/proposal_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"math/big"
 	"strings"
 )
 
@@ -53,4 +54,14 @@ type UpdateNodeManagerGlobalConfigParam struct {
 
 func (m *UpdateNodeManagerGlobalConfigParam) Encode() ([]byte, error) {
 	return utils.PackMethodWithStruct(ABI, MethodUpdateNodeManagerGlobalConfig, m)
+}
+
+type ProposeParam struct {
+	Type    ProposalType
+	Content []byte
+	Stake   *big.Int
+}
+
+func (m *ProposeParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodPropose, m)
 }

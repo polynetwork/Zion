@@ -33,11 +33,11 @@ var (
 )
 
 // IProposalManagerABI is the input ABI used to generate the binding from.
-const IProposalManagerABI = "[{\"anonymous\":false,\"inputs\":[],\"name\":\"UpdateNodeManagerGlobalConfig\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"maxCommissionChange\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"minInitialStake\",\"type\":\"string\"},{\"internalType\":\"uint256\",\"name\":\"maxDescLength\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"blockPerEpoch\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"consensusValidatorNum\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"voterValidatorNum\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"expireHeight\",\"type\":\"uint256\"}],\"name\":\"updateNodeManagerGlobalConfig\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IProposalManagerABI = "[{\"anonymous\":false,\"inputs\":[],\"name\":\"UpdateNodeManagerGlobalConfig\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"maxCommissionChange\",\"type\":\"string\"},{\"internalType\":\"string\",\"name\":\"minInitialStake\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"maxDescLength\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"blockPerEpoch\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"consensusValidatorNum\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"voterValidatorNum\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"expireHeight\",\"type\":\"uint64\"}],\"name\":\"updateNodeManagerGlobalConfig\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IProposalManagerFuncSigs maps the 4-byte function signature to its string representation.
 var IProposalManagerFuncSigs = map[string]string{
-	"f42e78c0": "updateNodeManagerGlobalConfig(string,string,uint256,uint256,uint256,uint256,uint256)",
+	"1efc8132": "updateNodeManagerGlobalConfig(string,string,uint64,uint64,uint64,uint64,uint64)",
 }
 
 // IProposalManager is an auto generated Go binding around an Ethereum contract.
@@ -182,24 +182,24 @@ func (_IProposalManager *IProposalManagerTransactorRaw) Transact(opts *bind.Tran
 	return _IProposalManager.Contract.contract.Transact(opts, method, params...)
 }
 
-// UpdateNodeManagerGlobalConfig is a paid mutator transaction binding the contract method 0xf42e78c0.
+// UpdateNodeManagerGlobalConfig is a paid mutator transaction binding the contract method 0x1efc8132.
 //
-// Solidity: function updateNodeManagerGlobalConfig(string maxCommissionChange, string minInitialStake, uint256 maxDescLength, uint256 blockPerEpoch, uint256 consensusValidatorNum, uint256 voterValidatorNum, uint256 expireHeight) returns(bool success)
-func (_IProposalManager *IProposalManagerTransactor) UpdateNodeManagerGlobalConfig(opts *bind.TransactOpts, maxCommissionChange string, minInitialStake string, maxDescLength *big.Int, blockPerEpoch *big.Int, consensusValidatorNum *big.Int, voterValidatorNum *big.Int, expireHeight *big.Int) (*types.Transaction, error) {
+// Solidity: function updateNodeManagerGlobalConfig(string maxCommissionChange, string minInitialStake, uint64 maxDescLength, uint64 blockPerEpoch, uint64 consensusValidatorNum, uint64 voterValidatorNum, uint64 expireHeight) returns(bool success)
+func (_IProposalManager *IProposalManagerTransactor) UpdateNodeManagerGlobalConfig(opts *bind.TransactOpts, maxCommissionChange string, minInitialStake string, maxDescLength uint64, blockPerEpoch uint64, consensusValidatorNum uint64, voterValidatorNum uint64, expireHeight uint64) (*types.Transaction, error) {
 	return _IProposalManager.contract.Transact(opts, "updateNodeManagerGlobalConfig", maxCommissionChange, minInitialStake, maxDescLength, blockPerEpoch, consensusValidatorNum, voterValidatorNum, expireHeight)
 }
 
-// UpdateNodeManagerGlobalConfig is a paid mutator transaction binding the contract method 0xf42e78c0.
+// UpdateNodeManagerGlobalConfig is a paid mutator transaction binding the contract method 0x1efc8132.
 //
-// Solidity: function updateNodeManagerGlobalConfig(string maxCommissionChange, string minInitialStake, uint256 maxDescLength, uint256 blockPerEpoch, uint256 consensusValidatorNum, uint256 voterValidatorNum, uint256 expireHeight) returns(bool success)
-func (_IProposalManager *IProposalManagerSession) UpdateNodeManagerGlobalConfig(maxCommissionChange string, minInitialStake string, maxDescLength *big.Int, blockPerEpoch *big.Int, consensusValidatorNum *big.Int, voterValidatorNum *big.Int, expireHeight *big.Int) (*types.Transaction, error) {
+// Solidity: function updateNodeManagerGlobalConfig(string maxCommissionChange, string minInitialStake, uint64 maxDescLength, uint64 blockPerEpoch, uint64 consensusValidatorNum, uint64 voterValidatorNum, uint64 expireHeight) returns(bool success)
+func (_IProposalManager *IProposalManagerSession) UpdateNodeManagerGlobalConfig(maxCommissionChange string, minInitialStake string, maxDescLength uint64, blockPerEpoch uint64, consensusValidatorNum uint64, voterValidatorNum uint64, expireHeight uint64) (*types.Transaction, error) {
 	return _IProposalManager.Contract.UpdateNodeManagerGlobalConfig(&_IProposalManager.TransactOpts, maxCommissionChange, minInitialStake, maxDescLength, blockPerEpoch, consensusValidatorNum, voterValidatorNum, expireHeight)
 }
 
-// UpdateNodeManagerGlobalConfig is a paid mutator transaction binding the contract method 0xf42e78c0.
+// UpdateNodeManagerGlobalConfig is a paid mutator transaction binding the contract method 0x1efc8132.
 //
-// Solidity: function updateNodeManagerGlobalConfig(string maxCommissionChange, string minInitialStake, uint256 maxDescLength, uint256 blockPerEpoch, uint256 consensusValidatorNum, uint256 voterValidatorNum, uint256 expireHeight) returns(bool success)
-func (_IProposalManager *IProposalManagerTransactorSession) UpdateNodeManagerGlobalConfig(maxCommissionChange string, minInitialStake string, maxDescLength *big.Int, blockPerEpoch *big.Int, consensusValidatorNum *big.Int, voterValidatorNum *big.Int, expireHeight *big.Int) (*types.Transaction, error) {
+// Solidity: function updateNodeManagerGlobalConfig(string maxCommissionChange, string minInitialStake, uint64 maxDescLength, uint64 blockPerEpoch, uint64 consensusValidatorNum, uint64 voterValidatorNum, uint64 expireHeight) returns(bool success)
+func (_IProposalManager *IProposalManagerTransactorSession) UpdateNodeManagerGlobalConfig(maxCommissionChange string, minInitialStake string, maxDescLength uint64, blockPerEpoch uint64, consensusValidatorNum uint64, voterValidatorNum uint64, expireHeight uint64) (*types.Transaction, error) {
 	return _IProposalManager.Contract.UpdateNodeManagerGlobalConfig(&_IProposalManager.TransactOpts, maxCommissionChange, minInitialStake, maxDescLength, blockPerEpoch, consensusValidatorNum, voterValidatorNum, expireHeight)
 }
 

@@ -570,6 +570,11 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawValidator, unStake error: %v", err)
 	}
 
+	_, err = withdrawCommission(s, caller, dec)
+	if err != nil {
+		return nil, fmt.Errorf("WithdrawValidator, withdrawCommission error: %v", err)
+	}
+
 	validator.TotalStake, err = validator.TotalStake.Sub(amount)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawValidator, validator.TotalStake.Sub error: %v", err)
@@ -591,12 +596,6 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 		}
 	}
 
-	_, err = withdrawCommission(s, caller, dec)
-	if err != nil {
-		return nil, fmt.Errorf("WithdrawValidator, withdrawCommission error: %v", err)
-	}
-	delAccumulatedCommission(s, dec)
-
 	err = s.AddNotify(ABI, []string{WITHDRAW_VALIDATOR_EVENT}, params.ConsensusPubkey, amount.BigInt().String())
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, AddNotify error: %v", err)
@@ -613,11 +612,14 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ChangeEpoch, GetCurrentEpochInfoImpl error: %v", err)
 	}
 	globalConfig, err := GetGlobalConfigImpl(s)
+	if err != nil {
+		return nil, fmt.Errorf("ChangeEpoch, GetGlobalConfigImpl error: %v", err)
+	}
 
 	// anyone can call this if height reaches
-	if new(big.Int).Sub(startHeight, currentEpochInfo.StartHeight).Cmp(globalConfig.BlockPerEpoch) == -1 {
-		return nil, fmt.Errorf("ChangeEpoch, block height does not reach, current epoch start at %s",
-			currentEpochInfo.StartHeight.String())
+	if startHeight.Cmp(currentEpochInfo.EndHeight) != 0 {
+		return nil, fmt.Errorf("ChangeEpoch, block height does not reach, current epoch end at %s",
+			currentEpochInfo.EndHeight.String())
 	}
 
 	epochInfo := &EpochInfo{
@@ -625,6 +627,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		Validators:  make([]*Peer, 0, globalConfig.ConsensusValidatorNum),
 		Voters:      make([]*Peer, 0, globalConfig.VoterValidatorNum),
 		StartHeight: startHeight,
+		EndHeight:   new(big.Int).Add(startHeight, globalConfig.BlockPerEpoch),
 	}
 	// get all validators
 	allValidators, err := getAllValidators(s)
@@ -749,7 +752,7 @@ func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawStakeRewards, initializeStake error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{WITHDRAW_STAKE_REWARDS_EVENT}, rewards.BigInt().String())
+	err = s.AddNotify(ABI, []string{WITHDRAW_STAKE_REWARDS_EVENT}, params.ConsensusPubkey, caller.Hex(), rewards.BigInt().String())
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawStakeRewards, AddNotify error: %v", err)
 	}

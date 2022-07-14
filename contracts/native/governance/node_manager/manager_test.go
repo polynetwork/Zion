@@ -48,7 +48,7 @@ func init() {
 	InitNodeManager()
 	db := rawdb.NewMemoryDatabase()
 	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testGenesisPeers = generateTestPeers(testGenesisNum)
+	testGenesisPeers = GenerateTestPeers(testGenesisNum)
 	StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	StoreGenesisEpoch(sdb, testGenesisPeers)
 	StoreGenesisGlobalConfig(sdb)
@@ -65,7 +65,7 @@ func TestCheckGenesis(t *testing.T) {
 	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
 	contract := native.NewNativeContract(sdb, contractRef)
 
-	globalConfig, err := getGlobalConfig(contract)
+	globalConfig, err := GetGlobalConfigImpl(contract)
 	assert.Nil(t, err)
 	assert.Equal(t, globalConfig.MaxDescLength, GenesisMaxDescLength)
 	assert.Equal(t, globalConfig.BlockPerEpoch, GenesisBlockPerEpoch)
@@ -347,8 +347,24 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, validator.Status, Remove)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(992000), params.ZNT1))
 
+	blockNumber = new(big.Int).SetUint64(799999)
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	blockNumber = new(big.Int).SetUint64(1199999)
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
 	// add block num
-	blockNumber = new(big.Int).SetUint64(1299999)
+	blockNumber = new(big.Int).SetUint64(1599999)
 	input, err = utils.PackMethod(ABI, MethodWithdraw)
 	assert.Nil(t, err)
 	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
@@ -395,8 +411,8 @@ func TestStake(t *testing.T) {
 	// check
 	epochInfo, err = GetCurrentEpochInfoImpl(contractQuery)
 	assert.Nil(t, err)
-	assert.Equal(t, epochInfo.ID, common.Big3)
-	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(1300000))
+	assert.Equal(t, epochInfo.ID, new(big.Int).SetUint64(5))
+	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(1600000))
 	assert.Equal(t, len(epochInfo.Validators), 4)
 	assert.Equal(t, len(epochInfo.Voters), 4)
 	validator, _, err = getValidator(contractQuery, validatorsKey[4].Dec)
@@ -819,21 +835,4 @@ func TestDistribute(t *testing.T) {
 	b7, _ := new(big.Int).SetString("1000092307692307692280000", 10)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), b6)
 	assert.Equal(t, sdb.GetBalance(stakeAddress2), b7)
-}
-
-// generateTestPeer ONLY used for testing
-func generateTestPeer() *Peer {
-	pk, _ := crypto.GenerateKey()
-	return &Peer{
-		PubKey:  hexutil.Encode(crypto.CompressPubkey(&pk.PublicKey)),
-		Address: crypto.PubkeyToAddress(pk.PublicKey),
-	}
-}
-
-func generateTestPeers(n int) []*Peer {
-	peers := make([]*Peer, n)
-	for i := 0; i < n; i++ {
-		peers[i] = generateTestPeer()
-	}
-	return peers
 }
