@@ -289,6 +289,8 @@ func (s *backend) Close() error {
 func (s *backend) restart() {
 	if s.coreStarted {
 		s.Stop()
+		// waiting for last engine instance free resource, e.g: unsubscribe...
+		time.Sleep(2 * time.Second)
 		log.Debug("Restart consensus engine...")
 		s.Start(s.chain, s.hasBadBlock)
 	}

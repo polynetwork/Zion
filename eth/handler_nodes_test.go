@@ -20,6 +20,7 @@ package eth
 
 import (
 	"math/rand"
+	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -110,4 +111,30 @@ func TestGoroutineManage(t *testing.T) {
 		sigCh <- sig
 		time.Sleep(time.Duration(sig.randNum) * time.Second)
 	}
+}
+
+func TestQuitSignal(t *testing.T) {
+	quit := make(chan struct{})
+	num := int32(0)
+
+	task := func(n int) {
+		for {
+			select {
+			case <-quit:
+				t.Log("quit task", n)
+				atomic.AddInt32(&num, 1)
+				return
+			}
+		}
+	}
+
+	for i := 0; i < 1000; i++ {
+		go task(i)
+	}
+
+	time.Sleep(1 * time.Second)
+	close(quit)
+	// must waiting for a little time
+	time.Sleep(1 * time.Second)
+	t.Log("quit goruntine", num)
 }
