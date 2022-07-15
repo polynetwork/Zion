@@ -181,4 +181,15 @@ func TestApproveUpdateSideChain(t *testing.T) {
 	assert.Nil(t, err)
 	assert.NotNil(t, sideChain)
 	assert.Equal(t, sideChain.Name, "own")
+
+	input, err = utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodGetSideChain, param)
+	assert.Nil(t, err)
+
+	contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodGetSideChain]+extra, nil)
+	ret, leftOverGas, err = contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+	assert.Nil(t, err)
+	result, err = utils.PackOutputs(ABI, side_chain_manager_abi.MethodGetSideChain, sideChain)
+	assert.Nil(t, err)
+	assert.Equal(t, ret, result)
+	assert.Equal(t, leftOverGas, extra)
 }

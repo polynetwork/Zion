@@ -86,7 +86,7 @@ import (
 		return
 	}
 
-	info, err := icom.GetRootInfo(service, sideChain.ChainId, params.Height)
+	info, err := icom.GetRootInfo(service, sideChain.ChainID, params.Height)
 	if err != nil {
 		err = fmt.Errorf("get root info failure, err %v", err)
 		return

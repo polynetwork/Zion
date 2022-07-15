@@ -47,15 +47,15 @@ const (
 var (
 	this     = native.NativeContractAddrMap[native.NativeSideChainManager]
 	gasTable = map[string]uint64{
-		side_chain_manager_abi.MethodGetSideChain: 0,
-		side_chain_manager_abi.MethodRegisterSideChain: 100000,
+		side_chain_manager_abi.MethodGetSideChain:             0,
+		side_chain_manager_abi.MethodRegisterSideChain:        100000,
 		side_chain_manager_abi.MethodApproveRegisterSideChain: 100000,
-		side_chain_manager_abi.MethodUpdateSideChain: 100000,
-		side_chain_manager_abi.MethodApproveUpdateSideChain: 100000,
-		side_chain_manager_abi.MethodQuitSideChain: 100000,
-		side_chain_manager_abi.MethodApproveQuitSideChain: 100000,
-		side_chain_manager_abi.MethodRegisterRedeem: 100000,
-		side_chain_manager_abi.MethodSetBtcTxParam: 100000,
+		side_chain_manager_abi.MethodUpdateSideChain:          100000,
+		side_chain_manager_abi.MethodApproveUpdateSideChain:   100000,
+		side_chain_manager_abi.MethodQuitSideChain:            100000,
+		side_chain_manager_abi.MethodApproveQuitSideChain:     100000,
+		side_chain_manager_abi.MethodRegisterRedeem:           100000,
+		side_chain_manager_abi.MethodSetBtcTxParam:            100000,
 	}
 
 	ABI *abi.ABI
@@ -116,8 +116,8 @@ func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 	}
 
 	sideChain = &SideChain{
-		Address:      s.ContractRef().TxOrigin(),
-		ChainId:      params.ChainID,
+		Owner:        s.ContractRef().TxOrigin(),
+		ChainID:      params.ChainID,
 		Router:       params.Router,
 		Name:         params.Name,
 		BlocksToWait: params.BlocksToWait,
@@ -187,12 +187,12 @@ func UpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	if sideChain == nil {
 		return nil, fmt.Errorf("UpdateSideChain, side chain is not registered")
 	}
-	if sideChain.Address != s.ContractRef().TxOrigin() {
+	if sideChain.Owner != s.ContractRef().TxOrigin() {
 		return nil, fmt.Errorf("UpdateSideChain, side chain owner is wrong")
 	}
 	updateSideChain := &SideChain{
-		Address:      s.ContractRef().TxOrigin(),
-		ChainId:      params.ChainID,
+		Owner:        s.ContractRef().TxOrigin(),
+		ChainID:      params.ChainID,
 		Router:       params.Router,
 		Name:         params.Name,
 		BlocksToWait: params.BlocksToWait,
@@ -266,7 +266,7 @@ func QuitSideChain(s *native.NativeContract) ([]byte, error) {
 	if sideChain == nil {
 		return nil, fmt.Errorf("QuitSideChain, side chain is not registered")
 	}
-	if sideChain.Address != s.ContractRef().TxOrigin() {
+	if sideChain.Owner != s.ContractRef().TxOrigin() {
 		return nil, fmt.Errorf("QuitSideChain, side chain owner is wrong")
 	}
 	err = putQuitSideChain(s, params.Chainid)
