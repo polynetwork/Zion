@@ -321,9 +321,6 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true, nil)
 
-	// todo(fuk): delete after test
-	// StoreGenesis(db, head)
-
 	return types.NewBlock(head, nil, nil, nil, trie.NewStackTrie(nil))
 }
 
@@ -357,30 +354,6 @@ func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
 				statedb.SetState(addr, key, value[:])
 			}
 		}
-
-		// todo(fuk): delete after test
-		// g.mintOtherUser(statedb)
-	}
-}
-
-// func (g *Genesis)  createGovernanceAccount(db *state.StateDB, )
-
-func (g *Genesis) mintOtherUser(statedb *state.StateDB) {
-	list := []common.Address{
-		common.HexToAddress("0x474c63c65b2bE91a4021D13fD584c54DF0347DC8"),
-		common.HexToAddress("0xE6e4e265aCc2dF22313BC4Abd66e0A81c565FC0d"),
-		common.HexToAddress("0xA7fDa32ddc8173D11B82729B0733C600AD7d58A5"),
-		common.HexToAddress("0x4668E6E7a5e2bd2ACaaF247B3B55C4b67C267E1F"),
-		common.HexToAddress("0xE9203A44f15eA61248E2A34425260184e3E33D0b"),
-		common.HexToAddress("0x553E3Ab33fFC18BF47bCb41311C4D9146f12D606"),
-		common.HexToAddress("0xFa4464acFc6410a31Bf565f309702C7C73363Af6"),
-		common.HexToAddress("0xDe6CAdE0a70d0BB124F7e68CAB15fc56aCEe91Ad"),
-	}
-
-	balance := new(big.Int).Mul(params.ZNT1, big.NewInt(100000000))
-	for _, addr := range list {
-		statedb.AddBalance(addr, balance)
-		statedb.SetNonce(addr, 0)
 	}
 }
 
@@ -424,10 +397,6 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 	RegGenesis = func(db *state.StateDB, genesis *Genesis) error {
 		return nil
 	}
-	// todo(fuk): delete after test
-	//StoreGenesis = func(db ethdb.Database, header *types.Header) error {
-	//	return nil
-	//}
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
 	g.Config = &params.ChainConfig{
 		ChainID:  new(big.Int).SetUint64(params.MainnetMainChainID),
