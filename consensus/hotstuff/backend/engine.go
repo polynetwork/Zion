@@ -258,7 +258,7 @@ func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(hash commo
 
 	// waiting for p2p connected
 	s.SendValidatorsChange(s.vals.AddressList())
-	time.Sleep(60 * time.Second)
+	//time.Sleep(60 * time.Second)
 
 	if err := s.core.Start(chain); err != nil {
 		return err

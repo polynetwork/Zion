@@ -45,7 +45,7 @@ func (s *backend) reward(state *state.StateDB, height *big.Int) error {
 	var sRwd string
 	for _, v := range list {
 		state.AddBalance(v.Address, v.Amount)
-		sRwd += fmt.Sprintf("address: %s, amount %v", v.Address.Hex(), v.Amount)
+		sRwd += fmt.Sprintf("address: %s, amount %v;", v.Address.Hex(), v.Amount)
 	}
 	log.Debug("reward", "list", sRwd)
 
