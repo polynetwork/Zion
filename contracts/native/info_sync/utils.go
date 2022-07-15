@@ -66,8 +66,8 @@ func NotifyPutRootInfo(native *native.NativeContract, chainID uint64, height uin
 	return nil
 }
 
-func NotifyReplenish(native *native.NativeContract, txHashes []string, chainId uint64) error {
-	err := native.AddNotify(ABI, []string{REPLENISH_EVENT}, txHashes, chainId)
+func NotifyReplenish(native *native.NativeContract, heights []uint32, chainId uint64) error {
+	err := native.AddNotify(ABI, []string{REPLENISH_EVENT}, heights, chainId)
 	if err != nil {
 		return fmt.Errorf("NotifyReplenish failed: %v", err)
 	}

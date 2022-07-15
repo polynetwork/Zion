@@ -19,7 +19,6 @@
 package info_sync
 
 import (
-	"encoding/binary"
 	"fmt"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -122,11 +121,11 @@ func Replenish(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("Replenish, unpack params error: %s", err)
 	}
 
-	err := NotifyReplenish(s, params.TxHashes, params.ChainID)
+	err := NotifyReplenish(s, params.Heights, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("Replenish, NotifyReplenish error: %s", err)
 	}
-	return utils.BYTE_TRUE, nil
+	return utils.PackOutputs(ABI, MethodReplenish, true)
 }
 
 func GetInfoHeight(s *native.NativeContract) ([]byte, error) {
@@ -140,9 +139,7 @@ func GetInfoHeight(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	v := make([]byte, 4)
-	binary.LittleEndian.PutUint32(v, height)
-	return utils.PackOutputs(ABI, MethodGetInfoHeight, v)
+	return utils.PackOutputs(ABI, MethodGetInfoHeight, height)
 }
 
 func GetInfo(s *native.NativeContract) ([]byte, error) {
