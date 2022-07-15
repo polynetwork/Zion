@@ -133,7 +133,7 @@ func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("RegisterSideChain, AddNotify error: %v", err)
 	}
-	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodRegisterSideChain, true)
+	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodRegisterSideChain)
 }
 
 func ApproveRegisterSideChain(s *native.NativeContract) ([]byte, error) {
@@ -208,7 +208,7 @@ func UpdateSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("UpdateSideChain, AddNotify error: %v", err)
 	}
 
-	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodUpdateSideChain, true)
+	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodUpdateSideChain)
 }
 
 func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
@@ -278,7 +278,7 @@ func QuitSideChain(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("QuitSideChain, AddNotify error: %v", err)
 	}
-	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodQuitSideChain, true)
+	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodQuitSideChain)
 }
 
 func ApproveQuitSideChain(s *native.NativeContract) ([]byte, error) {
