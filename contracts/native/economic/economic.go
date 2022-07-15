@@ -19,11 +19,12 @@
 package economic
 
 import (
+	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/economic_abi"
+	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/params"
 )
@@ -39,10 +40,6 @@ var (
 var (
 	RewardPerBlock = params.ZNT1
 	GenesisSupply  = params.GenesisSupply
-
-	// rewardPoolFactor default value should be 0.2 = 2000/10000
-	defaultPoolRewardFactor = big.NewInt(2000)
-	totalRewardFactor       = big.NewInt(10000)
 )
 
 func InitEconomic() {
@@ -73,21 +70,32 @@ func TotalSupply(s *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(ABI, MethodTotalSupply, supply)
 }
 
-// todo(fuk): getPoolRewardFactor from governance contract
-// todo(fuk): get reward pool address from governance
 func Reward(s *native.NativeContract) ([]byte, error) {
-	data := new(big.Int).Mul(RewardPerBlock, defaultPoolRewardFactor)
-	poolRwdAmt := new(big.Int).Div(data, totalRewardFactor)
-	stakingRwdAmt := new(big.Int).Sub(RewardPerBlock, poolRwdAmt)
 
-	poolAddr := common.HexToAddress("0x0000000000000000000000000000000001000000")
+	community, err := nm.GetCommunityInfoFromDB(s.StateDB())
+	if err != nil {
+		return nil, fmt.Errorf("GetCommunityInfo failed, err: %v", err)
+	}
+
+	poolAddr := community.CommunityAddress
+	rewardPerBlock := nm.NewDecFromBigInt(RewardPerBlock)
+	rewardFactor := nm.NewDecFromBigInt(community.CommunityRate)
+	poolRwdAmt, err := rewardPerBlock.MulWithPercentDecimal(rewardFactor)
+	if err != nil {
+		return nil, fmt.Errorf("Calculate pool reward amount failed, err: %v ", err)
+	}
+	stakingRwdAmt, err := rewardPerBlock.Sub(poolRwdAmt)
+	if err != nil {
+		return nil, fmt.Errorf("Calculate staking reward amount, failed, err: %v ", err)
+	}
+
 	poolRwd := &RewardAmount{
 		Address: poolAddr,
-		Amount:  poolRwdAmt,
+		Amount:  poolRwdAmt.BigInt(),
 	}
 	stakingRwd := &RewardAmount{
 		Address: utils.NodeManagerContractAddress,
-		Amount:  stakingRwdAmt,
+		Amount:  stakingRwdAmt.BigInt(),
 	}
 
 	output := new(MethodRewardOutput)
