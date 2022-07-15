@@ -105,37 +105,37 @@ var (
 )
 
 // INodeManagerABI is the input ABI used to generate the binding from.
-const INodeManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CancelValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"epochID\",\"type\":\"string\"}],\"name\":\"ChangeEpoch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"CreateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Stake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"UnStake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"UpdateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Withdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"commission\",\"type\":\"string\"}],\"name\":\"WithdrawCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rewards\",\"type\":\"string\"}],\"name\":\"WithdrawStakeRewards\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"selfStake\",\"type\":\"string\"}],\"name\":\"WithdrawValidator\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"cancelValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"changeEpoch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"initStake\",\"type\":\"int256\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"createValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"endBlock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"getAccumulatedCommission\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllValidators\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCommunityInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentEpochInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"id\",\"type\":\"int256\"}],\"name\":\"getEpochInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getGlobalConfig\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOutstandingRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"stakeAddress\",\"type\":\"address\"}],\"name\":\"getStakeInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"stakeAddress\",\"type\":\"address\"}],\"name\":\"getStakeStartingInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTotalPool\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"stakeAddress\",\"type\":\"address\"}],\"name\":\"getUnlockingInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"getValidator\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"getValidatorAccumulatedRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"getValidatorOutstandingRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"period\",\"type\":\"uint64\"}],\"name\":\"getValidatorSnapshotRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"stake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"unStake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"}],\"name\":\"updateCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"updateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawStakeRewards\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"string\",\"name\":\"consensusPubkey\",\"type\":\"string\"}],\"name\":\"withdrawValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const INodeManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusAddress\",\"type\":\"string\"}],\"name\":\"CancelValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"epochID\",\"type\":\"string\"}],\"name\":\"ChangeEpoch\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusAddress\",\"type\":\"string\"}],\"name\":\"CreateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusAddress\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Stake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusAddress\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"UnStake\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusAddress\",\"type\":\"string\"}],\"name\":\"UpdateCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusAddress\",\"type\":\"string\"}],\"name\":\"UpdateValidator\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"amount\",\"type\":\"string\"}],\"name\":\"Withdraw\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusAddress\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"commission\",\"type\":\"string\"}],\"name\":\"WithdrawCommission\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusAddress\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rewards\",\"type\":\"string\"}],\"name\":\"WithdrawStakeRewards\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"consensusAddress\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"selfStake\",\"type\":\"string\"}],\"name\":\"WithdrawValidator\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"}],\"name\":\"cancelValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"changeEpoch\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"signerAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"},{\"internalType\":\"int256\",\"name\":\"initStake\",\"type\":\"int256\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"createValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"endBlock\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"}],\"name\":\"getAccumulatedCommission\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAllValidators\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCommunityInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getCurrentEpochInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"id\",\"type\":\"int256\"}],\"name\":\"getEpochInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getGlobalConfig\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOutstandingRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakeAddress\",\"type\":\"address\"}],\"name\":\"getStakeInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"stakeAddress\",\"type\":\"address\"}],\"name\":\"getStakeStartingInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getTotalPool\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"stakeAddress\",\"type\":\"address\"}],\"name\":\"getUnlockingInfo\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"}],\"name\":\"getValidator\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"}],\"name\":\"getValidatorAccumulatedRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"}],\"name\":\"getValidatorOutstandingRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"period\",\"type\":\"uint64\"}],\"name\":\"getValidatorSnapshotRewards\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"stake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"amount\",\"type\":\"int256\"}],\"name\":\"unStake\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"},{\"internalType\":\"int256\",\"name\":\"commission\",\"type\":\"int256\"}],\"name\":\"updateCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"},{\"internalType\":\"address\",\"name\":\"proposalAddress\",\"type\":\"address\"},{\"internalType\":\"string\",\"name\":\"desc\",\"type\":\"string\"}],\"name\":\"updateValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"withdraw\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"}],\"name\":\"withdrawCommission\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"}],\"name\":\"withdrawStakeRewards\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"consensusAddress\",\"type\":\"address\"}],\"name\":\"withdrawValidator\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // INodeManagerFuncSigs maps the 4-byte function signature to its string representation.
 var INodeManagerFuncSigs = map[string]string{
-	"d087b01b": "cancelValidator(string)",
+	"1af78584": "cancelValidator(address)",
 	"fe6f86f8": "changeEpoch()",
-	"afa1d242": "createValidator(string,address,int256,int256,string)",
+	"b5c42005": "createValidator(address,address,address,int256,int256,string)",
 	"083c6323": "endBlock()",
-	"fc84eb97": "getAccumulatedCommission(string)",
+	"21d38c78": "getAccumulatedCommission(address)",
 	"f3513a37": "getAllValidators()",
 	"6e10ffd0": "getCommunityInfo()",
 	"babc394f": "getCurrentEpochInfo()",
 	"1af10a9c": "getEpochInfo(int256)",
 	"cda92be4": "getGlobalConfig()",
 	"fef97e4c": "getOutstandingRewards()",
-	"b5cec9f0": "getStakeInfo(string,address)",
-	"170a8c12": "getStakeStartingInfo(string,address)",
+	"d77c8f14": "getStakeInfo(address,address)",
+	"17674715": "getStakeStartingInfo(address,address)",
 	"75f4d677": "getTotalPool()",
 	"5e45511e": "getUnlockingInfo(address)",
-	"8fa111a5": "getValidator(string)",
-	"a2d3988a": "getValidatorAccumulatedRewards(string)",
-	"d3f831be": "getValidatorOutstandingRewards(string)",
-	"ca0d5cd4": "getValidatorSnapshotRewards(string,uint64)",
-	"102fc25a": "stake(string,int256)",
-	"6b2e7c4e": "unStake(string,int256)",
-	"9b079ff7": "updateCommission(string,int256)",
-	"74bddcc1": "updateValidator(string,address,string)",
+	"1904bb2e": "getValidator(address)",
+	"9c898a3b": "getValidatorAccumulatedRewards(address)",
+	"a76d00a8": "getValidatorOutstandingRewards(address)",
+	"edd0efa9": "getValidatorSnapshotRewards(address,uint64)",
+	"91398b13": "stake(address,int256)",
+	"dfe6bad3": "unStake(address,int256)",
+	"c5e7ad1d": "updateCommission(address,int256)",
+	"506472a0": "updateValidator(address,address,string)",
 	"3ccfd60b": "withdraw()",
-	"65371818": "withdrawCommission(string)",
-	"377b97fb": "withdrawStakeRewards(string)",
-	"944ac99f": "withdrawValidator(string)",
+	"16c58d04": "withdrawCommission(address)",
+	"5d3abd54": "withdrawStakeRewards(address)",
+	"814a2c11": "withdrawValidator(address)",
 }
 
 // GetSpecMethodID for consensus use
@@ -285,12 +285,12 @@ func (_INodeManager *INodeManagerTransactorRaw) Transact(opts *bind.TransactOpts
 	return _INodeManager.Contract.contract.Transact(opts, method, params...)
 }
 
-// GetAccumulatedCommission is a free data retrieval call binding the contract method 0xfc84eb97.
+// GetAccumulatedCommission is a free data retrieval call binding the contract method 0x21d38c78.
 //
-// Solidity: function getAccumulatedCommission(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerCaller) GetAccumulatedCommission(opts *bind.CallOpts, consensusPubkey string) ([]byte, error) {
+// Solidity: function getAccumulatedCommission(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetAccumulatedCommission(opts *bind.CallOpts, consensusAddress common.Address) ([]byte, error) {
 	var out []interface{}
-	err := _INodeManager.contract.Call(opts, &out, "getAccumulatedCommission", consensusPubkey)
+	err := _INodeManager.contract.Call(opts, &out, "getAccumulatedCommission", consensusAddress)
 
 	if err != nil {
 		return *new([]byte), err
@@ -302,18 +302,18 @@ func (_INodeManager *INodeManagerCaller) GetAccumulatedCommission(opts *bind.Cal
 
 }
 
-// GetAccumulatedCommission is a free data retrieval call binding the contract method 0xfc84eb97.
+// GetAccumulatedCommission is a free data retrieval call binding the contract method 0x21d38c78.
 //
-// Solidity: function getAccumulatedCommission(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerSession) GetAccumulatedCommission(consensusPubkey string) ([]byte, error) {
-	return _INodeManager.Contract.GetAccumulatedCommission(&_INodeManager.CallOpts, consensusPubkey)
+// Solidity: function getAccumulatedCommission(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetAccumulatedCommission(consensusAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetAccumulatedCommission(&_INodeManager.CallOpts, consensusAddress)
 }
 
-// GetAccumulatedCommission is a free data retrieval call binding the contract method 0xfc84eb97.
+// GetAccumulatedCommission is a free data retrieval call binding the contract method 0x21d38c78.
 //
-// Solidity: function getAccumulatedCommission(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerCallerSession) GetAccumulatedCommission(consensusPubkey string) ([]byte, error) {
-	return _INodeManager.Contract.GetAccumulatedCommission(&_INodeManager.CallOpts, consensusPubkey)
+// Solidity: function getAccumulatedCommission(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetAccumulatedCommission(consensusAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetAccumulatedCommission(&_INodeManager.CallOpts, consensusAddress)
 }
 
 // GetAllValidators is a free data retrieval call binding the contract method 0xf3513a37.
@@ -502,12 +502,12 @@ func (_INodeManager *INodeManagerCallerSession) GetOutstandingRewards() ([]byte,
 	return _INodeManager.Contract.GetOutstandingRewards(&_INodeManager.CallOpts)
 }
 
-// GetStakeInfo is a free data retrieval call binding the contract method 0xb5cec9f0.
+// GetStakeInfo is a free data retrieval call binding the contract method 0xd77c8f14.
 //
-// Solidity: function getStakeInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
-func (_INodeManager *INodeManagerCaller) GetStakeInfo(opts *bind.CallOpts, consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
+// Solidity: function getStakeInfo(address consensusAddress, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetStakeInfo(opts *bind.CallOpts, consensusAddress common.Address, stakeAddress common.Address) ([]byte, error) {
 	var out []interface{}
-	err := _INodeManager.contract.Call(opts, &out, "getStakeInfo", consensusPubkey, stakeAddress)
+	err := _INodeManager.contract.Call(opts, &out, "getStakeInfo", consensusAddress, stakeAddress)
 
 	if err != nil {
 		return *new([]byte), err
@@ -519,26 +519,26 @@ func (_INodeManager *INodeManagerCaller) GetStakeInfo(opts *bind.CallOpts, conse
 
 }
 
-// GetStakeInfo is a free data retrieval call binding the contract method 0xb5cec9f0.
+// GetStakeInfo is a free data retrieval call binding the contract method 0xd77c8f14.
 //
-// Solidity: function getStakeInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
-func (_INodeManager *INodeManagerSession) GetStakeInfo(consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
-	return _INodeManager.Contract.GetStakeInfo(&_INodeManager.CallOpts, consensusPubkey, stakeAddress)
+// Solidity: function getStakeInfo(address consensusAddress, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetStakeInfo(consensusAddress common.Address, stakeAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetStakeInfo(&_INodeManager.CallOpts, consensusAddress, stakeAddress)
 }
 
-// GetStakeInfo is a free data retrieval call binding the contract method 0xb5cec9f0.
+// GetStakeInfo is a free data retrieval call binding the contract method 0xd77c8f14.
 //
-// Solidity: function getStakeInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
-func (_INodeManager *INodeManagerCallerSession) GetStakeInfo(consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
-	return _INodeManager.Contract.GetStakeInfo(&_INodeManager.CallOpts, consensusPubkey, stakeAddress)
+// Solidity: function getStakeInfo(address consensusAddress, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetStakeInfo(consensusAddress common.Address, stakeAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetStakeInfo(&_INodeManager.CallOpts, consensusAddress, stakeAddress)
 }
 
-// GetStakeStartingInfo is a free data retrieval call binding the contract method 0x170a8c12.
+// GetStakeStartingInfo is a free data retrieval call binding the contract method 0x17674715.
 //
-// Solidity: function getStakeStartingInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
-func (_INodeManager *INodeManagerCaller) GetStakeStartingInfo(opts *bind.CallOpts, consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
+// Solidity: function getStakeStartingInfo(address consensusAddress, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetStakeStartingInfo(opts *bind.CallOpts, consensusAddress common.Address, stakeAddress common.Address) ([]byte, error) {
 	var out []interface{}
-	err := _INodeManager.contract.Call(opts, &out, "getStakeStartingInfo", consensusPubkey, stakeAddress)
+	err := _INodeManager.contract.Call(opts, &out, "getStakeStartingInfo", consensusAddress, stakeAddress)
 
 	if err != nil {
 		return *new([]byte), err
@@ -550,18 +550,18 @@ func (_INodeManager *INodeManagerCaller) GetStakeStartingInfo(opts *bind.CallOpt
 
 }
 
-// GetStakeStartingInfo is a free data retrieval call binding the contract method 0x170a8c12.
+// GetStakeStartingInfo is a free data retrieval call binding the contract method 0x17674715.
 //
-// Solidity: function getStakeStartingInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
-func (_INodeManager *INodeManagerSession) GetStakeStartingInfo(consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
-	return _INodeManager.Contract.GetStakeStartingInfo(&_INodeManager.CallOpts, consensusPubkey, stakeAddress)
+// Solidity: function getStakeStartingInfo(address consensusAddress, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetStakeStartingInfo(consensusAddress common.Address, stakeAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetStakeStartingInfo(&_INodeManager.CallOpts, consensusAddress, stakeAddress)
 }
 
-// GetStakeStartingInfo is a free data retrieval call binding the contract method 0x170a8c12.
+// GetStakeStartingInfo is a free data retrieval call binding the contract method 0x17674715.
 //
-// Solidity: function getStakeStartingInfo(string consensusPubkey, address stakeAddress) view returns(bytes)
-func (_INodeManager *INodeManagerCallerSession) GetStakeStartingInfo(consensusPubkey string, stakeAddress common.Address) ([]byte, error) {
-	return _INodeManager.Contract.GetStakeStartingInfo(&_INodeManager.CallOpts, consensusPubkey, stakeAddress)
+// Solidity: function getStakeStartingInfo(address consensusAddress, address stakeAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetStakeStartingInfo(consensusAddress common.Address, stakeAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetStakeStartingInfo(&_INodeManager.CallOpts, consensusAddress, stakeAddress)
 }
 
 // GetTotalPool is a free data retrieval call binding the contract method 0x75f4d677.
@@ -626,12 +626,12 @@ func (_INodeManager *INodeManagerCallerSession) GetUnlockingInfo(stakeAddress co
 	return _INodeManager.Contract.GetUnlockingInfo(&_INodeManager.CallOpts, stakeAddress)
 }
 
-// GetValidator is a free data retrieval call binding the contract method 0x8fa111a5.
+// GetValidator is a free data retrieval call binding the contract method 0x1904bb2e.
 //
-// Solidity: function getValidator(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerCaller) GetValidator(opts *bind.CallOpts, consensusPubkey string) ([]byte, error) {
+// Solidity: function getValidator(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetValidator(opts *bind.CallOpts, consensusAddress common.Address) ([]byte, error) {
 	var out []interface{}
-	err := _INodeManager.contract.Call(opts, &out, "getValidator", consensusPubkey)
+	err := _INodeManager.contract.Call(opts, &out, "getValidator", consensusAddress)
 
 	if err != nil {
 		return *new([]byte), err
@@ -643,26 +643,26 @@ func (_INodeManager *INodeManagerCaller) GetValidator(opts *bind.CallOpts, conse
 
 }
 
-// GetValidator is a free data retrieval call binding the contract method 0x8fa111a5.
+// GetValidator is a free data retrieval call binding the contract method 0x1904bb2e.
 //
-// Solidity: function getValidator(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerSession) GetValidator(consensusPubkey string) ([]byte, error) {
-	return _INodeManager.Contract.GetValidator(&_INodeManager.CallOpts, consensusPubkey)
+// Solidity: function getValidator(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetValidator(consensusAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetValidator(&_INodeManager.CallOpts, consensusAddress)
 }
 
-// GetValidator is a free data retrieval call binding the contract method 0x8fa111a5.
+// GetValidator is a free data retrieval call binding the contract method 0x1904bb2e.
 //
-// Solidity: function getValidator(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerCallerSession) GetValidator(consensusPubkey string) ([]byte, error) {
-	return _INodeManager.Contract.GetValidator(&_INodeManager.CallOpts, consensusPubkey)
+// Solidity: function getValidator(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetValidator(consensusAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetValidator(&_INodeManager.CallOpts, consensusAddress)
 }
 
-// GetValidatorAccumulatedRewards is a free data retrieval call binding the contract method 0xa2d3988a.
+// GetValidatorAccumulatedRewards is a free data retrieval call binding the contract method 0x9c898a3b.
 //
-// Solidity: function getValidatorAccumulatedRewards(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerCaller) GetValidatorAccumulatedRewards(opts *bind.CallOpts, consensusPubkey string) ([]byte, error) {
+// Solidity: function getValidatorAccumulatedRewards(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetValidatorAccumulatedRewards(opts *bind.CallOpts, consensusAddress common.Address) ([]byte, error) {
 	var out []interface{}
-	err := _INodeManager.contract.Call(opts, &out, "getValidatorAccumulatedRewards", consensusPubkey)
+	err := _INodeManager.contract.Call(opts, &out, "getValidatorAccumulatedRewards", consensusAddress)
 
 	if err != nil {
 		return *new([]byte), err
@@ -674,26 +674,26 @@ func (_INodeManager *INodeManagerCaller) GetValidatorAccumulatedRewards(opts *bi
 
 }
 
-// GetValidatorAccumulatedRewards is a free data retrieval call binding the contract method 0xa2d3988a.
+// GetValidatorAccumulatedRewards is a free data retrieval call binding the contract method 0x9c898a3b.
 //
-// Solidity: function getValidatorAccumulatedRewards(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerSession) GetValidatorAccumulatedRewards(consensusPubkey string) ([]byte, error) {
-	return _INodeManager.Contract.GetValidatorAccumulatedRewards(&_INodeManager.CallOpts, consensusPubkey)
+// Solidity: function getValidatorAccumulatedRewards(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetValidatorAccumulatedRewards(consensusAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorAccumulatedRewards(&_INodeManager.CallOpts, consensusAddress)
 }
 
-// GetValidatorAccumulatedRewards is a free data retrieval call binding the contract method 0xa2d3988a.
+// GetValidatorAccumulatedRewards is a free data retrieval call binding the contract method 0x9c898a3b.
 //
-// Solidity: function getValidatorAccumulatedRewards(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerCallerSession) GetValidatorAccumulatedRewards(consensusPubkey string) ([]byte, error) {
-	return _INodeManager.Contract.GetValidatorAccumulatedRewards(&_INodeManager.CallOpts, consensusPubkey)
+// Solidity: function getValidatorAccumulatedRewards(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetValidatorAccumulatedRewards(consensusAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorAccumulatedRewards(&_INodeManager.CallOpts, consensusAddress)
 }
 
-// GetValidatorOutstandingRewards is a free data retrieval call binding the contract method 0xd3f831be.
+// GetValidatorOutstandingRewards is a free data retrieval call binding the contract method 0xa76d00a8.
 //
-// Solidity: function getValidatorOutstandingRewards(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerCaller) GetValidatorOutstandingRewards(opts *bind.CallOpts, consensusPubkey string) ([]byte, error) {
+// Solidity: function getValidatorOutstandingRewards(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetValidatorOutstandingRewards(opts *bind.CallOpts, consensusAddress common.Address) ([]byte, error) {
 	var out []interface{}
-	err := _INodeManager.contract.Call(opts, &out, "getValidatorOutstandingRewards", consensusPubkey)
+	err := _INodeManager.contract.Call(opts, &out, "getValidatorOutstandingRewards", consensusAddress)
 
 	if err != nil {
 		return *new([]byte), err
@@ -705,26 +705,26 @@ func (_INodeManager *INodeManagerCaller) GetValidatorOutstandingRewards(opts *bi
 
 }
 
-// GetValidatorOutstandingRewards is a free data retrieval call binding the contract method 0xd3f831be.
+// GetValidatorOutstandingRewards is a free data retrieval call binding the contract method 0xa76d00a8.
 //
-// Solidity: function getValidatorOutstandingRewards(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerSession) GetValidatorOutstandingRewards(consensusPubkey string) ([]byte, error) {
-	return _INodeManager.Contract.GetValidatorOutstandingRewards(&_INodeManager.CallOpts, consensusPubkey)
+// Solidity: function getValidatorOutstandingRewards(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetValidatorOutstandingRewards(consensusAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorOutstandingRewards(&_INodeManager.CallOpts, consensusAddress)
 }
 
-// GetValidatorOutstandingRewards is a free data retrieval call binding the contract method 0xd3f831be.
+// GetValidatorOutstandingRewards is a free data retrieval call binding the contract method 0xa76d00a8.
 //
-// Solidity: function getValidatorOutstandingRewards(string consensusPubkey) view returns(bytes)
-func (_INodeManager *INodeManagerCallerSession) GetValidatorOutstandingRewards(consensusPubkey string) ([]byte, error) {
-	return _INodeManager.Contract.GetValidatorOutstandingRewards(&_INodeManager.CallOpts, consensusPubkey)
+// Solidity: function getValidatorOutstandingRewards(address consensusAddress) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetValidatorOutstandingRewards(consensusAddress common.Address) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorOutstandingRewards(&_INodeManager.CallOpts, consensusAddress)
 }
 
-// GetValidatorSnapshotRewards is a free data retrieval call binding the contract method 0xca0d5cd4.
+// GetValidatorSnapshotRewards is a free data retrieval call binding the contract method 0xedd0efa9.
 //
-// Solidity: function getValidatorSnapshotRewards(string consensusPubkey, uint64 period) view returns(bytes)
-func (_INodeManager *INodeManagerCaller) GetValidatorSnapshotRewards(opts *bind.CallOpts, consensusPubkey string, period uint64) ([]byte, error) {
+// Solidity: function getValidatorSnapshotRewards(address consensusAddress, uint64 period) view returns(bytes)
+func (_INodeManager *INodeManagerCaller) GetValidatorSnapshotRewards(opts *bind.CallOpts, consensusAddress common.Address, period uint64) ([]byte, error) {
 	var out []interface{}
-	err := _INodeManager.contract.Call(opts, &out, "getValidatorSnapshotRewards", consensusPubkey, period)
+	err := _INodeManager.contract.Call(opts, &out, "getValidatorSnapshotRewards", consensusAddress, period)
 
 	if err != nil {
 		return *new([]byte), err
@@ -736,39 +736,39 @@ func (_INodeManager *INodeManagerCaller) GetValidatorSnapshotRewards(opts *bind.
 
 }
 
-// GetValidatorSnapshotRewards is a free data retrieval call binding the contract method 0xca0d5cd4.
+// GetValidatorSnapshotRewards is a free data retrieval call binding the contract method 0xedd0efa9.
 //
-// Solidity: function getValidatorSnapshotRewards(string consensusPubkey, uint64 period) view returns(bytes)
-func (_INodeManager *INodeManagerSession) GetValidatorSnapshotRewards(consensusPubkey string, period uint64) ([]byte, error) {
-	return _INodeManager.Contract.GetValidatorSnapshotRewards(&_INodeManager.CallOpts, consensusPubkey, period)
+// Solidity: function getValidatorSnapshotRewards(address consensusAddress, uint64 period) view returns(bytes)
+func (_INodeManager *INodeManagerSession) GetValidatorSnapshotRewards(consensusAddress common.Address, period uint64) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorSnapshotRewards(&_INodeManager.CallOpts, consensusAddress, period)
 }
 
-// GetValidatorSnapshotRewards is a free data retrieval call binding the contract method 0xca0d5cd4.
+// GetValidatorSnapshotRewards is a free data retrieval call binding the contract method 0xedd0efa9.
 //
-// Solidity: function getValidatorSnapshotRewards(string consensusPubkey, uint64 period) view returns(bytes)
-func (_INodeManager *INodeManagerCallerSession) GetValidatorSnapshotRewards(consensusPubkey string, period uint64) ([]byte, error) {
-	return _INodeManager.Contract.GetValidatorSnapshotRewards(&_INodeManager.CallOpts, consensusPubkey, period)
+// Solidity: function getValidatorSnapshotRewards(address consensusAddress, uint64 period) view returns(bytes)
+func (_INodeManager *INodeManagerCallerSession) GetValidatorSnapshotRewards(consensusAddress common.Address, period uint64) ([]byte, error) {
+	return _INodeManager.Contract.GetValidatorSnapshotRewards(&_INodeManager.CallOpts, consensusAddress, period)
 }
 
-// CancelValidator is a paid mutator transaction binding the contract method 0xd087b01b.
+// CancelValidator is a paid mutator transaction binding the contract method 0x1af78584.
 //
-// Solidity: function cancelValidator(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerTransactor) CancelValidator(opts *bind.TransactOpts, consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "cancelValidator", consensusPubkey)
+// Solidity: function cancelValidator(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) CancelValidator(opts *bind.TransactOpts, consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "cancelValidator", consensusAddress)
 }
 
-// CancelValidator is a paid mutator transaction binding the contract method 0xd087b01b.
+// CancelValidator is a paid mutator transaction binding the contract method 0x1af78584.
 //
-// Solidity: function cancelValidator(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerSession) CancelValidator(consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.Contract.CancelValidator(&_INodeManager.TransactOpts, consensusPubkey)
+// Solidity: function cancelValidator(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerSession) CancelValidator(consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.Contract.CancelValidator(&_INodeManager.TransactOpts, consensusAddress)
 }
 
-// CancelValidator is a paid mutator transaction binding the contract method 0xd087b01b.
+// CancelValidator is a paid mutator transaction binding the contract method 0x1af78584.
 //
-// Solidity: function cancelValidator(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) CancelValidator(consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.Contract.CancelValidator(&_INodeManager.TransactOpts, consensusPubkey)
+// Solidity: function cancelValidator(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) CancelValidator(consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.Contract.CancelValidator(&_INodeManager.TransactOpts, consensusAddress)
 }
 
 // ChangeEpoch is a paid mutator transaction binding the contract method 0xfe6f86f8.
@@ -792,25 +792,25 @@ func (_INodeManager *INodeManagerTransactorSession) ChangeEpoch() (*types.Transa
 	return _INodeManager.Contract.ChangeEpoch(&_INodeManager.TransactOpts)
 }
 
-// CreateValidator is a paid mutator transaction binding the contract method 0xafa1d242.
+// CreateValidator is a paid mutator transaction binding the contract method 0xb5c42005.
 //
-// Solidity: function createValidator(string consensusPubkey, address proposalAddress, int256 commission, int256 initStake, string desc) returns(bool success)
-func (_INodeManager *INodeManagerTransactor) CreateValidator(opts *bind.TransactOpts, consensusPubkey string, proposalAddress common.Address, commission *big.Int, initStake *big.Int, desc string) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "createValidator", consensusPubkey, proposalAddress, commission, initStake, desc)
+// Solidity: function createValidator(address consensusAddress, address signerAddress, address proposalAddress, int256 commission, int256 initStake, string desc) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) CreateValidator(opts *bind.TransactOpts, consensusAddress common.Address, signerAddress common.Address, proposalAddress common.Address, commission *big.Int, initStake *big.Int, desc string) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "createValidator", consensusAddress, signerAddress, proposalAddress, commission, initStake, desc)
 }
 
-// CreateValidator is a paid mutator transaction binding the contract method 0xafa1d242.
+// CreateValidator is a paid mutator transaction binding the contract method 0xb5c42005.
 //
-// Solidity: function createValidator(string consensusPubkey, address proposalAddress, int256 commission, int256 initStake, string desc) returns(bool success)
-func (_INodeManager *INodeManagerSession) CreateValidator(consensusPubkey string, proposalAddress common.Address, commission *big.Int, initStake *big.Int, desc string) (*types.Transaction, error) {
-	return _INodeManager.Contract.CreateValidator(&_INodeManager.TransactOpts, consensusPubkey, proposalAddress, commission, initStake, desc)
+// Solidity: function createValidator(address consensusAddress, address signerAddress, address proposalAddress, int256 commission, int256 initStake, string desc) returns(bool success)
+func (_INodeManager *INodeManagerSession) CreateValidator(consensusAddress common.Address, signerAddress common.Address, proposalAddress common.Address, commission *big.Int, initStake *big.Int, desc string) (*types.Transaction, error) {
+	return _INodeManager.Contract.CreateValidator(&_INodeManager.TransactOpts, consensusAddress, signerAddress, proposalAddress, commission, initStake, desc)
 }
 
-// CreateValidator is a paid mutator transaction binding the contract method 0xafa1d242.
+// CreateValidator is a paid mutator transaction binding the contract method 0xb5c42005.
 //
-// Solidity: function createValidator(string consensusPubkey, address proposalAddress, int256 commission, int256 initStake, string desc) returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) CreateValidator(consensusPubkey string, proposalAddress common.Address, commission *big.Int, initStake *big.Int, desc string) (*types.Transaction, error) {
-	return _INodeManager.Contract.CreateValidator(&_INodeManager.TransactOpts, consensusPubkey, proposalAddress, commission, initStake, desc)
+// Solidity: function createValidator(address consensusAddress, address signerAddress, address proposalAddress, int256 commission, int256 initStake, string desc) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) CreateValidator(consensusAddress common.Address, signerAddress common.Address, proposalAddress common.Address, commission *big.Int, initStake *big.Int, desc string) (*types.Transaction, error) {
+	return _INodeManager.Contract.CreateValidator(&_INodeManager.TransactOpts, consensusAddress, signerAddress, proposalAddress, commission, initStake, desc)
 }
 
 // EndBlock is a paid mutator transaction binding the contract method 0x083c6323.
@@ -834,88 +834,88 @@ func (_INodeManager *INodeManagerTransactorSession) EndBlock() (*types.Transacti
 	return _INodeManager.Contract.EndBlock(&_INodeManager.TransactOpts)
 }
 
-// Stake is a paid mutator transaction binding the contract method 0x102fc25a.
+// Stake is a paid mutator transaction binding the contract method 0x91398b13.
 //
-// Solidity: function stake(string consensusPubkey, int256 amount) returns(bool success)
-func (_INodeManager *INodeManagerTransactor) Stake(opts *bind.TransactOpts, consensusPubkey string, amount *big.Int) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "stake", consensusPubkey, amount)
+// Solidity: function stake(address consensusAddress, int256 amount) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) Stake(opts *bind.TransactOpts, consensusAddress common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "stake", consensusAddress, amount)
 }
 
-// Stake is a paid mutator transaction binding the contract method 0x102fc25a.
+// Stake is a paid mutator transaction binding the contract method 0x91398b13.
 //
-// Solidity: function stake(string consensusPubkey, int256 amount) returns(bool success)
-func (_INodeManager *INodeManagerSession) Stake(consensusPubkey string, amount *big.Int) (*types.Transaction, error) {
-	return _INodeManager.Contract.Stake(&_INodeManager.TransactOpts, consensusPubkey, amount)
+// Solidity: function stake(address consensusAddress, int256 amount) returns(bool success)
+func (_INodeManager *INodeManagerSession) Stake(consensusAddress common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _INodeManager.Contract.Stake(&_INodeManager.TransactOpts, consensusAddress, amount)
 }
 
-// Stake is a paid mutator transaction binding the contract method 0x102fc25a.
+// Stake is a paid mutator transaction binding the contract method 0x91398b13.
 //
-// Solidity: function stake(string consensusPubkey, int256 amount) returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) Stake(consensusPubkey string, amount *big.Int) (*types.Transaction, error) {
-	return _INodeManager.Contract.Stake(&_INodeManager.TransactOpts, consensusPubkey, amount)
+// Solidity: function stake(address consensusAddress, int256 amount) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) Stake(consensusAddress common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _INodeManager.Contract.Stake(&_INodeManager.TransactOpts, consensusAddress, amount)
 }
 
-// UnStake is a paid mutator transaction binding the contract method 0x6b2e7c4e.
+// UnStake is a paid mutator transaction binding the contract method 0xdfe6bad3.
 //
-// Solidity: function unStake(string consensusPubkey, int256 amount) returns(bool success)
-func (_INodeManager *INodeManagerTransactor) UnStake(opts *bind.TransactOpts, consensusPubkey string, amount *big.Int) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "unStake", consensusPubkey, amount)
+// Solidity: function unStake(address consensusAddress, int256 amount) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) UnStake(opts *bind.TransactOpts, consensusAddress common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "unStake", consensusAddress, amount)
 }
 
-// UnStake is a paid mutator transaction binding the contract method 0x6b2e7c4e.
+// UnStake is a paid mutator transaction binding the contract method 0xdfe6bad3.
 //
-// Solidity: function unStake(string consensusPubkey, int256 amount) returns(bool success)
-func (_INodeManager *INodeManagerSession) UnStake(consensusPubkey string, amount *big.Int) (*types.Transaction, error) {
-	return _INodeManager.Contract.UnStake(&_INodeManager.TransactOpts, consensusPubkey, amount)
+// Solidity: function unStake(address consensusAddress, int256 amount) returns(bool success)
+func (_INodeManager *INodeManagerSession) UnStake(consensusAddress common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _INodeManager.Contract.UnStake(&_INodeManager.TransactOpts, consensusAddress, amount)
 }
 
-// UnStake is a paid mutator transaction binding the contract method 0x6b2e7c4e.
+// UnStake is a paid mutator transaction binding the contract method 0xdfe6bad3.
 //
-// Solidity: function unStake(string consensusPubkey, int256 amount) returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) UnStake(consensusPubkey string, amount *big.Int) (*types.Transaction, error) {
-	return _INodeManager.Contract.UnStake(&_INodeManager.TransactOpts, consensusPubkey, amount)
+// Solidity: function unStake(address consensusAddress, int256 amount) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) UnStake(consensusAddress common.Address, amount *big.Int) (*types.Transaction, error) {
+	return _INodeManager.Contract.UnStake(&_INodeManager.TransactOpts, consensusAddress, amount)
 }
 
-// UpdateCommission is a paid mutator transaction binding the contract method 0x9b079ff7.
+// UpdateCommission is a paid mutator transaction binding the contract method 0xc5e7ad1d.
 //
-// Solidity: function updateCommission(string consensusPubkey, int256 commission) returns(bool success)
-func (_INodeManager *INodeManagerTransactor) UpdateCommission(opts *bind.TransactOpts, consensusPubkey string, commission *big.Int) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "updateCommission", consensusPubkey, commission)
+// Solidity: function updateCommission(address consensusAddress, int256 commission) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) UpdateCommission(opts *bind.TransactOpts, consensusAddress common.Address, commission *big.Int) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "updateCommission", consensusAddress, commission)
 }
 
-// UpdateCommission is a paid mutator transaction binding the contract method 0x9b079ff7.
+// UpdateCommission is a paid mutator transaction binding the contract method 0xc5e7ad1d.
 //
-// Solidity: function updateCommission(string consensusPubkey, int256 commission) returns(bool success)
-func (_INodeManager *INodeManagerSession) UpdateCommission(consensusPubkey string, commission *big.Int) (*types.Transaction, error) {
-	return _INodeManager.Contract.UpdateCommission(&_INodeManager.TransactOpts, consensusPubkey, commission)
+// Solidity: function updateCommission(address consensusAddress, int256 commission) returns(bool success)
+func (_INodeManager *INodeManagerSession) UpdateCommission(consensusAddress common.Address, commission *big.Int) (*types.Transaction, error) {
+	return _INodeManager.Contract.UpdateCommission(&_INodeManager.TransactOpts, consensusAddress, commission)
 }
 
-// UpdateCommission is a paid mutator transaction binding the contract method 0x9b079ff7.
+// UpdateCommission is a paid mutator transaction binding the contract method 0xc5e7ad1d.
 //
-// Solidity: function updateCommission(string consensusPubkey, int256 commission) returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) UpdateCommission(consensusPubkey string, commission *big.Int) (*types.Transaction, error) {
-	return _INodeManager.Contract.UpdateCommission(&_INodeManager.TransactOpts, consensusPubkey, commission)
+// Solidity: function updateCommission(address consensusAddress, int256 commission) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) UpdateCommission(consensusAddress common.Address, commission *big.Int) (*types.Transaction, error) {
+	return _INodeManager.Contract.UpdateCommission(&_INodeManager.TransactOpts, consensusAddress, commission)
 }
 
-// UpdateValidator is a paid mutator transaction binding the contract method 0x74bddcc1.
+// UpdateValidator is a paid mutator transaction binding the contract method 0x506472a0.
 //
-// Solidity: function updateValidator(string consensusPubkey, address proposalAddress, string desc) returns(bool success)
-func (_INodeManager *INodeManagerTransactor) UpdateValidator(opts *bind.TransactOpts, consensusPubkey string, proposalAddress common.Address, desc string) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "updateValidator", consensusPubkey, proposalAddress, desc)
+// Solidity: function updateValidator(address consensusAddress, address proposalAddress, string desc) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) UpdateValidator(opts *bind.TransactOpts, consensusAddress common.Address, proposalAddress common.Address, desc string) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "updateValidator", consensusAddress, proposalAddress, desc)
 }
 
-// UpdateValidator is a paid mutator transaction binding the contract method 0x74bddcc1.
+// UpdateValidator is a paid mutator transaction binding the contract method 0x506472a0.
 //
-// Solidity: function updateValidator(string consensusPubkey, address proposalAddress, string desc) returns(bool success)
-func (_INodeManager *INodeManagerSession) UpdateValidator(consensusPubkey string, proposalAddress common.Address, desc string) (*types.Transaction, error) {
-	return _INodeManager.Contract.UpdateValidator(&_INodeManager.TransactOpts, consensusPubkey, proposalAddress, desc)
+// Solidity: function updateValidator(address consensusAddress, address proposalAddress, string desc) returns(bool success)
+func (_INodeManager *INodeManagerSession) UpdateValidator(consensusAddress common.Address, proposalAddress common.Address, desc string) (*types.Transaction, error) {
+	return _INodeManager.Contract.UpdateValidator(&_INodeManager.TransactOpts, consensusAddress, proposalAddress, desc)
 }
 
-// UpdateValidator is a paid mutator transaction binding the contract method 0x74bddcc1.
+// UpdateValidator is a paid mutator transaction binding the contract method 0x506472a0.
 //
-// Solidity: function updateValidator(string consensusPubkey, address proposalAddress, string desc) returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) UpdateValidator(consensusPubkey string, proposalAddress common.Address, desc string) (*types.Transaction, error) {
-	return _INodeManager.Contract.UpdateValidator(&_INodeManager.TransactOpts, consensusPubkey, proposalAddress, desc)
+// Solidity: function updateValidator(address consensusAddress, address proposalAddress, string desc) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) UpdateValidator(consensusAddress common.Address, proposalAddress common.Address, desc string) (*types.Transaction, error) {
+	return _INodeManager.Contract.UpdateValidator(&_INodeManager.TransactOpts, consensusAddress, proposalAddress, desc)
 }
 
 // Withdraw is a paid mutator transaction binding the contract method 0x3ccfd60b.
@@ -939,67 +939,67 @@ func (_INodeManager *INodeManagerTransactorSession) Withdraw() (*types.Transacti
 	return _INodeManager.Contract.Withdraw(&_INodeManager.TransactOpts)
 }
 
-// WithdrawCommission is a paid mutator transaction binding the contract method 0x65371818.
+// WithdrawCommission is a paid mutator transaction binding the contract method 0x16c58d04.
 //
-// Solidity: function withdrawCommission(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerTransactor) WithdrawCommission(opts *bind.TransactOpts, consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "withdrawCommission", consensusPubkey)
+// Solidity: function withdrawCommission(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) WithdrawCommission(opts *bind.TransactOpts, consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "withdrawCommission", consensusAddress)
 }
 
-// WithdrawCommission is a paid mutator transaction binding the contract method 0x65371818.
+// WithdrawCommission is a paid mutator transaction binding the contract method 0x16c58d04.
 //
-// Solidity: function withdrawCommission(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerSession) WithdrawCommission(consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.Contract.WithdrawCommission(&_INodeManager.TransactOpts, consensusPubkey)
+// Solidity: function withdrawCommission(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerSession) WithdrawCommission(consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.Contract.WithdrawCommission(&_INodeManager.TransactOpts, consensusAddress)
 }
 
-// WithdrawCommission is a paid mutator transaction binding the contract method 0x65371818.
+// WithdrawCommission is a paid mutator transaction binding the contract method 0x16c58d04.
 //
-// Solidity: function withdrawCommission(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) WithdrawCommission(consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.Contract.WithdrawCommission(&_INodeManager.TransactOpts, consensusPubkey)
+// Solidity: function withdrawCommission(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) WithdrawCommission(consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.Contract.WithdrawCommission(&_INodeManager.TransactOpts, consensusAddress)
 }
 
-// WithdrawStakeRewards is a paid mutator transaction binding the contract method 0x377b97fb.
+// WithdrawStakeRewards is a paid mutator transaction binding the contract method 0x5d3abd54.
 //
-// Solidity: function withdrawStakeRewards(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerTransactor) WithdrawStakeRewards(opts *bind.TransactOpts, consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "withdrawStakeRewards", consensusPubkey)
+// Solidity: function withdrawStakeRewards(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) WithdrawStakeRewards(opts *bind.TransactOpts, consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "withdrawStakeRewards", consensusAddress)
 }
 
-// WithdrawStakeRewards is a paid mutator transaction binding the contract method 0x377b97fb.
+// WithdrawStakeRewards is a paid mutator transaction binding the contract method 0x5d3abd54.
 //
-// Solidity: function withdrawStakeRewards(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerSession) WithdrawStakeRewards(consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.Contract.WithdrawStakeRewards(&_INodeManager.TransactOpts, consensusPubkey)
+// Solidity: function withdrawStakeRewards(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerSession) WithdrawStakeRewards(consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.Contract.WithdrawStakeRewards(&_INodeManager.TransactOpts, consensusAddress)
 }
 
-// WithdrawStakeRewards is a paid mutator transaction binding the contract method 0x377b97fb.
+// WithdrawStakeRewards is a paid mutator transaction binding the contract method 0x5d3abd54.
 //
-// Solidity: function withdrawStakeRewards(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) WithdrawStakeRewards(consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.Contract.WithdrawStakeRewards(&_INodeManager.TransactOpts, consensusPubkey)
+// Solidity: function withdrawStakeRewards(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) WithdrawStakeRewards(consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.Contract.WithdrawStakeRewards(&_INodeManager.TransactOpts, consensusAddress)
 }
 
-// WithdrawValidator is a paid mutator transaction binding the contract method 0x944ac99f.
+// WithdrawValidator is a paid mutator transaction binding the contract method 0x814a2c11.
 //
-// Solidity: function withdrawValidator(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerTransactor) WithdrawValidator(opts *bind.TransactOpts, consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.contract.Transact(opts, "withdrawValidator", consensusPubkey)
+// Solidity: function withdrawValidator(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerTransactor) WithdrawValidator(opts *bind.TransactOpts, consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.contract.Transact(opts, "withdrawValidator", consensusAddress)
 }
 
-// WithdrawValidator is a paid mutator transaction binding the contract method 0x944ac99f.
+// WithdrawValidator is a paid mutator transaction binding the contract method 0x814a2c11.
 //
-// Solidity: function withdrawValidator(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerSession) WithdrawValidator(consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.Contract.WithdrawValidator(&_INodeManager.TransactOpts, consensusPubkey)
+// Solidity: function withdrawValidator(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerSession) WithdrawValidator(consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.Contract.WithdrawValidator(&_INodeManager.TransactOpts, consensusAddress)
 }
 
-// WithdrawValidator is a paid mutator transaction binding the contract method 0x944ac99f.
+// WithdrawValidator is a paid mutator transaction binding the contract method 0x814a2c11.
 //
-// Solidity: function withdrawValidator(string consensusPubkey) returns(bool success)
-func (_INodeManager *INodeManagerTransactorSession) WithdrawValidator(consensusPubkey string) (*types.Transaction, error) {
-	return _INodeManager.Contract.WithdrawValidator(&_INodeManager.TransactOpts, consensusPubkey)
+// Solidity: function withdrawValidator(address consensusAddress) returns(bool success)
+func (_INodeManager *INodeManagerTransactorSession) WithdrawValidator(consensusAddress common.Address) (*types.Transaction, error) {
+	return _INodeManager.Contract.WithdrawValidator(&_INodeManager.TransactOpts, consensusAddress)
 }
 
 // INodeManagerCancelValidatorIterator is returned from FilterCancelValidator and is used to iterate over the raw logs and unpacked data for CancelValidator events raised by the INodeManager contract.
@@ -1071,13 +1071,13 @@ func (it *INodeManagerCancelValidatorIterator) Close() error {
 
 // INodeManagerCancelValidator represents a CancelValidator event raised by the INodeManager contract.
 type INodeManagerCancelValidator struct {
-	ConsensusPubkey string
-	Raw             types.Log // Blockchain specific contextual infos
+	ConsensusAddress string
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
 // FilterCancelValidator is a free log retrieval operation binding the contract event 0x958925709318fd39dab7c4c9812b315994b68e8d17a3408c1ca4bf0dc594473d.
 //
-// Solidity: event CancelValidator(string consensusPubkey)
+// Solidity: event CancelValidator(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) FilterCancelValidator(opts *bind.FilterOpts) (*INodeManagerCancelValidatorIterator, error) {
 
 	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "CancelValidator")
@@ -1089,7 +1089,7 @@ func (_INodeManager *INodeManagerFilterer) FilterCancelValidator(opts *bind.Filt
 
 // WatchCancelValidator is a free log subscription operation binding the contract event 0x958925709318fd39dab7c4c9812b315994b68e8d17a3408c1ca4bf0dc594473d.
 //
-// Solidity: event CancelValidator(string consensusPubkey)
+// Solidity: event CancelValidator(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) WatchCancelValidator(opts *bind.WatchOpts, sink chan<- *INodeManagerCancelValidator) (event.Subscription, error) {
 
 	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "CancelValidator")
@@ -1126,7 +1126,7 @@ func (_INodeManager *INodeManagerFilterer) WatchCancelValidator(opts *bind.Watch
 
 // ParseCancelValidator is a log parse operation binding the contract event 0x958925709318fd39dab7c4c9812b315994b68e8d17a3408c1ca4bf0dc594473d.
 //
-// Solidity: event CancelValidator(string consensusPubkey)
+// Solidity: event CancelValidator(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) ParseCancelValidator(log types.Log) (*INodeManagerCancelValidator, error) {
 	event := new(INodeManagerCancelValidator)
 	if err := _INodeManager.contract.UnpackLog(event, "CancelValidator", log); err != nil {
@@ -1339,13 +1339,13 @@ func (it *INodeManagerCreateValidatorIterator) Close() error {
 
 // INodeManagerCreateValidator represents a CreateValidator event raised by the INodeManager contract.
 type INodeManagerCreateValidator struct {
-	ConsensusPubkey string
-	Raw             types.Log // Blockchain specific contextual infos
+	ConsensusAddress string
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
 // FilterCreateValidator is a free log retrieval operation binding the contract event 0xb7f4cfc364000338326cb6f95799a39e25447cd02f70d1c7568f2d8d0a6fa2df.
 //
-// Solidity: event CreateValidator(string consensusPubkey)
+// Solidity: event CreateValidator(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) FilterCreateValidator(opts *bind.FilterOpts) (*INodeManagerCreateValidatorIterator, error) {
 
 	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "CreateValidator")
@@ -1357,7 +1357,7 @@ func (_INodeManager *INodeManagerFilterer) FilterCreateValidator(opts *bind.Filt
 
 // WatchCreateValidator is a free log subscription operation binding the contract event 0xb7f4cfc364000338326cb6f95799a39e25447cd02f70d1c7568f2d8d0a6fa2df.
 //
-// Solidity: event CreateValidator(string consensusPubkey)
+// Solidity: event CreateValidator(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) WatchCreateValidator(opts *bind.WatchOpts, sink chan<- *INodeManagerCreateValidator) (event.Subscription, error) {
 
 	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "CreateValidator")
@@ -1394,7 +1394,7 @@ func (_INodeManager *INodeManagerFilterer) WatchCreateValidator(opts *bind.Watch
 
 // ParseCreateValidator is a log parse operation binding the contract event 0xb7f4cfc364000338326cb6f95799a39e25447cd02f70d1c7568f2d8d0a6fa2df.
 //
-// Solidity: event CreateValidator(string consensusPubkey)
+// Solidity: event CreateValidator(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) ParseCreateValidator(log types.Log) (*INodeManagerCreateValidator, error) {
 	event := new(INodeManagerCreateValidator)
 	if err := _INodeManager.contract.UnpackLog(event, "CreateValidator", log); err != nil {
@@ -1473,14 +1473,14 @@ func (it *INodeManagerStakeIterator) Close() error {
 
 // INodeManagerStake represents a Stake event raised by the INodeManager contract.
 type INodeManagerStake struct {
-	ConsensusPubkey string
-	Amount          string
-	Raw             types.Log // Blockchain specific contextual infos
+	ConsensusAddress string
+	Amount           string
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
 // FilterStake is a free log retrieval operation binding the contract event 0x28c6fab16944691610b9d650c8296cb50ed85a965e81865eb3f1f3ccc274a272.
 //
-// Solidity: event Stake(string consensusPubkey, string amount)
+// Solidity: event Stake(string consensusAddress, string amount)
 func (_INodeManager *INodeManagerFilterer) FilterStake(opts *bind.FilterOpts) (*INodeManagerStakeIterator, error) {
 
 	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "Stake")
@@ -1492,7 +1492,7 @@ func (_INodeManager *INodeManagerFilterer) FilterStake(opts *bind.FilterOpts) (*
 
 // WatchStake is a free log subscription operation binding the contract event 0x28c6fab16944691610b9d650c8296cb50ed85a965e81865eb3f1f3ccc274a272.
 //
-// Solidity: event Stake(string consensusPubkey, string amount)
+// Solidity: event Stake(string consensusAddress, string amount)
 func (_INodeManager *INodeManagerFilterer) WatchStake(opts *bind.WatchOpts, sink chan<- *INodeManagerStake) (event.Subscription, error) {
 
 	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "Stake")
@@ -1529,7 +1529,7 @@ func (_INodeManager *INodeManagerFilterer) WatchStake(opts *bind.WatchOpts, sink
 
 // ParseStake is a log parse operation binding the contract event 0x28c6fab16944691610b9d650c8296cb50ed85a965e81865eb3f1f3ccc274a272.
 //
-// Solidity: event Stake(string consensusPubkey, string amount)
+// Solidity: event Stake(string consensusAddress, string amount)
 func (_INodeManager *INodeManagerFilterer) ParseStake(log types.Log) (*INodeManagerStake, error) {
 	event := new(INodeManagerStake)
 	if err := _INodeManager.contract.UnpackLog(event, "Stake", log); err != nil {
@@ -1608,14 +1608,14 @@ func (it *INodeManagerUnStakeIterator) Close() error {
 
 // INodeManagerUnStake represents a UnStake event raised by the INodeManager contract.
 type INodeManagerUnStake struct {
-	ConsensusPubkey string
-	Amount          string
-	Raw             types.Log // Blockchain specific contextual infos
+	ConsensusAddress string
+	Amount           string
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
 // FilterUnStake is a free log retrieval operation binding the contract event 0x09c079860913a3cf3561020297d9982bdeb613ecdb83920f88063bf6e3e19088.
 //
-// Solidity: event UnStake(string consensusPubkey, string amount)
+// Solidity: event UnStake(string consensusAddress, string amount)
 func (_INodeManager *INodeManagerFilterer) FilterUnStake(opts *bind.FilterOpts) (*INodeManagerUnStakeIterator, error) {
 
 	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "UnStake")
@@ -1627,7 +1627,7 @@ func (_INodeManager *INodeManagerFilterer) FilterUnStake(opts *bind.FilterOpts) 
 
 // WatchUnStake is a free log subscription operation binding the contract event 0x09c079860913a3cf3561020297d9982bdeb613ecdb83920f88063bf6e3e19088.
 //
-// Solidity: event UnStake(string consensusPubkey, string amount)
+// Solidity: event UnStake(string consensusAddress, string amount)
 func (_INodeManager *INodeManagerFilterer) WatchUnStake(opts *bind.WatchOpts, sink chan<- *INodeManagerUnStake) (event.Subscription, error) {
 
 	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "UnStake")
@@ -1664,7 +1664,7 @@ func (_INodeManager *INodeManagerFilterer) WatchUnStake(opts *bind.WatchOpts, si
 
 // ParseUnStake is a log parse operation binding the contract event 0x09c079860913a3cf3561020297d9982bdeb613ecdb83920f88063bf6e3e19088.
 //
-// Solidity: event UnStake(string consensusPubkey, string amount)
+// Solidity: event UnStake(string consensusAddress, string amount)
 func (_INodeManager *INodeManagerFilterer) ParseUnStake(log types.Log) (*INodeManagerUnStake, error) {
 	event := new(INodeManagerUnStake)
 	if err := _INodeManager.contract.UnpackLog(event, "UnStake", log); err != nil {
@@ -1743,13 +1743,13 @@ func (it *INodeManagerUpdateCommissionIterator) Close() error {
 
 // INodeManagerUpdateCommission represents a UpdateCommission event raised by the INodeManager contract.
 type INodeManagerUpdateCommission struct {
-	ConsensusPubkey string
-	Raw             types.Log // Blockchain specific contextual infos
+	ConsensusAddress string
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
 // FilterUpdateCommission is a free log retrieval operation binding the contract event 0x4122b09ab8922a4e7eb98b7aade17dd076d3eb78158a17a0ab826b857b17e2b2.
 //
-// Solidity: event UpdateCommission(string consensusPubkey)
+// Solidity: event UpdateCommission(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) FilterUpdateCommission(opts *bind.FilterOpts) (*INodeManagerUpdateCommissionIterator, error) {
 
 	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "UpdateCommission")
@@ -1761,7 +1761,7 @@ func (_INodeManager *INodeManagerFilterer) FilterUpdateCommission(opts *bind.Fil
 
 // WatchUpdateCommission is a free log subscription operation binding the contract event 0x4122b09ab8922a4e7eb98b7aade17dd076d3eb78158a17a0ab826b857b17e2b2.
 //
-// Solidity: event UpdateCommission(string consensusPubkey)
+// Solidity: event UpdateCommission(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) WatchUpdateCommission(opts *bind.WatchOpts, sink chan<- *INodeManagerUpdateCommission) (event.Subscription, error) {
 
 	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "UpdateCommission")
@@ -1798,7 +1798,7 @@ func (_INodeManager *INodeManagerFilterer) WatchUpdateCommission(opts *bind.Watc
 
 // ParseUpdateCommission is a log parse operation binding the contract event 0x4122b09ab8922a4e7eb98b7aade17dd076d3eb78158a17a0ab826b857b17e2b2.
 //
-// Solidity: event UpdateCommission(string consensusPubkey)
+// Solidity: event UpdateCommission(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) ParseUpdateCommission(log types.Log) (*INodeManagerUpdateCommission, error) {
 	event := new(INodeManagerUpdateCommission)
 	if err := _INodeManager.contract.UnpackLog(event, "UpdateCommission", log); err != nil {
@@ -1877,13 +1877,13 @@ func (it *INodeManagerUpdateValidatorIterator) Close() error {
 
 // INodeManagerUpdateValidator represents a UpdateValidator event raised by the INodeManager contract.
 type INodeManagerUpdateValidator struct {
-	ConsensusPubkey string
-	Raw             types.Log // Blockchain specific contextual infos
+	ConsensusAddress string
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
 // FilterUpdateValidator is a free log retrieval operation binding the contract event 0xf6d6118bb8579adc14af14122184c92bc5fa2d973b612298019af0fab85640c1.
 //
-// Solidity: event UpdateValidator(string consensusPubkey)
+// Solidity: event UpdateValidator(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) FilterUpdateValidator(opts *bind.FilterOpts) (*INodeManagerUpdateValidatorIterator, error) {
 
 	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "UpdateValidator")
@@ -1895,7 +1895,7 @@ func (_INodeManager *INodeManagerFilterer) FilterUpdateValidator(opts *bind.Filt
 
 // WatchUpdateValidator is a free log subscription operation binding the contract event 0xf6d6118bb8579adc14af14122184c92bc5fa2d973b612298019af0fab85640c1.
 //
-// Solidity: event UpdateValidator(string consensusPubkey)
+// Solidity: event UpdateValidator(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) WatchUpdateValidator(opts *bind.WatchOpts, sink chan<- *INodeManagerUpdateValidator) (event.Subscription, error) {
 
 	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "UpdateValidator")
@@ -1932,7 +1932,7 @@ func (_INodeManager *INodeManagerFilterer) WatchUpdateValidator(opts *bind.Watch
 
 // ParseUpdateValidator is a log parse operation binding the contract event 0xf6d6118bb8579adc14af14122184c92bc5fa2d973b612298019af0fab85640c1.
 //
-// Solidity: event UpdateValidator(string consensusPubkey)
+// Solidity: event UpdateValidator(string consensusAddress)
 func (_INodeManager *INodeManagerFilterer) ParseUpdateValidator(log types.Log) (*INodeManagerUpdateValidator, error) {
 	event := new(INodeManagerUpdateValidator)
 	if err := _INodeManager.contract.UnpackLog(event, "UpdateValidator", log); err != nil {
@@ -2146,14 +2146,14 @@ func (it *INodeManagerWithdrawCommissionIterator) Close() error {
 
 // INodeManagerWithdrawCommission represents a WithdrawCommission event raised by the INodeManager contract.
 type INodeManagerWithdrawCommission struct {
-	ConsensusPubkey string
-	Commission      string
-	Raw             types.Log // Blockchain specific contextual infos
+	ConsensusAddress string
+	Commission       string
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
 // FilterWithdrawCommission is a free log retrieval operation binding the contract event 0xb732e4a208911fcc74b6416fb6480712d8e9f03baecb7acc08372cb8a4ea64a7.
 //
-// Solidity: event WithdrawCommission(string consensusPubkey, string commission)
+// Solidity: event WithdrawCommission(string consensusAddress, string commission)
 func (_INodeManager *INodeManagerFilterer) FilterWithdrawCommission(opts *bind.FilterOpts) (*INodeManagerWithdrawCommissionIterator, error) {
 
 	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "WithdrawCommission")
@@ -2165,7 +2165,7 @@ func (_INodeManager *INodeManagerFilterer) FilterWithdrawCommission(opts *bind.F
 
 // WatchWithdrawCommission is a free log subscription operation binding the contract event 0xb732e4a208911fcc74b6416fb6480712d8e9f03baecb7acc08372cb8a4ea64a7.
 //
-// Solidity: event WithdrawCommission(string consensusPubkey, string commission)
+// Solidity: event WithdrawCommission(string consensusAddress, string commission)
 func (_INodeManager *INodeManagerFilterer) WatchWithdrawCommission(opts *bind.WatchOpts, sink chan<- *INodeManagerWithdrawCommission) (event.Subscription, error) {
 
 	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "WithdrawCommission")
@@ -2202,7 +2202,7 @@ func (_INodeManager *INodeManagerFilterer) WatchWithdrawCommission(opts *bind.Wa
 
 // ParseWithdrawCommission is a log parse operation binding the contract event 0xb732e4a208911fcc74b6416fb6480712d8e9f03baecb7acc08372cb8a4ea64a7.
 //
-// Solidity: event WithdrawCommission(string consensusPubkey, string commission)
+// Solidity: event WithdrawCommission(string consensusAddress, string commission)
 func (_INodeManager *INodeManagerFilterer) ParseWithdrawCommission(log types.Log) (*INodeManagerWithdrawCommission, error) {
 	event := new(INodeManagerWithdrawCommission)
 	if err := _INodeManager.contract.UnpackLog(event, "WithdrawCommission", log); err != nil {
@@ -2281,13 +2281,15 @@ func (it *INodeManagerWithdrawStakeRewardsIterator) Close() error {
 
 // INodeManagerWithdrawStakeRewards represents a WithdrawStakeRewards event raised by the INodeManager contract.
 type INodeManagerWithdrawStakeRewards struct {
-	Rewards string
-	Raw     types.Log // Blockchain specific contextual infos
+	ConsensusAddress string
+	Caller           string
+	Rewards          string
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
-// FilterWithdrawStakeRewards is a free log retrieval operation binding the contract event 0x4cfbe5cdece0beac6f7f101ecb4f9f5abce4f1dda029cf4bd5c3adfbb62a41a3.
+// FilterWithdrawStakeRewards is a free log retrieval operation binding the contract event 0xa1d663f7088e276bf2b90b1586311ae4ff6584f7d3cfaa901c4f369c999d152e.
 //
-// Solidity: event WithdrawStakeRewards(string rewards)
+// Solidity: event WithdrawStakeRewards(string consensusAddress, string caller, string rewards)
 func (_INodeManager *INodeManagerFilterer) FilterWithdrawStakeRewards(opts *bind.FilterOpts) (*INodeManagerWithdrawStakeRewardsIterator, error) {
 
 	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "WithdrawStakeRewards")
@@ -2297,9 +2299,9 @@ func (_INodeManager *INodeManagerFilterer) FilterWithdrawStakeRewards(opts *bind
 	return &INodeManagerWithdrawStakeRewardsIterator{contract: _INodeManager.contract, event: "WithdrawStakeRewards", logs: logs, sub: sub}, nil
 }
 
-// WatchWithdrawStakeRewards is a free log subscription operation binding the contract event 0x4cfbe5cdece0beac6f7f101ecb4f9f5abce4f1dda029cf4bd5c3adfbb62a41a3.
+// WatchWithdrawStakeRewards is a free log subscription operation binding the contract event 0xa1d663f7088e276bf2b90b1586311ae4ff6584f7d3cfaa901c4f369c999d152e.
 //
-// Solidity: event WithdrawStakeRewards(string rewards)
+// Solidity: event WithdrawStakeRewards(string consensusAddress, string caller, string rewards)
 func (_INodeManager *INodeManagerFilterer) WatchWithdrawStakeRewards(opts *bind.WatchOpts, sink chan<- *INodeManagerWithdrawStakeRewards) (event.Subscription, error) {
 
 	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "WithdrawStakeRewards")
@@ -2334,9 +2336,9 @@ func (_INodeManager *INodeManagerFilterer) WatchWithdrawStakeRewards(opts *bind.
 	}), nil
 }
 
-// ParseWithdrawStakeRewards is a log parse operation binding the contract event 0x4cfbe5cdece0beac6f7f101ecb4f9f5abce4f1dda029cf4bd5c3adfbb62a41a3.
+// ParseWithdrawStakeRewards is a log parse operation binding the contract event 0xa1d663f7088e276bf2b90b1586311ae4ff6584f7d3cfaa901c4f369c999d152e.
 //
-// Solidity: event WithdrawStakeRewards(string rewards)
+// Solidity: event WithdrawStakeRewards(string consensusAddress, string caller, string rewards)
 func (_INodeManager *INodeManagerFilterer) ParseWithdrawStakeRewards(log types.Log) (*INodeManagerWithdrawStakeRewards, error) {
 	event := new(INodeManagerWithdrawStakeRewards)
 	if err := _INodeManager.contract.UnpackLog(event, "WithdrawStakeRewards", log); err != nil {
@@ -2415,14 +2417,14 @@ func (it *INodeManagerWithdrawValidatorIterator) Close() error {
 
 // INodeManagerWithdrawValidator represents a WithdrawValidator event raised by the INodeManager contract.
 type INodeManagerWithdrawValidator struct {
-	ConsensusPubkey string
-	SelfStake       string
-	Raw             types.Log // Blockchain specific contextual infos
+	ConsensusAddress string
+	SelfStake        string
+	Raw              types.Log // Blockchain specific contextual infos
 }
 
 // FilterWithdrawValidator is a free log retrieval operation binding the contract event 0xa5bee9e1a2697e6ed6ddf963ed42431f3c8c594f49c697cf1391bbf74e4ea877.
 //
-// Solidity: event WithdrawValidator(string consensusPubkey, string selfStake)
+// Solidity: event WithdrawValidator(string consensusAddress, string selfStake)
 func (_INodeManager *INodeManagerFilterer) FilterWithdrawValidator(opts *bind.FilterOpts) (*INodeManagerWithdrawValidatorIterator, error) {
 
 	logs, sub, err := _INodeManager.contract.FilterLogs(opts, "WithdrawValidator")
@@ -2434,7 +2436,7 @@ func (_INodeManager *INodeManagerFilterer) FilterWithdrawValidator(opts *bind.Fi
 
 // WatchWithdrawValidator is a free log subscription operation binding the contract event 0xa5bee9e1a2697e6ed6ddf963ed42431f3c8c594f49c697cf1391bbf74e4ea877.
 //
-// Solidity: event WithdrawValidator(string consensusPubkey, string selfStake)
+// Solidity: event WithdrawValidator(string consensusAddress, string selfStake)
 func (_INodeManager *INodeManagerFilterer) WatchWithdrawValidator(opts *bind.WatchOpts, sink chan<- *INodeManagerWithdrawValidator) (event.Subscription, error) {
 
 	logs, sub, err := _INodeManager.contract.WatchLogs(opts, "WithdrawValidator")
@@ -2471,7 +2473,7 @@ func (_INodeManager *INodeManagerFilterer) WatchWithdrawValidator(opts *bind.Wat
 
 // ParseWithdrawValidator is a log parse operation binding the contract event 0xa5bee9e1a2697e6ed6ddf963ed42431f3c8c594f49c697cf1391bbf74e4ea877.
 //
-// Solidity: event WithdrawValidator(string consensusPubkey, string selfStake)
+// Solidity: event WithdrawValidator(string consensusAddress, string selfStake)
 func (_INodeManager *INodeManagerFilterer) ParseWithdrawValidator(log types.Log) (*INodeManagerWithdrawValidator, error) {
 	event := new(INodeManagerWithdrawValidator)
 	if err := _INodeManager.contract.UnpackLog(event, "WithdrawValidator", log); err != nil {

@@ -54,7 +54,7 @@ func CheckSigns(native *native.NativeContract, id, sig []byte, address common.Ad
 	num := 0
 	sum := len(epochInfo.Voters)
 	for _, v := range epochInfo.Voters {
-		address := v.Address
+		address := v
 		_, ok := sigInfo.m[address.Hex()]
 		if ok {
 			num = num + 1

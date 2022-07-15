@@ -44,11 +44,12 @@ var (
 )
 
 type CreateValidatorParam struct {
-	ConsensusPubkey string
-	ProposalAddress common.Address
-	Commission      *big.Int
-	InitStake       *big.Int
-	Desc            string
+	ConsensusAddress common.Address
+	SignerAddress    common.Address
+	ProposalAddress  common.Address
+	Commission       *big.Int
+	InitStake        *big.Int
+	Desc             string
 }
 
 func (m *CreateValidatorParam) Encode() ([]byte, error) {
@@ -56,9 +57,9 @@ func (m *CreateValidatorParam) Encode() ([]byte, error) {
 }
 
 type UpdateValidatorParam struct {
-	ConsensusPubkey string
-	ProposalAddress common.Address
-	Desc            string
+	ConsensusAddress common.Address
+	ProposalAddress  common.Address
+	Desc             string
 }
 
 func (m *UpdateValidatorParam) Encode() ([]byte, error) {
@@ -66,8 +67,8 @@ func (m *UpdateValidatorParam) Encode() ([]byte, error) {
 }
 
 type UpdateCommissionParam struct {
-	ConsensusPubkey string
-	Commission      *big.Int
+	ConsensusAddress common.Address
+	Commission       *big.Int
 }
 
 func (m *UpdateCommissionParam) Encode() ([]byte, error) {
@@ -75,8 +76,8 @@ func (m *UpdateCommissionParam) Encode() ([]byte, error) {
 }
 
 type StakeParam struct {
-	ConsensusPubkey string
-	Amount          *big.Int
+	ConsensusAddress common.Address
+	Amount           *big.Int
 }
 
 func (m *StakeParam) Encode() ([]byte, error) {
@@ -84,8 +85,8 @@ func (m *StakeParam) Encode() ([]byte, error) {
 }
 
 type UnStakeParam struct {
-	ConsensusPubkey string
-	Amount          *big.Int
+	ConsensusAddress common.Address
+	Amount           *big.Int
 }
 
 func (m *UnStakeParam) Encode() ([]byte, error) {
@@ -93,7 +94,7 @@ func (m *UnStakeParam) Encode() ([]byte, error) {
 }
 
 type CancelValidatorParam struct {
-	ConsensusPubkey string
+	ConsensusAddress common.Address
 }
 
 func (m *CancelValidatorParam) Encode() ([]byte, error) {
@@ -101,7 +102,7 @@ func (m *CancelValidatorParam) Encode() ([]byte, error) {
 }
 
 type WithdrawValidatorParam struct {
-	ConsensusPubkey string
+	ConsensusAddress common.Address
 }
 
 func (m *WithdrawValidatorParam) Encode() ([]byte, error) {
@@ -109,7 +110,7 @@ func (m *WithdrawValidatorParam) Encode() ([]byte, error) {
 }
 
 type WithdrawStakeRewardsParam struct {
-	ConsensusPubkey string
+	ConsensusAddress common.Address
 }
 
 func (m *WithdrawStakeRewardsParam) Encode() ([]byte, error) {
@@ -117,7 +118,7 @@ func (m *WithdrawStakeRewardsParam) Encode() ([]byte, error) {
 }
 
 type WithdrawCommissionParam struct {
-	ConsensusPubkey string
+	ConsensusAddress common.Address
 }
 
 func (m *WithdrawCommissionParam) Encode() ([]byte, error) {
@@ -175,7 +176,7 @@ func (m *GetAllValidatorsParam) Encode() ([]byte, error) {
 }
 
 type GetValidatorParam struct {
-	ConsensusPubkey string
+	ConsensusAddress common.Address
 }
 
 func (m *GetValidatorParam) Encode() ([]byte, error) {
@@ -183,8 +184,8 @@ func (m *GetValidatorParam) Encode() ([]byte, error) {
 }
 
 type GetStakeInfoParam struct {
-	ConsensusPubkey string
-	StakeAddress    common.Address
+	ConsensusAddress common.Address
+	StakeAddress     common.Address
 }
 
 func (m *GetStakeInfoParam) Encode() ([]byte, error) {
@@ -200,8 +201,8 @@ func (m *GetUnlockingInfoParam) Encode() ([]byte, error) {
 }
 
 type GetStakeStartingInfoParam struct {
-	ConsensusPubkey string
-	StakeAddress    common.Address
+	ConsensusAddress common.Address
+	StakeAddress     common.Address
 }
 
 func (m *GetStakeStartingInfoParam) Encode() ([]byte, error) {
@@ -209,7 +210,7 @@ func (m *GetStakeStartingInfoParam) Encode() ([]byte, error) {
 }
 
 type GetAccumulatedCommissionParam struct {
-	ConsensusPubkey string
+	ConsensusAddress common.Address
 }
 
 func (m *GetAccumulatedCommissionParam) Encode() ([]byte, error) {
@@ -217,8 +218,8 @@ func (m *GetAccumulatedCommissionParam) Encode() ([]byte, error) {
 }
 
 type GetValidatorSnapshotRewardsParam struct {
-	ConsensusPubkey string
-	Period          uint64
+	ConsensusAddress common.Address
+	Period           uint64
 }
 
 func (m *GetValidatorSnapshotRewardsParam) Encode() ([]byte, error) {
@@ -226,7 +227,7 @@ func (m *GetValidatorSnapshotRewardsParam) Encode() ([]byte, error) {
 }
 
 type GetValidatorAccumulatedRewardsParam struct {
-	ConsensusPubkey string
+	ConsensusAddress common.Address
 }
 
 func (m *GetValidatorAccumulatedRewardsParam) Encode() ([]byte, error) {
@@ -234,7 +235,7 @@ func (m *GetValidatorAccumulatedRewardsParam) Encode() ([]byte, error) {
 }
 
 type GetValidatorOutstandingRewardsParam struct {
-	ConsensusPubkey string
+	ConsensusAddress common.Address
 }
 
 func (m *GetValidatorOutstandingRewardsParam) Encode() ([]byte, error) {

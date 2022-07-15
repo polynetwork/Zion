@@ -120,15 +120,14 @@ func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Heade
 // header height infront of state height
 func (s *backend) execEpochChange(state *state.StateDB, header *types.Header, ctx *systemTxContext) error {
 
-	config, epoch, err := s.getGovernanceInfo(state)
+	epoch, err := s.getGovernanceInfo(state)
 	if err != nil {
 		return err
 	}
 
-	start := epoch.StartHeight.Uint64()
+	end := epoch.EndHeight.Uint64()
 	height := header.Number.Uint64()
-	epochLength := config.BlockPerEpoch.Uint64()
-	if height != start+epochLength-1 {
+	if height != end-1 {
 		return nil
 	}
 
@@ -140,20 +139,16 @@ func (s *backend) execEpochChange(state *state.StateDB, header *types.Header, ct
 		return err
 	}
 
-	log.Info("Execute governance EpochChange", "start", start, "current", height, "state", s.chain.CurrentHeader().Number.Uint64())
+	log.Info("Execute governance EpochChange", "end", end, "current", height, "state", s.chain.CurrentHeader().Number.Uint64())
 	return nil
 }
 
-func (s *backend) getGovernanceInfo(state *state.StateDB) (*nm.GlobalConfig, *nm.EpochInfo, error) {
-	config, err := nm.GetGlobalConfigFromDB(state)
-	if err != nil {
-		return nil, nil, err
-	}
+func (s *backend) getGovernanceInfo(state *state.StateDB) (*nm.EpochInfo, error) {
 	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-	return config, epoch, nil
+	return epoch, nil
 }
 
 func (s *backend) execEndBlock(ctx *systemTxContext) error {

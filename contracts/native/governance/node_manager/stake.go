@@ -21,18 +21,13 @@ package node_manager
 import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"math/big"
 )
 
 func deposit(s *native.NativeContract, from common.Address, amount Dec, validator *Validator) error {
-	dec, err := hexutil.Decode(validator.ConsensusPubkey)
-	if err != nil {
-		return fmt.Errorf("deposit, decode pubkey error: %v", err)
-	}
 	// get deposit info
-	stakeInfo, found, err := getStakeInfo(s, from, validator.ConsensusPubkey)
+	stakeInfo, found, err := getStakeInfo(s, from, validator.ConsensusAddress)
 	if err != nil {
 		return fmt.Errorf("deposit, getStakeInfo error: %v", err)
 	}
@@ -71,7 +66,7 @@ func deposit(s *native.NativeContract, from common.Address, amount Dec, validato
 	}
 
 	// Call the after-stake hook
-	if err = AfterStakeModified(s, stakeInfo, dec); err != nil {
+	if err = AfterStakeModified(s, stakeInfo, validator.ConsensusAddress); err != nil {
 		return err
 	}
 
@@ -80,16 +75,12 @@ func deposit(s *native.NativeContract, from common.Address, amount Dec, validato
 
 func unStake(s *native.NativeContract, from common.Address, amount Dec, validator *Validator) error {
 	height := s.ContractRef().BlockHeight()
-	dec, err := hexutil.Decode(validator.ConsensusPubkey)
-	if err != nil {
-		return fmt.Errorf("unStake, decode pubkey error: %v", err)
-	}
-	globalConfig, err := getGlobalConfig(s)
+	globalConfig, err := GetGlobalConfigImpl(s)
 	if err != nil {
 		return fmt.Errorf("unStake, GetGlobalConfig error: %v", err)
 	}
 
-	stakeInfo, found, err := getStakeInfo(s, from, validator.ConsensusPubkey)
+	stakeInfo, found, err := getStakeInfo(s, from, validator.ConsensusAddress)
 	if err != nil {
 		return fmt.Errorf("unStake, get stake info error: %v", err)
 	}
@@ -105,10 +96,10 @@ func unStake(s *native.NativeContract, from common.Address, amount Dec, validato
 	// update lock and unlock token pool
 	if validator.IsLocked() {
 		unlockingStake := &UnlockingStake{
-			Height:          height,
-			CompleteHeight:  new(big.Int).Add(height, globalConfig.BlockPerEpoch),
-			ConsensusPubkey: validator.ConsensusPubkey,
-			Amount:          amount,
+			Height:           height,
+			CompleteHeight:   new(big.Int).Add(height, globalConfig.BlockPerEpoch),
+			ConsensusAddress: validator.ConsensusAddress,
+			Amount:           amount,
 		}
 		err = addUnlockingInfo(s, from, unlockingStake)
 		if err != nil {
@@ -130,10 +121,10 @@ func unStake(s *native.NativeContract, from common.Address, amount Dec, validato
 
 	if validator.IsUnlocking(height) || validator.IsRemoving(height) {
 		unlockingStake := &UnlockingStake{
-			Height:          height,
-			CompleteHeight:  validator.UnlockHeight,
-			ConsensusPubkey: validator.ConsensusPubkey,
-			Amount:          amount,
+			Height:           height,
+			CompleteHeight:   validator.UnlockHeight,
+			ConsensusAddress: validator.ConsensusAddress,
+			Amount:           amount,
 		}
 		err = addUnlockingInfo(s, from, unlockingStake)
 		if err != nil {
@@ -146,17 +137,14 @@ func unStake(s *native.NativeContract, from common.Address, amount Dec, validato
 		return fmt.Errorf("unStake, stakeInfo.Amount.Sub error: %v", err)
 	}
 	if stakeInfo.Amount.IsZero() {
-		err = delStakeInfo(s, from, validator.ConsensusPubkey)
-		if err != nil {
-			return fmt.Errorf("unStake, delete stake info error: %v", err)
-		}
+		delStakeInfo(s, from, validator.ConsensusAddress)
 	} else {
 		err = setStakeInfo(s, stakeInfo)
 		if err != nil {
 			return fmt.Errorf("unStake, set stake info error: %v", err)
 		}
 		// Call the after-stake hook
-		if err = AfterStakeModified(s, stakeInfo, dec); err != nil {
+		if err = AfterStakeModified(s, stakeInfo, validator.ConsensusAddress); err != nil {
 			return err
 		}
 	}
