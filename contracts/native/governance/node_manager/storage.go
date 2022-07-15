@@ -21,10 +21,11 @@ package node_manager
 import (
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -738,6 +739,20 @@ func getCommunityInfo(s *native.NativeContract) (*CommunityInfo, error) {
 	}
 	if err := rlp.DecodeBytes(store, communityInfo); err != nil {
 		return nil, fmt.Errorf("GetCommunityInfo, deserialize community info error: %v", err)
+	}
+	return communityInfo, nil
+}
+
+func GetCommunityInfoFromDB(s *state.StateDB) (*CommunityInfo, error) {
+	cache := (*state.CacheDB)(s)
+	communityInfo := new(CommunityInfo)
+	key := communityInfoKey()
+	store, err := customGet(cache, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetEpochInfoFromDB, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, communityInfo); err != nil {
+		return nil, fmt.Errorf("GetEpochInfoFromDB, deserialize epoch info error: %v", err)
 	}
 	return communityInfo, nil
 }
