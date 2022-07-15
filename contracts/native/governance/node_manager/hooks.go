@@ -20,37 +20,32 @@ package node_manager
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"math/big"
 )
 
 func AfterValidatorCreated(s *native.NativeContract, validator *Validator) error {
-	dec, err := hexutil.Decode(validator.ConsensusPubkey)
-	if err != nil {
-		return fmt.Errorf("AfterValidatorCreated, decode pubkey error: %v", err)
-	}
-
 	// set initial historical rewards (period 0) with reference count of 1
-	err = setValidatorSnapshotRewards(s, dec, 0, &ValidatorSnapshotRewards{NewDecFromBigInt(new(big.Int)), 1})
+	err := setValidatorSnapshotRewards(s, validator.ConsensusAddress, 0, &ValidatorSnapshotRewards{NewDecFromBigInt(new(big.Int)), 1})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorSnapshotRewards error: %v", err)
 	}
 
 	// set accumulate rewards (starting at period 1)
-	err = setValidatorAccumulatedRewards(s, dec, &ValidatorAccumulatedRewards{NewDecFromBigInt(new(big.Int)), 1})
+	err = setValidatorAccumulatedRewards(s, validator.ConsensusAddress, &ValidatorAccumulatedRewards{NewDecFromBigInt(new(big.Int)), 1})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorAccumulatedRewards error: %v", err)
 	}
 
 	// set accumulated commission
-	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{NewDecFromBigInt(new(big.Int))})
+	err = setAccumulatedCommission(s, validator.ConsensusAddress, &AccumulatedCommission{NewDecFromBigInt(new(big.Int))})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setAccumulatedCommission error: %v", err)
 	}
 
 	// set outstanding rewards
-	err = setValidatorOutstandingRewards(s, dec, &ValidatorOutstandingRewards{Rewards: NewDecFromBigInt(new(big.Int))})
+	err = setValidatorOutstandingRewards(s, validator.ConsensusAddress, &ValidatorOutstandingRewards{Rewards: NewDecFromBigInt(new(big.Int))})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorOutstandingRewards error: %v", err)
 	}
@@ -58,11 +53,6 @@ func AfterValidatorCreated(s *native.NativeContract, validator *Validator) error
 }
 
 func AfterValidatorRemoved(s *native.NativeContract, validator *Validator) error {
-	dec, err := hexutil.Decode(validator.ConsensusPubkey)
-	if err != nil {
-		return fmt.Errorf("AfterValidatorRemoved, decode pubkey error: %v", err)
-	}
-
 	// fetch outstanding
 	//outstanding, err := getValidatorOutstandingRewards(s, dec)
 	//if err != nil {
@@ -71,21 +61,21 @@ func AfterValidatorRemoved(s *native.NativeContract, validator *Validator) error
 	//TODO: transfer outstanding dust to community pool
 
 	// delete outstanding
-	delValidatorOutstandingRewards(s, dec)
+	delValidatorOutstandingRewards(s, validator.ConsensusAddress)
 
 	// remove commission record
-	delAccumulatedCommission(s, dec)
+	delAccumulatedCommission(s, validator.ConsensusAddress)
 
-	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(s, dec)
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(s, validator.ConsensusAddress)
 	if err != nil {
 		return fmt.Errorf("AfterValidatorRemoved, getValidatorAccumulatedRewards error: %v", err)
 	}
 
 	// clear accumulate rewards
-	delValidatorAccumulatedRewards(s, dec)
+	delValidatorAccumulatedRewards(s, validator.ConsensusAddress)
 
 	// clear snapshot rewards
-	delValidatorSnapshotRewards(s, dec, validatorAccumulatedRewards.Period-1)
+	delValidatorSnapshotRewards(s, validator.ConsensusAddress, validatorAccumulatedRewards.Period-1)
 	return nil
 }
 
@@ -101,8 +91,8 @@ func BeforeStakeModified(s *native.NativeContract, validator *Validator, stakeIn
 	return nil
 }
 
-func AfterStakeModified(s *native.NativeContract, stakeInfo *StakeInfo, dec []byte) error {
-	err := initializeStake(s, stakeInfo, dec)
+func AfterStakeModified(s *native.NativeContract, stakeInfo *StakeInfo, consensusAddr common.Address) error {
+	err := initializeStake(s, stakeInfo, consensusAddr)
 	if err != nil {
 		return fmt.Errorf("AfterStakeModified, initializeStake error: %v", err)
 	}

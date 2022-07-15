@@ -24,7 +24,6 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -57,8 +56,8 @@ const (
 	SKP_COMMUNITY_INFO                = "st_community_info"
 )
 
-func setAccumulatedCommission(s *native.NativeContract, dec []byte, accumulatedCommission *AccumulatedCommission) error {
-	key := accumulatedCommissionKey(dec)
+func setAccumulatedCommission(s *native.NativeContract, consensusAddr common.Address, accumulatedCommission *AccumulatedCommission) error {
+	key := accumulatedCommissionKey(consensusAddr)
 	store, err := rlp.EncodeToBytes(accumulatedCommission)
 	if err != nil {
 		return fmt.Errorf("setAccumulatedCommission, serialize accumulatedCommission error: %v", err)
@@ -67,9 +66,9 @@ func setAccumulatedCommission(s *native.NativeContract, dec []byte, accumulatedC
 	return nil
 }
 
-func getAccumulatedCommission(s *native.NativeContract, dec []byte) (*AccumulatedCommission, error) {
+func getAccumulatedCommission(s *native.NativeContract, consensusAddr common.Address) (*AccumulatedCommission, error) {
 	accumulatedCommission := &AccumulatedCommission{}
-	key := accumulatedCommissionKey(dec)
+	key := accumulatedCommissionKey(consensusAddr)
 	store, err := get(s, key)
 	if err != nil {
 		return nil, fmt.Errorf("getAccumulatedCommission, get store error: %v", err)
@@ -80,13 +79,13 @@ func getAccumulatedCommission(s *native.NativeContract, dec []byte) (*Accumulate
 	return accumulatedCommission, nil
 }
 
-func delAccumulatedCommission(s *native.NativeContract, dec []byte) {
-	key := accumulatedCommissionKey(dec)
+func delAccumulatedCommission(s *native.NativeContract, consensusAddr common.Address) {
+	key := accumulatedCommissionKey(consensusAddr)
 	del(s, key)
 }
 
-func setValidatorAccumulatedRewards(s *native.NativeContract, dec []byte, validatorAccumulatedRewards *ValidatorAccumulatedRewards) error {
-	key := validatorAccumulatedRewardsKey(dec)
+func setValidatorAccumulatedRewards(s *native.NativeContract, consensusAddr common.Address, validatorAccumulatedRewards *ValidatorAccumulatedRewards) error {
+	key := validatorAccumulatedRewardsKey(consensusAddr)
 	store, err := rlp.EncodeToBytes(validatorAccumulatedRewards)
 	if err != nil {
 		return fmt.Errorf("setValidatorAccumulatedRewards, serialize validatorAccumulatedRewards error: %v", err)
@@ -95,9 +94,9 @@ func setValidatorAccumulatedRewards(s *native.NativeContract, dec []byte, valida
 	return nil
 }
 
-func getValidatorAccumulatedRewards(s *native.NativeContract, dec []byte) (*ValidatorAccumulatedRewards, error) {
+func getValidatorAccumulatedRewards(s *native.NativeContract, consensusAddr common.Address) (*ValidatorAccumulatedRewards, error) {
 	validatorAccumulatedRewards := &ValidatorAccumulatedRewards{}
-	key := validatorAccumulatedRewardsKey(dec)
+	key := validatorAccumulatedRewardsKey(consensusAddr)
 	store, err := get(s, key)
 	if err != nil {
 		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, get store error: %v", err)
@@ -108,13 +107,13 @@ func getValidatorAccumulatedRewards(s *native.NativeContract, dec []byte) (*Vali
 	return validatorAccumulatedRewards, nil
 }
 
-func delValidatorAccumulatedRewards(s *native.NativeContract, dec []byte) {
-	key := validatorAccumulatedRewardsKey(dec)
+func delValidatorAccumulatedRewards(s *native.NativeContract, consensusAddr common.Address) {
+	key := validatorAccumulatedRewardsKey(consensusAddr)
 	del(s, key)
 }
 
-func setValidatorOutstandingRewards(s *native.NativeContract, dec []byte, validatorOutstandingRewards *ValidatorOutstandingRewards) error {
-	key := validatorOutstandingRewardsKey(dec)
+func setValidatorOutstandingRewards(s *native.NativeContract, consensusAddr common.Address, validatorOutstandingRewards *ValidatorOutstandingRewards) error {
+	key := validatorOutstandingRewardsKey(consensusAddr)
 	store, err := rlp.EncodeToBytes(validatorOutstandingRewards)
 	if err != nil {
 		return fmt.Errorf("setValidatorOutstandingRewards, serialize validatorOutstandingRewards error: %v", err)
@@ -123,9 +122,9 @@ func setValidatorOutstandingRewards(s *native.NativeContract, dec []byte, valida
 	return nil
 }
 
-func getValidatorOutstandingRewards(s *native.NativeContract, dec []byte) (*ValidatorOutstandingRewards, error) {
+func getValidatorOutstandingRewards(s *native.NativeContract, consensusAddr common.Address) (*ValidatorOutstandingRewards, error) {
 	validatorOutstandingRewards := &ValidatorOutstandingRewards{}
-	key := validatorOutstandingRewardsKey(dec)
+	key := validatorOutstandingRewardsKey(consensusAddr)
 	store, err := get(s, key)
 	if err != nil {
 		return nil, fmt.Errorf("getValidatorOutstandingRewards, get store error: %v", err)
@@ -136,8 +135,8 @@ func getValidatorOutstandingRewards(s *native.NativeContract, dec []byte) (*Vali
 	return validatorOutstandingRewards, nil
 }
 
-func delValidatorOutstandingRewards(s *native.NativeContract, dec []byte) {
-	key := validatorOutstandingRewardsKey(dec)
+func delValidatorOutstandingRewards(s *native.NativeContract, consensusAddr common.Address) {
+	key := validatorOutstandingRewardsKey(consensusAddr)
 	del(s, key)
 }
 
@@ -169,8 +168,8 @@ func getOutstandingRewards(s *native.NativeContract) (*OutstandingRewards, error
 	return outstandingRewards, nil
 }
 
-func increaseReferenceCount(s *native.NativeContract, dec []byte, period uint64) error {
-	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, dec, period)
+func increaseReferenceCount(s *native.NativeContract, consensusAddr common.Address, period uint64) error {
+	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, consensusAddr, period)
 	if err != nil {
 		return fmt.Errorf("increaseReferenceCount, getValidatorSnapshotRewards error: %v", err)
 	}
@@ -178,15 +177,15 @@ func increaseReferenceCount(s *native.NativeContract, dec []byte, period uint64)
 		panic("reference count should never exceed 2")
 	}
 	validatorSnapshotRewards.ReferenceCount++
-	err = setValidatorSnapshotRewards(s, dec, period, validatorSnapshotRewards)
+	err = setValidatorSnapshotRewards(s, consensusAddr, period, validatorSnapshotRewards)
 	if err != nil {
 		return fmt.Errorf("increaseReferenceCount, setValidatorSnapshotRewards error: %v", err)
 	}
 	return nil
 }
 
-func decreaseReferenceCount(s *native.NativeContract, dec []byte, period uint64) error {
-	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, dec, period)
+func decreaseReferenceCount(s *native.NativeContract, consensusAddr common.Address, period uint64) error {
+	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, consensusAddr, period)
 	if err != nil {
 		return fmt.Errorf("decreaseReferenceCount, getValidatorSnapshotRewards error: %v", err)
 	}
@@ -195,9 +194,9 @@ func decreaseReferenceCount(s *native.NativeContract, dec []byte, period uint64)
 	}
 	validatorSnapshotRewards.ReferenceCount--
 	if validatorSnapshotRewards.ReferenceCount == 0 {
-		delValidatorSnapshotRewards(s, dec, period)
+		delValidatorSnapshotRewards(s, consensusAddr, period)
 	} else {
-		err = setValidatorSnapshotRewards(s, dec, period, validatorSnapshotRewards)
+		err = setValidatorSnapshotRewards(s, consensusAddr, period, validatorSnapshotRewards)
 		if err != nil {
 			return fmt.Errorf("decreaseReferenceCount, setValidatorSnapshotRewards error: %v", err)
 		}
@@ -205,8 +204,8 @@ func decreaseReferenceCount(s *native.NativeContract, dec []byte, period uint64)
 	return nil
 }
 
-func setValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period uint64, validatorSnapshotRewards *ValidatorSnapshotRewards) error {
-	key := validatorSnapshotRewardsKey(dec, period)
+func setValidatorSnapshotRewards(s *native.NativeContract, consensusAddr common.Address, period uint64, validatorSnapshotRewards *ValidatorSnapshotRewards) error {
+	key := validatorSnapshotRewardsKey(consensusAddr, period)
 	store, err := rlp.EncodeToBytes(validatorSnapshotRewards)
 	if err != nil {
 		return fmt.Errorf("setValidatorSnapshotRewards, serialize validatorSnapshotRewards error: %v", err)
@@ -215,9 +214,9 @@ func setValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period ui
 	return nil
 }
 
-func getValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period uint64) (*ValidatorSnapshotRewards, error) {
+func getValidatorSnapshotRewards(s *native.NativeContract, consensusAddr common.Address, period uint64) (*ValidatorSnapshotRewards, error) {
 	validatorSnapshotRewards := &ValidatorSnapshotRewards{}
-	key := validatorSnapshotRewardsKey(dec, period)
+	key := validatorSnapshotRewardsKey(consensusAddr, period)
 	store, err := get(s, key)
 	if err != nil {
 		return nil, fmt.Errorf("getValidatorSnapshotRewards, get store error: %v", err)
@@ -228,13 +227,13 @@ func getValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period ui
 	return validatorSnapshotRewards, nil
 }
 
-func delValidatorSnapshotRewards(s *native.NativeContract, dec []byte, period uint64) {
-	key := validatorSnapshotRewardsKey(dec, period)
+func delValidatorSnapshotRewards(s *native.NativeContract, consensusAddr common.Address, period uint64) {
+	key := validatorSnapshotRewardsKey(consensusAddr, period)
 	del(s, key)
 }
 
-func setStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, dec []byte, stakeStartingInfo *StakeStartingInfo) error {
-	key := stakeStartingInfoKey(stakeAddress, dec)
+func setStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, consensusAddr common.Address, stakeStartingInfo *StakeStartingInfo) error {
+	key := stakeStartingInfoKey(stakeAddress, consensusAddr)
 	store, err := rlp.EncodeToBytes(stakeStartingInfo)
 	if err != nil {
 		return fmt.Errorf("setStakeStartingInfo, serialize stakeStartingInfo error: %v", err)
@@ -243,9 +242,9 @@ func setStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address,
 	return nil
 }
 
-func getStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, dec []byte) (*StakeStartingInfo, error) {
+func getStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, consensusAddr common.Address) (*StakeStartingInfo, error) {
 	stakeStartingInfo := &StakeStartingInfo{}
-	key := stakeStartingInfoKey(stakeAddress, dec)
+	key := stakeStartingInfoKey(stakeAddress, consensusAddr)
 	store, err := get(s, key)
 	if err != nil {
 		return nil, fmt.Errorf("getStakeStartingInfo, get store error: %v", err)
@@ -256,12 +255,12 @@ func getStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address,
 	return stakeStartingInfo, nil
 }
 
-func delStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, dec []byte) {
-	key := stakeStartingInfoKey(stakeAddress, dec)
+func delStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, consensusAddr common.Address) {
+	key := stakeStartingInfoKey(stakeAddress, consensusAddr)
 	del(s, key)
 }
 
-func setGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error {
+func SetGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error {
 	key := globalConfigKey()
 	store, err := rlp.EncodeToBytes(globalConfig)
 	if err != nil {
@@ -281,15 +280,15 @@ func setGenesisGlobalConfig(s *state.CacheDB, globalConfig *GlobalConfig) error 
 	return nil
 }
 
-func getGlobalConfig(s *native.NativeContract) (*GlobalConfig, error) {
+func GetGlobalConfigImpl(s *native.NativeContract) (*GlobalConfig, error) {
 	key := globalConfigKey()
 	store, err := get(s, key)
 	if err != nil {
-		return nil, fmt.Errorf("GetGlobalConfig, get store error: %v", err)
+		return nil, fmt.Errorf("GetGlobalConfigImpl, get store error: %v", err)
 	}
 	globalConfig := new(GlobalConfig)
 	if err := rlp.DecodeBytes(store, globalConfig); err != nil {
-		return nil, fmt.Errorf("GetGlobalConfig, deserialize globalConfig error: %v", err)
+		return nil, fmt.Errorf("GetGlobalConfigImpl, deserialize globalConfig error: %v", err)
 	}
 	return globalConfig, nil
 }
@@ -309,12 +308,12 @@ func GetGlobalConfigFromDB(s *state.StateDB) (*GlobalConfig, error) {
 	return globalConfig, nil
 }
 
-func addToAllValidators(s *native.NativeContract, consensusPk string) error {
+func addToAllValidators(s *native.NativeContract, consensusAddr common.Address) error {
 	allValidators, err := getAllValidators(s)
 	if err != nil {
 		return fmt.Errorf("addToAllValidators, getAllValidators error: %v", err)
 	}
-	allValidators.AllValidators = append(allValidators.AllValidators, consensusPk)
+	allValidators.AllValidators = append(allValidators.AllValidators, consensusAddr)
 	err = setAllValidators(s, allValidators)
 	if err != nil {
 		return fmt.Errorf("addToAllValidators, set all validators error: %v", err)
@@ -322,14 +321,14 @@ func addToAllValidators(s *native.NativeContract, consensusPk string) error {
 	return nil
 }
 
-func removeFromAllValidators(s *native.NativeContract, consensusPk string) error {
+func removeFromAllValidators(s *native.NativeContract, consensusAddr common.Address) error {
 	allValidators, err := getAllValidators(s)
 	if err != nil {
 		return fmt.Errorf("removeFromAllValidators, getAllValidators error: %v", err)
 	}
 	j := 0
 	for _, validator := range allValidators.AllValidators {
-		if validator != consensusPk {
+		if validator != consensusAddr {
 			allValidators.AllValidators[j] = validator
 			j++
 		}
@@ -343,11 +342,7 @@ func removeFromAllValidators(s *native.NativeContract, consensusPk string) error
 }
 
 func setValidator(s *native.NativeContract, validator *Validator) error {
-	dec, err := hexutil.Decode(validator.ConsensusPubkey)
-	if err != nil {
-		return err
-	}
-	key := validatorKey(dec)
+	key := validatorKey(validator.ConsensusAddress)
 	store, err := rlp.EncodeToBytes(validator)
 	if err != nil {
 		return fmt.Errorf("setValidator, serialize validator error: %v", err)
@@ -356,18 +351,13 @@ func setValidator(s *native.NativeContract, validator *Validator) error {
 	return nil
 }
 
-func delValidator(s *native.NativeContract, consensusPk string) error {
-	dec, err := hexutil.Decode(consensusPk)
-	if err != nil {
-		return err
-	}
-	key := validatorKey(dec)
+func delValidator(s *native.NativeContract, consensusAddr common.Address) {
+	key := validatorKey(consensusAddr)
 	del(s, key)
-	return nil
 }
 
-func getValidator(s *native.NativeContract, dec []byte) (*Validator, bool, error) {
-	key := validatorKey(dec)
+func getValidator(s *native.NativeContract, consensusAddr common.Address) (*Validator, bool, error) {
+	key := validatorKey(consensusAddr)
 	store, err := get(s, key)
 	if err == ErrEof {
 		return nil, false, nil
@@ -394,7 +384,7 @@ func setAllValidators(s *native.NativeContract, allValidators *AllValidators) er
 
 func getAllValidators(s *native.NativeContract) (*AllValidators, error) {
 	allValidators := &AllValidators{
-		AllValidators: make([]string, 0),
+		AllValidators: make([]common.Address, 0),
 	}
 	key := allValidatorKey()
 	store, err := get(s, key)
@@ -469,11 +459,7 @@ func getTotalPool(s *native.NativeContract) (*TotalPool, error) {
 }
 
 func setStakeInfo(s *native.NativeContract, stakeInfo *StakeInfo) error {
-	dec, err := hexutil.Decode(stakeInfo.ConsensusPubkey)
-	if err != nil {
-		return err
-	}
-	key := stakeInfoKey(stakeInfo.StakeAddress, dec)
+	key := stakeInfoKey(stakeInfo.StakeAddress, stakeInfo.ConsensusAddr)
 	store, err := rlp.EncodeToBytes(stakeInfo)
 	if err != nil {
 		return fmt.Errorf("setStakeInfo, serialize stake info error: %v", err)
@@ -482,27 +468,18 @@ func setStakeInfo(s *native.NativeContract, stakeInfo *StakeInfo) error {
 	return nil
 }
 
-func delStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string) error {
-	dec, err := hexutil.Decode(consensusPk)
-	if err != nil {
-		return err
-	}
-	key := stakeInfoKey(stakeAddress, dec)
+func delStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusAddr common.Address) {
+	key := stakeInfoKey(stakeAddress, consensusAddr)
 	del(s, key)
-	return nil
 }
 
-func getStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusPk string) (*StakeInfo, bool, error) {
+func getStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusAddr common.Address) (*StakeInfo, bool, error) {
 	stakeInfo := &StakeInfo{
-		StakeAddress:    stakeAddress,
-		ConsensusPubkey: consensusPk,
-		Amount:          NewDecFromBigInt(new(big.Int)),
+		StakeAddress:  stakeAddress,
+		ConsensusAddr: consensusAddr,
+		Amount:        NewDecFromBigInt(new(big.Int)),
 	}
-	dec, err := hexutil.Decode(stakeInfo.ConsensusPubkey)
-	if err != nil {
-		return nil, false, err
-	}
-	key := stakeInfoKey(stakeAddress, dec)
+	key := stakeInfoKey(stakeAddress, consensusAddr)
 	store, err := get(s, key)
 	if err == ErrEof {
 		return stakeInfo, false, nil
@@ -650,17 +627,17 @@ func GetCurrentEpochInfoFromDB(s *state.StateDB) (*EpochInfo, error) {
 	key := currentEpochKey()
 	store, err := customGet(cache, key)
 	if err != nil {
-		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get store error: %v", err)
+		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get key store error: %v", err)
 	}
 	ID := new(big.Int).SetBytes(store)
 
 	epochInfo := &EpochInfo{
-		Validators: make([]*Peer, 0),
+		Validators: make([]common.Address, 0),
 	}
 	key = epochInfoKey(ID)
 	store, err = customGet(cache, key)
 	if err != nil {
-		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get store error: %v", err)
+		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get info store error: %v", err)
 	}
 	if err := rlp.DecodeBytes(store, epochInfo); err != nil {
 		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, deserialize epoch info error: %v", err)
@@ -680,7 +657,7 @@ func setEpochInfo(s *native.NativeContract, epochInfo *EpochInfo) error {
 
 func getEpochInfo(s *native.NativeContract, ID *big.Int) (*EpochInfo, error) {
 	epochInfo := &EpochInfo{
-		Validators: make([]*Peer, 0),
+		Validators: make([]common.Address, 0),
 	}
 	key := epochInfoKey(ID)
 	store, err := get(s, key)
@@ -697,7 +674,7 @@ func GetEpochInfoFromDB(s *state.StateDB, ID *big.Int) (*EpochInfo, error) {
 	cache := (*state.CacheDB)(s)
 
 	epochInfo := &EpochInfo{
-		Validators: make([]*Peer, 0),
+		Validators: make([]common.Address, 0),
 	}
 	key := epochInfoKey(ID)
 	store, err := customGet(cache, key)
@@ -899,8 +876,8 @@ func globalConfigKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_GLOBAL_CONFIG))
 }
 
-func validatorKey(dec []byte) []byte {
-	return utils.ConcatKey(this, []byte(SKP_VALIDATOR), dec)
+func validatorKey(consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR), consensusAddr[:])
 }
 
 func allValidatorKey() []byte {
@@ -911,8 +888,8 @@ func totalPoolKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_TOTAL_POOL))
 }
 
-func stakeInfoKey(stakeAddress common.Address, dec []byte) []byte {
-	return utils.ConcatKey(this, []byte(SKP_STAKE_INFO), stakeAddress[:], dec)
+func stakeInfoKey(stakeAddress common.Address, consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_STAKE_INFO), stakeAddress[:], consensusAddr[:])
 }
 
 func unlockingInfoKey(stakeAddress common.Address) []byte {
@@ -927,28 +904,28 @@ func epochInfoKey(ID *big.Int) []byte {
 	return utils.ConcatKey(this, []byte(SKP_EPOCH_INFO), ID.Bytes())
 }
 
-func accumulatedCommissionKey(dec []byte) []byte {
-	return utils.ConcatKey(this, []byte(SKP_ACCUMULATED_COMMISSION), dec)
+func accumulatedCommissionKey(consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_ACCUMULATED_COMMISSION), consensusAddr[:])
 }
 
-func validatorAccumulatedRewardsKey(dec []byte) []byte {
-	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_ACCUMULATED_REWARDS), dec)
+func validatorAccumulatedRewardsKey(consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_ACCUMULATED_REWARDS), consensusAddr[:])
 }
 
-func validatorOutstandingRewardsKey(dec []byte) []byte {
-	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_OUTSTANDING_REWARDS), dec)
+func validatorOutstandingRewardsKey(consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_OUTSTANDING_REWARDS), consensusAddr[:])
 }
 
 func outstandingRewardsKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_OUTSTANDING_REWARDS))
 }
 
-func validatorSnapshotRewardsKey(dec []byte, period uint64) []byte {
-	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_SNAPSHOT_REWARDS), dec, utils.Uint64Bytes(period))
+func validatorSnapshotRewardsKey(consensusAddr common.Address, period uint64) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_SNAPSHOT_REWARDS), consensusAddr[:], utils.Uint64Bytes(period))
 }
 
-func stakeStartingInfoKey(stakeAddress common.Address, dec []byte) []byte {
-	return utils.ConcatKey(this, []byte(SKP_STAKE_STARTING_INFO), stakeAddress[:], dec)
+func stakeStartingInfoKey(stakeAddress common.Address, consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_STAKE_STARTING_INFO), stakeAddress[:], consensusAddr[:])
 }
 
 func signKey(hash common.Hash) []byte {

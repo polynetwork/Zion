@@ -35,6 +35,7 @@ const (
 	NativeSideChainManager   = "side_chain_manager"
 	NativeEconomic           = "economic"
 	NativeSignatureManager   = "signature_manager"
+	NativeProposalManager    = "proposal_manager"
 
 	// native backup contracts
 	NativeExtra5  = "extra5"
@@ -63,7 +64,7 @@ var NativeContractAddrMap = map[string]common.Address{
 	NativeRelayerManager:     utils.RelayerManagerContractAddress,
 	NativeNeo3StateManager:   utils.Neo3StateManagerContractAddress,
 	NativeSignatureManager:   utils.SignatureManagerContractAddress,
-	NativeExtra5:             common.HexToAddress("0x0000000000000000000000000000000000001008"),
+	NativeProposalManager:    utils.ProposalManagerContractAddress,
 	NativeExtra6:             common.HexToAddress("0x0000000000000000000000000000000000001009"),
 	NativeExtra7:             common.HexToAddress("0x000000000000000000000000000000000000100a"),
 	NativeExtra8:             common.HexToAddress("0x000000000000000000000000000000000000100b"),
