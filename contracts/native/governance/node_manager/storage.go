@@ -749,10 +749,10 @@ func GetCommunityInfoFromDB(s *state.StateDB) (*CommunityInfo, error) {
 	key := communityInfoKey()
 	store, err := customGet(cache, key)
 	if err != nil {
-		return nil, fmt.Errorf("GetEpochInfoFromDB, get store error: %v", err)
+		return nil, fmt.Errorf("GetCommunityInfoFromDB, get store error: %v", err)
 	}
 	if err := rlp.DecodeBytes(store, communityInfo); err != nil {
-		return nil, fmt.Errorf("GetEpochInfoFromDB, deserialize epoch info error: %v", err)
+		return nil, fmt.Errorf("GetCommunityInfoFromDB, deserialize community info error: %v", err)
 	}
 	return communityInfo, nil
 }
