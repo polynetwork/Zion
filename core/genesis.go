@@ -42,6 +42,7 @@ import (
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
 //go:generate gencodec -type GenesisAccount -field-override genesisAccountMarshaling -out gen_genesis_account.go
+//go:generate gencodec -type GovernanceAccount -field-override genesisGovernanceMarshaling -out gen_genesis_governance.go
 
 var errGenesisNoConfig = errors.New("genesis has no chain configuration")
 
@@ -57,7 +58,7 @@ type Genesis struct {
 	Mixhash    common.Hash         `json:"mixHash"`
 	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
-
+	Governance GenesisGovernance   `json:"governance" gencodec:"required"`
 	// config of community pool
 	CommunityRate    *big.Int       `json:"community_rate" gencodec:"required"`
 	CommunityAddress common.Address `json:"community_address" gencodec:"required"`
@@ -94,6 +95,13 @@ type GenesisAccount struct {
 	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests
 }
 
+// GenesisGovernance map validator address to governanceAccount
+type GenesisGovernance map[common.Address]GovernanceAccount
+
+type GovernanceAccount struct {
+	SignerPubKey []byte `json:"signer" gencodec:"required"`
+}
+
 // field type overrides for gencodec
 type genesisSpecMarshaling struct {
 	Nonce      math.HexOrDecimal64
@@ -112,6 +120,10 @@ type genesisAccountMarshaling struct {
 	Nonce      math.HexOrDecimal64
 	Storage    map[storageJSON]storageJSON
 	PrivateKey hexutil.Bytes
+}
+
+type genesisGovernanceMarshaling struct {
+	SignerPubKey hexutil.Bytes
 }
 
 // storageJSON represents a 256 bit byte array, but allows less than 256 bits when
@@ -262,10 +274,6 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 var (
 	// RegGenesis store genesis validators and public keys in governance contract
 	RegGenesis func(db *state.StateDB, genesis *Genesis) error
-
-	// todo(fuk): delete after test
-	// StoreGenesis store genesis validators in consensus snapshot
-	// StoreGenesis func(db ethdb.Database, header *types.Header) error
 )
 
 // ToBlock creates the genesis block and writes state of a genesis specification
@@ -352,9 +360,11 @@ func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
 		}
 
 		// todo(fuk): delete after test
-		g.mintOtherUser(statedb)
+		// g.mintOtherUser(statedb)
 	}
 }
+
+// func (g *Genesis)  createGovernanceAccount(db *state.StateDB, )
 
 func (g *Genesis) mintOtherUser(statedb *state.StateDB) {
 	list := []common.Address{
