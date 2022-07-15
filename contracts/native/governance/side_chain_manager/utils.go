@@ -65,7 +65,7 @@ func putSideChainApply(native *native.NativeContract, sideChain *SideChain) erro
 	return nil
 }
 
-func GetSideChain(native *native.NativeContract, chainID uint64) (*SideChain, error) {
+func GetSideChainObject(native *native.NativeContract, chainID uint64) (*SideChain, error) {
 	contract := utils.SideChainManagerContractAddress
 	chainIDByte := utils.GetUint64Bytes(chainID)
 

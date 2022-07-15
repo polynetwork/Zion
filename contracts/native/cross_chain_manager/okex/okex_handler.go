@@ -72,7 +72,7 @@ func (this *OKHandler) MakeDepositProposal(service *native.NativeContract) (*sco
 	if err != nil {
 		return nil, fmt.Errorf("okex MakeDepositProposal, unmarshal proof err: %v", err)
 	}
-	sideChain, err := side_chain_manager.GetSideChain(service, params.SourceChainID)
+	sideChain, err := side_chain_manager.GetSideChainObject(service, params.SourceChainID)
 	if err != nil {
 		return nil, fmt.Errorf("okex MakeDepositProposal, side_chain_manager.GetSideChain error: %v", err)
 	}

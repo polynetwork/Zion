@@ -42,7 +42,7 @@ func (this *QuorumHandler) MakeDepositProposal(ns *native.NativeContract) (*comm
 		return nil, err
 	}
 
-	sideChain, err := side_chain_manager.GetSideChain(ns, params.SourceChainID)
+	sideChain, err := side_chain_manager.GetSideChainObject(ns, params.SourceChainID)
 	if err != nil {
 		return nil, fmt.Errorf("Quorum MakeDepositProposal, side_chain_manager.GetSideChain error: %v", err)
 	}

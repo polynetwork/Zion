@@ -62,7 +62,7 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 	chainID := params.ChainID
 
 	//check if chainid exist
-	sideChain, err := side_chain_manager.GetSideChain(s, chainID)
+	sideChain, err := side_chain_manager.GetSideChainObject(s, chainID)
 	if err != nil {
 		return nil, fmt.Errorf("SyncRootInfo, side_chain_manager.GetSideChain error: %v", err)
 	}

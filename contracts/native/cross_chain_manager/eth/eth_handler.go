@@ -41,7 +41,7 @@ func (this *ETHHandler) MakeDepositProposal(service *native.NativeContract) (*sc
 		return nil, err
 	}
 
-	sideChain, err := side_chain_manager.GetSideChain(service, params.SourceChainID)
+	sideChain, err := side_chain_manager.GetSideChainObject(service, params.SourceChainID)
 	if err != nil {
 		return nil, fmt.Errorf("eth MakeDepositProposal, side_chain_manager.GetSideChain error: %v", err)
 	}

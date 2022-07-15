@@ -26,22 +26,21 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
 )
 
 var (
-	EventRegisterSideChain        = side_chain_manager_abi.MethodRegisterSideChain
-	EventApproveRegisterSideChain = side_chain_manager_abi.MethodApproveRegisterSideChain
-	EventUpdateSideChain          = side_chain_manager_abi.MethodUpdateSideChain
-	EventApproveUpdateSideChain   = side_chain_manager_abi.MethodApproveUpdateSideChain
-	EventQuitSideChain            = side_chain_manager_abi.MethodQuitSideChain
-	EventApproveQuitSideChain     = side_chain_manager_abi.MethodApproveQuitSideChain
-	EventRegisterRedeem           = side_chain_manager_abi.MethodRegisterRedeem
+	EventRegisterSideChain        = side_chain_manager_abi.EventRegisterSideChain
+	EventApproveRegisterSideChain = side_chain_manager_abi.EventApproveRegisterSideChain
+	EventUpdateSideChain          = side_chain_manager_abi.EventUpdateSideChain
+	EventApproveUpdateSideChain   = side_chain_manager_abi.EventApproveUpdateSideChain
+	EventQuitSideChain            = side_chain_manager_abi.EventQuitSideChain
+	EventApproveQuitSideChain     = side_chain_manager_abi.EventApproveQuitSideChain
+	EventRegisterRedeem           = side_chain_manager_abi.EventRegisterRedeem
 )
 
 func GetABI() *abi.ABI {
-	ab, err := abi.JSON(strings.NewReader(side_chain_manager_abi.SideChainManagerABI))
+	ab, err := abi.JSON(strings.NewReader(side_chain_manager_abi.ISideChainManagerABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
@@ -49,8 +48,7 @@ func GetABI() *abi.ABI {
 }
 
 type RegisterSideChainParam struct {
-	Address      common.Address
-	ChainId      uint64
+	ChainID      uint64
 	Router       uint64
 	Name         string
 	BlocksToWait uint64
@@ -60,7 +58,6 @@ type RegisterSideChainParam struct {
 
 type ChainidParam struct {
 	Chainid uint64
-	Address common.Address
 }
 
 type RegisterRedeemParam struct {
