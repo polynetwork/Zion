@@ -20,16 +20,13 @@ package node_manager
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
-	"sort"
-
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
+	"math/big"
+	"sort"
 )
 
 const (
@@ -130,18 +127,12 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("CreateValidator, unpack params error: %v", err)
 	}
 
-	// check pub key
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("CreateValidator, decode pubkey error: %v", err)
+	// check consensus address
+	if params.ConsensusAddress == common.EmptyAddress {
+		return nil, fmt.Errorf("CreateValidator， invalid consensus address")
 	}
-	pubkey, err := crypto.DecompressPubkey(dec)
-	if err != nil {
-		return nil, fmt.Errorf("CreateValidator, decompress pubkey error: %v", err)
-	}
-	addr := crypto.PubkeyToAddress(*pubkey)
-	if addr == common.EmptyAddress {
-		return nil, fmt.Errorf("CreateValidator， invalid pubkey")
+	if params.SignerAddress == common.EmptyAddress {
+		return nil, fmt.Errorf("CreateValidator， invalid signer address")
 	}
 	if params.ProposalAddress == common.EmptyAddress {
 		return nil, fmt.Errorf("CreateValidator， invalid proposalAddress")
@@ -165,7 +156,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// check to see if the pubkey has been registered before
-	_, found, err := getValidator(s, dec)
+	_, found, err := getValidator(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, getValidator error: %v", err)
 	}
@@ -182,8 +173,8 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	// store validator
 	validator := &Validator{
 		StakeAddress:     caller,
-		ConsensusPubkey:  params.ConsensusPubkey,
-		ConsensusAddress: addr,
+		ConsensusAddress: params.ConsensusAddress,
+		SignerAddress:    params.SignerAddress,
 		ProposalAddress:  params.ProposalAddress,
 		Commission:       &Commission{Rate: NewDecFromBigInt(params.Commission), UpdateHeight: height},
 		Status:           Unlock,
@@ -198,7 +189,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("CreateValidator, setValidator error: %v", err)
 	}
 	// add validator to all validators pool
-	err = addToAllValidators(s, validator.ConsensusPubkey)
+	err = addToAllValidators(s, validator.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, addToAllValidators error: %v", err)
 	}
@@ -215,7 +206,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("CreateValidator, deposit error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{CREATE_VALIDATOR_EVENT}, params.ConsensusPubkey)
+	err = s.AddNotify(ABI, []string{CREATE_VALIDATOR_EVENT}, params.ConsensusAddress.Hex())
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, AddNotify error: %v", err)
 	}
@@ -231,11 +222,7 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("UpdateValidator, unpack params error: %v", err)
 	}
 
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("UpdateValidator, decode pubkey error: %v", err)
-	}
-	validator, found, err := getValidator(s, dec)
+	validator, found, err := getValidator(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateValidator, get validator error: %v", err)
 	}
@@ -267,7 +254,7 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("UpdateValidator, setValidator error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{UPDATE_VALIDATOR_EVENT}, params.ConsensusPubkey)
+	err = s.AddNotify(ABI, []string{UPDATE_VALIDATOR_EVENT}, params.ConsensusAddress.Hex())
 	if err != nil {
 		return nil, fmt.Errorf("UpdateValidator, AddNotify error: %v", err)
 	}
@@ -284,11 +271,7 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("UpdateCommission, unpack params error: %v", err)
 	}
 
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("UpdateCommission, decode pubkey error: %v", err)
-	}
-	validator, found, err := getValidator(s, dec)
+	validator, found, err := getValidator(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateCommission, get validator error: %v", err)
 	}
@@ -326,7 +309,7 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("UpdateCommission, setValidator error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{UPDATE_COMMISSION_EVENT}, params.ConsensusPubkey)
+	err = s.AddNotify(ABI, []string{UPDATE_COMMISSION_EVENT}, params.ConsensusAddress.Hex())
 	if err != nil {
 		return nil, fmt.Errorf("UpdateCommission, AddNotify error: %v", err)
 	}
@@ -341,14 +324,10 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodStake, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("Stake, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("Stake, decode pubkey error: %v", err)
-	}
 	amount := NewDecFromBigInt(params.Amount)
 
 	// check to see if the pubkey has been registered
-	validator, found, err := getValidator(s, dec)
+	validator, found, err := getValidator(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("Stake, getValidator error: %v", err)
 	}
@@ -379,7 +358,7 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("Stake, setValidator error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{STAKE_EVENT}, params.ConsensusPubkey, params.Amount.String())
+	err = s.AddNotify(ABI, []string{STAKE_EVENT}, params.ConsensusAddress.Hex(), params.Amount.String())
 	if err != nil {
 		return nil, fmt.Errorf("Stake, AddNotify error: %v", err)
 	}
@@ -394,14 +373,10 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodUnStake, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("UnStake, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("UnStake, decode pubkey error: %v", err)
-	}
 	amount := NewDecFromBigInt(params.Amount)
 
 	// check to see if the pubkey has been registered
-	validator, found, err := getValidator(s, dec)
+	validator, found, err := getValidator(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("UnStake, getValidator error: %v", err)
 	}
@@ -425,10 +400,7 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 		}
 	}
 	if validator.TotalStake.IsZero() && validator.SelfStake.IsZero() {
-		err = delValidator(s, params.ConsensusPubkey)
-		if err != nil {
-			return nil, fmt.Errorf("UnStake, delValidator error: %v", err)
-		}
+		delValidator(s, params.ConsensusAddress)
 		err = AfterValidatorRemoved(s, validator)
 		if err != nil {
 			return nil, fmt.Errorf("UnStake, AfterValidatorRemoved error: %v", err)
@@ -440,7 +412,7 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 		}
 	}
 
-	err = s.AddNotify(ABI, []string{UNSTAKE_EVENT}, params.ConsensusPubkey, params.Amount.String())
+	err = s.AddNotify(ABI, []string{UNSTAKE_EVENT}, params.ConsensusAddress.Hex(), params.Amount.String())
 	if err != nil {
 		return nil, fmt.Errorf("UnStake, AddNotify error: %v", err)
 	}
@@ -483,10 +455,6 @@ func CancelValidator(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodCancelValidator, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("CancelValidator, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("CancelValidator, decode pubkey error: %v", err)
-	}
 
 	globalConfig, err := GetGlobalConfigImpl(s)
 	if err != nil {
@@ -500,7 +468,7 @@ func CancelValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("CancelValidator, validator num is less than consensus node num error: %v", err)
 	}
 
-	validator, found, err := getValidator(s, dec)
+	validator, found, err := getValidator(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, GetValidator error: %v", err)
 	}
@@ -524,12 +492,12 @@ func CancelValidator(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, setValidator error: %v", err)
 	}
-	err = removeFromAllValidators(s, params.ConsensusPubkey)
+	err = removeFromAllValidators(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, removeFromAllValidators error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{CANCEL_VALIDATOR_EVENT}, params.ConsensusPubkey)
+	err = s.AddNotify(ABI, []string{CANCEL_VALIDATOR_EVENT}, params.ConsensusAddress.Hex())
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, AddNotify error: %v", err)
 	}
@@ -545,11 +513,7 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodWithdrawValidator, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("WithdrawValidator, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("WithdrawValidator, decode pubkey error: %v", err)
-	}
-	validator, found, err := getValidator(s, dec)
+	validator, found, err := getValidator(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawValidator, getValidator error: %v", err)
 	}
@@ -570,7 +534,7 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawValidator, unStake error: %v", err)
 	}
 
-	_, err = withdrawCommission(s, caller, dec)
+	_, err = withdrawCommission(s, caller, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawValidator, withdrawCommission error: %v", err)
 	}
@@ -581,10 +545,7 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	}
 	validator.SelfStake = NewDecFromBigInt(new(big.Int))
 	if validator.TotalStake.IsZero() {
-		err = delValidator(s, params.ConsensusPubkey)
-		if err != nil {
-			return nil, fmt.Errorf("WithdrawValidator, delValidator error: %v", err)
-		}
+		delValidator(s, params.ConsensusAddress)
 		err = AfterValidatorRemoved(s, validator)
 		if err != nil {
 			return nil, fmt.Errorf("WithdrawValidator, AfterValidatorRemoved error: %v", err)
@@ -596,7 +557,7 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 		}
 	}
 
-	err = s.AddNotify(ABI, []string{WITHDRAW_VALIDATOR_EVENT}, params.ConsensusPubkey, amount.BigInt().String())
+	err = s.AddNotify(ABI, []string{WITHDRAW_VALIDATOR_EVENT}, params.ConsensusAddress.Hex(), amount.BigInt().String())
 	if err != nil {
 		return nil, fmt.Errorf("CancelValidator, AddNotify error: %v", err)
 	}
@@ -624,8 +585,8 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 
 	epochInfo := &EpochInfo{
 		ID:          new(big.Int).Add(currentEpochInfo.ID, common.Big1),
-		Validators:  make([]*Peer, 0, globalConfig.ConsensusValidatorNum),
-		Voters:      make([]*Peer, 0, globalConfig.VoterValidatorNum),
+		Validators:  make([]common.Address, 0, globalConfig.ConsensusValidatorNum),
+		Voters:      make([]common.Address, 0, globalConfig.VoterValidatorNum),
 		StartHeight: startHeight,
 		EndHeight:   new(big.Int).Add(startHeight, globalConfig.BlockPerEpoch),
 	}
@@ -640,11 +601,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	} else {
 		validatorList := make([]*Validator, 0, len(allValidators.AllValidators))
 		for _, v := range allValidators.AllValidators {
-			dec, err := hexutil.Decode(v)
-			if err != nil {
-				return nil, fmt.Errorf("ChangeEpoch, decode pubkey error: %v", err)
-			}
-			validator, found, err := getValidator(s, dec)
+			validator, found, err := getValidator(s, v)
 			if err != nil {
 				return nil, fmt.Errorf("ChangeEpoch, getValidator error: %v", err)
 			}
@@ -667,11 +624,8 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 				validator.Status = Lock
 			}
 
-			peer := &Peer{
-				PubKey:  validator.ConsensusPubkey,
-				Address: validator.ConsensusAddress,
-			}
-			epochInfo.Validators = append(epochInfo.Validators, peer)
+			epochInfo.Validators = append(epochInfo.Validators, validator.ConsensusAddress)
+			epochInfo.Signers = append(epochInfo.Signers, validator.SignerAddress)
 			err = setValidator(s, validator)
 			if err != nil {
 				return nil, fmt.Errorf("ChangeEpoch, set lock validator error: %v", err)
@@ -693,11 +647,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 		//update voters
 		for i := 0; uint64(i) < globalConfig.VoterValidatorNum; i++ {
 			validator := validatorList[i]
-			peer := &Peer{
-				PubKey:  validator.ConsensusPubkey,
-				Address: validator.ConsensusAddress,
-			}
-			epochInfo.Voters = append(epochInfo.Voters, peer)
+			epochInfo.Voters = append(epochInfo.Voters, validator.SignerAddress)
 		}
 	}
 
@@ -721,19 +671,15 @@ func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodWithdrawStakeRewards, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("WithdrawStakeRewards, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("WithdrawStakeRewards, decode pubkey error: %v", err)
-	}
 
-	validator, found, err := getValidator(s, dec)
+	validator, found, err := getValidator(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawStakeRewards, node_manager.getValidator error: %v", err)
 	}
 	if !found {
 		return nil, fmt.Errorf("WithdrawStakeRewards, validator not found")
 	}
-	stakeInfo, found, err := getStakeInfo(s, caller, params.ConsensusPubkey)
+	stakeInfo, found, err := getStakeInfo(s, caller, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawStakeRewards, getStakeInfo error: %v", err)
 	}
@@ -747,12 +693,12 @@ func WithdrawStakeRewards(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// reinitialize the delegation
-	err = initializeStake(s, stakeInfo, dec)
+	err = initializeStake(s, stakeInfo, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawStakeRewards, initializeStake error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{WITHDRAW_STAKE_REWARDS_EVENT}, params.ConsensusPubkey, caller.Hex(), rewards.BigInt().String())
+	err = s.AddNotify(ABI, []string{WITHDRAW_STAKE_REWARDS_EVENT}, params.ConsensusAddress.Hex(), caller.Hex(), rewards.BigInt().String())
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawStakeRewards, AddNotify error: %v", err)
 	}
@@ -767,11 +713,7 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodWithdrawCommission, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("WithdrawCommission, decode pubkey error: %v", err)
-	}
-	validator, found, err := getValidator(s, dec)
+	validator, found, err := getValidator(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, getValidator error: %v", err)
 	}
@@ -782,16 +724,16 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("WithdrawCommission, caller is not stake address")
 	}
 
-	commission, err := withdrawCommission(s, caller, dec)
+	commission, err := withdrawCommission(s, caller, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, withdrawCommission error: %v", err)
 	}
-	err = setAccumulatedCommission(s, dec, &AccumulatedCommission{NewDecFromBigInt(new(big.Int))})
+	err = setAccumulatedCommission(s, params.ConsensusAddress, &AccumulatedCommission{NewDecFromBigInt(new(big.Int))})
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, setAccumulatedCommission error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{WITHDRAW_COMMISSION_EVENT}, params.ConsensusPubkey, commission.BigInt().String())
+	err = s.AddNotify(ABI, []string{WITHDRAW_COMMISSION_EVENT}, params.ConsensusAddress.Hex(), commission.BigInt().String())
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, AddNotify error: %v", err)
 	}
@@ -831,11 +773,7 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 	}
 	allocateSum := NewDecFromBigInt(new(big.Int))
 	for _, v := range epochInfo.Validators {
-		dec, err := hexutil.Decode(v.PubKey)
-		if err != nil {
-			return nil, fmt.Errorf("EndBlock, decode pubkey error: %v", err)
-		}
-		validator, found, err := getValidator(s, dec)
+		validator, found, err := getValidator(s, v)
 		if err != nil {
 			return nil, fmt.Errorf("EndBlock, getValidator error: %v", err)
 		}
@@ -940,12 +878,8 @@ func GetValidator(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodGetValidator, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("GetValidator, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("GetValidator, decode pubkey error: %v", err)
-	}
 
-	validator, found, err := getValidator(s, dec)
+	validator, found, err := getValidator(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("GetValidator, getValidator error: %v", err)
 	}
@@ -967,7 +901,7 @@ func GetStakeInfo(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("GetStakeInfo, unpack params error: %v", err)
 	}
 
-	stakeInfo, found, err := getStakeInfo(s, params.StakeAddress, params.ConsensusPubkey)
+	stakeInfo, found, err := getStakeInfo(s, params.StakeAddress, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("GetStakeInfo, getStakeInfo error: %v", err)
 	}
@@ -1007,12 +941,8 @@ func GetStakeStartingInfo(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodGetStakeStartingInfo, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("GetStakeStartingInfo, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("GetStakeStartingInfo, decode pubkey error: %v", err)
-	}
 
-	stakeStartingInfo, err := getStakeStartingInfo(s, params.StakeAddress, dec)
+	stakeStartingInfo, err := getStakeStartingInfo(s, params.StakeAddress, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("GetStakeStartingInfo, getStakeStartingInfo error: %v", err)
 	}
@@ -1030,12 +960,8 @@ func GetAccumulatedCommission(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodGetAccumulatedCommission, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("GetAccumulatedCommission, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("GetAccumulatedCommission, decode pubkey error: %v", err)
-	}
 
-	accumulatedCommission, err := getAccumulatedCommission(s, dec)
+	accumulatedCommission, err := getAccumulatedCommission(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("GetAccumulatedCommission, getAccumulatedCommission error: %v", err)
 	}
@@ -1053,12 +979,8 @@ func GetValidatorSnapshotRewards(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodGetValidatorSnapshotRewards, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("GetValidatorSnapshotRewards, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("GetValidatorSnapshotRewards, decode pubkey error: %v", err)
-	}
 
-	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, dec, params.Period)
+	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, params.ConsensusAddress, params.Period)
 	if err != nil {
 		return nil, fmt.Errorf("GetValidatorSnapshotRewards, getValidatorSnapshotRewards error: %v", err)
 	}
@@ -1076,12 +998,8 @@ func GetValidatorAccumulatedRewards(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodGetValidatorAccumulatedRewards, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, decode pubkey error: %v", err)
-	}
 
-	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(s, dec)
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, getValidatorAccumulatedRewards error: %v", err)
 	}
@@ -1099,12 +1017,8 @@ func GetValidatorOutstandingRewards(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodGetValidatorOutstandingRewards, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("GetValidatorOutstandingRewards, unpack params error: %v", err)
 	}
-	dec, err := hexutil.Decode(params.ConsensusPubkey)
-	if err != nil {
-		return nil, fmt.Errorf("GetValidatorOutstandingRewards, decode pubkey error: %v", err)
-	}
 
-	validatorOutstandingRewards, err := getValidatorOutstandingRewards(s, dec)
+	validatorOutstandingRewards, err := getValidatorOutstandingRewards(s, params.ConsensusAddress)
 	if err != nil {
 		return nil, fmt.Errorf("GetValidatorOutstandingRewards, getValidatorOutstandingRewards error: %v", err)
 	}

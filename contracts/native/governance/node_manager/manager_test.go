@@ -21,7 +21,6 @@ package node_manager
 import (
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -38,7 +37,7 @@ var (
 	sdb              *state.StateDB
 	testGenesisNum   = 4
 	acct             *ecdsa.PublicKey
-	testGenesisPeers []*Peer
+	testGenesisPeers []common.Address
 )
 
 func init() {
@@ -50,7 +49,7 @@ func init() {
 	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testGenesisPeers = GenerateTestPeers(testGenesisNum)
 	StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
-	StoreGenesisEpoch(sdb, testGenesisPeers)
+	StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 	StoreGenesisGlobalConfig(sdb)
 }
 
@@ -139,24 +138,25 @@ func TestStake(t *testing.T) {
 	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
 
 	type ValidatorKey struct {
-		ConsensusPubkey string
-		Dec             []byte
-		Address         common.Address
+		ConsensusAddr common.Address
+		StakeAddress  common.Address
 	}
 	// create validator
 	loop := 6
 	validatorsKey := make([]*ValidatorKey, 0, loop)
 	for i := 0; i < loop; i++ {
 		pk, _ := crypto.GenerateKey()
+		consensusAddr := crypto.PubkeyToAddress(pk.PublicKey)
 		caller := crypto.PubkeyToAddress(*acct)
 		sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 		param := new(CreateValidatorParam)
-		param.ConsensusPubkey = hexutil.Encode(crypto.CompressPubkey(&pk.PublicKey))
+		param.ConsensusAddress = consensusAddr
+		param.SignerAddress = consensusAddr
 		param.ProposalAddress = caller
 		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
-		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusPubkey, crypto.CompressPubkey(&pk.PublicKey), caller})
+		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
 		input, err := param.Encode()
 		assert.Nil(t, err)
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
@@ -167,7 +167,7 @@ func TestStake(t *testing.T) {
 	allValidators, err := getAllValidators(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, len(allValidators.AllValidators), loop)
-	validator, _, err := getValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err := getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
@@ -181,7 +181,7 @@ func TestStake(t *testing.T) {
 	stakeAddress := crypto.PubkeyToAddress(*staker)
 	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 	param1 := new(StakeParam)
-	param1.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
 	input, err := param1.Encode()
 	assert.Nil(t, err)
@@ -189,7 +189,7 @@ func TestStake(t *testing.T) {
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	// check
-	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(110000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
@@ -202,7 +202,7 @@ func TestStake(t *testing.T) {
 
 	// unstake
 	param2 := new(UnStakeParam)
-	param2.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param2.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param2.Amount = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
 	input, err = param2.Encode()
 	assert.Nil(t, err)
@@ -211,7 +211,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(109000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
@@ -236,7 +236,7 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(400000))
 	assert.Equal(t, len(epochInfo.Validators), 4)
 	assert.Equal(t, len(epochInfo.Voters), 4)
-	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.Status, Lock)
 	totalPool, err = getTotalPool(contractQuery)
@@ -245,7 +245,7 @@ func TestStake(t *testing.T) {
 
 	// unstake
 	param3 := new(UnStakeParam)
-	param3.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param3.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param3.Amount = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
 	input, err = param3.Encode()
 	assert.Nil(t, err)
@@ -254,7 +254,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(108000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
@@ -280,28 +280,28 @@ func TestStake(t *testing.T) {
 
 	// update validator
 	param4 := new(UpdateValidatorParam)
-	param4.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param4.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param4.Desc = "test2"
 	input, err = param4.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	param5 := new(UpdateCommissionParam)
-	param5.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param5.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param5.Commission = new(big.Int).SetUint64(2500)
 	input, err = param5.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// check
-	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(108000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
-	assert.Equal(t, validator.ProposalAddress, validatorsKey[0].Address)
+	assert.Equal(t, validator.ProposalAddress, validatorsKey[0].StakeAddress)
 	assert.Equal(t, validator.Status, Lock)
 	assert.Equal(t, validator.Commission.Rate.BigInt(), new(big.Int).SetUint64(2500))
 	assert.Equal(t, validator.Commission.UpdateHeight, new(big.Int).SetUint64(800000))
@@ -310,14 +310,14 @@ func TestStake(t *testing.T) {
 
 	// cancel validator && unstake && withdraw validator
 	param6 := new(CancelValidatorParam)
-	param6.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param6.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param6.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	param7 := new(UnStakeParam)
-	param7.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param7.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param7.Amount = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
 	input, err = param7.Encode()
 	assert.Nil(t, err)
@@ -331,18 +331,18 @@ func TestStake(t *testing.T) {
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	param8 := new(WithdrawValidatorParam)
-	param8.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param8.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param8.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
 	assert.NotNil(t, err)
 	allValidators, err = getAllValidators(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, len(allValidators.AllValidators), loop-1)
 
 	// check
-	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.Status, Remove)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(992000), params.ZNT1))
@@ -371,23 +371,23 @@ func TestStake(t *testing.T) {
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	param9 := new(WithdrawValidatorParam)
-	param9.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param9.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param9.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// check
-	validator, _, err = getValidator(contractQuery, validatorsKey[0].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.Status, Remove)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(993000), params.ZNT1))
-	assert.Equal(t, sdb.GetBalance(validatorsKey[0].Address), new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].StakeAddress), new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 
 	// unstake
 	param10 := new(UnStakeParam)
-	param10.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param10.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param10.Amount = new(big.Int).Mul(big.NewInt(7000), params.ZNT1)
 	input, err = param10.Encode()
 	assert.Nil(t, err)
@@ -396,7 +396,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	validator, found, err := getValidator(contractQuery, validatorsKey[0].Dec)
+	validator, found, err := getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, found, false)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
@@ -415,7 +415,7 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(1600000))
 	assert.Equal(t, len(epochInfo.Validators), 4)
 	assert.Equal(t, len(epochInfo.Voters), 4)
-	validator, _, err = getValidator(contractQuery, validatorsKey[4].Dec)
+	validator, _, err = getValidator(contractQuery, validatorsKey[4].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validator.Status, Lock)
 }
@@ -427,9 +427,8 @@ func TestDistribute(t *testing.T) {
 	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
 
 	type ValidatorKey struct {
-		ConsensusPubkey string
-		Dec             []byte
-		Address         common.Address
+		ConsensusAddr common.Address
+		StakeAddress  common.Address
 	}
 	// create validator
 	// 6 address with 1000000 token and  create 6 validators with 100000 init stake
@@ -437,15 +436,17 @@ func TestDistribute(t *testing.T) {
 	validatorsKey := make([]*ValidatorKey, 0, loop)
 	for i := 0; i < loop; i++ {
 		pk, _ := crypto.GenerateKey()
+		consensusAddr := crypto.PubkeyToAddress(pk.PublicKey)
 		caller := crypto.PubkeyToAddress(*acct)
 		sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 		param := new(CreateValidatorParam)
-		param.ConsensusPubkey = hexutil.Encode(crypto.CompressPubkey(&pk.PublicKey))
+		param.ConsensusAddress = consensusAddr
+		param.SignerAddress = consensusAddr
 		param.ProposalAddress = caller
 		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
-		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusPubkey, crypto.CompressPubkey(&pk.PublicKey), caller})
+		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
 		input, err := param.Encode()
 		assert.Nil(t, err)
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
@@ -460,7 +461,7 @@ func TestDistribute(t *testing.T) {
 	stakeAddress := crypto.PubkeyToAddress(*staker)
 	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 	param1 := new(StakeParam)
-	param1.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
 	input, err := param1.Encode()
 	assert.Nil(t, err)
@@ -472,7 +473,7 @@ func TestDistribute(t *testing.T) {
 	stakeAddress2 := crypto.PubkeyToAddress(*staker2)
 	sdb.SetBalance(stakeAddress2, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 	param2 := new(StakeParam)
-	param2.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param2.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param2.Amount = new(big.Int).Mul(big.NewInt(20000), params.ZNT1)
 	input, err = param2.Encode()
 	assert.Nil(t, err)
@@ -499,17 +500,17 @@ func TestDistribute(t *testing.T) {
 	assert.Nil(t, err)
 
 	// check
-	accumulatedCommission, err := getAccumulatedCommission(contractQuery, validatorsKey[0].Dec)
+	accumulatedCommission, err := getAccumulatedCommission(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, accumulatedCommission.Amount.BigInt(), new(big.Int).Mul(big.NewInt(50), params.ZNT1))
-	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validatorAccumulatedRewards.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(200), params.ZNT1))
 
-	accumulatedCommission2, err := getAccumulatedCommission(contractQuery, validatorsKey[1].Dec)
+	accumulatedCommission2, err := getAccumulatedCommission(contractQuery, validatorsKey[1].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, accumulatedCommission2.Amount.BigInt(), new(big.Int).Mul(big.NewInt(50), params.ZNT1))
-	validatorAccumulatedRewards2, err := getValidatorAccumulatedRewards(contractQuery, validatorsKey[1].Dec)
+	validatorAccumulatedRewards2, err := getValidatorAccumulatedRewards(contractQuery, validatorsKey[1].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validatorAccumulatedRewards2.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(200), params.ZNT1))
 
@@ -540,7 +541,7 @@ func TestDistribute(t *testing.T) {
 		assert.Equal(t, len(allValidators.AllValidators), loop)
 
 		p3 := &GetValidatorParam{
-			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
 		}
 		input, err = p3.Encode()
 		assert.Nil(t, err)
@@ -550,11 +551,11 @@ func TestDistribute(t *testing.T) {
 		validator := new(Validator)
 		err = validator.Decode(ret)
 		assert.Nil(t, err)
-		assert.Equal(t, validator.ConsensusPubkey, validatorsKey[0].ConsensusPubkey)
+		assert.Equal(t, validator.ConsensusAddress, validatorsKey[0].ConsensusAddr)
 
 		p4 := &GetStakeInfoParam{
-			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
-			StakeAddress:    stakeAddress,
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			StakeAddress:     stakeAddress,
 		}
 		input, err = p4.Encode()
 		assert.Nil(t, err)
@@ -564,7 +565,7 @@ func TestDistribute(t *testing.T) {
 		stakeInfo := new(StakeInfo)
 		err = stakeInfo.Decode(ret)
 		assert.Nil(t, err)
-		assert.Equal(t, stakeInfo.ConsensusPubkey, validatorsKey[0].ConsensusPubkey)
+		assert.Equal(t, stakeInfo.ConsensusAddr, validatorsKey[0].ConsensusAddr)
 
 		p5 := &GetUnlockingInfoParam{
 			StakeAddress: stakeAddress,
@@ -580,8 +581,8 @@ func TestDistribute(t *testing.T) {
 		assert.Equal(t, unlockingInfo.StakeAddress, stakeAddress)
 
 		p6 := &GetStakeStartingInfoParam{
-			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
-			StakeAddress:    stakeAddress,
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			StakeAddress:     stakeAddress,
 		}
 		input, err = p6.Encode()
 		assert.Nil(t, err)
@@ -594,7 +595,7 @@ func TestDistribute(t *testing.T) {
 		assert.Equal(t, stakeStartingInfo.Stake.BigInt(), new(big.Int).Mul(big.NewInt(10000), params.ZNT1))
 
 		p7 := &GetAccumulatedCommissionParam{
-			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
 		}
 		input, err = p7.Encode()
 		assert.Nil(t, err)
@@ -607,8 +608,8 @@ func TestDistribute(t *testing.T) {
 		assert.Equal(t, accumulatedCommission.Amount.BigInt(), new(big.Int).Mul(big.NewInt(50), params.ZNT1))
 
 		p8 := &GetValidatorSnapshotRewardsParam{
-			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
-			Period:          3,
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			Period:           3,
 		}
 		input, err = p8.Encode()
 		assert.Nil(t, err)
@@ -621,7 +622,7 @@ func TestDistribute(t *testing.T) {
 		assert.Equal(t, validatorSnapshotRewards.ReferenceCount, uint64(2))
 
 		p9 := &GetValidatorAccumulatedRewardsParam{
-			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
 		}
 		input, err = p9.Encode()
 		assert.Nil(t, err)
@@ -634,7 +635,7 @@ func TestDistribute(t *testing.T) {
 		assert.Equal(t, validatorAccumulatedRewards.Period, uint64(4))
 
 		p10 := &GetValidatorOutstandingRewardsParam{
-			ConsensusPubkey: validatorsKey[0].ConsensusPubkey,
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
 		}
 		input, err = p10.Encode()
 		assert.Nil(t, err)
@@ -671,25 +672,25 @@ func TestDistribute(t *testing.T) {
 
 	// withdraw stake rewards and commission
 	param4 := new(WithdrawStakeRewardsParam)
-	param4.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param4.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param4.Encode()
 	assert.Nil(t, err)
 	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	param5 := new(WithdrawStakeRewardsParam)
-	param5.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param5.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param5.Encode()
 	assert.Nil(t, err)
 	contractRef = native.NewContractRef(sdb, stakeAddress2, stakeAddress, blockNumber, common.Hash{}, extra, nil)
 	_, _, err = contractRef.NativeCall(stakeAddress2, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	param6 := new(WithdrawCommissionParam)
-	param6.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param6.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param6.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// check balance
@@ -697,68 +698,68 @@ func TestDistribute(t *testing.T) {
 	b2, _ := new(big.Int).SetString("980030769230769230760000", 10)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), b1)
 	assert.Equal(t, sdb.GetBalance(stakeAddress2), b2)
-	assert.Equal(t, sdb.GetBalance(validatorsKey[0].Address), new(big.Int).Mul(big.NewInt(900050), params.ZNT1))
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].StakeAddress), new(big.Int).Mul(big.NewInt(900050), params.ZNT1))
 
 	// check states
-	validatorAccumulatedRewards, err = getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
+	validatorAccumulatedRewards, err = getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validatorAccumulatedRewards.Rewards.BigInt(), new(big.Int))
 	assert.Equal(t, validatorAccumulatedRewards.Period, uint64(6))
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 0)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 0)
 	assert.NotNil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 1)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 1)
 	assert.Nil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 2)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 2)
 	assert.NotNil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 3)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 3)
 	assert.NotNil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 4)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 4)
 	assert.Nil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 5)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 5)
 	assert.Nil(t, err)
 
 	// withdraw validator stake rewards
 	param7 := new(WithdrawStakeRewardsParam)
-	param7.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param7.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param7.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	param8 := new(WithdrawStakeRewardsParam)
-	param8.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param8.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param8.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// check
 	b3, _ := new(big.Int).SetString("900203846153846153800000", 10)
-	assert.Equal(t, sdb.GetBalance(validatorsKey[0].Address), b3)
-	validatorOutstandingRewards, err := getValidatorOutstandingRewards(contractQuery, validatorsKey[0].Dec)
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].StakeAddress), b3)
+	validatorOutstandingRewards, err := getValidatorOutstandingRewards(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	b4, _ := new(big.Int).SetString("60000", 10)
 	assert.Equal(t, validatorOutstandingRewards.Rewards.BigInt(), b4)
-	validatorAccumulatedRewards, err = getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].Dec)
+	validatorAccumulatedRewards, err = getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, validatorAccumulatedRewards.Rewards.BigInt(), new(big.Int))
 	assert.Equal(t, validatorAccumulatedRewards.Period, uint64(8))
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 0)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 0)
 	assert.NotNil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 1)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 1)
 	assert.NotNil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 2)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 2)
 	assert.NotNil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 3)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 3)
 	assert.NotNil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 4)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 4)
 	assert.Nil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 5)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 5)
 	assert.Nil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 6)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 6)
 	assert.NotNil(t, err)
-	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].Dec, 7)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 7)
 	assert.Nil(t, err)
 
 	// here we have 4 validators with 100000 self stake, and validator 1 have 10000, 20000 user stake, and commission is 20%
@@ -783,11 +784,11 @@ func TestDistribute(t *testing.T) {
 
 	// cancel validator
 	param11 := new(CancelValidatorParam)
-	param11.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param11.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param11.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	blockNumber = big.NewInt(799999)
@@ -801,20 +802,20 @@ func TestDistribute(t *testing.T) {
 	blockNumber = big.NewInt(900000)
 	// withdraw validator
 	param12 := new(WithdrawValidatorParam)
-	param12.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param12.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param12.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, validatorsKey[0].Address, validatorsKey[0].Address, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(validatorsKey[0].Address, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// check
 	b5, _ := new(big.Int).SetString("1000611538461538461400000", 10) // include commission and stake rewards
-	assert.Equal(t, sdb.GetBalance(validatorsKey[0].Address), b5)
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].StakeAddress), b5)
 
 	// unstake
 	param13 := new(UnStakeParam)
-	param13.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param13.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param13.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
 	input, err = param13.Encode()
 	assert.Nil(t, err)
@@ -822,7 +823,7 @@ func TestDistribute(t *testing.T) {
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	param14 := new(UnStakeParam)
-	param14.ConsensusPubkey = validatorsKey[0].ConsensusPubkey
+	param14.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param14.Amount = new(big.Int).Mul(big.NewInt(20000), params.ZNT1)
 	input, err = param14.Encode()
 	assert.Nil(t, err)

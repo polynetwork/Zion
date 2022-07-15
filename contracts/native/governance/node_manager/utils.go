@@ -81,7 +81,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	// do not store redundancy sign
 	sizeBeforeSign := getSignerSize(s, sign.Hash())
 	log.Trace("checkConsensusSign", "sign hash", sign.Hash().Hex(), "size before sign", sizeBeforeSign)
-	if sizeBeforeSign >= epoch.ValidatorQuorumSize() {
+	if sizeBeforeSign >= epoch.SignerQuorumSize() {
 		return false, nil
 	}
 
@@ -92,7 +92,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	sizeAfterSign := getSignerSize(s, sign.Hash())
 	log.Trace("checkConsensusSign", "sign hash", sign.Hash().Hex(), "size after sign", sizeAfterSign)
 
-	return sizeAfterSign >= epoch.ValidatorQuorumSize(), nil
+	return sizeAfterSign >= epoch.SignerQuorumSize(), nil
 }
 
 func CheckVoterSigns(s *native.NativeContract, method string, input []byte, signer common.Address) (bool, error) {
@@ -148,7 +148,7 @@ func CheckVoterSigns(s *native.NativeContract, method string, input []byte, sign
 }
 
 func CheckValidatorAuthority(origin, caller common.Address, epoch *EpochInfo) error {
-	if epoch == nil || epoch.Validators == nil {
+	if epoch == nil || epoch.Signers == nil {
 		return fmt.Errorf("invalid epoch")
 	}
 	if origin == common.EmptyAddress || caller == common.EmptyAddress {
@@ -157,12 +157,12 @@ func CheckValidatorAuthority(origin, caller common.Address, epoch *EpochInfo) er
 	if origin != caller {
 		return fmt.Errorf("origin must be caller")
 	}
-	for _, v := range epoch.Validators {
-		if v.Address == origin {
+	for _, v := range epoch.Signers {
+		if v == origin {
 			return nil
 		}
 	}
-	return fmt.Errorf("tx origin %s is not valid validator", origin.Hex())
+	return fmt.Errorf("tx origin %s is not valid validator signer", origin.Hex())
 }
 
 func CheckVoterAuthority(addr common.Address, epoch *EpochInfo) error {
@@ -173,7 +173,7 @@ func CheckVoterAuthority(addr common.Address, epoch *EpochInfo) error {
 		return fmt.Errorf("addr is empty address")
 	}
 	for _, v := range epoch.Voters {
-		if v.Address == addr {
+		if v == addr {
 			return nil
 		}
 	}
@@ -188,16 +188,13 @@ func EpochChangeAtNextBlock(curHeight, epochStartHeight uint64) bool {
 }
 
 // generateTestPeer ONLY used for testing
-func generateTestPeer() *Peer {
+func generateTestPeer() common.Address {
 	pk, _ := crypto.GenerateKey()
-	return &Peer{
-		PubKey:  hexutil.Encode(crypto.CompressPubkey(&pk.PublicKey)),
-		Address: crypto.PubkeyToAddress(pk.PublicKey),
-	}
+	return crypto.PubkeyToAddress(pk.PublicKey)
 }
 
-func GenerateTestPeers(n int) []*Peer {
-	peers := make([]*Peer, n)
+func GenerateTestPeers(n int) []common.Address {
+	peers := make([]common.Address, n)
 	for i := 0; i < n; i++ {
 		peers[i] = generateTestPeer()
 	}

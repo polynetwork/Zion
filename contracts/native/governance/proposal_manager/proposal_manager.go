@@ -46,10 +46,10 @@ func RegisterProposalManagerContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
 	s.Register(MethodUpdateNodeManagerGlobalConfig, UpdateNodeManagerGlobalConfig)
-	s.Register(MethodPropose, Propose)
-	s.Register(MethodVoteActiveProposal, VoteActiveProposal)
-	s.Register(MethodGetActiveProposal, GetActiveProposal)
-	s.Register(MethodGetProposal, GetProposal)
+	//s.Register(MethodPropose, Propose)
+	//s.Register(MethodVoteActiveProposal, VoteActiveProposal)
+	//s.Register(MethodGetActiveProposal, GetActiveProposal)
+	//s.Register(MethodGetProposal, GetProposal)
 }
 
 func UpdateNodeManagerGlobalConfig(s *native.NativeContract) ([]byte, error) {
@@ -111,13 +111,13 @@ func UpdateNodeManagerGlobalConfig(s *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(ABI, MethodUpdateNodeManagerGlobalConfig, true)
 }
 
-func Propose(s *native.NativeContract) ([]byte, error) {
-	ctx := s.ContractRef().CurrentContext()
-
-	params := &ProposeParam{}
-	if err := utils.UnpackMethod(ABI, MethodPropose, params, ctx.Payload); err != nil {
-		return nil, fmt.Errorf("ProposeParam, unpack params error: %v", err)
-	}
-
-	return utils.PackOutputs(ABI, MethodPropose, true)
-}
+//func Propose(s *native.NativeContract) ([]byte, error) {
+//	ctx := s.ContractRef().CurrentContext()
+//
+//	params := &ProposeParam{}
+//	if err := utils.UnpackMethod(ABI, MethodPropose, params, ctx.Payload); err != nil {
+//		return nil, fmt.Errorf("ProposeParam, unpack params error: %v", err)
+//	}
+//
+//	return utils.PackOutputs(ABI, MethodPropose, true)
+//}

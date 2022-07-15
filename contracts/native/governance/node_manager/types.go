@@ -38,7 +38,7 @@ const (
 )
 
 type AllValidators struct {
-	AllValidators []string
+	AllValidators []common.Address
 }
 
 func (m *AllValidators) Decode(payload []byte) error {
@@ -53,8 +53,8 @@ func (m *AllValidators) Decode(payload []byte) error {
 
 type Validator struct {
 	StakeAddress     common.Address
-	ConsensusPubkey  string
 	ConsensusAddress common.Address
+	SignerAddress    common.Address
 	ProposalAddress  common.Address
 	Commission       *Commission
 	Status           LockStatus
@@ -125,9 +125,9 @@ func (m *GlobalConfig) Decode(payload []byte) error {
 }
 
 type StakeInfo struct {
-	StakeAddress    common.Address
-	ConsensusPubkey string
-	Amount          Dec
+	StakeAddress  common.Address
+	ConsensusAddr common.Address
+	Amount        Dec
 }
 
 func (m *StakeInfo) Decode(payload []byte) error {
@@ -156,16 +156,17 @@ func (m *UnlockingInfo) Decode(payload []byte) error {
 }
 
 type UnlockingStake struct {
-	Height          *big.Int
-	CompleteHeight  *big.Int
-	ConsensusPubkey string
-	Amount          Dec
+	Height           *big.Int
+	CompleteHeight   *big.Int
+	ConsensusAddress common.Address
+	Amount           Dec
 }
 
 type EpochInfo struct {
 	ID          *big.Int
-	Validators  []*Peer
-	Voters      []*Peer
+	Validators  []common.Address
+	Signers     []common.Address
+	Voters      []common.Address
 	StartHeight *big.Int
 	EndHeight   *big.Int
 }
@@ -180,11 +181,11 @@ func (m *EpochInfo) Decode(payload []byte) error {
 	return rlp.DecodeBytes(data.EpochInfo, m)
 }
 
-func (m *EpochInfo) ValidatorQuorumSize() int {
-	if m == nil || m.Validators == nil {
+func (m *EpochInfo) SignerQuorumSize() int {
+	if m == nil || m.Signers == nil {
 		return 0
 	}
-	total := len(m.Validators)
+	total := len(m.Signers)
 	return int(math.Ceil(float64(2*total) / 3))
 }
 
@@ -202,7 +203,7 @@ func (m *EpochInfo) MemberList() []common.Address {
 		return list
 	}
 	for _, v := range m.Validators {
-		list = append(list, v.Address)
+		list = append(list, v)
 	}
 	return list
 }
@@ -293,11 +294,6 @@ func (m *StakeStartingInfo) Decode(payload []byte) error {
 		return err
 	}
 	return rlp.DecodeBytes(data.StakeStartingInfo, m)
-}
-
-type Peer struct {
-	PubKey  string
-	Address common.Address
 }
 
 type AddressList struct {

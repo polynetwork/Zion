@@ -62,6 +62,6 @@ type ProposeParam struct {
 	Stake   *big.Int
 }
 
-func (m *ProposeParam) Encode() ([]byte, error) {
-	return utils.PackMethodWithStruct(ABI, MethodPropose, m)
-}
+//func (m *ProposeParam) Encode() ([]byte, error) {
+//	return utils.PackMethodWithStruct(ABI, MethodPropose, m)
+//}
