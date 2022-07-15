@@ -91,11 +91,10 @@ type GenesisAccount struct {
 	Storage    map[common.Hash]common.Hash `json:"storage,omitempty"`
 	Balance    *big.Int                    `json:"balance" gencodec:"required"`
 	Nonce      uint64                      `json:"nonce,omitempty"`
-	PublicKey  []byte                      `json:"publicKey" gencodec:"required"`
 	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests
 }
 
-// GenesisGovernance map validator address to governanceAccount
+// GenesisGovernance map validator address to signer account
 type GenesisGovernance map[common.Address]GovernanceAccount
 
 type GovernanceAccount struct {

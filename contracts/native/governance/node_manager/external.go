@@ -19,15 +19,11 @@
 package node_manager
 
 import (
-	"fmt"
 	"math/big"
-	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -43,31 +39,31 @@ var (
 func init() {
 	// store data in genesis block
 	core.RegGenesis = func(db *state.StateDB, genesis *core.Genesis) error {
-		data := genesis.Alloc
-		peers := make([]*Peer, 0, len(data))
-		for addr, v := range data {
-			pk := hexutil.Encode(v.PublicKey)
-			pubkey, err := crypto.DecompressPubkey(v.PublicKey)
-			if err != nil {
-				return fmt.Errorf("store genesis peers, decompress pubkey failed, err: %v", err)
-			}
-			if got := crypto.PubkeyToAddress(*pubkey); got != addr {
-				return fmt.Errorf("store genesis peers, expect address %s got %s", addr.Hex(), got.Hex())
-			}
-			peer := &Peer{PubKey: pk, Address: addr}
-			peers = append(peers, peer)
-		}
+		//data := genesis.Alloc
+		//peers := make([]*Peer, 0, len(data))
+		//for addr, v := range data {
+		//	pk := hexutil.Encode(v.PublicKey)
+		//	pubkey, err := crypto.DecompressPubkey(v.PublicKey)
+		//	if err != nil {
+		//		return fmt.Errorf("store genesis peers, decompress pubkey failed, err: %v", err)
+		//	}
+		//	if got := crypto.PubkeyToAddress(*pubkey); got != addr {
+		//		return fmt.Errorf("store genesis peers, expect address %s got %s", addr.Hex(), got.Hex())
+		//	}
+		//	peer := &Peer{PubKey: pk, Address: addr}
+		//	peers = append(peers, peer)
+		//}
 		// the order of peer in the list is random, so we must sort the list before store.
 		// btw, the mpt tree only needs the value of state_object to be deterministic.
-		sort.Slice(peers, func(i, j int) bool {
-			return peers[i].Address.Hex() < peers[j].Address.Hex()
-		})
+		//sort.Slice(peers, func(i, j int) bool {
+		//	return peers[i].Address.Hex() < peers[j].Address.Hex()
+		//})
 		if _, err := StoreCommunityInfo(db, genesis.CommunityRate, genesis.CommunityAddress); err != nil {
 			return err
 		}
-		if _, err := StoreGenesisEpoch(db, peers); err != nil {
-			return err
-		}
+		//if _, err := StoreGenesisEpoch(db, peers); err != nil {
+		//	return err
+		//}
 		if err := StoreGenesisGlobalConfig(db); err != nil {
 			return err
 		}
