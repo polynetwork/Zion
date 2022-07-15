@@ -41,7 +41,7 @@ func init() {
 
 var (
 	sdb  *state.StateDB
-    signers []common.Address
+	signers []common.Address
 )
 
 func init() {
