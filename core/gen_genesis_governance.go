@@ -6,7 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common"
 )
 
 var _ = (*genesisGovernanceMarshaling)(nil)
@@ -14,25 +14,25 @@ var _ = (*genesisGovernanceMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (g GovernanceAccount) MarshalJSON() ([]byte, error) {
 	type GovernanceAccount struct {
-		SignerPubKey hexutil.Bytes `json:"signer" gencodec:"required"`
+		Signer common.UnprefixedAddress `json:"signer" gencodec:"required"`
 	}
 	var enc GovernanceAccount
-	enc.SignerPubKey = g.SignerPubKey
+	enc.Signer = common.UnprefixedAddress(g.Signer)
 	return json.Marshal(&enc)
 }
 
 // UnmarshalJSON unmarshals from JSON.
 func (g *GovernanceAccount) UnmarshalJSON(input []byte) error {
 	type GovernanceAccount struct {
-		SignerPubKey *hexutil.Bytes `json:"signer" gencodec:"required"`
+		Signer *common.UnprefixedAddress `json:"signer" gencodec:"required"`
 	}
 	var dec GovernanceAccount
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
-	if dec.SignerPubKey == nil {
+	if dec.Signer == nil {
 		return errors.New("missing required field 'signer' for GovernanceAccount")
 	}
-	g.SignerPubKey = *dec.SignerPubKey
+	g.Signer = common.Address(*dec.Signer)
 	return nil
 }
