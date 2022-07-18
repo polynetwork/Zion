@@ -55,7 +55,7 @@ type staticNodeServer interface {
 	Peers() []*p2p.Peer
 	AddPeer(node *enode.Node)
 	RemovePeer(node *enode.Node)
-	LocalENode() *enode.Node
+	Self() *enode.Node
 	SeedNodes() []*enode.Node
 }
 
@@ -102,6 +102,7 @@ func (h *nodeFetcher) Start() {
 	handler := h.handler.engine.(consensus.Handler)
 	h.notifyCh = make(chan consensus.StaticNodesEvent, nodeFetcherChCapacity)
 	h.notifySub = handler.SubscribeNodes(h.notifyCh)
+	h.local = h.server.Self()
 	go h.loop()
 }
 
@@ -111,23 +112,6 @@ func (h *nodeFetcher) Stop() {
 	}
 	h.notifySub.Unsubscribe() // quits staticNodesLoop
 	close(h.quit)
-}
-
-// p2p stack server started after eth.backend, waiting for local node settled.
-func (h *nodeFetcher) setupLocalNode() {
-	for h.local == nil {
-		if node := h.server.LocalENode(); node != nil {
-			h.local = node
-
-			for _, v := range h.server.SeedNodes() {
-				if v.ID() == h.local.ID() {
-					atomic.StoreInt32(&h.seed, 1)
-					break
-				}
-			}
-		}
-		time.Sleep(1 * time.Second)
-	}
 }
 
 func (h *nodeFetcher) loop() {
@@ -183,8 +167,6 @@ func (h *nodeFetcher) handleTask(task *task) {
 
 	// fulfill validators
 	h.resetValidators(task.validators)
-	// setup local node
-	h.setupLocalNode()
 
 	// sync node do not allow to ask validator address, and seed node has already persisted other seeds.
 	if h.miner == common.EmptyAddress || !h.checkValidator(h.miner) || h.isSeedNode() {
