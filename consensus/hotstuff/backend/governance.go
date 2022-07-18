@@ -216,8 +216,8 @@ func (s *backend) getRecentHeader(height uint64, chain consensus.ChainHeaderRead
 	return header
 }
 
-// initValidators prepare validators for next block.
-func (s *backend) initValidators() (err error) {
+// newEpochValidators prepare validators for next block.
+func (s *backend) newEpochValidators() (vs hotstuff.ValidatorSet, err error) {
 	var (
 		header = s.chain.CurrentHeader()
 		extra  *types.HotstuffExtra
@@ -230,7 +230,7 @@ start:
 
 	// the next block use parent extra.validators as valset
 	if extra.Height == header.Number.Uint64() {
-		s.vals = NewDefaultValSet(extra.Validators)
+		vs = NewDefaultValSet(extra.Validators)
 		return
 	}
 

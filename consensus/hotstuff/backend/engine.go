@@ -252,13 +252,14 @@ func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(hash commo
 	s.hasBadBlock = hasBadBlock
 
 	// init validator set
-	if err := s.initValidators(); err != nil {
+	if next, err := s.newEpochValidators(); err != nil {
 		return fmt.Errorf("get validators failed, err: %v", err)
+	} else {
+		s.vals = next.Copy()
 	}
 
 	// waiting for p2p connected
 	s.SendValidatorsChange(s.vals.AddressList())
-	//time.Sleep(60 * time.Second)
 
 	if err := s.core.Start(chain); err != nil {
 		return err
@@ -287,6 +288,16 @@ func (s *backend) Close() error {
 }
 
 func (s *backend) restart() {
+	next, err := s.newEpochValidators()
+	if err != nil {
+		panic(fmt.Errorf("Restart consensus engine failed, err: %v ", err))
+	}
+
+	if next.Equal(s.vals.Copy()) {
+		log.Trace("Restart Consensus engine, validators not changed.")
+		return
+	}
+
 	if s.coreStarted {
 		s.Stop()
 		// waiting for last engine instance free resource, e.g: unsubscribe...

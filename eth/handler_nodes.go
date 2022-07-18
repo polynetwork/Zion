@@ -45,7 +45,7 @@ import (
 var (
 	// todo(fuk): update fixed param value
 	nodeFetcherDuration   = 2 * time.Second
-	nodeFetchingLastTime  = 1 * time.Minute
+	nodeFetchingLastTime  = 10 * time.Minute
 	nodeFetcherChCapacity = 10 // Capacity for broadcast channel, is a low frequency action
 )
 
@@ -98,8 +98,12 @@ func newNodeBroadcaster(miner common.Address, manager staticNodeServer, handler 
 	}
 }
 
-// only used for hotstuff
+// only used for hotstuff miner
 func (h *nodeFetcher) Start() {
+	if h.miner == common.EmptyAddress {
+		return
+	}
+
 	handler := h.handler.engine.(consensus.Handler)
 	h.notifyCh = make(chan consensus.StaticNodesEvent, nodeFetcherChCapacity)
 	h.notifySub = handler.SubscribeNodes(h.notifyCh)
@@ -116,6 +120,10 @@ func (h *nodeFetcher) Start() {
 }
 
 func (h *nodeFetcher) Stop() {
+	if h.miner == common.EmptyAddress {
+		return
+	}
+
 	if h.seed == 1 {
 		atomic.StoreInt32(&h.seed, 0)
 	}
@@ -233,9 +241,16 @@ func (h *nodeFetcher) connectionQuorum() bool {
 		return false
 	}
 	for addr, v := range h.validators {
-		if v == nil || h.handler.FindPeer(addr) == nil {
+		if addr == h.miner {
+			continue
+		}
+		if v == nil {
 			return false
 		}
+		if h.handler.FindPeer(addr) == nil {
+			return false
+		}
+		log.Trace("Node Fetcher Connected new peer", "address", addr.Hex())
 	}
 	return true
 }
@@ -321,8 +336,6 @@ func (h *nodeFetcher) setValidator(validator common.Address, node *enode.Node) b
 		h.validators[validator] = node
 		h.logger.Trace("Node Fetcher", "set validator node", validator.Hex(), "node", identity(node))
 		return true
-	} else {
-		h.logger.Trace("Node Fetcher", "set validator node", "failed", "exist", exist, "data == nil", data == nil)
 	}
 	return false
 }
