@@ -127,7 +127,7 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ImportExTransfer, source chain is blacked")
 	}
 
-	srcChain, err := side_chain_manager.GetSideChain(s, srcChainID)
+	srcChain, err := side_chain_manager.GetSideChainObject(s, srcChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ImportExTransfer, side_chain_manager.GetSideChain err: %v", err)
 	} else if srcChain == nil {
@@ -156,7 +156,7 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ImportExTransfer, target chain is blacked")
 	}
 
-	dstChain, err := side_chain_manager.GetSideChain(s, dstChainID)
+	dstChain, err := side_chain_manager.GetSideChainObject(s, dstChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ImportExTransfer, side_chain_manager.GetSideChain error: %v", err)
 	}

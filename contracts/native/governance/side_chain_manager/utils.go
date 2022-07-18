@@ -54,7 +54,7 @@ func GetSideChainApply(native *native.NativeContract, chanid uint64) (*SideChain
 
 func putSideChainApply(native *native.NativeContract, sideChain *SideChain) error {
 	contract := utils.SideChainManagerContractAddress
-	chainidByte := utils.GetUint64Bytes(sideChain.ChainId)
+	chainidByte := utils.GetUint64Bytes(sideChain.ChainID)
 
 	blob, err := rlp.EncodeToBytes(sideChain)
 	if err != nil {
@@ -65,7 +65,7 @@ func putSideChainApply(native *native.NativeContract, sideChain *SideChain) erro
 	return nil
 }
 
-func GetSideChain(native *native.NativeContract, chainID uint64) (*SideChain, error) {
+func GetSideChainObject(native *native.NativeContract, chainID uint64) (*SideChain, error) {
 	contract := utils.SideChainManagerContractAddress
 	chainIDByte := utils.GetUint64Bytes(chainID)
 
@@ -87,7 +87,7 @@ func GetSideChain(native *native.NativeContract, chainID uint64) (*SideChain, er
 
 func PutSideChain(native *native.NativeContract, sideChain *SideChain) error {
 	contract := utils.SideChainManagerContractAddress
-	chainidByte := utils.GetUint64Bytes(sideChain.ChainId)
+	chainidByte := utils.GetUint64Bytes(sideChain.ChainID)
 
 	blob, err := rlp.EncodeToBytes(sideChain)
 	if err != nil {
@@ -120,7 +120,7 @@ func getUpdateSideChain(native *native.NativeContract, chanid uint64) (*SideChai
 
 func putUpdateSideChain(native *native.NativeContract, sideChain *SideChain) error {
 	contract := utils.SideChainManagerContractAddress
-	chainidByte := utils.GetUint64Bytes(sideChain.ChainId)
+	chainidByte := utils.GetUint64Bytes(sideChain.ChainID)
 
 	blob, err := rlp.EncodeToBytes(sideChain)
 	if err != nil {

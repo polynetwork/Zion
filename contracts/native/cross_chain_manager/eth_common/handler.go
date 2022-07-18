@@ -49,7 +49,7 @@ import (
 		return nil, err
 	}
 
-	sideChain, err := side_chain_manager.GetSideChain(service, params.SourceChainID)
+	sideChain, err := side_chain_manager.GetSideChainObject(service, params.SourceChainID)
 	if err != nil || sideChain == nil {
 		err = fmt.Errorf("eth common handler  failed to get side chain instance, chain(%d) err: %v", params.SourceChainID, err)
 		return
@@ -86,7 +86,7 @@ import (
 		return
 	}
 
-	info, err := icom.GetRootInfo(service, sideChain.ChainId, params.Height)
+	info, err := icom.GetRootInfo(service, sideChain.ChainID, params.Height)
 	if err != nil {
 		err = fmt.Errorf("get root info failure, err %v", err)
 		return
