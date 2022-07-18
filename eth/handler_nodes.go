@@ -43,6 +43,7 @@ import (
 //
 
 var (
+	// todo(fuk): update fixed param value
 	nodeFetcherDuration   = 2 * time.Second
 	nodeFetchingLastTime  = 1 * time.Minute
 	nodeFetcherChCapacity = 10 // Capacity for broadcast channel, is a low frequency action
@@ -103,6 +104,14 @@ func (h *nodeFetcher) Start() {
 	h.notifyCh = make(chan consensus.StaticNodesEvent, nodeFetcherChCapacity)
 	h.notifySub = handler.SubscribeNodes(h.notifyCh)
 	h.local = h.server.Self()
+	for _, v := range h.server.SeedNodes() {
+		if v.ID() == h.local.ID() {
+			atomic.StoreInt32(&h.seed, 1)
+			log.Trace("Node Fetcher seed node")
+			break
+		}
+	}
+
 	go h.loop()
 }
 
