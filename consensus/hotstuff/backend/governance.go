@@ -139,7 +139,7 @@ func (s *backend) execEpochChange(state *state.StateDB, header *types.Header, ct
 		return err
 	}
 
-	log.Info("Execute governance EpochChange", "end", end, "current", height, "state", s.chain.CurrentHeader().Number.Uint64())
+	log.Info("Execute governance EpochChange", "end", end, "current", height)
 	return nil
 }
 
