@@ -631,9 +631,7 @@ func GetCurrentEpochInfoFromDB(s *state.StateDB) (*EpochInfo, error) {
 	}
 	ID := new(big.Int).SetBytes(store)
 
-	epochInfo := &EpochInfo{
-		Validators: make([]common.Address, 0),
-	}
+	epochInfo := new(EpochInfo)
 	key = epochInfoKey(ID)
 	store, err = customGet(cache, key)
 	if err != nil {
@@ -656,9 +654,7 @@ func setEpochInfo(s *native.NativeContract, epochInfo *EpochInfo) error {
 }
 
 func getEpochInfo(s *native.NativeContract, ID *big.Int) (*EpochInfo, error) {
-	epochInfo := &EpochInfo{
-		Validators: make([]common.Address, 0),
-	}
+	epochInfo := new(EpochInfo)
 	key := epochInfoKey(ID)
 	store, err := get(s, key)
 	if err != nil {
@@ -673,9 +669,7 @@ func getEpochInfo(s *native.NativeContract, ID *big.Int) (*EpochInfo, error) {
 func GetEpochInfoFromDB(s *state.StateDB, ID *big.Int) (*EpochInfo, error) {
 	cache := (*state.CacheDB)(s)
 
-	epochInfo := &EpochInfo{
-		Validators: make([]common.Address, 0),
-	}
+	epochInfo := new(EpochInfo)
 	key := epochInfoKey(ID)
 	store, err := customGet(cache, key)
 	if err != nil {

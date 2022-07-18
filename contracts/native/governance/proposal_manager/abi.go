@@ -42,26 +42,20 @@ var (
 	this = utils.ProposalManagerContractAddress
 )
 
-type UpdateNodeManagerGlobalConfigParam struct {
-	MaxCommissionChange   string
-	MinInitialStake       string
-	MaxDescLength         uint64
-	BlockPerEpoch         uint64
-	ConsensusValidatorNum uint64
-	VoterValidatorNum     uint64
-	ExpireHeight          uint64
-}
-
-func (m *UpdateNodeManagerGlobalConfigParam) Encode() ([]byte, error) {
-	return utils.PackMethodWithStruct(ABI, MethodUpdateNodeManagerGlobalConfig, m)
-}
-
 type ProposeParam struct {
-	Type    ProposalType
+	PType    ProposalType
 	Content []byte
 	Stake   *big.Int
 }
 
-//func (m *ProposeParam) Encode() ([]byte, error) {
-//	return utils.PackMethodWithStruct(ABI, MethodPropose, m)
-//}
+func (m *ProposeParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodPropose, m)
+}
+
+type VoteActiveProposalParam struct {
+	ID *big.Int
+}
+
+func (m *VoteActiveProposalParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodVoteActiveProposal, m)
+}

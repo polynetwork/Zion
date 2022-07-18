@@ -183,7 +183,7 @@ func BlackChain(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// Get current epoch operator
-	ok, err := node_manager.CheckConsensusSigns(s, scom.MethodBlackChain, utils.GetUint64Bytes(params.ChainID), s.ContractRef().MsgSender())
+	ok, err := node_manager.CheckConsensusSigns(s, scom.MethodBlackChain, utils.GetUint64Bytes(params.ChainID), s.ContractRef().MsgSender(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("BlackChain, CheckConsensusSigns error: %v", err)
 	}
@@ -203,7 +203,7 @@ func WhiteChain(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// Get current epoch operator
-	ok, err := node_manager.CheckConsensusSigns(s, scom.MethodWhiteChain, ctx.Payload, s.ContractRef().MsgSender())
+	ok, err := node_manager.CheckConsensusSigns(s, scom.MethodWhiteChain, ctx.Payload, s.ContractRef().MsgSender(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("WhiteChain, CheckConsensusSigns error: %v", err)
 	}

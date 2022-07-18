@@ -52,7 +52,7 @@ func (this *NoProofHandler) MakeDepositProposal(service *native.NativeContract) 
 	}
 	addr := crypto.PubkeyToAddress(*pub)
 
-	ok, err := node_manager.CheckVoterSigns(service, scom.MethodImportOuterTransfer, digest, addr)
+	ok, err := node_manager.CheckConsensusSigns(service, scom.MethodImportOuterTransfer, digest, addr, node_manager.Voter)
 	if err != nil {
 		return nil, fmt.Errorf("no proof MakeDepositProposal, CheckVoterSigns error: %v", err)
 	}

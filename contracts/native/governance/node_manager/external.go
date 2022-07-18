@@ -88,6 +88,7 @@ func StoreGenesisEpoch(s *state.StateDB, peers []common.Address, signers []commo
 		Validators:  peers,
 		Signers:     signers,
 		Voters:      signers,
+		Proposers:   signers,
 		StartHeight: new(big.Int),
 		EndHeight:   GenesisBlockPerEpoch,
 	}
