@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -47,7 +46,7 @@ func init() {
 	InitProposalManager()
 	db := rawdb.NewMemoryDatabase()
 	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testGenesisPeers = node_manager.GenerateTestPeers(testGenesisNum)
+	testGenesisPeers, _ = node_manager.GenerateTestPeers(testGenesisNum)
 	node_manager.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 	node_manager.StoreGenesisGlobalConfig(sdb)
@@ -67,31 +66,5 @@ func TestUpdateNodeManagerGlobalConfig(t *testing.T) {
 	assert.Equal(t, globalConfig.MinInitialStake, node_manager.GenesisMinInitialStake)
 	assert.Equal(t, globalConfig.VoterValidatorNum, node_manager.GenesisVoterValidatorNum)
 	assert.Equal(t, globalConfig.ConsensusValidatorNum, node_manager.GenesisConsensusValidatorNum)
-
-	// update global config
-	for _, p := range testGenesisPeers {
-		param1 := new(UpdateNodeManagerGlobalConfigParam)
-		param1.ExpireHeight = 100
-		param1.BlockPerEpoch = 10000
-		input, err := param1.Encode()
-		assert.Nil(t, err)
-		contractRef := native.NewContractRef(sdb, p.Address, p.Address, blockNumber, common.Hash{}, extra, nil)
-		_, _, err = contractRef.NativeCall(p.Address, utils.ProposalManagerContractAddress, input)
-		assert.Nil(t, err)
-	}
-
-	globalConfig, err = node_manager.GetGlobalConfigImpl(contract)
-	assert.Nil(t, err)
-	assert.Equal(t, globalConfig.BlockPerEpoch, new(big.Int).SetUint64(10000))
-
-	// not consensus address
-	caller := crypto.PubkeyToAddress(*acct)
-	param2 := new(UpdateNodeManagerGlobalConfigParam)
-	param2.ExpireHeight = 100
-	param2.BlockPerEpoch = 10000
-	input, err := param2.Encode()
-	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(caller, utils.ProposalManagerContractAddress, input)
-	assert.NotNil(t, err)
+	assert.Equal(t, globalConfig.MinProposalStake, node_manager.GenesisMinProposalStake)
 }
