@@ -29,29 +29,34 @@ var (
 var (
 	MethodPropose = "propose"
 
-	MethodSetActiveProposal = "setActiveProposal"
+	MethodProposeConfig = "proposeConfig"
 
-	MethodVoteActiveProposal = "voteActiveProposal"
+	MethodVoteProposal = "voteProposal"
 
-	MethodGetActiveProposal = "getActiveProposal"
+	MethodGetConfigProposalList = "getConfigProposalList"
+
+	MethodGetProposal = "getProposal"
 
 	MethodGetProposalList = "getProposalList"
 
 	EventPropose = "Propose"
 
-	EventVoteActiveProposal = "VoteActiveProposal"
+	EventProposeConfig = "ProposeConfig"
+
+	EventVoteProposal = "VoteProposal"
 )
 
 // IProposalManagerABI is the input ABI used to generate the binding from.
-const IProposalManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"pType\",\"type\":\"uint8\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"stake\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"content\",\"type\":\"string\"}],\"name\":\"Propose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"pType\",\"type\":\"uint8\"}],\"name\":\"VoteActiveProposal\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"getActiveProposal\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getProposalList\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint8\",\"name\":\"pType\",\"type\":\"uint8\"},{\"internalType\":\"bytes\",\"name\":\"content\",\"type\":\"bytes\"},{\"internalType\":\"int256\",\"name\":\"stake\",\"type\":\"int256\"}],\"name\":\"propose\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"setActiveProposal\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"ID\",\"type\":\"int256\"}],\"name\":\"voteActiveProposal\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IProposalManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"stake\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"content\",\"type\":\"string\"}],\"name\":\"Propose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"stake\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"content\",\"type\":\"string\"}],\"name\":\"ProposeConfig\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"}],\"name\":\"VoteProposal\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"getConfigProposalList\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"ID\",\"type\":\"int256\"}],\"name\":\"getProposal\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getProposalList\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"content\",\"type\":\"bytes\"}],\"name\":\"propose\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"content\",\"type\":\"bytes\"}],\"name\":\"proposeConfig\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"ID\",\"type\":\"int256\"}],\"name\":\"voteProposal\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IProposalManagerFuncSigs maps the 4-byte function signature to its string representation.
 var IProposalManagerFuncSigs = map[string]string{
-	"d7335d03": "getActiveProposal()",
+	"de63d452": "getConfigProposalList()",
+	"2a69c349": "getProposal(int256)",
 	"346750f3": "getProposalList()",
-	"a02a2b06": "propose(uint8,bytes,int256)",
-	"cfd74457": "setActiveProposal()",
-	"a8bcb673": "voteActiveProposal(int256)",
+	"37558af5": "propose(bytes)",
+	"529aaa13": "proposeConfig(bytes)",
+	"e3b917ca": "voteProposal(int256)",
 }
 
 // IProposalManager is an auto generated Go binding around an Ethereum contract.
@@ -196,12 +201,12 @@ func (_IProposalManager *IProposalManagerTransactorRaw) Transact(opts *bind.Tran
 	return _IProposalManager.Contract.contract.Transact(opts, method, params...)
 }
 
-// GetActiveProposal is a free data retrieval call binding the contract method 0xd7335d03.
+// GetConfigProposalList is a free data retrieval call binding the contract method 0xde63d452.
 //
-// Solidity: function getActiveProposal() view returns(bytes)
-func (_IProposalManager *IProposalManagerCaller) GetActiveProposal(opts *bind.CallOpts) ([]byte, error) {
+// Solidity: function getConfigProposalList() view returns(bytes)
+func (_IProposalManager *IProposalManagerCaller) GetConfigProposalList(opts *bind.CallOpts) ([]byte, error) {
 	var out []interface{}
-	err := _IProposalManager.contract.Call(opts, &out, "getActiveProposal")
+	err := _IProposalManager.contract.Call(opts, &out, "getConfigProposalList")
 
 	if err != nil {
 		return *new([]byte), err
@@ -213,18 +218,49 @@ func (_IProposalManager *IProposalManagerCaller) GetActiveProposal(opts *bind.Ca
 
 }
 
-// GetActiveProposal is a free data retrieval call binding the contract method 0xd7335d03.
+// GetConfigProposalList is a free data retrieval call binding the contract method 0xde63d452.
 //
-// Solidity: function getActiveProposal() view returns(bytes)
-func (_IProposalManager *IProposalManagerSession) GetActiveProposal() ([]byte, error) {
-	return _IProposalManager.Contract.GetActiveProposal(&_IProposalManager.CallOpts)
+// Solidity: function getConfigProposalList() view returns(bytes)
+func (_IProposalManager *IProposalManagerSession) GetConfigProposalList() ([]byte, error) {
+	return _IProposalManager.Contract.GetConfigProposalList(&_IProposalManager.CallOpts)
 }
 
-// GetActiveProposal is a free data retrieval call binding the contract method 0xd7335d03.
+// GetConfigProposalList is a free data retrieval call binding the contract method 0xde63d452.
 //
-// Solidity: function getActiveProposal() view returns(bytes)
-func (_IProposalManager *IProposalManagerCallerSession) GetActiveProposal() ([]byte, error) {
-	return _IProposalManager.Contract.GetActiveProposal(&_IProposalManager.CallOpts)
+// Solidity: function getConfigProposalList() view returns(bytes)
+func (_IProposalManager *IProposalManagerCallerSession) GetConfigProposalList() ([]byte, error) {
+	return _IProposalManager.Contract.GetConfigProposalList(&_IProposalManager.CallOpts)
+}
+
+// GetProposal is a free data retrieval call binding the contract method 0x2a69c349.
+//
+// Solidity: function getProposal(int256 ID) view returns(bytes)
+func (_IProposalManager *IProposalManagerCaller) GetProposal(opts *bind.CallOpts, ID *big.Int) ([]byte, error) {
+	var out []interface{}
+	err := _IProposalManager.contract.Call(opts, &out, "getProposal", ID)
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetProposal is a free data retrieval call binding the contract method 0x2a69c349.
+//
+// Solidity: function getProposal(int256 ID) view returns(bytes)
+func (_IProposalManager *IProposalManagerSession) GetProposal(ID *big.Int) ([]byte, error) {
+	return _IProposalManager.Contract.GetProposal(&_IProposalManager.CallOpts, ID)
+}
+
+// GetProposal is a free data retrieval call binding the contract method 0x2a69c349.
+//
+// Solidity: function getProposal(int256 ID) view returns(bytes)
+func (_IProposalManager *IProposalManagerCallerSession) GetProposal(ID *big.Int) ([]byte, error) {
+	return _IProposalManager.Contract.GetProposal(&_IProposalManager.CallOpts, ID)
 }
 
 // GetProposalList is a free data retrieval call binding the contract method 0x346750f3.
@@ -258,67 +294,67 @@ func (_IProposalManager *IProposalManagerCallerSession) GetProposalList() ([]byt
 	return _IProposalManager.Contract.GetProposalList(&_IProposalManager.CallOpts)
 }
 
-// Propose is a paid mutator transaction binding the contract method 0xa02a2b06.
+// Propose is a paid mutator transaction binding the contract method 0x37558af5.
 //
-// Solidity: function propose(uint8 pType, bytes content, int256 stake) returns(bool success)
-func (_IProposalManager *IProposalManagerTransactor) Propose(opts *bind.TransactOpts, pType uint8, content []byte, stake *big.Int) (*types.Transaction, error) {
-	return _IProposalManager.contract.Transact(opts, "propose", pType, content, stake)
+// Solidity: function propose(bytes content) returns(bool success)
+func (_IProposalManager *IProposalManagerTransactor) Propose(opts *bind.TransactOpts, content []byte) (*types.Transaction, error) {
+	return _IProposalManager.contract.Transact(opts, "propose", content)
 }
 
-// Propose is a paid mutator transaction binding the contract method 0xa02a2b06.
+// Propose is a paid mutator transaction binding the contract method 0x37558af5.
 //
-// Solidity: function propose(uint8 pType, bytes content, int256 stake) returns(bool success)
-func (_IProposalManager *IProposalManagerSession) Propose(pType uint8, content []byte, stake *big.Int) (*types.Transaction, error) {
-	return _IProposalManager.Contract.Propose(&_IProposalManager.TransactOpts, pType, content, stake)
+// Solidity: function propose(bytes content) returns(bool success)
+func (_IProposalManager *IProposalManagerSession) Propose(content []byte) (*types.Transaction, error) {
+	return _IProposalManager.Contract.Propose(&_IProposalManager.TransactOpts, content)
 }
 
-// Propose is a paid mutator transaction binding the contract method 0xa02a2b06.
+// Propose is a paid mutator transaction binding the contract method 0x37558af5.
 //
-// Solidity: function propose(uint8 pType, bytes content, int256 stake) returns(bool success)
-func (_IProposalManager *IProposalManagerTransactorSession) Propose(pType uint8, content []byte, stake *big.Int) (*types.Transaction, error) {
-	return _IProposalManager.Contract.Propose(&_IProposalManager.TransactOpts, pType, content, stake)
+// Solidity: function propose(bytes content) returns(bool success)
+func (_IProposalManager *IProposalManagerTransactorSession) Propose(content []byte) (*types.Transaction, error) {
+	return _IProposalManager.Contract.Propose(&_IProposalManager.TransactOpts, content)
 }
 
-// SetActiveProposal is a paid mutator transaction binding the contract method 0xcfd74457.
+// ProposeConfig is a paid mutator transaction binding the contract method 0x529aaa13.
 //
-// Solidity: function setActiveProposal() returns(bool success)
-func (_IProposalManager *IProposalManagerTransactor) SetActiveProposal(opts *bind.TransactOpts) (*types.Transaction, error) {
-	return _IProposalManager.contract.Transact(opts, "setActiveProposal")
+// Solidity: function proposeConfig(bytes content) returns(bool success)
+func (_IProposalManager *IProposalManagerTransactor) ProposeConfig(opts *bind.TransactOpts, content []byte) (*types.Transaction, error) {
+	return _IProposalManager.contract.Transact(opts, "proposeConfig", content)
 }
 
-// SetActiveProposal is a paid mutator transaction binding the contract method 0xcfd74457.
+// ProposeConfig is a paid mutator transaction binding the contract method 0x529aaa13.
 //
-// Solidity: function setActiveProposal() returns(bool success)
-func (_IProposalManager *IProposalManagerSession) SetActiveProposal() (*types.Transaction, error) {
-	return _IProposalManager.Contract.SetActiveProposal(&_IProposalManager.TransactOpts)
+// Solidity: function proposeConfig(bytes content) returns(bool success)
+func (_IProposalManager *IProposalManagerSession) ProposeConfig(content []byte) (*types.Transaction, error) {
+	return _IProposalManager.Contract.ProposeConfig(&_IProposalManager.TransactOpts, content)
 }
 
-// SetActiveProposal is a paid mutator transaction binding the contract method 0xcfd74457.
+// ProposeConfig is a paid mutator transaction binding the contract method 0x529aaa13.
 //
-// Solidity: function setActiveProposal() returns(bool success)
-func (_IProposalManager *IProposalManagerTransactorSession) SetActiveProposal() (*types.Transaction, error) {
-	return _IProposalManager.Contract.SetActiveProposal(&_IProposalManager.TransactOpts)
+// Solidity: function proposeConfig(bytes content) returns(bool success)
+func (_IProposalManager *IProposalManagerTransactorSession) ProposeConfig(content []byte) (*types.Transaction, error) {
+	return _IProposalManager.Contract.ProposeConfig(&_IProposalManager.TransactOpts, content)
 }
 
-// VoteActiveProposal is a paid mutator transaction binding the contract method 0xa8bcb673.
+// VoteProposal is a paid mutator transaction binding the contract method 0xe3b917ca.
 //
-// Solidity: function voteActiveProposal(int256 ID) returns(bool success)
-func (_IProposalManager *IProposalManagerTransactor) VoteActiveProposal(opts *bind.TransactOpts, ID *big.Int) (*types.Transaction, error) {
-	return _IProposalManager.contract.Transact(opts, "voteActiveProposal", ID)
+// Solidity: function voteProposal(int256 ID) returns(bool success)
+func (_IProposalManager *IProposalManagerTransactor) VoteProposal(opts *bind.TransactOpts, ID *big.Int) (*types.Transaction, error) {
+	return _IProposalManager.contract.Transact(opts, "voteProposal", ID)
 }
 
-// VoteActiveProposal is a paid mutator transaction binding the contract method 0xa8bcb673.
+// VoteProposal is a paid mutator transaction binding the contract method 0xe3b917ca.
 //
-// Solidity: function voteActiveProposal(int256 ID) returns(bool success)
-func (_IProposalManager *IProposalManagerSession) VoteActiveProposal(ID *big.Int) (*types.Transaction, error) {
-	return _IProposalManager.Contract.VoteActiveProposal(&_IProposalManager.TransactOpts, ID)
+// Solidity: function voteProposal(int256 ID) returns(bool success)
+func (_IProposalManager *IProposalManagerSession) VoteProposal(ID *big.Int) (*types.Transaction, error) {
+	return _IProposalManager.Contract.VoteProposal(&_IProposalManager.TransactOpts, ID)
 }
 
-// VoteActiveProposal is a paid mutator transaction binding the contract method 0xa8bcb673.
+// VoteProposal is a paid mutator transaction binding the contract method 0xe3b917ca.
 //
-// Solidity: function voteActiveProposal(int256 ID) returns(bool success)
-func (_IProposalManager *IProposalManagerTransactorSession) VoteActiveProposal(ID *big.Int) (*types.Transaction, error) {
-	return _IProposalManager.Contract.VoteActiveProposal(&_IProposalManager.TransactOpts, ID)
+// Solidity: function voteProposal(int256 ID) returns(bool success)
+func (_IProposalManager *IProposalManagerTransactorSession) VoteProposal(ID *big.Int) (*types.Transaction, error) {
+	return _IProposalManager.Contract.VoteProposal(&_IProposalManager.TransactOpts, ID)
 }
 
 // IProposalManagerProposeIterator is returned from FilterPropose and is used to iterate over the raw logs and unpacked data for Propose events raised by the IProposalManager contract.
@@ -390,16 +426,16 @@ func (it *IProposalManagerProposeIterator) Close() error {
 
 // IProposalManagerPropose represents a Propose event raised by the IProposalManager contract.
 type IProposalManagerPropose struct {
+	ID      string
 	Caller  string
-	PType   uint8
 	Stake   string
 	Content string
 	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterPropose is a free log retrieval operation binding the contract event 0x1eedae0efed6a9892a40aa176f002fab58d8b558e2f1330fbb125562b0e20af1.
+// FilterPropose is a free log retrieval operation binding the contract event 0x85dc3bd90ead16a6343614ed337d3c3e10994d4da6691ba4d8d14c78370260d6.
 //
-// Solidity: event Propose(string caller, uint8 pType, string stake, string content)
+// Solidity: event Propose(string ID, string caller, string stake, string content)
 func (_IProposalManager *IProposalManagerFilterer) FilterPropose(opts *bind.FilterOpts) (*IProposalManagerProposeIterator, error) {
 
 	logs, sub, err := _IProposalManager.contract.FilterLogs(opts, "Propose")
@@ -409,9 +445,9 @@ func (_IProposalManager *IProposalManagerFilterer) FilterPropose(opts *bind.Filt
 	return &IProposalManagerProposeIterator{contract: _IProposalManager.contract, event: "Propose", logs: logs, sub: sub}, nil
 }
 
-// WatchPropose is a free log subscription operation binding the contract event 0x1eedae0efed6a9892a40aa176f002fab58d8b558e2f1330fbb125562b0e20af1.
+// WatchPropose is a free log subscription operation binding the contract event 0x85dc3bd90ead16a6343614ed337d3c3e10994d4da6691ba4d8d14c78370260d6.
 //
-// Solidity: event Propose(string caller, uint8 pType, string stake, string content)
+// Solidity: event Propose(string ID, string caller, string stake, string content)
 func (_IProposalManager *IProposalManagerFilterer) WatchPropose(opts *bind.WatchOpts, sink chan<- *IProposalManagerPropose) (event.Subscription, error) {
 
 	logs, sub, err := _IProposalManager.contract.WatchLogs(opts, "Propose")
@@ -446,9 +482,9 @@ func (_IProposalManager *IProposalManagerFilterer) WatchPropose(opts *bind.Watch
 	}), nil
 }
 
-// ParsePropose is a log parse operation binding the contract event 0x1eedae0efed6a9892a40aa176f002fab58d8b558e2f1330fbb125562b0e20af1.
+// ParsePropose is a log parse operation binding the contract event 0x85dc3bd90ead16a6343614ed337d3c3e10994d4da6691ba4d8d14c78370260d6.
 //
-// Solidity: event Propose(string caller, uint8 pType, string stake, string content)
+// Solidity: event Propose(string ID, string caller, string stake, string content)
 func (_IProposalManager *IProposalManagerFilterer) ParsePropose(log types.Log) (*IProposalManagerPropose, error) {
 	event := new(IProposalManagerPropose)
 	if err := _IProposalManager.contract.UnpackLog(event, "Propose", log); err != nil {
@@ -458,9 +494,9 @@ func (_IProposalManager *IProposalManagerFilterer) ParsePropose(log types.Log) (
 	return event, nil
 }
 
-// IProposalManagerVoteActiveProposalIterator is returned from FilterVoteActiveProposal and is used to iterate over the raw logs and unpacked data for VoteActiveProposal events raised by the IProposalManager contract.
-type IProposalManagerVoteActiveProposalIterator struct {
-	Event *IProposalManagerVoteActiveProposal // Event containing the contract specifics and raw log
+// IProposalManagerProposeConfigIterator is returned from FilterProposeConfig and is used to iterate over the raw logs and unpacked data for ProposeConfig events raised by the IProposalManager contract.
+type IProposalManagerProposeConfigIterator struct {
+	Event *IProposalManagerProposeConfig // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -474,7 +510,7 @@ type IProposalManagerVoteActiveProposalIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *IProposalManagerVoteActiveProposalIterator) Next() bool {
+func (it *IProposalManagerProposeConfigIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -483,7 +519,7 @@ func (it *IProposalManagerVoteActiveProposalIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(IProposalManagerVoteActiveProposal)
+			it.Event = new(IProposalManagerProposeConfig)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -498,7 +534,7 @@ func (it *IProposalManagerVoteActiveProposalIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(IProposalManagerVoteActiveProposal)
+		it.Event = new(IProposalManagerProposeConfig)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -514,42 +550,44 @@ func (it *IProposalManagerVoteActiveProposalIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *IProposalManagerVoteActiveProposalIterator) Error() error {
+func (it *IProposalManagerProposeConfigIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *IProposalManagerVoteActiveProposalIterator) Close() error {
+func (it *IProposalManagerProposeConfigIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// IProposalManagerVoteActiveProposal represents a VoteActiveProposal event raised by the IProposalManager contract.
-type IProposalManagerVoteActiveProposal struct {
-	ID    string
-	PType uint8
-	Raw   types.Log // Blockchain specific contextual infos
+// IProposalManagerProposeConfig represents a ProposeConfig event raised by the IProposalManager contract.
+type IProposalManagerProposeConfig struct {
+	ID      string
+	Caller  string
+	Stake   string
+	Content string
+	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterVoteActiveProposal is a free log retrieval operation binding the contract event 0xeccf1292b1b5cc7f99be34efed92ae9b3412e330d6bb21cfadafbe8851727306.
+// FilterProposeConfig is a free log retrieval operation binding the contract event 0x74bbe87e16daa665c9fe316a858f4968102afdba7df9b3a9ffe75c705a8c7a86.
 //
-// Solidity: event VoteActiveProposal(string ID, uint8 pType)
-func (_IProposalManager *IProposalManagerFilterer) FilterVoteActiveProposal(opts *bind.FilterOpts) (*IProposalManagerVoteActiveProposalIterator, error) {
+// Solidity: event ProposeConfig(string ID, string caller, string stake, string content)
+func (_IProposalManager *IProposalManagerFilterer) FilterProposeConfig(opts *bind.FilterOpts) (*IProposalManagerProposeConfigIterator, error) {
 
-	logs, sub, err := _IProposalManager.contract.FilterLogs(opts, "VoteActiveProposal")
+	logs, sub, err := _IProposalManager.contract.FilterLogs(opts, "ProposeConfig")
 	if err != nil {
 		return nil, err
 	}
-	return &IProposalManagerVoteActiveProposalIterator{contract: _IProposalManager.contract, event: "VoteActiveProposal", logs: logs, sub: sub}, nil
+	return &IProposalManagerProposeConfigIterator{contract: _IProposalManager.contract, event: "ProposeConfig", logs: logs, sub: sub}, nil
 }
 
-// WatchVoteActiveProposal is a free log subscription operation binding the contract event 0xeccf1292b1b5cc7f99be34efed92ae9b3412e330d6bb21cfadafbe8851727306.
+// WatchProposeConfig is a free log subscription operation binding the contract event 0x74bbe87e16daa665c9fe316a858f4968102afdba7df9b3a9ffe75c705a8c7a86.
 //
-// Solidity: event VoteActiveProposal(string ID, uint8 pType)
-func (_IProposalManager *IProposalManagerFilterer) WatchVoteActiveProposal(opts *bind.WatchOpts, sink chan<- *IProposalManagerVoteActiveProposal) (event.Subscription, error) {
+// Solidity: event ProposeConfig(string ID, string caller, string stake, string content)
+func (_IProposalManager *IProposalManagerFilterer) WatchProposeConfig(opts *bind.WatchOpts, sink chan<- *IProposalManagerProposeConfig) (event.Subscription, error) {
 
-	logs, sub, err := _IProposalManager.contract.WatchLogs(opts, "VoteActiveProposal")
+	logs, sub, err := _IProposalManager.contract.WatchLogs(opts, "ProposeConfig")
 	if err != nil {
 		return nil, err
 	}
@@ -559,8 +597,8 @@ func (_IProposalManager *IProposalManagerFilterer) WatchVoteActiveProposal(opts 
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(IProposalManagerVoteActiveProposal)
-				if err := _IProposalManager.contract.UnpackLog(event, "VoteActiveProposal", log); err != nil {
+				event := new(IProposalManagerProposeConfig)
+				if err := _IProposalManager.contract.UnpackLog(event, "ProposeConfig", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -581,12 +619,146 @@ func (_IProposalManager *IProposalManagerFilterer) WatchVoteActiveProposal(opts 
 	}), nil
 }
 
-// ParseVoteActiveProposal is a log parse operation binding the contract event 0xeccf1292b1b5cc7f99be34efed92ae9b3412e330d6bb21cfadafbe8851727306.
+// ParseProposeConfig is a log parse operation binding the contract event 0x74bbe87e16daa665c9fe316a858f4968102afdba7df9b3a9ffe75c705a8c7a86.
 //
-// Solidity: event VoteActiveProposal(string ID, uint8 pType)
-func (_IProposalManager *IProposalManagerFilterer) ParseVoteActiveProposal(log types.Log) (*IProposalManagerVoteActiveProposal, error) {
-	event := new(IProposalManagerVoteActiveProposal)
-	if err := _IProposalManager.contract.UnpackLog(event, "VoteActiveProposal", log); err != nil {
+// Solidity: event ProposeConfig(string ID, string caller, string stake, string content)
+func (_IProposalManager *IProposalManagerFilterer) ParseProposeConfig(log types.Log) (*IProposalManagerProposeConfig, error) {
+	event := new(IProposalManagerProposeConfig)
+	if err := _IProposalManager.contract.UnpackLog(event, "ProposeConfig", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IProposalManagerVoteProposalIterator is returned from FilterVoteProposal and is used to iterate over the raw logs and unpacked data for VoteProposal events raised by the IProposalManager contract.
+type IProposalManagerVoteProposalIterator struct {
+	Event *IProposalManagerVoteProposal // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IProposalManagerVoteProposalIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IProposalManagerVoteProposal)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IProposalManagerVoteProposal)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IProposalManagerVoteProposalIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IProposalManagerVoteProposalIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IProposalManagerVoteProposal represents a VoteProposal event raised by the IProposalManager contract.
+type IProposalManagerVoteProposal struct {
+	ID  string
+	Raw types.Log // Blockchain specific contextual infos
+}
+
+// FilterVoteProposal is a free log retrieval operation binding the contract event 0xc2dd9b8e110ee6b2faa8e933b5638ec5a62091253ebf357146d0637a9e30bafe.
+//
+// Solidity: event VoteProposal(string ID)
+func (_IProposalManager *IProposalManagerFilterer) FilterVoteProposal(opts *bind.FilterOpts) (*IProposalManagerVoteProposalIterator, error) {
+
+	logs, sub, err := _IProposalManager.contract.FilterLogs(opts, "VoteProposal")
+	if err != nil {
+		return nil, err
+	}
+	return &IProposalManagerVoteProposalIterator{contract: _IProposalManager.contract, event: "VoteProposal", logs: logs, sub: sub}, nil
+}
+
+// WatchVoteProposal is a free log subscription operation binding the contract event 0xc2dd9b8e110ee6b2faa8e933b5638ec5a62091253ebf357146d0637a9e30bafe.
+//
+// Solidity: event VoteProposal(string ID)
+func (_IProposalManager *IProposalManagerFilterer) WatchVoteProposal(opts *bind.WatchOpts, sink chan<- *IProposalManagerVoteProposal) (event.Subscription, error) {
+
+	logs, sub, err := _IProposalManager.contract.WatchLogs(opts, "VoteProposal")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IProposalManagerVoteProposal)
+				if err := _IProposalManager.contract.UnpackLog(event, "VoteProposal", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseVoteProposal is a log parse operation binding the contract event 0xc2dd9b8e110ee6b2faa8e933b5638ec5a62091253ebf357146d0637a9e30bafe.
+//
+// Solidity: event VoteProposal(string ID)
+func (_IProposalManager *IProposalManagerFilterer) ParseVoteProposal(log types.Log) (*IProposalManagerVoteProposal, error) {
+	event := new(IProposalManagerVoteProposal)
+	if err := _IProposalManager.contract.UnpackLog(event, "VoteProposal", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

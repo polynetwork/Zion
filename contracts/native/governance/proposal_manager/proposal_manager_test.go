@@ -36,7 +36,7 @@ var (
 	sdb              *state.StateDB
 	testGenesisNum   = 4
 	acct             *ecdsa.PublicKey
-	testGenesisPeers []*node_manager.Peer
+	testGenesisPeers []common.Address
 )
 
 func init() {
@@ -49,7 +49,7 @@ func init() {
 	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
 	testGenesisPeers = node_manager.GenerateTestPeers(testGenesisNum)
 	node_manager.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
-	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers)
+	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 	node_manager.StoreGenesisGlobalConfig(sdb)
 }
 

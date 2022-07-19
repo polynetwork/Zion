@@ -23,9 +23,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/log"
-	"math/big"
 )
 
 type SignerName string
@@ -35,17 +35,6 @@ const (
 	Voter    SignerName = "Voter"
 	Proposer SignerName = "Proposer"
 )
-
-func nativeTransfer(s *native.NativeContract, from, to common.Address, amount *big.Int) error {
-	if amount.Sign() == -1 {
-		return fmt.Errorf("amount can not be negative")
-	}
-	if !core.CanTransfer(s.StateDB(), from, amount) {
-		return fmt.Errorf("%s insufficient balance", from.Hex())
-	}
-	core.Transfer(s.StateDB(), from, to, amount)
-	return nil
-}
 
 func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, signer common.Address, signerName SignerName) (bool, error) {
 	ctx := s.ContractRef().CurrentContext()

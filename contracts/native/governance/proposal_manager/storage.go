@@ -26,14 +26,15 @@ import (
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
-	"sort"
 )
 
 var ErrEof = errors.New("EOF")
 
 const (
-	SKP_PROPOSAL_ID   = "st_proposal_id"
-	SKP_PROPOSAL_LIST = "st_proposal_list"
+	SKP_PROPOSAL_ID          = "st_proposal_id"
+	SKP_PROPOSAL             = "st_proposal"
+	SKP_PROPOSAL_LIST        = "st_proposal_list"
+	SKP_CONFIG_PROPOSAL_LIST = "st_config_proposal_list"
 )
 
 func getProposalID(s *native.NativeContract) (*big.Int, error) {
@@ -56,7 +57,7 @@ func setProposalID(s *native.NativeContract, proposalID *big.Int) {
 
 func getProposalList(s *native.NativeContract) (*ProposalList, error) {
 	proposalList := &ProposalList{
-		make([]*Proposal, 0),
+		make([]*big.Int, 0),
 	}
 	key := proposalListKey()
 	store, err := get(s, key)
@@ -72,17 +73,53 @@ func getProposalList(s *native.NativeContract) (*ProposalList, error) {
 	return proposalList, nil
 }
 
-func setProposalList(s *native.NativeContract, proposalList *ProposalList) error {
-	// sort
-	sort.SliceStable(proposalList.ProposalList, func(i, j int) bool {
-		if proposalList.ProposalList[i].Status == Active {
-			return true
-		} else if proposalList.ProposalList[i].Stake.Cmp(proposalList.ProposalList[j].Stake) > 0 {
-			return true
-		}
-		return false
-	})
+func removeFromProposalList(s *native.NativeContract, ID *big.Int) error {
+	proposalList, err := getProposalList(s)
+	if err != nil {
+		return fmt.Errorf("removeFromProposalList, getProposalList error: %v", err)
+	}
 
+	j := 0
+	for _, proposalID := range proposalList.ProposalList {
+		if proposalID.Cmp(ID) != 0 {
+			proposalList.ProposalList[j] = proposalID
+			j++
+		}
+	}
+	proposalList.ProposalList = proposalList.ProposalList[:j]
+	err = setProposalList(s, proposalList)
+	if err != nil {
+		return fmt.Errorf("removeFromProposalList, setProposalList error: %v", err)
+	}
+	return nil
+}
+
+func removeExpiredFromProposalList(s *native.NativeContract) error {
+	proposalList, err := getProposalList(s)
+	if err != nil {
+		return fmt.Errorf("removeExpiredFromProposalList, getProposalList error: %v", err)
+	}
+
+	j := 0
+	for _, proposalID := range proposalList.ProposalList {
+		proposal, err := getProposal(s, proposalID)
+		if err != nil {
+			return fmt.Errorf("removeExpiredFromProposalList, getProposal error: %v", err)
+		}
+		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) < 0 {
+			proposalList.ProposalList[j] = proposalID
+			j++
+		}
+	}
+	proposalList.ProposalList = proposalList.ProposalList[:j]
+	err = setProposalList(s, proposalList)
+	if err != nil {
+		return fmt.Errorf("removeExpiredFromProposalList, setProposalList error: %v", err)
+	}
+	return nil
+}
+
+func setProposalList(s *native.NativeContract, proposalList *ProposalList) error {
 	key := proposalListKey()
 	store, err := rlp.EncodeToBytes(proposalList)
 	if err != nil {
@@ -92,47 +129,87 @@ func setProposalList(s *native.NativeContract, proposalList *ProposalList) error
 	return nil
 }
 
-func getActiveProposal(s *native.NativeContract) (*Proposal, bool, error) {
-	flag := false
-	proposalList, err := getProposalList(s)
+func getConfigProposalList(s *native.NativeContract) (*ConfigProposalList, error) {
+	configProposalList := &ConfigProposalList{
+		make([]*big.Int, 0),
+	}
+	key := configProposalListKey()
+	store, err := get(s, key)
+	if err == ErrEof {
+		return configProposalList, nil
+	}
 	if err != nil {
-		return nil, false, fmt.Errorf("getActiveProposal, getProposalList error: %v", err)
+		return nil, fmt.Errorf("getConfigProposalList, get store error: %v", err)
 	}
-	if len(proposalList.ProposalList) == 0 {
-		return nil, false, fmt.Errorf("getActiveProposal, there is no proposal")
+	if err := rlp.DecodeBytes(store, configProposalList); err != nil {
+		return nil, fmt.Errorf("getConfigProposalList, deserialize config proposal list error: %v", err)
 	}
-	proposal := proposalList.ProposalList[0]
-	if proposal.Status != Active || proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) > 0 {
-		if len(proposalList.ProposalList) == 1 {
-			return nil, false, fmt.Errorf("getActiveProposal, there is no active proposal")
-		}
-		proposal = proposalList.ProposalList[1]
-		flag = true
-	}
-	return proposal, flag, nil
+	return configProposalList, nil
 }
 
-func setActiveProposal(s *native.NativeContract) error {
-	proposalList, err := getProposalList(s)
+func cleanConfigProposalList(s *native.NativeContract, ID *big.Int) error {
+	err := setConfigProposalList(s, &ConfigProposalList{make([]*big.Int, 0)})
 	if err != nil {
-		return fmt.Errorf("setActiveProposal, getProposalList error: %v", err)
+		return fmt.Errorf("cleanConfigProposalList, setConfigProposalList error: %v", err)
 	}
-	if len(proposalList.ProposalList) == 0 {
-		return nil
-	}
-	if len(proposalList.ProposalList) == 1 {
-		proposalList.ProposalList = make([]*Proposal, 0)
-	} else {
-		oldActive := proposalList.ProposalList[0]
-		proposalList.ProposalList = proposalList.ProposalList[1:]
-		proposalList.ProposalList[0].Status = Active
-		proposalList.ProposalList[0].EndHeight = new(big.Int).Add(oldActive.EndHeight, s.ContractRef().BlockHeight())
+	return nil
+}
+
+func removeExpiredFromConfigProposalList(s *native.NativeContract) error {
+	configProposalList, err := getConfigProposalList(s)
+	if err != nil {
+		return fmt.Errorf("removeExpiredFromConfigProposalList, getProposalList error: %v", err)
 	}
 
-	err = setProposalList(s, proposalList)
-	if err != nil {
-		return fmt.Errorf("setActiveProposal, setProposalList error: %v", err)
+	j := 0
+	for _, proposalID := range configProposalList.ConfigProposalList {
+		proposal, err := getProposal(s, proposalID)
+		if err != nil {
+			return fmt.Errorf("removeExpiredFromConfigProposalList, getProposal error: %v", err)
+		}
+		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) < 0 {
+			configProposalList.ConfigProposalList[j] = proposalID
+			j++
+		}
 	}
+	configProposalList.ConfigProposalList = configProposalList.ConfigProposalList[:j]
+	err = setConfigProposalList(s, configProposalList)
+	if err != nil {
+		return fmt.Errorf("removeExpiredFromConfigProposalList, setProposalList error: %v", err)
+	}
+	return nil
+}
+
+func setConfigProposalList(s *native.NativeContract, configProposalList *ConfigProposalList) error {
+	key := configProposalListKey()
+	store, err := rlp.EncodeToBytes(configProposalList)
+	if err != nil {
+		return fmt.Errorf("setConfigProposalList, serialize config proposal list error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func getProposal(s *native.NativeContract, ID *big.Int) (*Proposal, error) {
+	proposal := new(Proposal)
+	key := proposalKey(ID)
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("getProposal, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, proposal); err != nil {
+		return nil, fmt.Errorf("getProposal, deserialize proposal error: %v", err)
+	}
+	return proposal, nil
+}
+
+func setProposal(s *native.NativeContract, proposal *Proposal) error {
+	key := proposalKey(proposal.ID)
+	store, err := rlp.EncodeToBytes(proposal)
+	if err != nil {
+		return fmt.Errorf("setProposal, serialize proposal error: %v", err)
+	}
+	set(s, key, store)
 	return nil
 }
 
@@ -183,6 +260,14 @@ func proposalIDKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_PROPOSAL_ID))
 }
 
+func proposalKey(ID *big.Int) []byte {
+	return utils.ConcatKey(this, []byte(SKP_PROPOSAL), ID.Bytes())
+}
+
 func proposalListKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_PROPOSAL_LIST))
+}
+
+func configProposalListKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_CONFIG_PROPOSAL_LIST))
 }

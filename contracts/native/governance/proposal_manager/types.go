@@ -12,17 +12,18 @@ type ProposalType uint8
 type Status uint8
 
 const (
-	UpdateGlobalConfig ProposalType = 0
-	Normal             ProposalType = 1
+	Normal             ProposalType = 0
+	UpdateGlobalConfig ProposalType = 1
 
-	Active   Status = 1
-	UnActive Status = 0
+	NOTPASS Status = 0
+	PASS    Status = 1
+	FAIL    Status = 2
 
 	ProposalListLen int = 20
 )
 
 type ProposalList struct {
-	ProposalList []*Proposal // sorted list
+	ProposalList []*big.Int
 }
 
 func (m *ProposalList) Decode(payload []byte) error {
@@ -35,10 +36,24 @@ func (m *ProposalList) Decode(payload []byte) error {
 	return rlp.DecodeBytes(data.ProposalList, m)
 }
 
+type ConfigProposalList struct {
+	ConfigProposalList []*big.Int
+}
+
+func (m *ConfigProposalList) Decode(payload []byte) error {
+	var data struct {
+		ProposalList []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetConfigProposalList, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.ProposalList, m)
+}
+
 type Proposal struct {
 	ID        *big.Int
 	Address   common.Address
-	PType     ProposalType
+	Type      ProposalType
 	Content   []byte
 	EndHeight *big.Int
 	Stake     *big.Int
@@ -49,7 +64,7 @@ func (m *Proposal) Decode(payload []byte) error {
 	var data struct {
 		Proposal []byte
 	}
-	if err := utils.UnpackOutputs(ABI, MethodGetActiveProposal, &data, payload); err != nil {
+	if err := utils.UnpackOutputs(ABI, MethodGetProposal, &data, payload); err != nil {
 		return err
 	}
 	return rlp.DecodeBytes(data.Proposal, m)

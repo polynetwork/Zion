@@ -43,19 +43,25 @@ var (
 )
 
 type ProposeParam struct {
-	PType    ProposalType
 	Content []byte
-	Stake   *big.Int
 }
 
 func (m *ProposeParam) Encode() ([]byte, error) {
 	return utils.PackMethodWithStruct(ABI, MethodPropose, m)
 }
 
-type VoteActiveProposalParam struct {
+type VoteProposalParam struct {
 	ID *big.Int
 }
 
-func (m *VoteActiveProposalParam) Encode() ([]byte, error) {
-	return utils.PackMethodWithStruct(ABI, MethodVoteActiveProposal, m)
+func (m *VoteProposalParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodVoteProposal, m)
+}
+
+type GetProposalParam struct {
+	ID *big.Int
+}
+
+func (m *GetProposalParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetProposal, m)
 }
