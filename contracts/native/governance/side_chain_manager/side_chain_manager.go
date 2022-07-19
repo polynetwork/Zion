@@ -19,17 +19,13 @@
 package side_chain_manager
 
 import (
-	"encoding/hex"
 	"fmt"
 
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const (
@@ -38,10 +34,6 @@ const (
 	UPDATE_SIDE_CHAIN_REQUEST = "updateSideChainRequest"
 	QUIT_SIDE_CHAIN_REQUEST   = "quitSideChainRequest"
 	SIDE_CHAIN                = "sideChain"
-	REDEEM_BIND               = "redeemBind"
-	BIND_SIGN_INFO            = "bindSignInfo"
-	BTC_TX_PARAM              = "btcTxParam"
-	REDEEM_SCRIPT             = "redeemScript"
 )
 
 var (
@@ -54,8 +46,6 @@ var (
 		side_chain_manager_abi.MethodApproveUpdateSideChain:   100000,
 		side_chain_manager_abi.MethodQuitSideChain:            100000,
 		side_chain_manager_abi.MethodApproveQuitSideChain:     100000,
-		side_chain_manager_abi.MethodRegisterRedeem:           100000,
-		side_chain_manager_abi.MethodSetBtcTxParam:            100000,
 	}
 
 	ABI *abi.ABI
@@ -77,8 +67,6 @@ func RegisterSideChainManagerContract(s *native.NativeContract) {
 	s.Register(side_chain_manager_abi.MethodApproveUpdateSideChain, ApproveUpdateSideChain)
 	s.Register(side_chain_manager_abi.MethodQuitSideChain, QuitSideChain)
 	s.Register(side_chain_manager_abi.MethodApproveQuitSideChain, ApproveQuitSideChain)
-	s.Register(side_chain_manager_abi.MethodRegisterRedeem, RegisterRedeem)
-	s.Register(side_chain_manager_abi.MethodSetBtcTxParam, SetBtcTxParam)
 }
 
 func GetSideChain(s *native.NativeContract) ([]byte, error) {
@@ -312,127 +300,4 @@ func ApproveQuitSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ApproveQuitSideChain, AddNotify error: %v", err)
 	}
 	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveQuitSideChain, true)
-}
-
-func RegisterRedeem(native *native.NativeContract) ([]byte, error) {
-	ctx := native.ContractRef().CurrentContext()
-	params := &RegisterRedeemParam{}
-	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodRegisterRedeem, params, ctx.Payload); err != nil {
-		return nil, err
-	}
-
-	ty, addrs, m, err := txscript.ExtractPkScriptAddrs(params.Redeem, netParam)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterRedeem, failed to extract addrs: %v", err)
-	}
-	if ty != txscript.MultiSigTy {
-		return nil, fmt.Errorf("RegisterRedeem, wrong type of redeem: %s", ty.String())
-	}
-	rk := btcutil.Hash160(params.Redeem)
-
-	contract, err := GetContractBind(native, params.RedeemChainID, params.ContractChainID, rk)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterRedeem, failed to get contract and version: %v", err)
-	}
-	if contract != nil && contract.Ver+1 != params.CVersion {
-		return nil, fmt.Errorf("RegisterRedeem, previous version is %d and your version should "+
-			"be %d not %d", contract.Ver, contract.Ver+1, params.CVersion)
-	}
-	verified, err := verifyRedeemRegister(params, addrs)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterRedeem, failed to verify: %v", err)
-	}
-	key := append(append(append(rk, utils.GetUint64Bytes(params.RedeemChainID)...),
-		params.ContractAddress...), utils.GetUint64Bytes(params.ContractChainID)...)
-	bindSignInfo, err := getBindSignInfo(native, key)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterRedeem, getBindSignInfo error: %v", err)
-	}
-	for k, v := range verified {
-		bindSignInfo.BindSignInfo[k] = v
-	}
-	err = putBindSignInfo(native, key, bindSignInfo)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterRedeem, failed to putBindSignInfo: %v", err)
-	}
-
-	if len(bindSignInfo.BindSignInfo) >= m {
-		err = putContractBind(native, params.RedeemChainID, params.ContractChainID, rk, params.ContractAddress, params.CVersion)
-		if err != nil {
-			return nil, fmt.Errorf("RegisterRedeem, putContractBind error: %v", err)
-		}
-		if err = putBtcRedeemScript(native, hex.EncodeToString(rk), params.Redeem, params.RedeemChainID); err != nil {
-			return nil, fmt.Errorf("RegisterRedeem, failed to save redeemscript %v with key %v, error: %v", hex.EncodeToString(params.Redeem), rk, err)
-		}
-		err = native.AddNotify(ABI, []string{EventRegisterRedeem}, hex.EncodeToString(rk), hex.EncodeToString(params.ContractAddress))
-		if err != nil {
-			return nil, fmt.Errorf("RegisterRedeem, AddNotify error: %v", err)
-		}
-	}
-
-	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodRegisterRedeem, true)
-}
-
-func SetBtcTxParam(native *native.NativeContract) ([]byte, error) {
-	ctx := native.ContractRef().CurrentContext()
-	params := &BtcTxParam{}
-	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodSetBtcTxParam, params, ctx.Payload); err != nil {
-		return nil, err
-	}
-
-	if params.Detial.FeeRate == 0 {
-		return nil, fmt.Errorf("SetBtcTxParam, fee rate can't be zero")
-	}
-	if params.Detial.MinChange < 2000 {
-		return nil, fmt.Errorf("SetBtcTxParam, min-change can't less than 2000")
-	}
-	cls, addrs, m, err := txscript.ExtractPkScriptAddrs(params.Redeem, netParam)
-	if err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, extract addrs from redeem %v", err)
-	}
-	if cls != txscript.MultiSigTy {
-		return nil, fmt.Errorf("SetBtcTxParam, redeem script is not multisig script: %s", cls.String())
-	}
-	rk := btcutil.Hash160(params.Redeem)
-	prev, err := GetBtcTxParam(native, rk, params.RedeemChainId)
-	if err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, get previous param error: %v", err)
-	}
-	if prev != nil && params.Detial.PVersion != prev.PVersion+1 {
-		return nil, fmt.Errorf("SetBtcTxParam, previous version is %d and your version should "+
-			"be %d not %d", prev.PVersion, prev.PVersion+1, params.Detial.PVersion)
-	}
-
-	blob, err := rlp.EncodeToBytes(params.Detial)
-	if err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, EncodeToBytes error: %v", err)
-	}
-	key := append(append(rk, utils.GetUint64Bytes(params.RedeemChainId)...), blob...)
-	info, err := getBindSignInfo(native, key)
-	if err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, getBindSignInfo error: %v", err)
-	}
-	if len(info.BindSignInfo) >= m {
-		return nil, fmt.Errorf("SetBtcTxParam, the signatures are already enough")
-	}
-	verified, err := verifyBtcTxParam(params, addrs)
-	if err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, failed to verify: %v", err)
-	}
-	for k, v := range verified {
-		info.BindSignInfo[k] = v
-	}
-	if err = putBindSignInfo(native, key, info); err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, failed to put bindSignInfo: %v", err)
-	}
-	if len(info.BindSignInfo) >= m {
-		if err = putBtcTxParam(native, rk, params.RedeemChainId, params.Detial); err != nil {
-			return nil, fmt.Errorf("SetBtcTxParam, failed to put btcTxParam: %v", err)
-		}
-		native.AddNotify(
-			ABI, []string{side_chain_manager_abi.MethodSetBtcTxParam}, hex.EncodeToString(rk), params.RedeemChainId,
-			params.Detial.FeeRate, params.Detial.MinChange)
-	}
-
-	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodSetBtcTxParam, true)
 }

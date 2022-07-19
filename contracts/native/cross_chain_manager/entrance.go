@@ -48,10 +48,10 @@ var (
 	gasTable = map[string]uint64{
 		scom.MethodContractName:        0,
 		scom.MethodImportOuterTransfer: 0,
-		scom.MethodMultiSign:           100000,
 		scom.MethodBlackChain:          0,
 		scom.MethodWhiteChain:          0,
 		scom.MethodCheckDone:           0,
+		scom.MethodReplenish:           0,
 	}
 )
 
