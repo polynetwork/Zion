@@ -24,7 +24,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/log"
 	"math/big"
 )
@@ -185,18 +184,4 @@ func EpochChangeAtNextBlock(curHeight, epochStartHeight uint64) bool {
 		return true
 	}
 	return false
-}
-
-// generateTestPeer ONLY used for testing
-func generateTestPeer() common.Address {
-	pk, _ := crypto.GenerateKey()
-	return crypto.PubkeyToAddress(pk.PublicKey)
-}
-
-func GenerateTestPeers(n int) []common.Address {
-	peers := make([]common.Address, n)
-	for i := 0; i < n; i++ {
-		peers[i] = generateTestPeer()
-	}
-	return peers
 }

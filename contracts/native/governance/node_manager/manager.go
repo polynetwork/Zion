@@ -24,6 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 	"math/big"
 	"sort"
@@ -1051,4 +1052,19 @@ func GetOutstandingRewards(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("GetOutstandingRewards, serialize outstandingRewards error: %v", err)
 	}
 	return utils.PackOutputs(ABI, MethodGetOutstandingRewards, enc)
+}
+
+
+// generateTestPeer ONLY used for testing
+func generateTestPeer() common.Address {
+	pk, _ := crypto.GenerateKey()
+	return crypto.PubkeyToAddress(pk.PublicKey)
+}
+
+func GenerateTestPeers(n int) []common.Address {
+	peers := make([]common.Address, n)
+	for i := 0; i < n; i++ {
+		peers[i] = generateTestPeer()
+	}
+	return peers
 }
