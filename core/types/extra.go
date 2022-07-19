@@ -87,6 +87,9 @@ func (ist *HotstuffExtra) Dump() string {
 // error if the length of the given extra-data is less than 32 bytes or the extra-data can not
 // be decoded.
 func ExtractHotstuffExtra(h *Header) (*HotstuffExtra, error) {
+	if h == nil || h.Extra == nil {
+		return nil, fmt.Errorf("invalid header")
+	}
 	return ExtractHotstuffExtraPayload(h.Extra)
 }
 

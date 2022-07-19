@@ -283,3 +283,18 @@ func (valSet *defaultSet) Cmp(src hotstuff.ValidatorSet) bool {
 	}
 	return true
 }
+
+func (valSet *defaultSet) Equal(src hotstuff.ValidatorSet) bool {
+	for _, v := range valSet.validators {
+		if index, _ := src.GetByAddress(v.Address()); index < 0 {
+			return false
+		}
+	}
+	for _, v := range src.AddressList() {
+		if index, _ := valSet.GetByAddress(v); index < 0 {
+			return false
+		}
+	}
+
+	return true
+}
