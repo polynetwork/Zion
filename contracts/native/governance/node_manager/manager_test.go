@@ -20,17 +20,17 @@ package node_manager
 
 import (
 	"crypto/ecdsa"
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
 )
 
 var (
@@ -45,9 +45,8 @@ func init() {
 	acct = &key.PublicKey
 
 	InitNodeManager()
-	db := rawdb.NewMemoryDatabase()
-	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testGenesisPeers, _ = GenerateTestPeers(testGenesisNum)
+	sdb = utils.NewTestStateDB()
+	testGenesisPeers, _ = utils.GenerateTestPeers(testGenesisNum)
 	StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 	StoreGenesisGlobalConfig(sdb)

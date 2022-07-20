@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -49,6 +48,10 @@ const (
 	CHAIN_ID uint64 = 1
 )
 
+func TestMain(m *testing.M) {
+
+}
+
 func init() {
 	key, _ = crypto.GenerateKey()
 	pub = &key.PublicKey
@@ -56,9 +59,8 @@ func init() {
 	node_manager.InitNodeManager()
 	side_chain_manager.InitSideChainManager()
 	InitInfoSync()
-	db := rawdb.NewMemoryDatabase()
-	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testGenesisPeers, testGenesisPri = node_manager.GenerateTestPeers(testGenesisNum)
+	sdb = utils.NewTestStateDB()
+	testGenesisPeers, testGenesisPri = utils.GenerateTestPeers(testGenesisNum)
 	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 
 	putSideChain()
@@ -164,7 +166,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 
 	param2 := &GetInfoParam{
 		ChainID: CHAIN_ID,
-		Height: 100,
+		Height:  100,
 	}
 	input, err := param2.Encode()
 	assert.Nil(t, err)

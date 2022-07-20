@@ -18,9 +18,12 @@
 package utils
 
 import (
+	"crypto/ecdsa"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func NewTestStateDB() *state.StateDB {
@@ -28,4 +31,19 @@ func NewTestStateDB() *state.StateDB {
 	db := state.NewDatabase(memdb)
 	stateDB, _ := state.New(common.Hash{}, db, nil)
 	return stateDB
+}
+
+// generateTestPeer ONLY used for testing
+func generateTestPeer() (common.Address, *ecdsa.PrivateKey) {
+	pk, _ := crypto.GenerateKey()
+	return crypto.PubkeyToAddress(pk.PublicKey), pk
+}
+
+func GenerateTestPeers(n int) ([]common.Address, []*ecdsa.PrivateKey) {
+	peers := make([]common.Address, n)
+	pris := make([]*ecdsa.PrivateKey, n)
+	for i := 0; i < n; i++ {
+		peers[i], pris[i] = generateTestPeer()
+	}
+	return peers, pris
 }
