@@ -14,9 +14,11 @@ var _ = (*genesisGovernanceMarshaling)(nil)
 // MarshalJSON marshals as JSON.
 func (g GovernanceAccount) MarshalJSON() ([]byte, error) {
 	type GovernanceAccount struct {
-		Signer common.UnprefixedAddress `json:"signer" gencodec:"required"`
+		Validator common.UnprefixedAddress `json:"validator" gencodec:"required"`
+		Signer    common.UnprefixedAddress `json:"signer" gencodec:"required"`
 	}
 	var enc GovernanceAccount
+	enc.Validator = common.UnprefixedAddress(g.Validator)
 	enc.Signer = common.UnprefixedAddress(g.Signer)
 	return json.Marshal(&enc)
 }
@@ -24,12 +26,17 @@ func (g GovernanceAccount) MarshalJSON() ([]byte, error) {
 // UnmarshalJSON unmarshals from JSON.
 func (g *GovernanceAccount) UnmarshalJSON(input []byte) error {
 	type GovernanceAccount struct {
-		Signer *common.UnprefixedAddress `json:"signer" gencodec:"required"`
+		Validator *common.UnprefixedAddress `json:"validator" gencodec:"required"`
+		Signer    *common.UnprefixedAddress `json:"signer" gencodec:"required"`
 	}
 	var dec GovernanceAccount
 	if err := json.Unmarshal(input, &dec); err != nil {
 		return err
 	}
+	if dec.Validator == nil {
+		return errors.New("missing required field 'validator' for GovernanceAccount")
+	}
+	g.Validator = common.Address(*dec.Validator)
 	if dec.Signer == nil {
 		return errors.New("missing required field 'signer' for GovernanceAccount")
 	}
