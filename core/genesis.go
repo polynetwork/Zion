@@ -95,10 +95,11 @@ type GenesisAccount struct {
 }
 
 // GenesisGovernance map validator address to signer address
-type GenesisGovernance map[common.Address]GovernanceAccount
+type GenesisGovernance []GovernanceAccount
 
 type GovernanceAccount struct {
-	Signer common.Address `json:"signer" gencodec:"required"`
+	Validator common.Address `json:"validator" gencodec:"required"`
+	Signer    common.Address `json:"signer" gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -122,7 +123,8 @@ type genesisAccountMarshaling struct {
 }
 
 type genesisGovernanceMarshaling struct {
-	Signer common.UnprefixedAddress
+	Validator common.UnprefixedAddress
+	Signer    common.UnprefixedAddress
 }
 
 // storageJSON represents a 256 bit byte array, but allows less than 256 bits when

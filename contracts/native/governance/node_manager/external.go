@@ -20,7 +20,6 @@ package node_manager
 
 import (
 	"math/big"
-	"sort"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core"
@@ -44,18 +43,10 @@ func init() {
 		data := genesis.Governance
 		peers := make([]common.Address, 0, len(data))
 		signers := make([]common.Address, 0, len(data))
-		for addr, v := range data {
-			peers = append(peers, addr)
+		for _, v := range data {
+			peers = append(peers, v.Validator)
 			signers = append(signers, v.Signer)
 		}
-		// the order of peer in the list is random, so we must sort the list before store.
-		// btw, the mpt tree only needs the value of state_object to be deterministic.
-		sort.Slice(peers, func(i, j int) bool {
-			return peers[i].Hex() < peers[j].Hex()
-		})
-		sort.Slice(signers, func(i, j int) bool {
-			return signers[i].Hex() < signers[j].Hex()
-		})
 		if _, err := StoreCommunityInfo(db, genesis.CommunityRate, genesis.CommunityAddress); err != nil {
 			return err
 		}
