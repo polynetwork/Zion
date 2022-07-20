@@ -20,51 +20,35 @@ package economic
 
 import (
 	"math/big"
+	"os"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/economic_abi"
+	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/stretchr/testify/assert"
 )
 
-func TestABIMethodContractName(t *testing.T) {
-	enc, err := utils.PackOutputs(ABI, MethodName, contractName)
-	assert.NoError(t, err)
-	params := new(MethodContractNameOutput)
-	assert.NoError(t, utils.UnpackOutputs(ABI, MethodName, params, enc))
-	assert.Equal(t, contractName, params.Name)
+func TestMain(m *testing.M) {
+	InitABI()
+	nm.InitNodeManager()
+	os.Exit(m.Run())
 }
 
-func TestABIMethodTotalSupply(t *testing.T) {
-	expect := new(MethodTotalSupplyInput)
-	enc, err := expect.Encode()
+func TestTotalSupply(t *testing.T) {
+	sdb := utils.NewTestStateDB()
+	blockHeight := big.NewInt(40)
+
+	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockHeight, common.Hash{}, 0, nil)
+	ctx := native.NewNativeContract(sdb, contractRef)
+
+	raw, err := TotalSupply(ctx)
 	assert.NoError(t, err)
 
-	got := new(MethodTotalSupplyInput)
-	assert.NoError(t, got.Decode(enc))
+	output := new(big.Int)
+	assert.NoError(t, utils.UnpackOutputs(ABI, MethodTotalSupply, output, raw))
 
-	assert.Equal(t, expect, got)
-}
-
-func TestABIMethodReward(t *testing.T) {
-	expect := &MethodRewardOutput{
-		List: []*RewardAmount{
-			{
-				Address: common.HexToAddress("0x0123"),
-				Amount:  big.NewInt(12),
-			},
-			{
-				Address: common.HexToAddress("0x0124"),
-				Amount:  big.NewInt(15),
-			},
-		},
-	}
-	enc, err := expect.Encode()
-	assert.NoError(t, err)
-
-	got := new(MethodRewardOutput)
-	assert.NoError(t, got.Decode(enc))
-
-	assert.Equal(t, expect, got)
+	t.Log(output)
 }

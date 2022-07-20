@@ -23,7 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
@@ -44,9 +44,8 @@ func init() {
 
 	node_manager.InitNodeManager()
 	InitProposalManager()
-	db := rawdb.NewMemoryDatabase()
-	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testGenesisPeers, _ = node_manager.GenerateTestPeers(testGenesisNum)
+	sdb = utils.NewTestStateDB()
+	testGenesisPeers, _ = utils.GenerateTestPeers(testGenesisNum)
 	node_manager.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 	node_manager.StoreGenesisGlobalConfig(sdb)

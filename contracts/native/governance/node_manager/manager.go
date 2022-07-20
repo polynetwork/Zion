@@ -19,17 +19,16 @@
 package node_manager
 
 import (
-	"crypto/ecdsa"
 	"fmt"
+	"math/big"
+	"sort"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
-	"sort"
 )
 
 const (
@@ -1059,20 +1058,4 @@ func GetOutstandingRewards(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("GetOutstandingRewards, serialize outstandingRewards error: %v", err)
 	}
 	return utils.PackOutputs(ABI, MethodGetOutstandingRewards, enc)
-}
-
-
-// generateTestPeer ONLY used for testing
-func generateTestPeer() (common.Address, *ecdsa.PrivateKey) {
-	pk, _ := crypto.GenerateKey()
-	return crypto.PubkeyToAddress(pk.PublicKey), pk
-}
-
-func GenerateTestPeers(n int) ([]common.Address, []*ecdsa.PrivateKey) {
-	peers := make([]common.Address, n)
-	pris := make([]*ecdsa.PrivateKey, n)
-	for i := 0; i < n; i++ {
-		peers[i], pris[i] = generateTestPeer()
-	}
-	return peers, pris
 }
