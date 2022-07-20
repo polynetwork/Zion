@@ -78,6 +78,7 @@ type backend struct {
 	nodesFeed event.Feed
 
 	eventMux *event.TypeMux
+	point    int32 // check point mutex
 
 	proposals map[common.Address]bool // Current list of proposals we are pushing
 }

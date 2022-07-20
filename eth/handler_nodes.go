@@ -58,6 +58,7 @@ type staticNodeServer interface {
 	RemovePeer(node *enode.Node)
 	Self() *enode.Node
 	SeedNodes() []*enode.Node
+	MaxPeer() int
 }
 
 type task struct {
@@ -71,18 +72,17 @@ type nodeFetcher struct {
 	server  staticNodeServer // interface of p2p server
 	logger  log.Logger
 
-	miner common.Address              // miner address used to judge that whether this program need to broadcast static-nodes
-	local *enode.Node                 // local node
-	seed  int32                       // flag of whether the node is seed node
-	seeds map[common.Address]*ethPeer // seed node peer connections, identity is validator address
-
-	validators   map[common.Address]*enode.Node  // validators map for filter useless connection
-	validatorsMu sync.RWMutex                    // mutex for validators map
+	miner        common.Address                  // only validator miner need to request enode info from seed nodes.
+	local        *enode.Node                     // self enode
+	seed         int32                           // flag of whether the node is seed node
+	seeds        map[common.Address]*ethPeer     // seed peers storage, map coinbase address to `ethPeer`
+	validators   map[common.Address]*enode.Node  // validator storage, map coinbase address to enode
+	validatorsMu sync.RWMutex                    // mutex for validator storage
 	notifyCh     chan consensus.StaticNodesEvent // channel for listening `StaticNodeEvent`
 	notifySub    event.Subscription              // subscribe consensus `StaticNodeEvent`
 
-	taskCh chan *task    // Signal for procedure halt
-	quit   chan struct{} // Signal for quit broadcasting
+	taskCh chan *task    // signal for connect task
+	quit   chan struct{} // signal for quit loop
 }
 
 func newNodeBroadcaster(miner common.Address, manager staticNodeServer, handler *handler) *nodeFetcher {
@@ -93,6 +93,7 @@ func newNodeBroadcaster(miner common.Address, manager staticNodeServer, handler 
 		logger:     log.New("address", miner.Hex()),
 		validators: make(map[common.Address]*enode.Node),
 		seeds:      make(map[common.Address]*ethPeer),
+		notifyCh:   make(chan consensus.StaticNodesEvent, nodeFetcherChCapacity),
 		taskCh:     make(chan *task, nodeFetcherChCapacity),
 		quit:       make(chan struct{}),
 	}
@@ -100,19 +101,14 @@ func newNodeBroadcaster(miner common.Address, manager staticNodeServer, handler 
 
 // only used for hotstuff miner
 func (h *nodeFetcher) Start() {
-	if h.miner == common.EmptyAddress {
-		return
-	}
-
 	handler := h.handler.engine.(consensus.Handler)
-	h.notifyCh = make(chan consensus.StaticNodesEvent, nodeFetcherChCapacity)
 	h.notifySub = handler.SubscribeNodes(h.notifyCh)
 	h.local = h.server.Self()
 	for _, v := range h.server.SeedNodes() {
-		if v.ID() == h.local.ID() {
+		h.seeds[nodeAddress(v)] = nil
+		if h.seed == 0 && v.ID() == h.local.ID() {
 			atomic.StoreInt32(&h.seed, 1)
 			log.Trace("Node Fetcher seed node")
-			break
 		}
 	}
 
@@ -120,14 +116,10 @@ func (h *nodeFetcher) Start() {
 }
 
 func (h *nodeFetcher) Stop() {
-	if h.miner == common.EmptyAddress {
-		return
-	}
-
-	if h.seed == 1 {
+	if h.isSeed() {
 		atomic.StoreInt32(&h.seed, 0)
 	}
-	h.notifySub.Unsubscribe() // quits staticNodesLoop
+	h.notifySub.Unsubscribe()
 	close(h.quit)
 }
 
@@ -135,9 +127,21 @@ func (h *nodeFetcher) loop() {
 	for {
 		select {
 		case evt := <-h.notifyCh:
-			h.waitingLastTask()
-			task := h.newTask(evt.Validators)
-			go h.handleTask(task)
+			// seed node will disconnect last task validators before reset validators for new epoch.
+			if h.isSeed() {
+				h.seedDisconnect(evt.Validators)
+			}
+
+			// all nodes should reset validators
+			h.resetValidators(evt.Validators)
+
+			// only validator node for current epoch will handle new task.
+			if !h.isSeed() && h.checkValidator(h.miner) {
+				h.waitingLastTask()
+				h.waitingSeedServer()
+				task := h.newTask(evt.Validators)
+				go h.handleTask(task)
+			}
 
 		case <-h.notifySub.Err():
 			return
@@ -161,7 +165,6 @@ func (h *nodeFetcher) newTask(validators []common.Address) *task {
 
 func (h *nodeFetcher) waitingLastTask() {
 	if len(h.taskCh) > 0 {
-		h.logger.Trace("Node Fetcher waiting for last task end...")
 		task := <-h.taskCh
 		close(task.halt)
 		<-task.done
@@ -169,38 +172,35 @@ func (h *nodeFetcher) waitingLastTask() {
 	}
 }
 
+// waitingSeedServer node fetcher works of CS mode for communication. and the server should be prepared
+// before client send request, nodes sleep for seconds will take effective as above.
+func (h *nodeFetcher) waitingSeedServer() {
+	if !h.isSeed() {
+		time.Sleep(1 * time.Second)
+	}
+}
+
 func (h *nodeFetcher) handleTask(task *task) {
 	timer := time.NewTimer(0)
 	done := make(chan struct{})
-
 	time.AfterFunc(nodeFetchingLastTime, func() {
 		close(done)
 	})
 	defer func() {
-		// todo: remove all nodes which is not validator
 		timer.Stop()
 		task.done <- struct{}{}
 	}()
-
-	// fulfill validators
-	h.resetValidators(task.validators)
-
-	// sync node do not allow to ask validator address, and seed node has already persisted other seeds.
-	if h.miner == common.EmptyAddress || !h.checkValidator(h.miner) || h.isSeedNode() {
-		h.logger.Trace("Node Fetcher authority invalid")
-		return
-	}
 
 	h.logger.Trace("Node Fetcher handle new task", "miner", h.miner, "validators", task.validators)
 
 	for {
 		select {
 		case <-timer.C:
-			if h.connectionQuorum() {
+			if h.quorum() {
 				h.logger.Trace("Node Fetcher full connected!")
 				return
 			}
-			h.fullConnectSeedNodes()
+			h.connectSeeds()
 			h.batchRequest()
 			timer.Reset(nodeFetcherDuration)
 
@@ -219,9 +219,18 @@ func (h *nodeFetcher) handleTask(task *task) {
 	}
 }
 
-func (h *nodeFetcher) fullConnectSeedNodes() {
-	// 如果种子节点已经全连接，则无需再重新连接
-	if len(h.server.SeedNodes()) == len(h.seeds) {
+// 如果种子节点已经全连接，则无需再重新连接
+func (h *nodeFetcher) connectSeeds() {
+	seedFulConn := func() bool {
+		for _, seed := range h.seeds {
+			if seed == nil {
+				return false
+			}
+		}
+		return true
+	}
+
+	if seedFulConn() {
 		return
 	}
 
@@ -231,12 +240,65 @@ func (h *nodeFetcher) fullConnectSeedNodes() {
 			h.server.AddPeer(seed)
 		} else {
 			h.seeds[addr] = peer.(*ethPeer)
-			h.logger.Trace("Node Fetcher add seed", "address", addr.Hex())
+			h.logger.Trace("Node Fetcher Connected", "seed", addr.Hex())
 		}
 	}
 }
 
-func (h *nodeFetcher) connectionQuorum() bool {
+// seedDisconnect seed node close p2p connection with validators of last epoch.
+func (h *nodeFetcher) seedDisconnect(newGroup []common.Address) {
+	if !h.isSeed() {
+		return
+	}
+
+	// filter validators which also exist in current epoch
+	inNewGroup := func(addr common.Address) bool {
+		for _, v := range newGroup {
+			if v == addr {
+				return true
+			}
+		}
+		return false
+	}
+	// filter other seed nodes
+	inSeedGroup := func(addr common.Address) bool {
+		for v, _ := range h.seeds {
+			if addr == v {
+				return true
+			}
+		}
+		return false
+	}
+
+	discList := make([]common.Address, 0)
+	for addr, _ := range h.validators {
+		if inNewGroup(addr) {
+			h.logger.Trace("Node Fetcher DisConnect", "in new group", addr.Hex())
+			continue
+		}
+		if inSeedGroup(addr) {
+			h.logger.Trace("Node Fetcher DisConnect", "in seed group", addr.Hex())
+			continue
+		}
+		discList = append(discList, addr)
+	}
+
+	// disconnect part of old validators, the rest capacity should greater than 2 * len(discList)
+	maxPeer := h.server.MaxPeer()
+	currentNum := h.handler.PeerCount()
+	restCap := maxPeer - currentNum
+	if len(discList) > restCap/2 {
+		for _, addr := range discList {
+			if data := h.handler.FindPeer(addr); data != nil {
+				peer := data.(*ethPeer)
+				peer.Disconnect(p2p.DiscQuitting)
+				h.logger.Trace("Node Fetcher DisConnect", "last validator", addr.Hex())
+			}
+		}
+	}
+}
+
+func (h *nodeFetcher) quorum() bool {
 	if h.validators == nil {
 		return false
 	}
@@ -250,17 +312,21 @@ func (h *nodeFetcher) connectionQuorum() bool {
 		if h.handler.FindPeer(addr) == nil {
 			return false
 		}
-		log.Trace("Node Fetcher Connected new peer", "address", addr.Hex())
+		log.Trace("Node Fetcher Connected", "validator", addr.Hex())
 	}
 	return true
 }
 
 func (h *nodeFetcher) batchRequest() {
 	for _, peer := range h.seeds {
+		if peer == nil {
+			continue
+		}
+
 		if err := peer.RequestStaticNodes(h.local); err != nil {
-			h.logger.Trace("Node Fetcher", "request static node", identity(peer.Node()), "err", err)
+			h.logger.Trace("Node Fetcher Request", "seed", identity(peer.Node()), "err", err)
 		} else {
-			h.logger.Trace("Node Fetcher", "request static node", identity(peer.Node()), "local", identity(h.local))
+			h.logger.Trace("Node Fetcher Request", "seed", identity(peer.Node()), "local", identity(h.local))
 		}
 	}
 }
@@ -269,19 +335,19 @@ func (h *nodeFetcher) handleGetStaticNodesMsg(peer *eth.Peer, from *enode.Node) 
 	logger := h.logger.New("handle", "GetStaticNodesMsg", "local", identity(h.local), "from", identity(from))
 	logger.Trace("Node Fetcher")
 
-	if !h.isSeedNode() {
-		logger.Trace("Failed to check seed authority", "err", "node is not seed node")
+	if !h.isSeed() {
+		logger.Trace("Only seed node need reply")
 		return nil
 	}
 
 	validator := nodeAddress(peer.Node())
 	if !h.checkValidator(validator) {
-		logger.Trace("Failed to check validator", "err", "node is not validator")
+		logger.Trace("Failed to check msg from")
 		return nil
 	}
 
 	// todo: ensure that peer.node pubkey and ip is the same with `from` node
-	node, err := enode.CopyUrlv4(from.URLv4(), from.IP(), from.TCP(), from.UDP())
+	node, err := enode.CopyUrlv4(peer.Node().URLv4(), peer.Node().IP(), from.TCP(), from.UDP())
 	if err != nil {
 		logger.Trace("Failed to regenerate new remote node", "err", err)
 		return nil
@@ -293,7 +359,7 @@ func (h *nodeFetcher) handleGetStaticNodesMsg(peer *eth.Peer, from *enode.Node) 
 		logger.Trace("Failed to reply `GetStaticNodes`", "err", err)
 		return nil
 	} else {
-		logger.Trace("Reply `GetStaticNodes` succeed!", "length", len(list))
+		logger.Trace("Reply `GetStaticNodes` succeed!", "len", len(list))
 	}
 	return nil
 }
@@ -303,15 +369,16 @@ func (h *nodeFetcher) handleStaticNodesMsg(peer *eth.Peer, list []*enode.Node) e
 	logger.Trace("Node Fetcher")
 
 	if list == nil || len(list) == 0 {
-		logger.Trace("Failed to check message packet", "err", "node list is empty")
+		logger.Trace("Node list is empty")
 		return nil
 	}
 
 	for _, node := range list {
 		validator := nodeAddress(node)
-		h.server.AddPeer(node)
-		if h.setValidator(validator, node) {
+		if exist := h.handler.FindPeer(validator); exist == nil {
+			h.server.AddPeer(node)
 		}
+		h.setValidator(validator, node)
 	}
 
 	return nil
@@ -365,7 +432,7 @@ func (h *nodeFetcher) validatorList() []*enode.Node {
 	return list
 }
 
-func (h *nodeFetcher) isSeedNode() bool {
+func (h *nodeFetcher) isSeed() bool {
 	return h.seed == 1
 }
 
