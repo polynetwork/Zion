@@ -294,7 +294,7 @@ func (s *backend) restart() {
 	}
 
 	if next.Equal(s.vals.Copy()) {
-		log.Trace("Restart Consensus engine, validators not changed.")
+		log.Trace("Restart Consensus engine, validators not changed.", "origin", s.vals.AddressList(), "current", next.AddressList())
 		return
 	}
 

@@ -20,6 +20,7 @@ package backend
 
 import (
 	"fmt"
+	"sync/atomic"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -83,9 +84,18 @@ func (s *backend) CheckPoint(height uint64) {
 		log.Warn("CheckPoint", "get current epoch info, height", height, "err", err)
 		return
 	}
+
+	// lock status to ensure that the action of restart engine wont recall CheckPoint twice.
+	// and the action of lock should happen before restart.
 	start := epoch.StartHeight.Uint64()
-	if height == start+1 {
+	if s.point == 0 && height == start+1 {
+		log.Trace("CheckPoint lock status", "height", height, "epoch start", start)
+		atomic.StoreInt32(&s.point, 1)
 		s.restart()
+	}
+	if s.point == 1 && height > start+1 {
+		log.Trace("CheckPoint unlock status", "height", height, "epoch start", start)
+		atomic.StoreInt32(&s.point, 0)
 	}
 }
 
