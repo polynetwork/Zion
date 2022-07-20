@@ -25,7 +25,6 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
@@ -42,7 +41,7 @@ var (
 	testGenesisNum   = 4
 	pub              *ecdsa.PublicKey
 	key              *ecdsa.PrivateKey
-	testGenesisPeers []*node_manager.Peer
+	testGenesisPeers []common.Address
 	testGenesisPri   []*ecdsa.PrivateKey
 )
 
@@ -59,8 +58,8 @@ func init() {
 	InitInfoSync()
 	db := rawdb.NewMemoryDatabase()
 	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testGenesisPeers, testGenesisPri = generateTestPeers(testGenesisNum)
-	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers)
+	testGenesisPeers, testGenesisPri = node_manager.GenerateTestPeers(testGenesisNum)
+	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 
 	putSideChain()
 }
@@ -73,19 +72,19 @@ func putSideChain() {
 
 	err := side_chain_manager.PutSideChain(contract, &side_chain_manager.SideChain{
 		Router:  utils.NO_PROOF_ROUTER,
-		ChainId: CHAIN_ID,
+		ChainID: CHAIN_ID,
 	})
 	if err != nil {
 		log.Fatalf("PutSideChain fail:%v", err)
 		return
 	}
-	sideChain, err := side_chain_manager.GetSideChain(contract, CHAIN_ID)
+	sideChain, err := side_chain_manager.GetSideChainObject(contract, CHAIN_ID)
 	if err != nil {
 		log.Fatalf("PutSideChain fail:%v", err)
 		return
 	}
 
-	if sideChain.ChainId != CHAIN_ID {
+	if sideChain.ChainID != CHAIN_ID {
 		log.Fatalf("GetSideChain mismatch")
 	}
 }
@@ -131,7 +130,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 	param.RootInfos = [][]byte{b1, b2}
 
 	for i := 0; i < testGenesisNum; i++ {
-		caller := testGenesisPeers[i].Address
+		caller := testGenesisPeers[i]
 		blockNumber := big.NewInt(1)
 		extra := uint64(1000)
 		digest, err := param.Digest()
@@ -185,38 +184,20 @@ func TestNormalSyncRootInfo(t *testing.T) {
 	contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, 0+extra, nil)
 	ret3, _, err := contractRef.NativeCall(common.EmptyAddress, utils.InfoSyncContractAddress, input)
 	assert.Nil(t, err)
-	result3 := new(GetInfoHeightOutput)
-	err = result3.Decode(ret3)
+	var height uint32 = 0
+	err = utils.UnpackOutputs(ABI, MethodGetInfoHeight, &height, ret3)
 	assert.Nil(t, err)
-	assert.Equal(t, result3.Height, uint32(100))
+	assert.Equal(t, height, uint32(100))
 }
 
 func TestReplenish(t *testing.T) {
 	param := &ReplenishParam{
 		ChainID: CHAIN_ID,
-		TxHashes: []string{"a", "b"},
+		Heights: []uint32{100, 90},
 	}
 	input, err := param.Encode()
 	assert.Nil(t, err)
 	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, big.NewInt(1), common.Hash{}, 1000, nil)
 	_, _, err = contractRef.NativeCall(common.EmptyAddress, utils.InfoSyncContractAddress, input)
 	assert.Nil(t, err)
-}
-
-// generateTestPeer ONLY used for testing
-func generateTestPeer() (*node_manager.Peer, *ecdsa.PrivateKey) {
-	pk, _ := crypto.GenerateKey()
-	return &node_manager.Peer{
-		PubKey:  hexutil.Encode(crypto.CompressPubkey(&pk.PublicKey)),
-		Address: crypto.PubkeyToAddress(pk.PublicKey),
-	}, pk
-}
-
-func generateTestPeers(n int) ([]*node_manager.Peer, []*ecdsa.PrivateKey) {
-	peers := make([]*node_manager.Peer, n)
-	pris := make([]*ecdsa.PrivateKey, n)
-	for i := 0; i < n; i++ {
-		peers[i], pris[i] = generateTestPeer()
-	}
-	return peers, pris
 }

@@ -23,28 +23,24 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/log"
-	"math/big"
 )
 
-func nativeTransfer(s *native.NativeContract, from, to common.Address, amount *big.Int) error {
-	if amount.Sign() == -1 {
-		return fmt.Errorf("amount can not be negative")
-	}
-	if !core.CanTransfer(s.StateDB(), from, amount) {
-		return fmt.Errorf("%s insufficient balance", from.Hex())
-	}
-	core.Transfer(s.StateDB(), from, to, amount)
-	return nil
-}
+type SignerName string
 
-func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, signer common.Address) (bool, error) {
+const (
+	Signer   SignerName = "Signer"
+	Voter    SignerName = "Voter"
+	Proposer SignerName = "Proposer"
+)
+
+func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, signer common.Address, signerName SignerName) (bool, error) {
 	ctx := s.ContractRef().CurrentContext()
 	caller := ctx.Caller
 
 	log.Trace("checkConsensusSign", "method", method, "input", hexutil.Encode(input), "signer", signer.Hex())
 
+	quorum := 0
 	// get epoch info
 	epoch, err := GetCurrentEpochInfoImpl(s)
 	if err != nil {
@@ -52,8 +48,22 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	}
 
 	// check authority
-	if err := CheckValidatorAuthority(signer, caller, epoch); err != nil {
-		return false, fmt.Errorf("CheckConsensusSigns, CheckValidatorAuthority error: %v", err)
+	switch signerName {
+	case "Signer":
+		if err := CheckSignerAuthority(signer, caller, epoch); err != nil {
+			return false, fmt.Errorf("CheckConsensusSigns, CheckSignerAuthority error: %v", err)
+		}
+		quorum = epoch.SignerQuorumSize()
+	case "Voter":
+		if err := CheckVoterAuthority(signer, epoch); err != nil {
+			return false, fmt.Errorf("CheckVoterSigns, CheckVoterAuthority error: %v", err)
+		}
+		quorum = epoch.VoterQuorumSize()
+	case "Proposer":
+		if err := CheckProposerAuthority(signer, epoch); err != nil {
+			return false, fmt.Errorf("CheckVoterSigns, CheckProposerAuthority error: %v", err)
+		}
+		quorum = epoch.ProposerQuorumSize()
 	}
 
 	// get or set consensus sign info
@@ -80,7 +90,7 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	// do not store redundancy sign
 	sizeBeforeSign := getSignerSize(s, sign.Hash())
 	log.Trace("checkConsensusSign", "sign hash", sign.Hash().Hex(), "size before sign", sizeBeforeSign)
-	if sizeBeforeSign >= epoch.SignerQuorumSize() {
+	if sizeBeforeSign >= quorum {
 		return false, nil
 	}
 
@@ -91,62 +101,10 @@ func CheckConsensusSigns(s *native.NativeContract, method string, input []byte, 
 	sizeAfterSign := getSignerSize(s, sign.Hash())
 	log.Trace("checkConsensusSign", "sign hash", sign.Hash().Hex(), "size after sign", sizeAfterSign)
 
-	return sizeAfterSign >= epoch.SignerQuorumSize(), nil
+	return sizeAfterSign >= quorum, nil
 }
 
-func CheckVoterSigns(s *native.NativeContract, method string, input []byte, signer common.Address) (bool, error) {
-	log.Trace("CheckVoterSigns", "method", method, "input", hexutil.Encode(input), "signer", signer.Hex())
-
-	// get epoch info
-	epoch, err := GetCurrentEpochInfoImpl(s)
-	if err != nil {
-		return false, fmt.Errorf("CheckVoterSigns, GetCurrentEpochInfoImpl error: %v", err)
-	}
-
-	// check authority
-	if err := CheckVoterAuthority(signer, epoch); err != nil {
-		return false, fmt.Errorf("CheckVoterSigns, CheckValidatorAuthority error: %v", err)
-	}
-
-	// get or set consensus sign info
-	sign := &ConsensusSign{Method: method, Input: input}
-	if exist, err := getSign(s, sign.Hash()); err != nil {
-		if err.Error() == "EOF" {
-			if err := storeSign(s, sign); err != nil {
-				return false, fmt.Errorf("CheckVoterSigns, storeSign error: %v, hash %s", err, sign.Hash().Hex())
-			} else {
-				log.Trace("CheckVoterSigns", "store sign, hash", sign.Hash().Hex())
-			}
-		} else {
-			return false, fmt.Errorf("CheckVoterSigns, get sign error: %v, hash %s", err, sign.Hash().Hex())
-		}
-	} else if exist.Hash() != sign.Hash() {
-		return false, fmt.Errorf("CheckVoterSigns, check sign hash failed, expect: %s, got %s", exist.Hash().Hex(), sign.Hash().Hex())
-	}
-
-	// check duplicate signature
-	if findSigner(s, sign.Hash(), signer) {
-		return false, fmt.Errorf("CheckVoterSigns, signer already exist: %s, hash %s", signer.Hex(), sign.Hash().Hex())
-	}
-
-	// do not store redundancy sign
-	sizeBeforeSign := getSignerSize(s, sign.Hash())
-	log.Trace("CheckVoterSigns", "sign hash", sign.Hash().Hex(), "size before sign", sizeBeforeSign)
-	if sizeBeforeSign >= epoch.VoterQuorumSize() {
-		return false, nil
-	}
-
-	// store signer address and emit event log
-	if err := storeSigner(s, sign.Hash(), signer); err != nil {
-		return false, fmt.Errorf("CheckVoterSigns, store signer failed: %s, hash %s", err, sign.Hash().Hex())
-	}
-	sizeAfterSign := getSignerSize(s, sign.Hash())
-	log.Trace("CheckVoterSigns", "sign hash", sign.Hash().Hex(), "size after sign", sizeAfterSign)
-
-	return sizeAfterSign >= epoch.VoterQuorumSize(), nil
-}
-
-func CheckValidatorAuthority(origin, caller common.Address, epoch *EpochInfo) error {
+func CheckSignerAuthority(origin, caller common.Address, epoch *EpochInfo) error {
 	if epoch == nil || epoch.Signers == nil {
 		return fmt.Errorf("invalid epoch")
 	}
@@ -176,7 +134,22 @@ func CheckVoterAuthority(addr common.Address, epoch *EpochInfo) error {
 			return nil
 		}
 	}
-	return fmt.Errorf("addr %s is not valid validator", addr.Hex())
+	return fmt.Errorf("addr %s is not valid voter", addr.Hex())
+}
+
+func CheckProposerAuthority(addr common.Address, epoch *EpochInfo) error {
+	if epoch == nil || epoch.Proposers == nil {
+		return fmt.Errorf("invalid epoch")
+	}
+	if addr == common.EmptyAddress {
+		return fmt.Errorf("addr is empty address")
+	}
+	for _, v := range epoch.Proposers {
+		if v == addr {
+			return nil
+		}
+	}
+	return fmt.Errorf("addr %s is not valid proposer", addr.Hex())
 }
 
 func EpochChangeAtNextBlock(curHeight, epochStartHeight uint64) bool {

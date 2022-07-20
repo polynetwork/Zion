@@ -19,14 +19,26 @@ package contract
 
 import (
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/core"
+	"math/big"
 )
 
 func ValidateOwner(n *native.NativeContract, address common.Address) error {
 	if n.ContractRef().TxOrigin() != address {
 		return fmt.Errorf("validateOwner, authentication failed!")
 	}
+	return nil
+}
+
+func NativeTransfer(s *native.NativeContract, from, to common.Address, amount *big.Int) error {
+	if amount.Sign() == -1 {
+		return fmt.Errorf("amount can not be negative")
+	}
+	if !core.CanTransfer(s.StateDB(), from, amount) {
+		return fmt.Errorf("%s insufficient balance", from.Hex())
+	}
+	core.Transfer(s.StateDB(), from, to, amount)
 	return nil
 }

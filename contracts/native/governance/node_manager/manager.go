@@ -19,9 +19,11 @@
 package node_manager
 
 import (
+	"crypto/ecdsa"
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -434,7 +436,7 @@ func Withdraw(s *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Withdraw, withdrawTotalPool error: %v", err)
 		}
-		err = nativeTransfer(s, this, caller, amount.BigInt())
+		err = contract.NativeTransfer(s, this, caller, amount.BigInt())
 		if err != nil {
 			return nil, fmt.Errorf("Withdraw, nativeTransfer error: %v", err)
 		}
@@ -587,7 +589,9 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	epochInfo := &EpochInfo{
 		ID:          new(big.Int).Add(currentEpochInfo.ID, common.Big1),
 		Validators:  make([]common.Address, 0, globalConfig.ConsensusValidatorNum),
+		Signers:     make([]common.Address, 0, globalConfig.ConsensusValidatorNum),
 		Voters:      make([]common.Address, 0, globalConfig.VoterValidatorNum),
+		Proposers:   make([]common.Address, 0, globalConfig.ConsensusValidatorNum),
 		StartHeight: startHeight,
 		EndHeight:   new(big.Int).Add(startHeight, globalConfig.BlockPerEpoch),
 	}
@@ -598,7 +602,9 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 	}
 	if uint64(len(allValidators.AllValidators)) < globalConfig.ConsensusValidatorNum {
 		epochInfo.Validators = currentEpochInfo.Validators
+		epochInfo.Signers = currentEpochInfo.Signers
 		epochInfo.Voters = currentEpochInfo.Voters
+		epochInfo.Proposers = currentEpochInfo.Proposers
 	} else {
 		validatorList := make([]*Validator, 0, len(allValidators.AllValidators))
 		for _, v := range allValidators.AllValidators {
@@ -627,6 +633,7 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 
 			epochInfo.Validators = append(epochInfo.Validators, validator.ConsensusAddress)
 			epochInfo.Signers = append(epochInfo.Signers, validator.SignerAddress)
+			epochInfo.Proposers = append(epochInfo.Proposers, validator.ProposalAddress)
 			err = setValidator(s, validator)
 			if err != nil {
 				return nil, fmt.Errorf("ChangeEpoch, set lock validator error: %v", err)
@@ -1056,15 +1063,16 @@ func GetOutstandingRewards(s *native.NativeContract) ([]byte, error) {
 
 
 // generateTestPeer ONLY used for testing
-func generateTestPeer() common.Address {
+func generateTestPeer() (common.Address, *ecdsa.PrivateKey) {
 	pk, _ := crypto.GenerateKey()
-	return crypto.PubkeyToAddress(pk.PublicKey)
+	return crypto.PubkeyToAddress(pk.PublicKey), pk
 }
 
-func GenerateTestPeers(n int) []common.Address {
+func GenerateTestPeers(n int) ([]common.Address, []*ecdsa.PrivateKey) {
 	peers := make([]common.Address, n)
+	pris := make([]*ecdsa.PrivateKey, n)
 	for i := 0; i < n; i++ {
-		peers[i] = generateTestPeer()
+		peers[i], pris[i] = generateTestPeer()
 	}
-	return peers
+	return peers, pris
 }

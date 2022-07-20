@@ -48,7 +48,7 @@ func init() {
 	node_manager.InitNodeManager()
 	db := rawdb.NewMemoryDatabase()
 	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	signers = node_manager.GenerateTestPeers(2)
+	signers, _ = node_manager.GenerateTestPeers(2)
 	node_manager.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	node_manager.StoreGenesisEpoch(sdb, signers, signers)
 	node_manager.StoreGenesisGlobalConfig(sdb)

@@ -47,7 +47,7 @@ func init() {
 	InitNodeManager()
 	db := rawdb.NewMemoryDatabase()
 	sdb, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testGenesisPeers = GenerateTestPeers(testGenesisNum)
+	testGenesisPeers, _ = GenerateTestPeers(testGenesisNum)
 	StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 	StoreGenesisGlobalConfig(sdb)
@@ -97,6 +97,7 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Equal(t, globalConfig2.MinInitialStake, GenesisMinInitialStake)
 	assert.Equal(t, globalConfig2.VoterValidatorNum, GenesisVoterValidatorNum)
 	assert.Equal(t, globalConfig2.ConsensusValidatorNum, GenesisConsensusValidatorNum)
+	assert.Equal(t, globalConfig2.MinProposalStake, GenesisMinProposalStake)
 
 	param2 := new(GetCommunityInfoParam)
 	input, err = param2.Encode()

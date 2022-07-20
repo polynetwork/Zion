@@ -116,7 +116,7 @@ func ApproveRegisterRelayer(native *native.NativeContract) ([]byte, error) {
 	}
 
 	//check consensus signs
-	ok, err := node_manager.CheckConsensusSigns(native, MethodApproveRegisterRelayer, utils.GetUint64Bytes(params.ID), params.Address)
+	ok, err := node_manager.CheckConsensusSigns(native, MethodApproveRegisterRelayer, utils.GetUint64Bytes(params.ID), params.Address, node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterRelayer, CheckConsensusSigns error: %v", err)
 	}
@@ -180,7 +180,7 @@ func ApproveRemoveRelayer(native *native.NativeContract) ([]byte, error) {
 	}
 
 	//check consensus signs
-	ok, err := node_manager.CheckConsensusSigns(native, MethodApproveRemoveRelayer, utils.GetUint64Bytes(params.ID), params.Address)
+	ok, err := node_manager.CheckConsensusSigns(native, MethodApproveRemoveRelayer, utils.GetUint64Bytes(params.ID), params.Address, node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRemoveRelayer, CheckConsensusSigns error: %v", err)
 	}

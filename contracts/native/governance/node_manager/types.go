@@ -108,6 +108,7 @@ type Commission struct {
 type GlobalConfig struct {
 	MaxCommissionChange   *big.Int
 	MinInitialStake       *big.Int
+	MinProposalStake      *big.Int
 	MaxDescLength         uint64
 	BlockPerEpoch         *big.Int
 	ConsensusValidatorNum uint64
@@ -167,6 +168,7 @@ type EpochInfo struct {
 	Validators  []common.Address
 	Signers     []common.Address
 	Voters      []common.Address
+	Proposers   []common.Address
 	StartHeight *big.Int
 	EndHeight   *big.Int
 }
@@ -194,6 +196,14 @@ func (m *EpochInfo) VoterQuorumSize() int {
 		return 0
 	}
 	total := len(m.Voters)
+	return int(math.Ceil(float64(2*total) / 3))
+}
+
+func (m *EpochInfo) ProposerQuorumSize() int {
+	if m == nil || m.Proposers == nil {
+		return 0
+	}
+	total := len(m.Proposers)
 	return int(math.Ceil(float64(2*total) / 3))
 }
 

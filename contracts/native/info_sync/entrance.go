@@ -99,7 +99,7 @@ func SyncRootInfo(s *native.NativeContract) ([]byte, error) {
 			return nil, err
 		}
 
-		ok, err := node_manager.CheckVoterSigns(s, MethodSyncRootInfo, blob, addr)
+		ok, err := node_manager.CheckConsensusSigns(s, MethodSyncRootInfo, blob, addr, node_manager.Voter)
 		if err != nil {
 			return nil, fmt.Errorf("SyncRootInfo, CheckVoterSigns error: %v", err)
 		}

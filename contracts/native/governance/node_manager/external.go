@@ -31,6 +31,7 @@ import (
 var (
 	GenesisMaxCommissionChange, _        = new(big.Int).SetString("500", 10) // 50%
 	GenesisMinInitialStake               = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	GenesisMinProposalStake              = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
 	GenesisMaxDescLength          uint64 = 2048
 	GenesisBlockPerEpoch                 = new(big.Int).SetUint64(400000)
 	GenesisConsensusValidatorNum  uint64 = 4
@@ -88,6 +89,7 @@ func StoreGenesisEpoch(s *state.StateDB, peers []common.Address, signers []commo
 		Validators:  peers,
 		Signers:     signers,
 		Voters:      signers,
+		Proposers:   signers,
 		StartHeight: new(big.Int),
 		EndHeight:   GenesisBlockPerEpoch,
 	}
@@ -104,6 +106,7 @@ func StoreGenesisGlobalConfig(s *state.StateDB) error {
 	globalConfig := &GlobalConfig{
 		MaxCommissionChange:   GenesisMaxCommissionChange,
 		MinInitialStake:       GenesisMinInitialStake,
+		MinProposalStake:      GenesisMinProposalStake,
 		MaxDescLength:         GenesisMaxDescLength,
 		BlockPerEpoch:         GenesisBlockPerEpoch,
 		ConsensusValidatorNum: GenesisConsensusValidatorNum,

@@ -76,7 +76,9 @@ func GetSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, err
 	}
 	sideChain, err := GetSideChainObject(s, params.Chainid)
-	if err != nil { return nil, fmt.Errorf("GetSideChain error: %v", err) }
+	if err != nil {
+		return nil, fmt.Errorf("GetSideChain error: %v", err)
+	}
 
 	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodGetSideChain, sideChain)
 }
@@ -140,7 +142,7 @@ func ApproveRegisterSideChain(s *native.NativeContract) ([]byte, error) {
 	}
 
 	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveRegisterSideChain, utils.GetUint64Bytes(params.Chainid),
-	s.ContractRef().TxOrigin())
+		s.ContractRef().TxOrigin(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, CheckConsensusSigns error: %v", err)
 	}
@@ -216,7 +218,7 @@ func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
 
 	//check consensus signs
 	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveUpdateSideChain, utils.GetUint64Bytes(params.Chainid),
-	s.ContractRef().TxOrigin())
+		s.ContractRef().TxOrigin(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, CheckConsensusSigns error: %v", err)
 	}
@@ -283,7 +285,7 @@ func ApproveQuitSideChain(s *native.NativeContract) ([]byte, error) {
 
 	//check consensus signs
 	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveQuitSideChain, utils.GetUint64Bytes(params.Chainid),
-		s.ContractRef().TxOrigin())
+		s.ContractRef().TxOrigin(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveQuitSideChain, CheckConsensusSigns error: %v", err)
 	}

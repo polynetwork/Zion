@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	"math/big"
 )
 
@@ -54,7 +55,7 @@ func deposit(s *native.NativeContract, from common.Address, amount Dec, validato
 	}
 
 	// transfer native token
-	err = nativeTransfer(s, from, this, amount.BigInt())
+	err = contract.NativeTransfer(s, from, this, amount.BigInt())
 	if err != nil {
 		return fmt.Errorf("deposit, nativeTransfer error: %v", err)
 	}
@@ -113,7 +114,7 @@ func unStake(s *native.NativeContract, from common.Address, amount Dec, validato
 			return fmt.Errorf("unStake, withdrawTotalPool error: %v", err)
 		}
 		// transfer native token
-		err = nativeTransfer(s, this, from, amount.BigInt())
+		err = contract.NativeTransfer(s, this, from, amount.BigInt())
 		if err != nil {
 			return fmt.Errorf("unStake, nativeTransfer error: %v", err)
 		}
