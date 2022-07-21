@@ -46,8 +46,8 @@ var (
 
 func init() {
 	node_manager.InitNodeManager()
-	sdb = utils.NewTestStateDB()
-	signers, _ = utils.GenerateTestPeers(2)
+	sdb = native.NewTestStateDB()
+	signers, _ = native.GenerateTestPeers(2)
 	node_manager.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	node_manager.StoreGenesisEpoch(sdb, signers, signers)
 	node_manager.StoreGenesisGlobalConfig(sdb)

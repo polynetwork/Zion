@@ -59,8 +59,8 @@ func init() {
 	node_manager.InitNodeManager()
 	side_chain_manager.InitSideChainManager()
 	InitInfoSync()
-	sdb = utils.NewTestStateDB()
-	testGenesisPeers, testGenesisPri = utils.GenerateTestPeers(testGenesisNum)
+	sdb = native.NewTestStateDB()
+	testGenesisPeers, testGenesisPri = native.GenerateTestPeers(testGenesisNum)
 	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 
 	putSideChain()

@@ -45,8 +45,8 @@ func init() {
 	acct = &key.PublicKey
 
 	InitNodeManager()
-	sdb = utils.NewTestStateDB()
-	testGenesisPeers, _ = utils.GenerateTestPeers(testGenesisNum)
+	sdb = native.NewTestStateDB()
+	testGenesisPeers, _ = native.GenerateTestPeers(testGenesisNum)
 	StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 	StoreGenesisGlobalConfig(sdb)

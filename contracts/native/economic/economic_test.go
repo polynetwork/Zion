@@ -38,11 +38,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestTotalSupply(t *testing.T) {
-	sdb := utils.NewTestStateDB()
-	blockHeight := big.NewInt(40)
-
-	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockHeight, common.Hash{}, 0, nil)
-	ctx := native.NewNativeContract(sdb, contractRef)
+	_, ctx := native.GenerateTestContext(t, 40, common.HexToAddress("0x123"))
 
 	raw, err := TotalSupply(ctx)
 	assert.NoError(t, err)
