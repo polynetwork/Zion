@@ -77,6 +77,7 @@ func Reward(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("GetCommunityInfo failed, err: %v", err)
 	}
 
+	// allow empty address as reward pool
 	poolAddr := community.CommunityAddress
 	rewardPerBlock := nm.NewDecFromBigInt(RewardPerBlock)
 	rewardFactor := nm.NewDecFromBigInt(community.CommunityRate)

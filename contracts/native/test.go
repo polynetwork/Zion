@@ -86,5 +86,16 @@ func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *
 	blockHeight := new(big.Int).SetInt64(int64(block))
 	contractRef := NewContractRef(sdb, sender, caller, blockHeight, hash, supplyGas, nil)
 	ctx := NewNativeContract(sdb, contractRef)
+
+	// need to break point at the next step, e.g: nativeCall or some contract function
+	ctx.BreakPoint()
 	return sdb, ctx
+}
+
+func TestNativeCall(t *testing.T, contract common.Address, payload []byte, params ...interface{}) ([]byte, error) {
+	_, ctx := GenerateTestContext(t, params...)
+	ref := ctx.ContractRef()
+	res, _, err := ref.NativeCall(ref.caller, contract, payload)
+	t.Logf("execute time %v", ctx.BreakPoint())
+	return res, err
 }
