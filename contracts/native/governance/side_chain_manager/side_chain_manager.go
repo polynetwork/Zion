@@ -79,7 +79,9 @@ func GetSideChain(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("GetSideChain error: %v", err)
 	}
-
+	if sideChain == nil {
+		return nil, fmt.Errorf("GetSideChain error: side chain %v not exist", params.Chainid)
+	}
 	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodGetSideChain, sideChain)
 }
 
