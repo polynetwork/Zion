@@ -15,10 +15,12 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
-package utils
+package native
 
 import (
 	"crypto/ecdsa"
+	"math/big"
+	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -46,4 +48,43 @@ func GenerateTestPeers(n int) ([]common.Address, []*ecdsa.PrivateKey) {
 		peers[i], pris[i] = generateTestPeer()
 	}
 	return peers, pris
+}
+
+// GenerateTestContext generate nativeContract with params, and the sequence of param contains:
+// `blockHeight`, `caller`, `tx sender`, `tx hash`, `supply gas`. these params separated with
+// each other by type, only the `caller` and `tx sender` are both of type of `common.Address`,
+// and the first one is `sender` and the next is `caller`.
+func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *NativeContract) {
+	var (
+		block     = int(0)
+		caller    = common.EmptyAddress
+		sender    = common.EmptyAddress
+		hash      = common.EmptyHash
+		supplyGas = uint64(0)
+	)
+
+	for _, v := range params {
+		switch v.(type) {
+		case int:
+			block = v.(int)
+		case common.Address:
+			if sender == common.EmptyAddress {
+				sender = v.(common.Address)
+			} else if caller == common.EmptyAddress {
+				caller = v.(common.Address)
+			}
+		case common.Hash:
+			hash = v.(common.Hash)
+		case uint64:
+			supplyGas = v.(uint64)
+		default:
+			t.Fatal("invalid params type")
+		}
+	}
+
+	sdb := NewTestStateDB()
+	blockHeight := new(big.Int).SetInt64(int64(block))
+	contractRef := NewContractRef(sdb, sender, caller, blockHeight, hash, supplyGas, nil)
+	ctx := NewNativeContract(sdb, contractRef)
+	return sdb, ctx
 }

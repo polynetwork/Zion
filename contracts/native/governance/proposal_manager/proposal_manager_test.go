@@ -20,15 +20,15 @@ package proposal_manager
 
 import (
 	"crypto/ecdsa"
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"testing"
 )
 
 var (
@@ -44,8 +44,8 @@ func init() {
 
 	node_manager.InitNodeManager()
 	InitProposalManager()
-	sdb = utils.NewTestStateDB()
-	testGenesisPeers, _ = utils.GenerateTestPeers(testGenesisNum)
+	sdb = native.NewTestStateDB()
+	testGenesisPeers, _ = native.GenerateTestPeers(testGenesisNum)
 	node_manager.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 	node_manager.StoreGenesisGlobalConfig(sdb)
