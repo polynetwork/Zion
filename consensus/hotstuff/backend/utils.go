@@ -26,6 +26,8 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -72,10 +74,10 @@ func (c chainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
 }
 
 // get system message
-func (s *backend) getSystemMessage(from, toAddress common.Address, data []byte, value *big.Int) callmsg {
+func (s *backend) getSystemMessage(toAddress common.Address, data []byte, value *big.Int) callmsg {
 	return callmsg{
 		ethereum.CallMsg{
-			From:     from,
+			From:     utils.SystemTxSender,
 			Gas:      math.MaxUint64 / 2,
 			GasPrice: big.NewInt(0), // consensus txs do not need to participate in gas price bidding
 			Value:    value,
@@ -94,24 +96,22 @@ func (s *backend) applyTransaction(
 	chainContext core.ChainContext,
 	commonTxs *[]*types.Transaction, receipts *[]*types.Receipt,
 	sysTxs *[]*types.Transaction, usedGas *uint64, mining bool,
-) (err error) {
-	nonce := state.GetNonce(msg.From())
+) error {
 
+	// check msg sender
+	if msg.From() != utils.SystemTxSender {
+		return fmt.Errorf("system tx sender invalid")
+	}
+
+	nonce := state.GetNonce(msg.From())
 	expectedTx := types.NewTransaction(nonce, *msg.To(), msg.Value(), msg.Gas(), msg.GasPrice(), msg.Data())
 	signer := types.MakeSigner(chain.Config(), header.Number)
 
-	// miner worker use finalizeAndAssemble in which the param of `mining` is true,  it's denote
-	// that this tx comes from miner. `validator` send governance tx in the same nonce is forbidden.
-	if msg.From() == s.signer.Address() && mining {
-		expectedTx, err = s.signer.SignTx(expectedTx, signer)
-		if err != nil {
-			return err
-		}
-	} else {
+	// if the msg sender is not systemTxSender, expectTx should be s.signer.SignTx(expectedTx, signer)
+	// and the message sender should be equal to current signer `s.signer.address`
+	if !mining {
 		if sysTxs == nil || len(*sysTxs) == 0 || (*sysTxs)[0] == nil {
-			//return errors.New("supposed to get a actual transaction, but get none")
-			// allow empty system contract
-			return nil
+			return fmt.Errorf("supposed to get a actual transaction, but get none")
 		}
 		actualTx := (*sysTxs)[0]
 		if expectedHash := signer.Hash(expectedTx); !bytes.Equal(signer.Hash(actualTx).Bytes(), expectedHash.Bytes()) {
@@ -137,6 +137,7 @@ func (s *backend) applyTransaction(
 		// move to next
 		*sysTxs = (*sysTxs)[1:]
 	}
+
 	state.Prepare(expectedTx.Hash(), common.Hash{}, len(*commonTxs))
 	gasUsed, err := applyMessage(msg, state, header, chain.Config(), chainContext)
 	if err != nil {
@@ -232,7 +233,7 @@ type systemTxContext struct {
 }
 
 func (s *backend) executeTransaction(ctx *systemTxContext, contract common.Address, payload []byte) error {
-	msg := s.getSystemMessage(ctx.header.Coinbase, contract, payload, common.Big0)
+	msg := s.getSystemMessage(contract, payload, common.Big0)
 	return s.applyTransaction(ctx.chain, msg, ctx.state, ctx.header, ctx.chainCtx, ctx.txs, ctx.receipts, ctx.sysTxs, ctx.usedGas, ctx.mining)
 }
 
