@@ -117,9 +117,12 @@ func (s *backend) applyTransaction(
 			return err
 		}
 	} else {
+		// system tx CAN'T be nil or empty
 		if sysTxs == nil || len(*sysTxs) == 0 || (*sysTxs)[0] == nil {
 			return fmt.Errorf("supposed to get a actual transaction, but get none")
 		}
+
+		// check tx hash
 		actualTx := (*sysTxs)[0]
 		if expectedHash := signer.Hash(expectedTx); !bytes.Equal(signer.Hash(actualTx).Bytes(), expectedHash.Bytes()) {
 			return fmt.Errorf("expected tx hash %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s;"+
@@ -140,8 +143,18 @@ func (s *backend) applyTransaction(
 				hex.EncodeToString(actualTx.Data()),
 			)
 		}
+
+		// tx signature can be recovered and the sender should be equal to block `coinbase`
+		sender, err := signer.Sender(actualTx)
+		if err != nil {
+			return fmt.Errorf("recover system tx sender failed, err: %v", err)
+		}
+		if sender != header.Coinbase {
+			return fmt.Errorf("supposed to miner %s but got %s", header.Coinbase.Hex(), sender.Hex())
+		}
+
+		// reset tx and shift system tx list to next
 		expectedTx = actualTx
-		// move to next
 		*sysTxs = (*sysTxs)[1:]
 	}
 
