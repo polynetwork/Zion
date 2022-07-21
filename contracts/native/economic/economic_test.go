@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/economic_abi"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -35,6 +36,7 @@ import (
 func TestMain(m *testing.M) {
 	InitABI()
 	nm.InitNodeManager()
+	InitEconomic()
 	os.Exit(m.Run())
 }
 
@@ -44,36 +46,23 @@ func TestMain(m *testing.M) {
 // go test -v -count=1 -cover github.com/ethereum/go-ethereum/contracts/native/economic -run TestTotalSupply
 //
 func TestTotalSupply(t *testing.T) {
-	list := []struct {
+
+	// genesis supply should be 100,000,000 and total supply has no upper limit.
+	testcases := []struct {
 		height  int
 		expect  *big.Int
 		testABI bool
 	}{
-		// genesis supply should be 100,000,000
-		{
-			0,
-			new(big.Int).SetUint64(100000000),
-			false,
-		},
-		// supply = genesis supply + block number * 1
-		{
-			40,
-			new(big.Int).SetUint64(100000040),
-			false,
-		},
-		// total supply has no upper limit
-		{
-			200000000,
-			new(big.Int).SetUint64(300000000),
-			true,
-		},
+		{0, big.NewInt(100000000), false},
+		{40, big.NewInt(100000040), false},
+		{200000000, big.NewInt(300000000), true},
 	}
 
-	for _, tc := range list {
+	for _, tc := range testcases {
 		var supply *big.Int
 
-		_, ctx := native.GenerateTestContext(t, tc.height)
-		raw, err := TotalSupply(ctx)
+		payload, _ := new(MethodTotalSupplyInput).Encode()
+		raw, err := native.TestNativeCall(t, this, payload, tc.height, common.EmptyAddress)
 		assert.NoError(t, err)
 
 		if tc.testABI {
@@ -88,3 +77,20 @@ func TestTotalSupply(t *testing.T) {
 		assert.Equal(t, tc.expect, got)
 	}
 }
+
+//func TestReward(t *testing.T) {
+//	testcases := []struct {
+//		pool common.Address
+//		rate int
+//		expectPoolAmount *big.Int
+//		expectStakeAmount *big.Int
+//		errNil bool
+//	}{
+//		{common.EmptyAddress, 0, common.Big0, params.ZNT1, true},
+//		{common.HexToAddress("0x123"), 2000, new(big.Int).SetUint64(1e18), },
+//		{common.HexToAddress("0x123"), 10000},
+//		{common.HexToAddress("0x123"), 10001},
+//	}
+//
+//
+//}

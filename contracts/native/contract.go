@@ -19,6 +19,7 @@ package native
 
 import (
 	"fmt"
+	"time"
 
 	abiPkg "github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
@@ -33,7 +34,8 @@ type (
 )
 
 var (
-	Contracts = make(map[common.Address]RegisterService)
+	Contracts           = make(map[common.Address]RegisterService)
+	DebugSpentOpen bool = true
 )
 
 type NativeContract struct {
@@ -42,6 +44,8 @@ type NativeContract struct {
 	handlers map[string]MethodHandler // map method id to method handler
 	gasTable map[string]uint64        // map method id to gas usage
 	ab       *abiPkg.ABI
+
+	testPoint int64 // last test time
 }
 
 func NewNativeContract(db *state.StateDB, ref *ContractRef) *NativeContract {
@@ -185,4 +189,19 @@ func getTopicAndEvent(abi *abiPkg.ABI, topic string) (string, *abiPkg.Event, err
 		return topicWithCamel, &eventInfo, nil
 	}
 	return topic, nil, fmt.Errorf("topic %s not exist", topic)
+}
+
+func (s *NativeContract) BreakPoint() time.Duration {
+	if !DebugSpentOpen {
+		return 0
+	}
+
+	if s.testPoint == 0 {
+		s.testPoint = time.Now().UnixNano()
+		return 0
+	} else {
+		lastTime := s.testPoint
+		s.testPoint = time.Now().UnixNano()
+		return time.Duration(s.testPoint-lastTime) / time.Microsecond
+	}
 }
