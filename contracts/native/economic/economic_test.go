@@ -23,11 +23,12 @@ import (
 	"os"
 	"testing"
 
-	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/economic_abi"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -37,14 +38,53 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+// TestTotalSupply use command as follow to test each cases, and the result contains coverage and output. and use
+// the flag of -count=1 to avoid the affect of test cache.
+// cmd:
+// go test -v -count=1 -cover github.com/ethereum/go-ethereum/contracts/native/economic -run TestTotalSupply
+//
 func TestTotalSupply(t *testing.T) {
-	_, ctx := native.GenerateTestContext(t, 40, common.HexToAddress("0x123"))
+	list := []struct {
+		height  int
+		expect  *big.Int
+		testABI bool
+	}{
+		// genesis supply should be 100,000,000
+		{
+			0,
+			new(big.Int).SetUint64(100000000),
+			false,
+		},
+		// supply = genesis supply + block number * 1
+		{
+			40,
+			new(big.Int).SetUint64(100000040),
+			false,
+		},
+		// total supply has no upper limit
+		{
+			200000000,
+			new(big.Int).SetUint64(300000000),
+			true,
+		},
+	}
 
-	raw, err := TotalSupply(ctx)
-	assert.NoError(t, err)
+	for _, tc := range list {
+		var supply *big.Int
 
-	output := new(big.Int)
-	assert.NoError(t, utils.UnpackOutputs(ABI, MethodTotalSupply, output, raw))
+		_, ctx := native.GenerateTestContext(t, tc.height)
+		raw, err := TotalSupply(ctx)
+		assert.NoError(t, err)
 
-	t.Log(output)
+		if tc.testABI {
+			output, err := ABI.Unpack(MethodTotalSupply, raw)
+			assert.NoError(t, err)
+			supply = *abi.ConvertType(output[0], new(*big.Int)).(**big.Int)
+		} else {
+			assert.NoError(t, utils.UnpackOutputs(ABI, MethodTotalSupply, &supply, raw))
+		}
+
+		got := new(big.Int).Div(supply, params.ZNT1)
+		assert.Equal(t, tc.expect, got)
+	}
 }
