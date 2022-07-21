@@ -112,19 +112,19 @@ func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSe
 	return vals
 }
 
-func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) bool {
+func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) (string, bool) {
 	// consider that tx is deploy transaction, so the tx.to will be nil
 	if tx == nil || len(tx.Data()) < 4 || tx.To() == nil {
-		return false
+		return "", false
 	}
 	if *tx.To() != contractAddr {
-		return false
+		return "", false
 	}
 	id := common.Bytes2Hex(tx.Data()[:4])
 	if _, exist := specMethod[id]; !exist {
-		return false
+		return id, false
 	}
-	return true
+	return id, true
 }
 
 // header height infront of state height

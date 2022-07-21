@@ -166,7 +166,7 @@ type HotStuff interface {
 	FillHeader(state *state.StateDB, header *types.Header) error
 
 	// IsSystemCall whether the method id is the governance tx method
-	IsSystemTransaction(tx *types.Transaction, header *types.Header) bool
+	IsSystemTransaction(tx *types.Transaction, header *types.Header) (string, bool)
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message
