@@ -63,6 +63,7 @@ func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *
 		supplyGas = uint64(0)
 	)
 
+	sdb := NewTestStateDB()
 	for _, v := range params {
 		switch v.(type) {
 		case int:
@@ -77,12 +78,14 @@ func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *
 			hash = v.(common.Hash)
 		case uint64:
 			supplyGas = v.(uint64)
+		case func(*state.StateDB):
+			fn := v.(func(*state.StateDB))
+			fn(sdb)
 		default:
 			t.Fatal("invalid params type")
 		}
 	}
 
-	sdb := NewTestStateDB()
 	blockHeight := new(big.Int).SetInt64(int64(block))
 	contractRef := NewContractRef(sdb, sender, caller, blockHeight, hash, supplyGas, nil)
 	ctx := NewNativeContract(sdb, contractRef)

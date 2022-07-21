@@ -19,6 +19,7 @@
 package economic
 
 import (
+	"errors"
 	"math/big"
 	"os"
 	"testing"
@@ -29,6 +30,7 @@ import (
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/economic_abi"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/assert"
 )
@@ -62,7 +64,7 @@ func TestTotalSupply(t *testing.T) {
 		var supply *big.Int
 
 		payload, _ := new(MethodTotalSupplyInput).Encode()
-		raw, err := native.TestNativeCall(t, this, payload, tc.height, common.EmptyAddress)
+		raw, err := native.TestNativeCall(t, this, payload, tc.height)
 		assert.NoError(t, err)
 
 		if tc.testABI {
@@ -78,19 +80,43 @@ func TestTotalSupply(t *testing.T) {
 	}
 }
 
-//func TestReward(t *testing.T) {
-//	testcases := []struct {
-//		pool common.Address
-//		rate int
-//		expectPoolAmount *big.Int
-//		expectStakeAmount *big.Int
-//		errNil bool
-//	}{
-//		{common.EmptyAddress, 0, common.Big0, params.ZNT1, true},
-//		{common.HexToAddress("0x123"), 2000, new(big.Int).SetUint64(1e18), },
-//		{common.HexToAddress("0x123"), 10000},
-//		{common.HexToAddress("0x123"), 10001},
-//	}
-//
-//
-//}
+func TestReward(t *testing.T) {
+	xe17 := func(n int) *big.Int {
+		return new(big.Int).SetUint64(uint64(1e17) * uint64(n))
+	}
+
+	testcases := []struct {
+		pool              common.Address
+		height            int
+		rate              int
+		expectPoolAmount  *big.Int
+		expectStakeAmount *big.Int
+		err               error
+	}{
+		{common.EmptyAddress, 0, 0, common.Big0, params.ZNT1, nil},
+		{common.HexToAddress("0x123"), 1, 2000, xe17(2), xe17(8), nil},
+		{common.HexToAddress("0x123"), 100000000, 10000, xe17(10), xe17(0), nil},
+		{common.HexToAddress("0x123"), 100000000, 10001, xe17(10), xe17(0), errors.New("reward err should be decimal")},
+	}
+
+	for _, tc := range testcases {
+		got := new(MethodRewardOutput)
+
+		payload, _ := new(MethodRewardInput).Encode()
+		raw, err := native.TestNativeCall(t, this, payload, tc.height, func(state *state.StateDB) {
+			nm.StoreCommunityInfo(state, big.NewInt(int64(tc.rate)), tc.pool)
+		})
+		if tc.err == nil {
+			assert.NoError(t, err)
+			assert.NoError(t, got.Decode(raw))
+
+			assert.Equal(t, 2, len(got.List))
+			assert.Equal(t, tc.pool, got.List[0].Address)
+			assert.Equal(t, tc.expectPoolAmount, got.List[0].Amount)
+			assert.Equal(t, utils.NodeManagerContractAddress, got.List[1].Address)
+			assert.Equal(t, tc.expectStakeAmount, got.List[1].Amount)
+		} else {
+			t.Logf("exepct err %v, got %v", tc.err, err)
+		}
+	}
+}
