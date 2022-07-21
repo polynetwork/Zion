@@ -95,7 +95,7 @@ func (s *backend) applyTransaction(
 	chainContext core.ChainContext,
 	commonTxs *[]*types.Transaction, receipts *[]*types.Receipt,
 	sysTxs *[]*types.Transaction, usedGas *uint64, mining bool,
-) error {
+) (err error) {
 
 	// check msg sender
 	if msg.From() != utils.SystemTxSender {
@@ -106,9 +106,17 @@ func (s *backend) applyTransaction(
 	expectedTx := types.NewTransaction(nonce, *msg.To(), msg.Value(), msg.Gas(), msg.GasPrice(), msg.Data())
 	signer := types.MakeSigner(chain.Config(), header.Number)
 
-	// if the msg sender is not systemTxSender, expectTx should be s.signer.SignTx(expectedTx, signer)
-	// and the message sender should be equal to current signer `s.signer.address`
-	if !mining {
+	// miner worker execute `finalizeAndAssemble` in which the param of `mining` is true,  it's denote
+	// that this tx comes from miner, and `validator` send governance tx in the same nonce is forbidden.
+	// the sender of system tx is an unusual address, let the miner `signTx` to keep the signature in tx.Data
+	// which denote that the system tx is mined by some one validator. this tx and the `actual` tx which
+	// others sync node received should be compared and ensure that they are extreme the same.
+	if mining {
+		expectedTx, err = s.signer.SignTx(expectedTx, signer)
+		if err != nil {
+			return err
+		}
+	} else {
 		if sysTxs == nil || len(*sysTxs) == 0 || (*sysTxs)[0] == nil {
 			return fmt.Errorf("supposed to get a actual transaction, but get none")
 		}
