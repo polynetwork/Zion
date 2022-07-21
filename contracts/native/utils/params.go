@@ -34,6 +34,10 @@ var (
 )
 
 var (
+	SystemTxSender = common.HexToAddress("0x0000000000000000000100000000000000000000")
+)
+
+var (
 	NodeManagerContractAddress       = common.HexToAddress("0x0000000000000000000000000000000000001000")
 	EconomicContractAddress          = common.HexToAddress("0x0000000000000000000000000000000000001001")
 	InfoSyncContractAddress          = common.HexToAddress("0x0000000000000000000000000000000000001002")

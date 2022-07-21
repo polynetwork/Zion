@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -72,10 +73,10 @@ func (c chainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
 }
 
 // get system message
-func (s *backend) getSystemMessage(from, toAddress common.Address, data []byte, value *big.Int) callmsg {
+func (s *backend) getSystemMessage(toAddress common.Address, data []byte, value *big.Int) callmsg {
 	return callmsg{
 		ethereum.CallMsg{
-			From:     from,
+			From:     utils.SystemTxSender,
 			Gas:      math.MaxUint64 / 2,
 			GasPrice: big.NewInt(0), // consensus txs do not need to participate in gas price bidding
 			Value:    value,
@@ -95,24 +96,33 @@ func (s *backend) applyTransaction(
 	commonTxs *[]*types.Transaction, receipts *[]*types.Receipt,
 	sysTxs *[]*types.Transaction, usedGas *uint64, mining bool,
 ) (err error) {
-	nonce := state.GetNonce(msg.From())
 
+	// check msg sender
+	if msg.From() != utils.SystemTxSender {
+		return fmt.Errorf("system tx sender invalid")
+	}
+
+	nonce := state.GetNonce(msg.From())
 	expectedTx := types.NewTransaction(nonce, *msg.To(), msg.Value(), msg.Gas(), msg.GasPrice(), msg.Data())
 	signer := types.MakeSigner(chain.Config(), header.Number)
 
-	// miner worker use finalizeAndAssemble in which the param of `mining` is true,  it's denote
-	// that this tx comes from miner. `validator` send governance tx in the same nonce is forbidden.
-	if msg.From() == s.signer.Address() && mining {
+	// miner worker execute `finalizeAndAssemble` in which the param of `mining` is true,  it's denote
+	// that this tx comes from miner, and `validator` send governance tx in the same nonce is forbidden.
+	// the sender of system tx is an unusual address, let the miner `signTx` to keep the signature in tx.Data
+	// which denote that the system tx is mined by some one validator. this tx and the `actual` tx which
+	// others sync node received should be compared and ensure that they are extreme the same.
+	if mining {
 		expectedTx, err = s.signer.SignTx(expectedTx, signer)
 		if err != nil {
 			return err
 		}
 	} else {
+		// system tx CAN'T be nil or empty
 		if sysTxs == nil || len(*sysTxs) == 0 || (*sysTxs)[0] == nil {
-			//return errors.New("supposed to get a actual transaction, but get none")
-			// allow empty system contract
-			return nil
+			return fmt.Errorf("supposed to get a actual transaction, but get none")
 		}
+
+		// check tx hash
 		actualTx := (*sysTxs)[0]
 		if expectedHash := signer.Hash(expectedTx); !bytes.Equal(signer.Hash(actualTx).Bytes(), expectedHash.Bytes()) {
 			return fmt.Errorf("expected tx hash %v, nonce %d, to %s, value %s, gas %d, gasPrice %s, data %s;"+
@@ -133,10 +143,21 @@ func (s *backend) applyTransaction(
 				hex.EncodeToString(actualTx.Data()),
 			)
 		}
+
+		// tx signature can be recovered and the sender should be equal to block `coinbase`
+		sender, err := signer.Sender(actualTx)
+		if err != nil {
+			return fmt.Errorf("recover system tx sender failed, err: %v", err)
+		}
+		if sender != header.Coinbase {
+			return fmt.Errorf("supposed to miner %s but got %s", header.Coinbase.Hex(), sender.Hex())
+		}
+
+		// reset tx and shift system tx list to next
 		expectedTx = actualTx
-		// move to next
 		*sysTxs = (*sysTxs)[1:]
 	}
+
 	state.Prepare(expectedTx.Hash(), common.Hash{}, len(*commonTxs))
 	gasUsed, err := applyMessage(msg, state, header, chain.Config(), chainContext)
 	if err != nil {
@@ -232,7 +253,7 @@ type systemTxContext struct {
 }
 
 func (s *backend) executeTransaction(ctx *systemTxContext, contract common.Address, payload []byte) error {
-	msg := s.getSystemMessage(ctx.header.Coinbase, contract, payload, common.Big0)
+	msg := s.getSystemMessage(contract, payload, common.Big0)
 	return s.applyTransaction(ctx.chain, msg, ctx.state, ctx.header, ctx.chainCtx, ctx.txs, ctx.receipts, ctx.sysTxs, ctx.usedGas, ctx.mining)
 }
 

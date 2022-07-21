@@ -567,6 +567,11 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 }
 
 func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	if ctx.Caller != s.ContractRef().TxOrigin() || ctx.Caller != utils.SystemTxSender {
+		return nil, fmt.Errorf("SystemTx authority failed")
+	}
+
 	endHeight := s.ContractRef().BlockHeight()
 	startHeight := new(big.Int).Add(endHeight, common.Big1)
 
@@ -748,6 +753,11 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 }
 
 func EndBlock(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	if ctx.Caller != s.ContractRef().TxOrigin() || ctx.Caller != utils.SystemTxSender {
+		return nil, fmt.Errorf("SystemTx authority failed")
+	}
+
 	// contract balance = totalpool + outstanding + new block reward
 	balance := NewDecFromBigInt(s.StateDB().GetBalance(this))
 
