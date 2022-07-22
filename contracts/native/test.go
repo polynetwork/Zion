@@ -95,10 +95,10 @@ func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *
 	return sdb, ctx
 }
 
-func TestNativeCall(t *testing.T, contract common.Address, payload []byte, params ...interface{}) ([]byte, error) {
+func TestNativeCall(t *testing.T, contract common.Address, name string, payload []byte, params ...interface{}) ([]byte, error) {
 	_, ctx := GenerateTestContext(t, params...)
 	ref := ctx.ContractRef()
 	res, _, err := ref.NativeCall(ref.caller, contract, payload)
-	t.Logf("execute time %v", ctx.BreakPoint())
+	t.Logf("contract %s method %s execute time %v", contract.Hex(), name, ctx.BreakPoint())
 	return res, err
 }
