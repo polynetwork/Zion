@@ -115,10 +115,9 @@ func TestNativeCall(t *testing.T, contract common.Address, name string, payload 
 	_, ctx := GenerateTestContext(t, params...)
 	ref := ctx.ContractRef()
 	res, _, err := ref.NativeCall(ref.caller, contract, payload)
-	t.Logf("contract %s method %s execute time %v", contract.Hex(), name, ctx.BreakPoint())
+	t.Logf("contract %s method %s execute time %v us", contract.Hex(), name, ctx.BreakPoint())
 	return res, err
 }
-
 
 type Timer struct {
 	name string

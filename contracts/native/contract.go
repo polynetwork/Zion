@@ -191,7 +191,7 @@ func getTopicAndEvent(abi *abiPkg.ABI, topic string) (string, *abiPkg.Event, err
 	return topic, nil, fmt.Errorf("topic %s not exist", topic)
 }
 
-func (s *NativeContract) BreakPoint() time.Duration {
+func (s *NativeContract) BreakPoint() uint64 {
 	if !DebugSpentOpen {
 		return 0
 	}
@@ -202,6 +202,6 @@ func (s *NativeContract) BreakPoint() time.Duration {
 	} else {
 		lastTime := s.testPoint
 		s.testPoint = time.Now().UnixNano()
-		return time.Duration(s.testPoint-lastTime) / time.Microsecond
+		return uint64(s.testPoint-lastTime) / uint64(time.Microsecond)
 	}
 }
