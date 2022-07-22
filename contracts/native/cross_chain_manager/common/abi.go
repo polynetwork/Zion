@@ -34,7 +34,6 @@ var (
 	MethodContractName        = cross_chain_manager_abi.MethodName
 	MethodImportOuterTransfer = cross_chain_manager_abi.MethodImportOuterTransfer
 	MethodCheckDone           = cross_chain_manager_abi.MethodCheckDone
-	MethodMultiSign           = cross_chain_manager_abi.MethodMultiSign
 	MethodBlackChain          = cross_chain_manager_abi.MethodBlackChain
 	MethodWhiteChain          = cross_chain_manager_abi.MethodWhiteChain
 	MethodReplenish           = cross_chain_manager_abi.MethodReplenish
@@ -47,7 +46,7 @@ func init() {
 }
 
 func GetABI() *abi.ABI {
-	ab, err := abi.JSON(strings.NewReader(cross_chain_manager_abi.CrossChainManagerABI))
+	ab, err := abi.JSON(strings.NewReader(cross_chain_manager_abi.ICrossChainManagerABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}

@@ -55,7 +55,7 @@ func init() {
 }
 
 
-func TestRegisterSideChainManager(t *testing.T) {
+func testRegisterSideChainManager(t *testing.T) {
 	param := new(RegisterSideChainParam)
 	param.BlocksToWait = 4
 	param.ChainID = 8
@@ -97,8 +97,8 @@ func TestRegisterSideChainManager(t *testing.T) {
 	tr.Dump()
 }
 
-func TestApproveRegisterSideChain(t *testing.T) {
-	TestRegisterSideChainManager(t)
+func testApproveRegisterSideChain(t *testing.T) {
+	testRegisterSideChainManager(t)
 
 	param := new(ChainIDParam)
 	param.ChainID = 8
@@ -140,8 +140,8 @@ func TestApproveRegisterSideChain(t *testing.T) {
 	tr.Dump()
 }
 
-func TestUpdateSideChain(t *testing.T) {
-	TestApproveRegisterSideChain(t)
+func testUpdateSideChain(t *testing.T) {
+	testApproveRegisterSideChain(t)
 
 	param := new(RegisterSideChainParam)
 	param.BlocksToWait = 10
@@ -179,8 +179,8 @@ func TestUpdateSideChain(t *testing.T) {
 
 }
 
-func TestApproveUpdateSideChain(t *testing.T) {
-	TestUpdateSideChain(t)
+func testApproveUpdateSideChain(t *testing.T) {
+	testUpdateSideChain(t)
 	param := new(ChainIDParam)
 	param.ChainID = 8
 
@@ -248,8 +248,8 @@ func TestApproveUpdateSideChain(t *testing.T) {
 }
 
 
-func TestQuiteSideChain(t *testing.T) {
-	TestApproveUpdateSideChain(t)
+func testQuiteSideChain(t *testing.T) {
+	testApproveUpdateSideChain(t)
 	param := new(ChainIDParam)
 	param.ChainID = 8
 
@@ -282,7 +282,7 @@ func TestQuiteSideChain(t *testing.T) {
 
 
 func TestApproveQuiteSideChain(t *testing.T) {
-	TestQuiteSideChain(t)
+	testQuiteSideChain(t)
 	param := new(ChainIDParam)
 	param.ChainID = 8
 

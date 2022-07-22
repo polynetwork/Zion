@@ -226,70 +226,41 @@ func TestImportOuterTransfer(t *testing.T) {
 	tr.Dump()
 }
 
-func TestWhiteChain(t *testing.T) {
-	TestImportOuterTransfer(t)
 
-	param := new(scom.BlackChainParam)
+
+func TestReplenish(t *testing.T) {
+	param := new(scom.ReplenishParam)
 	param.ChainID = 8
+	param.TxHashes = []string {"0x74676ce6389bbb479ffc9afe720749ad28b9500ff09c7ae8f19bd1e543f8845f"}
 
-	param1 := new(scom.BlackChainParam)
+	param1 := new(scom.ReplenishParam)
 	param1.ChainID = 9
+	for i := 0; i < 200; i++ {
+		param1.TxHashes = append(param1.TxHashes, "0x74676ce6389bbb479ffc9afe720749ad28b9500ff09c7ae8f19bd1e543f8845f")
+	}
 
-	tr := native.NewTimer(scom.MethodBlackChain)
-	for _, param := range []*scom.BlackChainParam{param, param1} {
-		input, err := utils.PackMethodWithStruct(scom.ABI, cross_chain_manager_abi.MethodWhiteChain, param)
+	tr := native.NewTimer(scom.MethodReplenish)
+	for _, param := range []*scom.ReplenishParam{param, param1} {
+		input, err := utils.PackMethodWithStruct(scom.ABI, cross_chain_manager_abi.MethodReplenish, param)
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
 		extra := uint64(10)
-		caller := signers[0]
-		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodWhiteChain]+extra, nil)
+		caller := common.Address{}
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodReplenish]+extra, nil)
 		tr.Start()
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.CrossChainManagerContractAddress, input)
 		tr.Stop()
 		assert.Nil(t, err)
-		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodWhiteChain, true)
+		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodReplenish, true)
 		assert.Nil(t, err)
 		assert.Equal(t, ret, result)
 		assert.Equal(t, leftOverGas, extra)
 	}
 	tr.Dump()
 }
-
-func TestBlackChain(t *testing.T) {
-	TestImportOuterTransfer(t)
-
-	param := new(scom.BlackChainParam)
-	param.ChainID = 8
-
-	param1 := new(scom.BlackChainParam)
-	param1.ChainID = 9
-
-	tr := native.NewTimer(scom.MethodBlackChain)
-	for _, param := range []*scom.BlackChainParam{param, param1} {
-		input, err := utils.PackMethodWithStruct(scom.ABI, cross_chain_manager_abi.MethodBlackChain, param)
-		assert.Nil(t, err)
-
-		blockNumber := big.NewInt(1)
-		extra := uint64(10)
-		caller := signers[0]
-		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodBlackChain]+extra, nil)
-		tr.Start()
-		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.CrossChainManagerContractAddress, input)
-		tr.Stop()
-		assert.Nil(t, err)
-		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodBlackChain, true)
-		assert.Nil(t, err)
-		assert.Equal(t, ret, result)
-		assert.Equal(t, leftOverGas, extra)
-	}
-	tr.Dump()
-}
-
 
 func TestCheckDone(t *testing.T) {
-	TestImportOuterTransfer(t)
-
 	param := new(scom.CheckDoneParam)
 	param.CrossChainID = make([]byte, 32)
 
@@ -318,33 +289,55 @@ func TestCheckDone(t *testing.T) {
 	tr.Dump()
 }
 
-func TestReplenish(t *testing.T) {
-	TestImportOuterTransfer(t)
-
-	param := new(scom.ReplenishParam)
+func TestWhiteChain(t *testing.T) {
+	param := new(scom.BlackChainParam)
 	param.ChainID = 8
-	param.TxHashes = []string {"0x74676ce6389bbb479ffc9afe720749ad28b9500ff09c7ae8f19bd1e543f8845f"}
 
-	param1 := new(scom.ReplenishParam)
+	param1 := new(scom.BlackChainParam)
 	param1.ChainID = 9
-	for i := 0; i < 200; i++ {
-		param1.TxHashes = append(param1.TxHashes, "0x74676ce6389bbb479ffc9afe720749ad28b9500ff09c7ae8f19bd1e543f8845f")
-	}
 
-	tr := native.NewTimer(scom.MethodReplenish)
-	for _, param := range []*scom.ReplenishParam{param, param1} {
-		input, err := utils.PackMethodWithStruct(scom.ABI, cross_chain_manager_abi.MethodReplenish, param)
+	tr := native.NewTimer(scom.MethodBlackChain)
+	for _, param := range []*scom.BlackChainParam{param, param1} {
+		input, err := utils.PackMethodWithStruct(scom.ABI, cross_chain_manager_abi.MethodWhiteChain, param)
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
 		extra := uint64(10)
-		caller := common.Address{}
-		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodReplenish]+extra, nil)
+		caller := signers[0]
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodWhiteChain]+extra, nil)
 		tr.Start()
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.CrossChainManagerContractAddress, input)
 		tr.Stop()
 		assert.Nil(t, err)
-		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodReplenish, true)
+		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodWhiteChain, true)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
+	}
+	tr.Dump()
+}
+
+func TestBlackChain(t *testing.T) {
+	param := new(scom.BlackChainParam)
+	param.ChainID = 8
+
+	param1 := new(scom.BlackChainParam)
+	param1.ChainID = 9
+
+	tr := native.NewTimer(scom.MethodBlackChain)
+	for _, param := range []*scom.BlackChainParam{param, param1} {
+		input, err := utils.PackMethodWithStruct(scom.ABI, cross_chain_manager_abi.MethodBlackChain, param)
+		assert.Nil(t, err)
+
+		blockNumber := big.NewInt(1)
+		extra := uint64(10)
+		caller := signers[0]
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodBlackChain]+extra, nil)
+		tr.Start()
+		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.CrossChainManagerContractAddress, input)
+		tr.Stop()
+		assert.Nil(t, err)
+		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodBlackChain, true)
 		assert.Nil(t, err)
 		assert.Equal(t, ret, result)
 		assert.Equal(t, leftOverGas, extra)
