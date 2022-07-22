@@ -40,7 +40,7 @@ var (
 	testGenesisPeers []common.Address
 )
 
-func init() {
+func Init() {
 	key, _ := crypto.GenerateKey()
 	acct = &key.PublicKey
 
@@ -53,6 +53,7 @@ func init() {
 }
 
 func TestCheckGenesis(t *testing.T) {
+	Init()
 	// check get spec methodID
 	m := GetSpecMethodID()
 	assert.Equal(t, m["fe6f86f8"], true)
@@ -130,6 +131,7 @@ func TestCheckGenesis(t *testing.T) {
 }
 
 func TestStake(t *testing.T) {
+	Init()
 	blockNumber := big.NewInt(399999)
 	extra := uint64(10)
 	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
@@ -419,6 +421,7 @@ func TestStake(t *testing.T) {
 }
 
 func TestDistribute(t *testing.T) {
+	Init()
 	blockNumber := big.NewInt(399999)
 	extra := uint64(10)
 	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
@@ -837,6 +840,7 @@ func TestDistribute(t *testing.T) {
 }
 
 func TestPerformance(t *testing.T) {
+	Init()
 	blockNumber := 399999
 	extra := uint64(10)
 
