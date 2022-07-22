@@ -140,10 +140,18 @@ func TestReward(t *testing.T) {
 func TestTransfer(t *testing.T) {
 	var (
 		from   = common.HexToAddress("0x123")
+		to     = common.HexToAddress("0x456")
 		amount = params.ZNT1
 	)
 
-	state, ctx := native.GenerateTestContext(t)
+	state := native.NewTestStateDB()
 	state.AddBalance(from, amount)
+
+	_, ctx := native.GenerateTestContext(t, state)
+	if state.GetBalance(from).Cmp(amount) < 0 {
+		t.Error("balance not enough")
+	}
+	state.SubBalance(from, amount)
+	state.AddBalance(to, amount)
 	t.Logf("base method `transfer` function %d", ctx.BreakPoint())
 }
