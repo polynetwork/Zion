@@ -928,6 +928,102 @@ func TestPerformance(t *testing.T) {
 		assert.Nil(t, err)
 	}
 
+	// query
+	{
+		p1 := &GetEpochInfoParam{
+			ID: common.Big1,
+		}
+		input, err = p1.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetEpochInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p2 := &GetAllValidatorsParam{}
+		input, err = p2.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetAllValidators", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p3 := &GetValidatorParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p3.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidator", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p4 := &GetStakeInfoParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			StakeAddress:     stakeAddressList[0],
+		}
+		input, err = p4.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetStakeInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p5 := &GetUnlockingInfoParam{
+			StakeAddress: stakeAddressList[0],
+		}
+		input, err = p5.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetUnlockingInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p6 := &GetStakeStartingInfoParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			StakeAddress:     stakeAddressList[0],
+		}
+		input, err = p6.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetStakeStartingInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p7 := &GetAccumulatedCommissionParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p7.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetAccumulatedCommission", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p8 := &GetValidatorSnapshotRewardsParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			Period:           3,
+		}
+		input, err = p8.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorSnapshotRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p9 := &GetValidatorAccumulatedRewardsParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p9.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorAccumulatedRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p10 := &GetValidatorOutstandingRewardsParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p10.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorOutstandingRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p11 := &GetTotalPoolParam{}
+		input, err = p11.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetTotalPool", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p12 := &GetOutstandingRewardsParam{}
+		input, err = p12.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetOutstandingRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+	}
+
 	// withdraw
 	input, err = utils.PackMethod(ABI, MethodWithdraw)
 	assert.Nil(t, err)
