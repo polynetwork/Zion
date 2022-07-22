@@ -63,7 +63,8 @@ func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *
 		supplyGas = uint64(0)
 	)
 
-	sdb := NewTestStateDB()
+	var sdb *state.StateDB
+	flag := false
 	for _, v := range params {
 		switch v.(type) {
 		case int:
@@ -79,11 +80,20 @@ func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *
 		case uint64:
 			supplyGas = v.(uint64)
 		case func(*state.StateDB):
+			sdb = NewTestStateDB()
 			fn := v.(func(*state.StateDB))
 			fn(sdb)
+			flag = true
+		case *state.StateDB:
+			sdb = v.(*state.StateDB)
+			flag = true
 		default:
 			t.Fatal("invalid params type")
 		}
+	}
+
+	if !flag {
+		sdb = NewTestStateDB()
 	}
 
 	blockHeight := new(big.Int).SetInt64(int64(block))

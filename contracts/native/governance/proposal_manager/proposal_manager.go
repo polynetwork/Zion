@@ -35,6 +35,8 @@ const (
 	PROPOSE_EVENT        = "Propose"
 	PROPOSE_CONFIG_EVENT = "ProposeConfig"
 	VOTE_PROPOSAL_EVENT  = "VoteProposal"
+
+	MaxContentLength int = 4000
 )
 
 var (
@@ -72,6 +74,10 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	params := &ProposeParam{}
 	if err := utils.UnpackMethod(ABI, MethodPropose, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("Propose, unpack params error: %v", err)
+	}
+
+	if len(params.Content) > MaxContentLength {
+		return nil, fmt.Errorf("Propose, content is more than max length")
 	}
 
 	// remove expired proposal
@@ -137,6 +143,10 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 	params := &ProposeParam{}
 	if err := utils.UnpackMethod(ABI, MethodProposeConfig, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("ProposeConfig, unpack params error: %v", err)
+	}
+
+	if len(params.Content) > MaxContentLength {
+		return nil, fmt.Errorf("Propose, content is more than max length")
 	}
 
 	// remove expired proposal
@@ -252,9 +262,6 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			}
 			if config.BlockPerEpoch != nil {
 				globalConfig.BlockPerEpoch = config.BlockPerEpoch
-			}
-			if config.MaxDescLength != 0 {
-				globalConfig.MaxDescLength = config.MaxDescLength
 			}
 			if config.MaxCommissionChange != nil {
 				globalConfig.MaxCommissionChange = config.MaxCommissionChange

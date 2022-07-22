@@ -109,7 +109,6 @@ type GlobalConfig struct {
 	MaxCommissionChange   *big.Int
 	MinInitialStake       *big.Int
 	MinProposalStake      *big.Int
-	MaxDescLength         uint64
 	BlockPerEpoch         *big.Int
 	ConsensusValidatorNum uint64
 	VoterValidatorNum     uint64

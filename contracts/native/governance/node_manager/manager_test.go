@@ -65,7 +65,6 @@ func TestCheckGenesis(t *testing.T) {
 
 	globalConfig, err := GetGlobalConfigImpl(contract)
 	assert.Nil(t, err)
-	assert.Equal(t, globalConfig.MaxDescLength, GenesisMaxDescLength)
 	assert.Equal(t, globalConfig.BlockPerEpoch, GenesisBlockPerEpoch)
 	assert.Equal(t, globalConfig.MaxCommissionChange, GenesisMaxCommissionChange)
 	assert.Equal(t, globalConfig.MinInitialStake, GenesisMinInitialStake)
@@ -90,7 +89,6 @@ func TestCheckGenesis(t *testing.T) {
 	globalConfig2 := new(GlobalConfig)
 	err = globalConfig2.Decode(ret)
 	assert.Nil(t, err)
-	assert.Equal(t, globalConfig2.MaxDescLength, GenesisMaxDescLength)
 	assert.Equal(t, globalConfig2.BlockPerEpoch, GenesisBlockPerEpoch)
 	assert.Equal(t, globalConfig2.MaxCommissionChange, GenesisMaxCommissionChange)
 	assert.Equal(t, globalConfig2.MinInitialStake, GenesisMinInitialStake)
@@ -225,8 +223,8 @@ func TestStake(t *testing.T) {
 	// change epoch
 	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// check
@@ -351,16 +349,16 @@ func TestStake(t *testing.T) {
 	// change epoch
 	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	blockNumber = new(big.Int).SetUint64(1199999)
 	// change epoch
 	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// add block num
@@ -404,8 +402,8 @@ func TestStake(t *testing.T) {
 	// change epoch
 	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// check
@@ -484,8 +482,8 @@ func TestDistribute(t *testing.T) {
 	// change epoch
 	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// here we have 4 validators with 100000 self stake, and validator 1 have 10000, 20000 user stake, and commission is 20%
@@ -495,8 +493,8 @@ func TestDistribute(t *testing.T) {
 	param3 := new(EndBlockParam)
 	input, err = param3.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// check
@@ -769,8 +767,8 @@ func TestDistribute(t *testing.T) {
 	param9 := new(EndBlockParam)
 	input, err = param9.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
@@ -778,8 +776,8 @@ func TestDistribute(t *testing.T) {
 	param10 := new(EndBlockParam)
 	input, err = param10.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// cancel validator
@@ -795,8 +793,8 @@ func TestDistribute(t *testing.T) {
 	// change epoch
 	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
-	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	blockNumber = big.NewInt(900000)
@@ -836,4 +834,59 @@ func TestDistribute(t *testing.T) {
 	b7, _ := new(big.Int).SetString("1000092307692307692280000", 10)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), b6)
 	assert.Equal(t, sdb.GetBalance(stakeAddress2), b7)
+}
+
+func TestPerformance(t *testing.T) {
+	blockNumber := 399999
+	extra := uint64(10)
+
+	type ValidatorKey struct {
+		ConsensusAddr common.Address
+		StakeAddress  common.Address
+	}
+	// create validator
+	loop := 300
+	validatorsKey := make([]*ValidatorKey, 0, loop)
+	for i := 0; i < loop; i++ {
+		pk, _ := crypto.GenerateKey()
+		consensusAddr := crypto.PubkeyToAddress(pk.PublicKey)
+		caller := crypto.PubkeyToAddress(*acct)
+		sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+		param := new(CreateValidatorParam)
+		param.ConsensusAddress = consensusAddr
+		param.SignerAddress = consensusAddr
+		param.ProposalAddress = caller
+		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+		param.Commission = new(big.Int).SetUint64(2000)
+		param.Desc = "test"
+		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
+		input, err := param.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "CreateValidator", input, caller, caller, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+	}
+
+	loop = 10000
+	stakeAddressList := make([]common.Address, 0, loop)
+	for i := 0; i < loop; i++ {
+		//stake
+		pkStake, _ := crypto.GenerateKey()
+		staker := &pkStake.PublicKey
+		stakeAddress := crypto.PubkeyToAddress(*staker)
+		stakeAddressList = append(stakeAddressList, stakeAddress)
+		sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+		param1 := new(StakeParam)
+		param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
+		param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
+		input, err := param1.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "Stake", input, stakeAddress, stakeAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+	}
+
+	// change epoch
+	input, err := utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "ChangeEpoch", input, utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
+	assert.Nil(t, err)
 }

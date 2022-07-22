@@ -261,6 +261,9 @@ func delStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address,
 }
 
 func SetGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error {
+	if globalConfig.MaxCommissionChange.Cmp(PercentDecimal) > 0 {
+		return fmt.Errorf("SetGlobalConfig, MaxCommissionChange over size")
+	}
 	key := globalConfigKey()
 	store, err := rlp.EncodeToBytes(globalConfig)
 	if err != nil {
@@ -271,6 +274,9 @@ func SetGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error
 }
 
 func setGenesisGlobalConfig(s *state.CacheDB, globalConfig *GlobalConfig) error {
+	if globalConfig.MaxCommissionChange.Cmp(PercentDecimal) > 0 {
+		return fmt.Errorf("setGenesisGlobalConfig, MaxCommissionChange over size")
+	}
 	key := globalConfigKey()
 	store, err := rlp.EncodeToBytes(globalConfig)
 	if err != nil {
@@ -314,6 +320,9 @@ func addToAllValidators(s *native.NativeContract, consensusAddr common.Address) 
 		return fmt.Errorf("addToAllValidators, getAllValidators error: %v", err)
 	}
 	allValidators.AllValidators = append(allValidators.AllValidators, consensusAddr)
+	if len(allValidators.AllValidators) > 300 {
+		return fmt.Errorf("addToAllValidators, validator num is more than max")
+	}
 	err = setAllValidators(s, allValidators)
 	if err != nil {
 		return fmt.Errorf("addToAllValidators, set all validators error: %v", err)
@@ -682,6 +691,9 @@ func GetEpochInfoFromDB(s *state.StateDB, ID *big.Int) (*EpochInfo, error) {
 }
 
 func setGenesisCommunityInfo(s *state.CacheDB, communityInfo *CommunityInfo) error {
+	if communityInfo.CommunityRate.Cmp(PercentDecimal) > 0 {
+		return fmt.Errorf("setGenesisCommunityInfo, CommunityRate over size")
+	}
 	key := communityInfoKey()
 	store, err := rlp.EncodeToBytes(communityInfo)
 	if err != nil {
@@ -692,6 +704,9 @@ func setGenesisCommunityInfo(s *state.CacheDB, communityInfo *CommunityInfo) err
 }
 
 func setCommunityInfo(s *native.NativeContract, communityInfo *CommunityInfo) error {
+	if communityInfo.CommunityRate.Cmp(PercentDecimal) > 0 {
+		return fmt.Errorf("setCommunityInfo, CommunityRate over size")
+	}
 	key := communityInfoKey()
 	store, err := rlp.EncodeToBytes(communityInfo)
 	if err != nil {

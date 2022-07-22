@@ -48,10 +48,6 @@ const (
 	CHAIN_ID uint64 = 1
 )
 
-func TestMain(m *testing.M) {
-
-}
-
 func init() {
 	key, _ = crypto.GenerateKey()
 	pub = &key.PublicKey
@@ -112,10 +108,8 @@ func TestNoAuthSyncRootInfo(t *testing.T) {
 	assert.Nil(t, err)
 
 	caller := crypto.PubkeyToAddress(*pub)
-	blockNumber := big.NewInt(1)
 	extra := uint64(1000)
-	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, 0+extra, nil)
-	_, _, err = contractRef.NativeCall(caller, utils.InfoSyncContractAddress, input)
+	_, err = native.TestNativeCall(t, utils.InfoSyncContractAddress, "SyncRootInfo", input, caller, caller, extra, sdb)
 	assert.NotNil(t, err)
 }
 
@@ -133,7 +127,6 @@ func TestNormalSyncRootInfo(t *testing.T) {
 
 	for i := 0; i < testGenesisNum; i++ {
 		caller := testGenesisPeers[i]
-		blockNumber := big.NewInt(1)
 		extra := uint64(1000)
 		digest, err := param.Digest()
 		assert.Nil(t, err)
@@ -143,53 +136,43 @@ func TestNormalSyncRootInfo(t *testing.T) {
 
 		input, err := param.Encode()
 		assert.Nil(t, err)
-		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, 0+extra, nil)
-		ret, _, err := contractRef.NativeCall(caller, utils.InfoSyncContractAddress, input)
+		ret, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "SyncRootInfo", input, caller, caller, extra, sdb)
 		assert.Nil(t, err)
 		result, err := utils.PackOutputs(ABI, MethodSyncRootInfo, true)
 		assert.Nil(t, err)
 		assert.Equal(t, ret, result)
 	}
-	blockNumber := big.NewInt(1)
+	q1 := GetInfoParam{
+		ChainID: CHAIN_ID,
+		Height: 100,
+	}
+	input, err := q1.Encode()
+	assert.Nil(t, err)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
-	contract := native.NewNativeContract(sdb, contractRef)
-	rootInfo, err := GetRootInfo(contract, CHAIN_ID, 100)
+	ret1, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "GetInfo", input, extra, sdb)
+	rootInfo := new(GetInfoOutput)
+	err = rootInfo.Decode(ret1)
 	assert.Nil(t, err)
-	assert.Equal(t, rootInfo, []byte{0x01, 0x02})
-	rootInfo, err = GetRootInfo(contract, CHAIN_ID, 98)
-	assert.Nil(t, err)
-	assert.Equal(t, rootInfo, []byte{0x02, 0x03})
-	h, err := GetCurrentHeight(contract, CHAIN_ID)
-	assert.Nil(t, err)
-	assert.Equal(t, h, uint32(100))
-
-	param2 := &GetInfoParam{
+	assert.Equal(t, rootInfo.Info, []byte{0x01, 0x02})
+	q2 := GetInfoParam{
 		ChainID: CHAIN_ID,
-		Height:  100,
+		Height: 98,
 	}
-	input, err := param2.Encode()
+	input, err = q2.Encode()
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, 0+extra, nil)
-	ret2, _, err := contractRef.NativeCall(common.EmptyAddress, utils.InfoSyncContractAddress, input)
+	ret2, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "GetInfo", input, extra, sdb)
+	rootInfo = new(GetInfoOutput)
+	err = rootInfo.Decode(ret2)
 	assert.Nil(t, err)
-	result2 := new(GetInfoOutput)
-	err = result2.Decode(ret2)
+	assert.Equal(t, rootInfo.Info, []byte{0x02, 0x03})
+	q3 := &GetInfoHeightParam{CHAIN_ID}
+	input, err = q3.Encode()
 	assert.Nil(t, err)
-	assert.Equal(t, result2.Info, []byte{0x01, 0x02})
-
-	param3 := &GetInfoHeightParam{
-		ChainID: CHAIN_ID,
-	}
-	input, err = param3.Encode()
+	ret3, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "GetInfoHeight", input, extra, sdb)
+	height := new(GetInfoHeightOutput)
+	err = height.Decode(ret3)
 	assert.Nil(t, err)
-	contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, 0+extra, nil)
-	ret3, _, err := contractRef.NativeCall(common.EmptyAddress, utils.InfoSyncContractAddress, input)
-	assert.Nil(t, err)
-	var height uint32 = 0
-	err = utils.UnpackOutputs(ABI, MethodGetInfoHeight, &height, ret3)
-	assert.Nil(t, err)
-	assert.Equal(t, height, uint32(100))
+	assert.Equal(t, height.Height, uint32(100))
 }
 
 func TestReplenish(t *testing.T) {
@@ -197,9 +180,9 @@ func TestReplenish(t *testing.T) {
 		ChainID: CHAIN_ID,
 		Heights: []uint32{100, 90},
 	}
+	extra := uint64(1000)
 	input, err := param.Encode()
 	assert.Nil(t, err)
-	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, big.NewInt(1), common.Hash{}, 1000, nil)
-	_, _, err = contractRef.NativeCall(common.EmptyAddress, utils.InfoSyncContractAddress, input)
+	_, err = native.TestNativeCall(t, utils.InfoSyncContractAddress, "Replenish", input, extra, sdb)
 	assert.Nil(t, err)
 }
