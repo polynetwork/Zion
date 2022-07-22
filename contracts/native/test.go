@@ -97,7 +97,11 @@ func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *
 	if !flag {
 		sdb = NewTestStateDB()
 	}
-
+	// set caller = sender if params only contains sender
+	if sender != common.EmptyAddress && caller == common.EmptyAddress {
+		caller = sender
+	}
+	
 	blockHeight := new(big.Int).SetInt64(int64(block))
 	contractRef := NewContractRef(sdb, sender, caller, blockHeight, hash, supplyGas, nil)
 	ctx := NewNativeContract(sdb, contractRef)
