@@ -23,15 +23,15 @@ import (
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
-	"github.com/ethereum/go-ethereum/contracts/native/go_abi/signature_manager_abi"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/signature_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
 var (
-	this     = native.NativeContractAddrMap[native.NativeSignatureManager]
+	this = utils.SignatureManagerContractAddress
+
 	gasTable = map[string]uint64{
-		// MethodContractName:             0,
-		signature_manager_abi.MethodAddSignature: 100000,
+		MethodAddSignature: 100000,
 	}
 
 	ABI *abi.ABI
@@ -46,26 +46,26 @@ func InitSignatureManager() {
 func RegisterSignatureManagerContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
-	s.Register(signature_manager_abi.MethodAddSignature, AddSignature)
-
+	s.Register(MethodAddSignature, AddSignature)
 }
 
 func AddSignature(s *native.NativeContract) ([]byte, error) {
 
 	ctx := s.ContractRef().CurrentContext()
 	params := &AddSignatureParam{}
-	if err := utils.UnpackMethod(ABI, signature_manager_abi.MethodAddSignature, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(ABI, MethodAddSignature, params, ctx.Payload); err != nil {
 		return nil, err
 	}
+
 	//check witness
-	if err := contract.ValidateOwner(s, params.Address); err != nil {
-		return utils.BYTE_FALSE, fmt.Errorf("AddSignature, checkWitness: %s, error: %v", params.Address, err)
+	if err := contract.ValidateOwner(s, params.Addr); err != nil {
+		return utils.BYTE_FALSE, fmt.Errorf("AddSignature, checkWitness: %s, error: %v", params.Addr, err)
 	}
 
 	temp := sha256.Sum256(params.Subject)
 	id := temp[:]
 	//check consensus signs
-	ok, err := CheckSigns(s, id, params.Signature, params.Address)
+	ok, err := CheckSigns(s, id, params.Signature, params.Addr)
 	if err != nil {
 		return utils.BYTE_FALSE, fmt.Errorf("AddSignature, CheckSigns error: %v", err)
 	}
@@ -73,8 +73,8 @@ func AddSignature(s *native.NativeContract) ([]byte, error) {
 		return utils.BYTE_TRUE, nil
 	}
 
-	s.AddNotify(
-		ABI, []string{signature_manager_abi.EventAddSignatureQuorumEvent}, id, params.Subject, params.SideChainID)
-	return utils.BYTE_TRUE, nil
-
+	if err := s.AddNotify(ABI, []string{EventAddSignatureQuorumEvent}, id, params.Subject, params.SideChainID); err != nil {
+		return utils.BYTE_FALSE, err
+	}
+	return utils.PackOutputs(ABI, MethodAddSignature, true)
 }
