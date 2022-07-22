@@ -56,8 +56,8 @@ type RegisterSideChainParam struct {
 	ExtraInfo    []byte
 }
 
-type ChainidParam struct {
-	Chainid uint64
+type ChainIDParam struct {
+	ChainID uint64
 }
 
 type RegisterRedeemParam struct {

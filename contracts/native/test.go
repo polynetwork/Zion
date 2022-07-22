@@ -21,6 +21,8 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"testing"
+	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -112,3 +114,62 @@ func TestNativeCall(t *testing.T, contract common.Address, name string, payload 
 	t.Logf("contract %s method %s execute time %v", contract.Hex(), name, ctx.BreakPoint())
 	return res, err
 }
+
+
+type Timer struct {
+	name string
+	since time.Time
+	cases []time.Duration
+}
+
+func NewTimer(name string) *Timer { 
+	return &Timer { name: name }
+}
+
+func (t *Timer) Start() {
+	if !t.since.IsZero() {
+		panic("timer not clean")
+	}
+	t.since = time.Now()
+}
+
+func (t *Timer) Stop() {
+	if t.since.IsZero() {
+		panic("time was not started")
+	}
+	t.cases = append(t.cases, time.Since(t.since))
+	t.since = time.Time{}
+}
+
+func (t *Timer) Add(duration time.Duration) {
+	if t.since.IsZero() {
+		panic("time was not started")
+	}
+	t.cases = append(t.cases, duration)
+}
+
+func (t *Timer) Dump() {
+	var min, max, avg time.Duration
+	for _, c := range t.cases {
+		if min == 0 || c < min {
+			min = c
+		}
+		if c > max {
+			max = c
+		}
+		avg += c
+	}
+	if len(t.cases) > 0 {
+		avg /= time.Duration(len(t.cases))
+	}
+	fmt.Printf("%s cases(%d), min: %d, max: %d, avg: %d\n", t.name, len(t.cases), min, max, avg)
+}
+
+func (t *Timer) ResetAs(name string) {
+	if !t.since.IsZero() {
+		panic("time is diry before reset")
+	}
+	t.name = name
+	t.cases = []time.Duration{}
+}
+

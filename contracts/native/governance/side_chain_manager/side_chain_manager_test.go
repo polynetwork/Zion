@@ -20,6 +20,7 @@ package side_chain_manager
 
 import (
 	"math/big"
+	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -53,6 +54,7 @@ func init() {
 	node_manager.StoreGenesisGlobalConfig(sdb)
 }
 
+
 func TestRegisterSideChainManager(t *testing.T) {
 	param := new(RegisterSideChainParam)
 	param.BlocksToWait = 4
@@ -62,60 +64,80 @@ func TestRegisterSideChainManager(t *testing.T) {
 
 	input, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodRegisterSideChain, param)
 	assert.Nil(t, err)
+	param.Name = strings.Repeat("1", 100)
+	param.ChainID = 9
+	param.ExtraInfo = make([]byte, 1000000)
+	param.CCMCAddress = make([]byte, 1000)
+	input1, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodRegisterSideChain, param)
+	assert.Nil(t, err)
 
 	blockNumber := big.NewInt(1)
 	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, common.Address{}, common.Address{}, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodRegisterSideChain]+extra, nil)
-	ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
+	tr := native.NewTimer(side_chain_manager_abi.MethodRegisterSideChain)
+	for _, input := range [][]byte{input, input1} {
+		caller := signers[0]
+		tr.Start()
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodRegisterSideChain]+extra, nil)
+		ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
+		tr.Stop()
+		assert.Nil(t, err)
+		result, err := utils.PackOutputs(ABI, side_chain_manager_abi.MethodRegisterSideChain)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
 
-	assert.Nil(t, err)
+		contract := native.NewNativeContract(sdb, contractRef)
+		sideChain, err := GetSideChainApply(contract, 8)
+		assert.Equal(t, sideChain.Name, "mychain")
+		assert.Nil(t, err)
 
-	result, err := utils.PackOutputs(ABI, side_chain_manager_abi.MethodRegisterSideChain)
-	assert.Nil(t, err)
-	assert.Equal(t, ret, result)
-	assert.Equal(t, leftOverGas, extra)
-
-	contract := native.NewNativeContract(sdb, contractRef)
-	sideChain, err := GetSideChainApply(contract, 8)
-	assert.Equal(t, sideChain.Name, "mychain")
-	assert.Nil(t, err)
-
-	_, _, err = contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
-	assert.NotNil(t, err)
+		_, _, err = contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
+		assert.NotNil(t, err)
+	}
+	tr.Dump()
 }
 
 func TestApproveRegisterSideChain(t *testing.T) {
-	caller := signers[0]
 	TestRegisterSideChainManager(t)
 
-	param := new(ChainidParam)
-	param.Chainid = 8
+	param := new(ChainIDParam)
+	param.ChainID = 8
 
 	input, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodApproveRegisterSideChain, param)
 	assert.Nil(t, err)
-
-	blockNumber := big.NewInt(1)
-	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodApproveRegisterSideChain]+extra, nil)
-	ret, leftOverGas, err := contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
-
+	param.ChainID = 9
+	input1, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodApproveRegisterSideChain, param)
 	assert.Nil(t, err)
 
-	result, err := utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveRegisterSideChain, true)
-	assert.Nil(t, err)
-	assert.Equal(t, ret, result)
-	assert.Equal(t, leftOverGas, extra)
+	tr := native.NewTimer(side_chain_manager_abi.MethodApproveRegisterSideChain)
+	for _, input := range [][]byte{input, input1} {
+		caller := signers[0]
+		blockNumber := big.NewInt(1)
+		extra := uint64(10)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodApproveRegisterSideChain]+extra, nil)
+		tr.Start()
+		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+		tr.Stop()
+		assert.Nil(t, err)
 
-	caller = signers[1]
-	contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodApproveRegisterSideChain]+extra, nil)
-	ret, leftOverGas, err = contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+		result, err := utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveRegisterSideChain, true)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
 
-	assert.Nil(t, err)
+		caller = signers[1]
+		contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodApproveRegisterSideChain]+extra, nil)
+		tr.Start()
+		ret, leftOverGas, err = contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+		tr.Stop()
+		assert.Nil(t, err)
 
-	result, err = utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveRegisterSideChain, true)
-	assert.Nil(t, err)
-	assert.Equal(t, ret, result)
-	assert.Equal(t, leftOverGas, extra)
+		result, err = utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveRegisterSideChain, true)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
+	}
+	tr.Dump()
 }
 
 func TestUpdateSideChain(t *testing.T) {
@@ -130,65 +152,179 @@ func TestUpdateSideChain(t *testing.T) {
 	input, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodUpdateSideChain, param)
 	assert.Nil(t, err)
 
-	blockNumber := big.NewInt(1)
-	extra := uint64(10)
-	contractRef := native.NewContractRef(sdb, common.Address{}, common.Address{}, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodUpdateSideChain]+extra, nil)
-	ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
-
+	param.ChainID = 9
+	param.Name = strings.Repeat("2", 100)
+	param.ExtraInfo = make([]byte, 1000000)
+	param.CCMCAddress = make([]byte, 1000)
+	input1, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodUpdateSideChain, param)
 	assert.Nil(t, err)
 
-	result, err := utils.PackOutputs(ABI, side_chain_manager_abi.MethodUpdateSideChain)
-	assert.Nil(t, err)
-	assert.Equal(t, ret, result)
-	assert.Equal(t, leftOverGas, extra)
+	tr := native.NewTimer(side_chain_manager_abi.MethodUpdateSideChain)
+	for _, input := range [][]byte{input, input1} {
+		blockNumber := big.NewInt(1)
+		extra := uint64(10)
+		caller := signers[0]
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodUpdateSideChain]+extra, nil)
+		tr.Start()
+		ret, leftOverGas, err := contractRef.NativeCall(common.Address{}, utils.SideChainManagerContractAddress, input)
+		tr.Stop()
+		assert.Nil(t, err)
+
+		result, err := utils.PackOutputs(ABI, side_chain_manager_abi.MethodUpdateSideChain)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
+	}
+	tr.Dump()
+
 }
 
 func TestApproveUpdateSideChain(t *testing.T) {
 	TestUpdateSideChain(t)
-	param := new(ChainidParam)
-	param.Chainid = 8
+	param := new(ChainIDParam)
+	param.ChainID = 8
 
 	input, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, param)
 	assert.Nil(t, err)
 
-	blockNumber := big.NewInt(1)
-	extra := uint64(10)
-	caller := signers[0]
-	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodApproveUpdateSideChain]+extra, nil)
-	ret, leftOverGas, err := contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
-
+	param.ChainID = 9
+	input1, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, param)
 	assert.Nil(t, err)
 
-	result, err := utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, true)
-	assert.Nil(t, err)
-	assert.Equal(t, ret, result)
-	assert.Equal(t, leftOverGas, extra)
+	tr := native.NewTimer(side_chain_manager_abi.MethodApproveUpdateSideChain)
+	tr1 := native.NewTimer(side_chain_manager_abi.MethodGetSideChain)
+	for i, input := range [][]byte{input, input1} {
+		blockNumber := big.NewInt(1)
+		extra := uint64(10)
+		caller := signers[0]
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodApproveUpdateSideChain]+extra, nil)
+		tr.Start()
+		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+		tr.Stop()
+		assert.Nil(t, err)
 
-	caller = signers[1]
-	contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodApproveUpdateSideChain]+extra, nil)
-	ret, leftOverGas, err = contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+		result, err := utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, true)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
 
+		caller = signers[1]
+		contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodApproveUpdateSideChain]+extra, nil)
+		tr.Start()
+		ret, leftOverGas, err = contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+		tr.Stop()
+		assert.Nil(t, err)
+
+		result, err = utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, true)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
+
+		contract := native.NewNativeContract(sdb, contractRef)
+		sideChain, err := GetSideChainObject(contract, 8 + uint64(i))
+		assert.Nil(t, err)
+		assert.NotNil(t, sideChain)
+		if i == 0 {
+			assert.Equal(t, sideChain.Name, "own")
+			param.ChainID = 8
+		} else {
+			param.ChainID = 9
+		}
+		input, err = utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodGetSideChain, param)
+		assert.Nil(t, err)
+
+		contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodGetSideChain]+extra, nil)
+		tr1.Start()
+		ret, leftOverGas, err = contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+		tr1.Stop()
+		assert.Nil(t, err)
+		result, err = utils.PackOutputs(ABI, side_chain_manager_abi.MethodGetSideChain, sideChain)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
+	}
+	tr.Dump()
+	tr1.Dump()
+}
+
+
+func TestQuiteSideChain(t *testing.T) {
+	TestApproveUpdateSideChain(t)
+	param := new(ChainIDParam)
+	param.ChainID = 8
+
+	input, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodQuitSideChain, param)
 	assert.Nil(t, err)
 
-	result, err = utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, true)
-	assert.Nil(t, err)
-	assert.Equal(t, ret, result)
-	assert.Equal(t, leftOverGas, extra)
-
-	contract := native.NewNativeContract(sdb, contractRef)
-	sideChain, err := GetSideChainObject(contract, 8)
-	assert.Nil(t, err)
-	assert.NotNil(t, sideChain)
-	assert.Equal(t, sideChain.Name, "own")
-
-	input, err = utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodGetSideChain, param)
+	param.ChainID = 9
+	input1, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodQuitSideChain, param)
 	assert.Nil(t, err)
 
-	contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodGetSideChain]+extra, nil)
-	ret, leftOverGas, err = contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+	tr := native.NewTimer(side_chain_manager_abi.MethodQuitSideChain)
+	for _, input := range [][]byte{input, input1} {
+		blockNumber := big.NewInt(1)
+		extra := uint64(10)
+		caller := signers[0]
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodQuitSideChain]+extra, nil)
+		tr.Start()
+		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+		tr.Stop()
+		assert.Nil(t, err)
+
+		result, err := utils.PackOutputs(ABI, side_chain_manager_abi.MethodQuitSideChain)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
+	}
+	tr.Dump()
+}
+
+
+
+func TestApproveQuiteSideChain(t *testing.T) {
+	TestQuiteSideChain(t)
+	param := new(ChainIDParam)
+	param.ChainID = 8
+
+	input, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodApproveQuitSideChain, param)
 	assert.Nil(t, err)
-	result, err = utils.PackOutputs(ABI, side_chain_manager_abi.MethodGetSideChain, sideChain)
+
+	param.ChainID = 9
+	input1, err := utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodApproveQuitSideChain, param)
 	assert.Nil(t, err)
-	assert.Equal(t, ret, result)
-	assert.Equal(t, leftOverGas, extra)
+
+	tr := native.NewTimer(side_chain_manager_abi.MethodApproveQuitSideChain)
+	for i, input := range [][]byte{input, input1} {
+		blockNumber := big.NewInt(1)
+		extra := uint64(10)
+		caller := signers[0]
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodApproveQuitSideChain]+extra, nil)
+		tr.Start()
+		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+		tr.Stop()
+		assert.Nil(t, err)
+
+		result, err := utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, true)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
+
+		caller = signers[1]
+		contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[side_chain_manager_abi.MethodApproveQuitSideChain]+extra, nil)
+		tr.Start()
+		ret, leftOverGas, err = contractRef.NativeCall(caller, utils.SideChainManagerContractAddress, input)
+		tr.Stop()
+		assert.Nil(t, err)
+
+		result, err = utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveQuitSideChain, true)
+		assert.Nil(t, err)
+		assert.Equal(t, ret, result)
+		assert.Equal(t, leftOverGas, extra)
+
+		contract := native.NewNativeContract(sdb, contractRef)
+		sideChain, err := GetSideChainObject(contract, 8 + uint64(i))
+		assert.Nil(t, err)
+		assert.Nil(t, sideChain)
+	}
+	tr.Dump()
 }
