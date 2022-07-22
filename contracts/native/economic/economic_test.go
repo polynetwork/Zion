@@ -42,6 +42,20 @@ func TestMain(m *testing.M) {
 	os.Exit(m.Run())
 }
 
+func TestName(t *testing.T) {
+	name := MethodName
+	expect := contractName
+
+	payload, err := new(MethodContractNameInput).Encode()
+	assert.NoError(t, err)
+
+	raw, err := native.TestNativeCall(t, this, name, payload)
+	assert.NoError(t, err)
+	var got string
+	assert.NoError(t, utils.UnpackOutputs(ABI, name, &got, raw))
+	assert.Equal(t, expect, got)
+}
+
 // TestTotalSupply use command as follow to test each cases, and the result contains coverage and output. and use
 // the flag of -count=1 to avoid the affect of test cache.
 // cmd:
@@ -59,20 +73,21 @@ func TestTotalSupply(t *testing.T) {
 		{40, big.NewInt(100000040), false},
 		{200000000, big.NewInt(300000000), true},
 	}
+	name := MethodTotalSupply
 
 	for _, tc := range testcases {
 		var supply *big.Int
 
 		payload, _ := new(MethodTotalSupplyInput).Encode()
-		raw, err := native.TestNativeCall(t, this, "totalSupply", payload, tc.height)
+		raw, err := native.TestNativeCall(t, this, name, payload, tc.height)
 		assert.NoError(t, err)
 
 		if tc.testABI {
-			output, err := ABI.Unpack(MethodTotalSupply, raw)
+			output, err := ABI.Unpack(name, raw)
 			assert.NoError(t, err)
 			supply = *abi.ConvertType(output[0], new(*big.Int)).(**big.Int)
 		} else {
-			assert.NoError(t, utils.UnpackOutputs(ABI, MethodTotalSupply, &supply, raw))
+			assert.NoError(t, utils.UnpackOutputs(ABI, name, &supply, raw))
 		}
 
 		got := new(big.Int).Div(supply, params.ZNT1)
@@ -85,6 +100,7 @@ func TestReward(t *testing.T) {
 		return new(big.Int).SetUint64(uint64(1e17) * uint64(n))
 	}
 
+	name := MethodReward
 	testcases := []struct {
 		pool              common.Address
 		height            int
@@ -103,7 +119,7 @@ func TestReward(t *testing.T) {
 		got := new(MethodRewardOutput)
 
 		payload, _ := new(MethodRewardInput).Encode()
-		raw, err := native.TestNativeCall(t, this, "reward", payload, tc.height, func(state *state.StateDB) {
+		raw, err := native.TestNativeCall(t, this, name, payload, tc.height, func(state *state.StateDB) {
 			nm.StoreCommunityInfo(state, big.NewInt(int64(tc.rate)), tc.pool)
 		})
 		if tc.err == nil {
@@ -119,4 +135,15 @@ func TestReward(t *testing.T) {
 			t.Logf("exepct err %v, got %v", tc.err, err)
 		}
 	}
+}
+
+func TestTransfer(t *testing.T) {
+	var (
+		from   = common.HexToAddress("0x123")
+		amount = params.ZNT1
+	)
+
+	state, ctx := native.GenerateTestContext(t)
+	state.AddBalance(from, amount)
+	t.Logf("base method `transfer` function %d", ctx.BreakPoint())
 }
