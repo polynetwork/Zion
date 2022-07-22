@@ -93,7 +93,13 @@ func CheckDone(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(scom.ABI, scom.MethodCheckDone, params, ctx.Payload); err != nil {
 		return nil, err
 	}
-	err := scom.CheckDoneTx(s, params.CrossChainID, params.SourceChainID)
+	if len(params.CrossChainID) == 0 || len(params.CrossChainID) > 2000 {
+		return nil, fmt.Errorf("invalid cross chain id length, min 1, max 2000, current %v", len(params.CrossChainID))
+	}
+	err := scom.CheckDoneTx(s, params.CrossChainID, params.ChainID)
+	if err != nil && err != scom.ErrTxAlreadyImported {
+		return nil, err
+	}
 	return utils.PackOutputs(scom.ABI, scom.MethodCheckDone, err == scom.ErrTxAlreadyImported)
 }
 
