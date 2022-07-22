@@ -59,7 +59,6 @@ func TestUpdateNodeManagerGlobalConfig(t *testing.T) {
 
 	globalConfig, err := node_manager.GetGlobalConfigImpl(contract)
 	assert.Nil(t, err)
-	assert.Equal(t, globalConfig.MaxDescLength, node_manager.GenesisMaxDescLength)
 	assert.Equal(t, globalConfig.BlockPerEpoch, node_manager.GenesisBlockPerEpoch)
 	assert.Equal(t, globalConfig.MaxCommissionChange, node_manager.GenesisMaxCommissionChange)
 	assert.Equal(t, globalConfig.MinInitialStake, node_manager.GenesisMinInitialStake)
