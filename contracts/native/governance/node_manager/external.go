@@ -37,6 +37,7 @@ var (
 
 	MaxDescLength   int = 4000
 	MaxValidatorNum int = 300
+	MaxUnlockingNum int = 100
 )
 
 func init() {

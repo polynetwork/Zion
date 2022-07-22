@@ -320,7 +320,7 @@ func addToAllValidators(s *native.NativeContract, consensusAddr common.Address) 
 		return fmt.Errorf("addToAllValidators, getAllValidators error: %v", err)
 	}
 	allValidators.AllValidators = append(allValidators.AllValidators, consensusAddr)
-	if len(allValidators.AllValidators) > 300 {
+	if len(allValidators.AllValidators) > MaxValidatorNum {
 		return fmt.Errorf("addToAllValidators, validator num is more than max")
 	}
 	err = setAllValidators(s, allValidators)
@@ -508,6 +508,9 @@ func addUnlockingInfo(s *native.NativeContract, stakeAddress common.Address, unl
 		return fmt.Errorf("addUnlockingInfo, GetUnlockingInfo error: %v", err)
 	}
 	unlockingInfo.UnlockingStake = append(unlockingInfo.UnlockingStake, unlockingStake)
+	if len(unlockingInfo.UnlockingStake) > MaxUnlockingNum {
+		return fmt.Errorf("addUnlockingInfo, unlocking info more than max")
+	}
 	err = setUnlockingInfo(s, unlockingInfo)
 	if err != nil {
 		return fmt.Errorf("addUnlockingInfo, setUnlockingInfo error: %v", err)

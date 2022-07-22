@@ -19,6 +19,7 @@
 package side_chain_manager
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -71,16 +72,16 @@ func RegisterSideChainManagerContract(s *native.NativeContract) {
 
 func GetSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &ChainidParam{}
+	params := &ChainIDParam{}
 	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodGetSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
-	sideChain, err := GetSideChainObject(s, params.Chainid)
+	sideChain, err := GetSideChainObject(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("GetSideChain error: %v", err)
 	}
 	if sideChain == nil {
-		return nil, fmt.Errorf("GetSideChain error: side chain %v not exist", params.Chainid)
+		return nil, fmt.Errorf("GetSideChain error: side chain %v not exist", params.ChainID)
 	}
 	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodGetSideChain, sideChain)
 }
@@ -90,6 +91,18 @@ func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 	params := &RegisterSideChainParam{}
 	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodRegisterSideChain, params, ctx.Payload); err != nil {
 		return nil, err
+	}
+
+	if len(params.Name) > 100 {
+		return nil, errors.New("param name too long, max is 100")
+	}
+
+	if len(params.ExtraInfo) > 1000000 {
+		return nil, errors.New("param extra info too long, max is 1000000")
+	}
+
+	if len(params.CCMCAddress) > 1000 {
+		return nil, errors.New("param extra info too long, max is 1000")
 	}
 
 	registerSideChain, err := GetSideChainApply(s, params.ChainID)
@@ -130,12 +143,12 @@ func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 
 func ApproveRegisterSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &ChainidParam{}
+	params := &ChainIDParam{}
 	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodApproveRegisterSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	registerSideChain, err := GetSideChainApply(s, params.Chainid)
+	registerSideChain, err := GetSideChainApply(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, getRegisterSideChain error: %v", err)
 	}
@@ -143,7 +156,7 @@ func ApproveRegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, chainid is not requested")
 	}
 
-	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveRegisterSideChain, utils.GetUint64Bytes(params.Chainid),
+	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveRegisterSideChain, utils.GetUint64Bytes(params.ChainID),
 		s.ContractRef().TxOrigin(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, CheckConsensusSigns error: %v", err)
@@ -157,8 +170,8 @@ func ApproveRegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, putSideChain error: %v", err)
 	}
 
-	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(SIDE_CHAIN_APPLY), utils.GetUint64Bytes(params.Chainid)))
-	err = s.AddNotify(ABI, []string{EventApproveRegisterSideChain}, params.Chainid)
+	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(SIDE_CHAIN_APPLY), utils.GetUint64Bytes(params.ChainID)))
+	err = s.AddNotify(ABI, []string{EventApproveRegisterSideChain}, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, AddNotify error: %v", err)
 	}
@@ -170,6 +183,18 @@ func UpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	params := &RegisterSideChainParam{}
 	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodUpdateSideChain, params, ctx.Payload); err != nil {
 		return nil, err
+	}
+
+	if len(params.Name) > 100 {
+		return nil, errors.New("param name too long, max is 100")
+	}
+
+	if len(params.ExtraInfo) > 1000000 {
+		return nil, errors.New("param extra info too long, max is 1000000")
+	}
+
+	if len(params.CCMCAddress) > 1000 {
+		return nil, errors.New("param extra info too long, max is 1000")
 	}
 
 	sideChain, err := GetSideChainObject(s, params.ChainID)
@@ -205,12 +230,12 @@ func UpdateSideChain(s *native.NativeContract) ([]byte, error) {
 
 func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &ChainidParam{}
+	params := &ChainIDParam{}
 	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	sideChain, err := getUpdateSideChain(s, params.Chainid)
+	sideChain, err := getUpdateSideChain(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, getUpdateSideChain error: %v", err)
 	}
@@ -219,7 +244,7 @@ func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	}
 
 	//check consensus signs
-	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveUpdateSideChain, utils.GetUint64Bytes(params.Chainid),
+	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveUpdateSideChain, utils.GetUint64Bytes(params.ChainID),
 		s.ContractRef().TxOrigin(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, CheckConsensusSigns error: %v", err)
@@ -233,10 +258,10 @@ func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, putSideChain error: %v", err)
 	}
 
-	chainidByte := utils.GetUint64Bytes(params.Chainid)
+	chainidByte := utils.GetUint64Bytes(params.ChainID)
 	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(UPDATE_SIDE_CHAIN_REQUEST), chainidByte))
 
-	err = s.AddNotify(ABI, []string{EventApproveUpdateSideChain}, params.Chainid)
+	err = s.AddNotify(ABI, []string{EventApproveUpdateSideChain}, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, AddNotify error: %v", err)
 	}
@@ -246,12 +271,12 @@ func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
 
 func QuitSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &ChainidParam{}
+	params := &ChainIDParam{}
 	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodQuitSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	sideChain, err := GetSideChainObject(s, params.Chainid)
+	sideChain, err := GetSideChainObject(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("QuitSideChain, getSideChain error: %v", err)
 	}
@@ -261,12 +286,12 @@ func QuitSideChain(s *native.NativeContract) ([]byte, error) {
 	if sideChain.Owner != s.ContractRef().TxOrigin() {
 		return nil, fmt.Errorf("QuitSideChain, side chain owner is wrong")
 	}
-	err = putQuitSideChain(s, params.Chainid)
+	err = putQuitSideChain(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("QuitSideChain, putUpdateSideChain error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{EventQuitSideChain}, params.Chainid)
+	err = s.AddNotify(ABI, []string{EventQuitSideChain}, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("QuitSideChain, AddNotify error: %v", err)
 	}
@@ -275,18 +300,18 @@ func QuitSideChain(s *native.NativeContract) ([]byte, error) {
 
 func ApproveQuitSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &ChainidParam{}
+	params := &ChainIDParam{}
 	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodApproveQuitSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	err := getQuitSideChain(s, params.Chainid)
+	err := getQuitSideChain(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveQuitSideChain, getQuitSideChain error: %v", err)
 	}
 
 	//check consensus signs
-	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveQuitSideChain, utils.GetUint64Bytes(params.Chainid),
+	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveQuitSideChain, utils.GetUint64Bytes(params.ChainID),
 		s.ContractRef().TxOrigin(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveQuitSideChain, CheckConsensusSigns error: %v", err)
@@ -295,11 +320,11 @@ func ApproveQuitSideChain(s *native.NativeContract) ([]byte, error) {
 		return utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveQuitSideChain, true)
 	}
 
-	chainidByte := utils.GetUint64Bytes(params.Chainid)
+	chainidByte := utils.GetUint64Bytes(params.ChainID)
 	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(side_chain_manager_abi.MethodApproveQuitSideChain), chainidByte))
 	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(SIDE_CHAIN), chainidByte))
 
-	err = s.AddNotify(ABI, []string{EventApproveQuitSideChain}, params.Chainid)
+	err = s.AddNotify(ABI, []string{EventApproveQuitSideChain}, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveQuitSideChain, AddNotify error: %v", err)
 	}
