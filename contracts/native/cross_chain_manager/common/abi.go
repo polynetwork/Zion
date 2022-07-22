@@ -19,15 +19,15 @@ package common
 
 import (
 	"fmt"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
 	"io"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/cross_chain_manager_abi"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 var (
@@ -59,7 +59,7 @@ type InitRedeemScriptParam struct {
 }
 
 type CheckDoneParam struct {
-	SourceChainID uint64
+	ChainID uint64
 	CrossChainID  []byte
 }
 

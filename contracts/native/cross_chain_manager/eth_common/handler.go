@@ -22,10 +22,10 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
-	icom "github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	icom "github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
@@ -140,6 +140,9 @@ type ProofAccount struct {
 
 // Verify account proof and contract storage proof
 func VerifyCrossChainProof(value []byte, proof *Proof, root common.Hash, address []byte) (err error) {
+	if root == (common.Hash{}) {
+		return fmt.Errorf("empty root hash found in header")
+	}
 	nodeList := new(light.NodeList)
 	for _, s := range proof.AccountProof {
 		nodeList.Put(nil, common.Hex2Bytes(scom.Replace0x(s)))

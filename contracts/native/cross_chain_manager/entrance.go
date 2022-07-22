@@ -20,17 +20,13 @@ package cross_chain_manager
 
 import (
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/bsc"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth_common"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/no_proof"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
@@ -76,18 +72,8 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return no_proof.NewNoProofHandler(), nil
 	case utils.ETH_COMMON_ROUTER:
 		return eth_common.NewHandler(), nil
-	case utils.BSC_ROUTER:
-		return bsc.NewHandler(), nil
-	case utils.ETH_ROUTER:
-		return eth.NewETHHandler(), nil
-	case utils.HECO_ROUTER:
-		return heco.NewHecoHandler(), nil
-	case utils.MSC_ROUTER:
-		return msc.NewHandler(), nil
 	case utils.OKEX_ROUTER:
 		return okex.NewHandler(), nil
-	case utils.QUORUM_ROUTER:
-		return quorum.NewQuorumHandler(), nil
 	case utils.COSMOS_ROUTER:
 		return cosmos.NewCosmosHandler(), nil
 	case utils.ZILLIQA_ROUTER:
@@ -107,7 +93,13 @@ func CheckDone(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(scom.ABI, scom.MethodCheckDone, params, ctx.Payload); err != nil {
 		return nil, err
 	}
-	err := scom.CheckDoneTx(s, params.CrossChainID, params.SourceChainID)
+	if len(params.CrossChainID) == 0 || len(params.CrossChainID) > 2000 {
+		return nil, fmt.Errorf("invalid cross chain id length, min 1, max 2000, current %v", len(params.CrossChainID))
+	}
+	err := scom.CheckDoneTx(s, params.CrossChainID, params.ChainID)
+	if err != nil && err != scom.ErrTxAlreadyImported {
+		return nil, err
+	}
 	return utils.PackOutputs(scom.ABI, scom.MethodCheckDone, err == scom.ErrTxAlreadyImported)
 }
 
@@ -145,6 +137,10 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	txParam, err := handler.MakeDepositProposal(s)
 	if err != nil {
 		return nil, err
+	}
+
+	if txParam == nil {
+		return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
 	}
 
 	//check target chain
@@ -222,6 +218,9 @@ func Replenish(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("Replenish, unpack params error: %s", err)
 	}
 
+	if len(params.TxHashes) == 0 || len(params.TxHashes) > 200 {
+		return nil, fmt.Errorf("invalid replenish hash length, min 1, max 200, current %v", len(params.TxHashes))
+	}
 	err := scom.NotifyReplenish(s, params.TxHashes, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("Replenish, NotifyReplenish error: %s", err)
