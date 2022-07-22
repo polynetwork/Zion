@@ -64,7 +64,7 @@ func TestTotalSupply(t *testing.T) {
 		var supply *big.Int
 
 		payload, _ := new(MethodTotalSupplyInput).Encode()
-		raw, err := native.TestNativeCall(t, this, payload, tc.height)
+		raw, err := native.TestNativeCall(t, this, "totalSupply", payload, tc.height)
 		assert.NoError(t, err)
 
 		if tc.testABI {
@@ -103,7 +103,7 @@ func TestReward(t *testing.T) {
 		got := new(MethodRewardOutput)
 
 		payload, _ := new(MethodRewardInput).Encode()
-		raw, err := native.TestNativeCall(t, this, payload, tc.height, func(state *state.StateDB) {
+		raw, err := native.TestNativeCall(t, this, "reward", payload, tc.height, func(state *state.StateDB) {
 			nm.StoreCommunityInfo(state, big.NewInt(int64(tc.rate)), tc.pool)
 		})
 		if tc.err == nil {
