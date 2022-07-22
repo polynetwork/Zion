@@ -84,6 +84,17 @@ func (m *GetInfoHeightParam) Encode() ([]byte, error) {
 	return utils.PackMethodWithStruct(ABI, MethodGetInfoHeight, m)
 }
 
+type GetInfoHeightOutput struct {
+	Height uint32
+}
+
+func (m *GetInfoHeightOutput) Decode(payload []byte) error {
+	if err := utils.UnpackOutputs(ABI, MethodGetInfoHeight, m, payload); err != nil {
+		return err
+	}
+	return nil
+}
+
 type SyncRootInfoParam struct {
 	ChainID   uint64
 	RootInfos [][]byte
@@ -127,8 +138,8 @@ func (m *SyncRootInfoParam) Digest() ([]byte, error) {
 }
 
 type ReplenishParam struct {
-	ChainID  uint64
-	Heights  []uint32
+	ChainID uint64
+	Heights []uint32
 }
 
 func (m *ReplenishParam) Encode() ([]byte, error) {

@@ -153,8 +153,8 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// check desc
-	if uint64(len(params.Desc)) > globalConfig.MaxDescLength {
-		return nil, fmt.Errorf("CreateValidator, desc length more than limit %d", globalConfig.MaxDescLength)
+	if len(params.Desc) > MaxDescLength {
+		return nil, fmt.Errorf("CreateValidator, desc length more than limit %d", MaxDescLength)
 	}
 
 	// check to see if the pubkey has been registered before
@@ -234,10 +234,6 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 	if validator.StakeAddress != caller {
 		return nil, fmt.Errorf("UpdateValidator, stake address is not caller")
 	}
-	globalConfig, err := GetGlobalConfigImpl(s)
-	if err != nil {
-		return nil, fmt.Errorf("UpdateValidator, GetGlobalConfig error: %v", err)
-	}
 
 	if params.ProposalAddress != common.EmptyAddress {
 		validator.ProposalAddress = params.ProposalAddress
@@ -245,8 +241,8 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 
 	if params.Desc != "" {
 		// check desc
-		if uint64(len(params.Desc)) > globalConfig.MaxDescLength {
-			return nil, fmt.Errorf("UpdateValidator, desc length more than limit %d", globalConfig.MaxDescLength)
+		if len(params.Desc) > MaxDescLength {
+			return nil, fmt.Errorf("UpdateValidator, desc length more than limit %d", MaxDescLength)
 		}
 		validator.Desc = params.Desc
 	}
