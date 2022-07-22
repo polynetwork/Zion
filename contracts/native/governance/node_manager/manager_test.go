@@ -889,4 +889,84 @@ func TestPerformance(t *testing.T) {
 	assert.Nil(t, err)
 	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "ChangeEpoch", input, utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
 	assert.Nil(t, err)
+
+	// call endblock
+	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(10000000), params.ZNT1))
+	param := new(EndBlockParam)
+	input, err = param.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "EndBlock", input, utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	// withdraw stake rewards and commission
+	param1 := new(WithdrawStakeRewardsParam)
+	param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param1.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawStakeRewards", input, stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
+	assert.Nil(t, err)
+	param2 := new(WithdrawCommissionParam)
+	param2.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param2.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawCommission", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	loop = 100
+	for i := 0; i < loop; i++ {
+		// unstake
+		param3 := new(UnStakeParam)
+		param3.ConsensusAddress = validatorsKey[0].ConsensusAddr
+		param3.Amount = new(big.Int).Mul(big.NewInt(1), params.ZNT1)
+		input, err = param3.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UnStake", input, stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
+		assert.Nil(t, err)
+	}
+
+	// withdraw
+	input, err = utils.PackMethod(ABI, MethodWithdraw)
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "Withdraw", input, stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	// cancel validator && withdraw validator
+	param4 := new(CancelValidatorParam)
+	param4.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param4.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "CancelValidator", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	blockNumber = 799999
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "ChangeEpoch", input, utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	blockNumber = 900000
+	// withdraw validator
+	param5 := new(WithdrawValidatorParam)
+	param5.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param5.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawValidator", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	// update validator
+	param6 := new(UpdateValidatorParam)
+	param6.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param6.Desc = "test2"
+	input, err = param6.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UpdateValidator", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+	param7 := new(UpdateCommissionParam)
+	param7.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param7.Commission = new(big.Int).SetUint64(2500)
+	input, err = param7.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UpdateCommission", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	assert.Nil(t, err)
 }
