@@ -20,7 +20,7 @@ package cross_chain_manager
 
 import (
 	"fmt"
-	
+
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
@@ -212,6 +212,9 @@ func Replenish(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("Replenish, unpack params error: %s", err)
 	}
 
+	if len(params.TxHashes) == 0 || len(params.TxHashes) > 200 {
+		return nil, fmt.Errorf("invalid replenish hash length, min 1, max 200, current %v", len(params.TxHashes))
+	}
 	err := scom.NotifyReplenish(s, params.TxHashes, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("Replenish, NotifyReplenish error: %s", err)
