@@ -23,7 +23,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/governance/neo3_state_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/proposal_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/governance/relayer_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/signature_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/info_sync"
@@ -37,7 +36,6 @@ func InitNativeContracts() {
 	info_sync.InitInfoSync()
 	cross_chain_manager.InitCrossChainManager()
 	side_chain_manager.InitSideChainManager()
-	relayer_manager.InitRelayerManager()
 	neo3_state_manager.InitNeo3StateManager()
 	signature_manager.InitSignatureManager()
 	proposal_manager.InitProposalManager()

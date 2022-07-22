@@ -2,7 +2,7 @@
 pragma solidity >=0.7.0 <0.9.0;
 pragma experimental ABIEncoderV2;
 
-interface InfoSync {
+interface IInfoSync {
   event SyncRootInfoEvent(uint64 chainID, uint32 height, uint256 BlockHeight);
   event ReplenishEvent(uint32[] heights, uint64 chainID);
   function name() external view returns(string memory);

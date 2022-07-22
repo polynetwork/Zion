@@ -47,7 +47,7 @@ var GasTable = map[string]uint64{
 }
 
 func GetABI() *abi.ABI {
-	ab, err := abi.JSON(strings.NewReader(info_sync_abi.InfoSyncABI))
+	ab, err := abi.JSON(strings.NewReader(info_sync_abi.IInfoSyncABI))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
