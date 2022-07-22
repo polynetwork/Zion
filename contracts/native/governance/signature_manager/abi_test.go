@@ -50,7 +50,6 @@ func TestAddSignatureParam(t *testing.T) {
 
 		var got bool
 		assert.NoError(t, utils.UnpackOutputs(ABI, MethodAddSignature, &got, raw))
-
 		assert.Equal(t, expect, got)
 	}
 }

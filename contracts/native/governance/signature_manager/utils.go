@@ -86,7 +86,11 @@ func getSigInfo(native *native.NativeContract, id []byte) (*SigInfo, error) {
 		return nil, fmt.Errorf("getSigInfo, get getSigInfoStore error: %v", err)
 	}
 
-	sigInfo := &SigInfo{}
+	sigInfo := &SigInfo{
+		Status:  false,
+		SigInfo: make([]Signature, 0),
+		m:       make(map[string][]byte),
+	}
 	if sigInfoBytes != nil {
 		err = rlp.DecodeBytes(sigInfoBytes, sigInfo)
 		if err != nil {
