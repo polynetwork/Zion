@@ -48,7 +48,7 @@ const (
 	CHAIN_ID uint64 = 1
 )
 
-func init() {
+func Init() {
 	key, _ = crypto.GenerateKey()
 	pub = &key.PublicKey
 
@@ -88,6 +88,7 @@ func putSideChain() {
 }
 
 func TestNoAuthSyncRootInfo(t *testing.T) {
+	Init()
 	var err error
 	param := new(SyncRootInfoParam)
 	param.ChainID = CHAIN_ID
@@ -114,6 +115,7 @@ func TestNoAuthSyncRootInfo(t *testing.T) {
 }
 
 func TestNormalSyncRootInfo(t *testing.T) {
+	Init()
 	var err error
 	param := new(SyncRootInfoParam)
 	param.ChainID = CHAIN_ID
@@ -176,6 +178,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 }
 
 func TestReplenish(t *testing.T) {
+	Init()
 	param := &ReplenishParam{
 		ChainID: CHAIN_ID,
 		Heights: []uint32{100, 90},
