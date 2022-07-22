@@ -47,7 +47,7 @@ func CheckSigns(native *native.NativeContract, id, sig []byte, address common.Ad
 
 	// check authority
 	if err := node_manager.CheckVoterAuthority(caller, epochInfo); err != nil {
-		return false, fmt.Errorf("CheckSigns", "check authority failed", err)
+		return false, fmt.Errorf("CheckSigns authority invalid: %v", err)
 	}
 
 	//check signs num
