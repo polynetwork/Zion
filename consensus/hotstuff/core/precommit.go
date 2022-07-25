@@ -50,6 +50,13 @@ func (c *core) handlePrepareVote(data *hotstuff.Message, src hotstuff.Validator)
 		return errAddPrepareVote
 	}
 
+	// check committed seal
+	if addr, err := c.validateFn(vote.Digest[:], data.CommittedSeal); err != nil {
+		logger.Trace("Failed to check vote", "msg", msgTyp, "err", err)
+	} else if addr != src.Address() {
+		logger.Trace("Failed to check vote", "msg", msgTyp, "expect", src.Address().Hex(), "got", addr.Hex())
+	}
+
 	logger.Trace("handlePrepareVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() < StatePrepared {
