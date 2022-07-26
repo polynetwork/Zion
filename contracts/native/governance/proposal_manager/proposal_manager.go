@@ -140,7 +140,7 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 	height := s.ContractRef().BlockHeight()
 	caller := ctx.Caller
 
-	params := &ProposeParam{}
+	params := &ProposeConfigParam{}
 	if err := utils.UnpackMethod(ABI, MethodProposeConfig, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("ProposeConfig, unpack params error: %v", err)
 	}
@@ -257,7 +257,7 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			if config.ConsensusValidatorNum >= node_manager.GenesisConsensusValidatorNum {
 				globalConfig.ConsensusValidatorNum = config.ConsensusValidatorNum
 			}
-			if config.VoterValidatorNum >= node_manager.GenesisVoterValidatorNum {
+			if config.VoterValidatorNum != 0 {
 				globalConfig.VoterValidatorNum = config.VoterValidatorNum
 			}
 			if config.BlockPerEpoch != nil {
@@ -283,7 +283,7 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 				return nil, fmt.Errorf("VoteProposal, getConfigProposalList error: %v", err)
 			}
 			for _, ID := range configProposalList.ConfigProposalList {
-				if ID != proposal.ID {
+				if ID.Cmp(proposal.ID) != 0 {
 					p, err := getProposal(s, ID)
 					if err != nil {
 						return nil, fmt.Errorf("VoteProposal, getProposal p error: %v", err)

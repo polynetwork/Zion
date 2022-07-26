@@ -99,6 +99,9 @@ func removeExpiredFromProposalList(s *native.NativeContract) error {
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromProposalList, getProposalList error: %v", err)
 	}
+	if len(proposalList.ProposalList) == 0 {
+		return nil
+	}
 
 	j := 0
 	for _, proposalID := range proposalList.ProposalList {
@@ -106,7 +109,7 @@ func removeExpiredFromProposalList(s *native.NativeContract) error {
 		if err != nil {
 			return fmt.Errorf("removeExpiredFromProposalList, getProposal error: %v", err)
 		}
-		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) < 0 {
+		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) > 0 {
 			proposalList.ProposalList[j] = proposalID
 			j++
 		}
@@ -160,6 +163,9 @@ func removeExpiredFromConfigProposalList(s *native.NativeContract) error {
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromConfigProposalList, getProposalList error: %v", err)
 	}
+	if len(configProposalList.ConfigProposalList) == 0 {
+		return nil
+	}
 
 	j := 0
 	for _, proposalID := range configProposalList.ConfigProposalList {
@@ -167,7 +173,7 @@ func removeExpiredFromConfigProposalList(s *native.NativeContract) error {
 		if err != nil {
 			return fmt.Errorf("removeExpiredFromConfigProposalList, getProposal error: %v", err)
 		}
-		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) < 0 {
+		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) > 0 {
 			configProposalList.ConfigProposalList[j] = proposalID
 			j++
 		}
