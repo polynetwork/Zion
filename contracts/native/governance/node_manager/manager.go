@@ -828,9 +828,9 @@ func GetGlobalConfig(s *native.NativeContract) ([]byte, error) {
 }
 
 func GetCommunityInfo(s *native.NativeContract) ([]byte, error) {
-	communityInfo, err := getCommunityInfo(s)
+	communityInfo, err := GetCommunityInfoImpl(s)
 	if err != nil {
-		return nil, fmt.Errorf("GetCommunityInfo, getCommunityInfo error: %v", err)
+		return nil, fmt.Errorf("GetCommunityInfo, GetCommunityInfoImpl error: %v", err)
 	}
 
 	enc, err := rlp.EncodeToBytes(communityInfo)

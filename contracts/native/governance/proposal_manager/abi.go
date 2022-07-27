@@ -58,6 +58,14 @@ func (m *ProposeConfigParam) Encode() ([]byte, error) {
 	return utils.PackMethodWithStruct(ABI, MethodProposeConfig, m)
 }
 
+type ProposeCommunityParam struct {
+	Content []byte
+}
+
+func (m *ProposeCommunityParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodProposeCommunity, m)
+}
+
 type VoteProposalParam struct {
 	ID *big.Int
 }

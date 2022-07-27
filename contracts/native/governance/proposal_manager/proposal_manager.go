@@ -32,9 +32,10 @@ import (
 )
 
 const (
-	PROPOSE_EVENT        = "Propose"
-	PROPOSE_CONFIG_EVENT = "ProposeConfig"
-	VOTE_PROPOSAL_EVENT  = "VoteProposal"
+	PROPOSE_EVENT           = "Propose"
+	PROPOSE_CONFIG_EVENT    = "ProposeConfig"
+	PROPOSE_COMMUNITY_EVENT = "ProposeCommunity"
+	VOTE_PROPOSAL_EVENT     = "VoteProposal"
 
 	MaxContentLength int = 4000
 )
@@ -60,10 +61,12 @@ func RegisterProposalManagerContract(s *native.NativeContract) {
 
 	s.Register(MethodPropose, Propose)
 	s.Register(MethodProposeConfig, ProposeConfig)
+	s.Register(MethodProposeCommunity, ProposeCommunity)
 	s.Register(MethodVoteProposal, VoteProposal)
 	s.Register(MethodGetProposal, GetProposal)
 	s.Register(MethodGetProposalList, GetProposalList)
 	s.Register(MethodGetConfigProposalList, GetConfigProposalList)
+	s.Register(MethodGetCommunityProposalList, GetCommunityProposalList)
 }
 
 func Propose(s *native.NativeContract) ([]byte, error) {
@@ -146,13 +149,13 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 	}
 
 	if len(params.Content) > MaxContentLength {
-		return nil, fmt.Errorf("Propose, content is more than max length")
+		return nil, fmt.Errorf("ProposeConfig, content is more than max length")
 	}
 
 	// remove expired proposal
 	err := removeExpiredFromConfigProposalList(s)
 	if err != nil {
-		return nil, fmt.Errorf("Propose, removeExpiredFromConfigProposalList error: %v", err)
+		return nil, fmt.Errorf("ProposeConfig, removeExpiredFromConfigProposalList error: %v", err)
 	}
 
 	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
@@ -193,7 +196,7 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 	// transfer token
 	err = contract.NativeTransfer(s, caller, this, proposal.Stake)
 	if err != nil {
-		return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
+		return nil, fmt.Errorf("ProposeConfig, utils.NativeTransfer error: %v", err)
 	}
 
 	err = s.AddNotify(ABI, []string{PROPOSE_CONFIG_EVENT}, proposal.ID.String(), caller.Hex(), proposal.Stake.String(), hex.EncodeToString(params.Content))
@@ -202,6 +205,75 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 	}
 
 	return utils.PackOutputs(ABI, MethodProposeConfig, true)
+}
+
+func ProposeCommunity(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	height := s.ContractRef().BlockHeight()
+	caller := ctx.Caller
+
+	params := &ProposeCommunityParam{}
+	if err := utils.UnpackMethod(ABI, MethodProposeCommunity, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("ProposeCommunity, unpack params error: %v", err)
+	}
+
+	if len(params.Content) > MaxContentLength {
+		return nil, fmt.Errorf("ProposeCommunity, content is more than max length")
+	}
+
+	// remove expired proposal
+	err := removeExpiredFromCommunityProposalList(s)
+	if err != nil {
+		return nil, fmt.Errorf("ProposeCommunity, removeExpiredFromCommunityProposalList error: %v", err)
+	}
+
+	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
+	if err != nil {
+		return nil, fmt.Errorf("ProposeCommunity, GetGlobalConfigImpl error: %v", err)
+	}
+
+	proposalID, err := getProposalID(s)
+	if err != nil {
+		return nil, fmt.Errorf("ProposeCommunity, getProposalID error: %v", err)
+	}
+	communityProposalList, err := getCommunityProposalList(s)
+	if err != nil {
+		return nil, fmt.Errorf("ProposeCommunity, getCommunityProposalList error: %v", err)
+	}
+	if len(communityProposalList.CommunityProposalList) >= ProposalListLen {
+		return nil, fmt.Errorf("ProposeCommunity, proposal is more than max length %d", ProposalListLen)
+	}
+	proposal := &Proposal{
+		ID:        proposalID,
+		Address:   ctx.Caller,
+		Type:      UpdateCommunityInfo,
+		Content:   params.Content,
+		EndHeight: new(big.Int).Add(height, globalConfig.BlockPerEpoch),
+		Stake:     globalConfig.MinProposalStake,
+	}
+	communityProposalList.CommunityProposalList = append(communityProposalList.CommunityProposalList, proposal.ID)
+	err = setCommunityProposalList(s, communityProposalList)
+	if err != nil {
+		return nil, fmt.Errorf("ProposeCommunity, setCommunityProposalList error: %v", err)
+	}
+	err = setProposal(s, proposal)
+	if err != nil {
+		return nil, fmt.Errorf("ProposeCommunity, setProposal error: %v", err)
+	}
+	setProposalID(s, new(big.Int).Add(proposalID, common.Big1))
+
+	// transfer token
+	err = contract.NativeTransfer(s, caller, this, proposal.Stake)
+	if err != nil {
+		return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
+	}
+
+	err = s.AddNotify(ABI, []string{PROPOSE_COMMUNITY_EVENT}, proposal.ID.String(), caller.Hex(), proposal.Stake.String(), hex.EncodeToString(params.Content))
+	if err != nil {
+		return nil, fmt.Errorf("ProposeConfig, AddNotify error: %v", err)
+	}
+
+	return utils.PackOutputs(ABI, MethodProposeCommunity, true)
 }
 
 func VoteProposal(s *native.NativeContract) ([]byte, error) {
@@ -243,7 +315,8 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
 		}
 
-		if proposal.Type == UpdateGlobalConfig {
+		switch proposal.Type {
+		case UpdateGlobalConfig:
 			config := new(node_manager.GlobalConfig)
 			err := rlp.DecodeBytes(proposal.Content, config)
 			if err != nil {
@@ -286,22 +359,67 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 				if ID.Cmp(proposal.ID) != 0 {
 					p, err := getProposal(s, ID)
 					if err != nil {
-						return nil, fmt.Errorf("VoteProposal, getProposal p error: %v", err)
+						return nil, fmt.Errorf("VoteProposal, getProposal config error: %v", err)
 					}
 					p.Status = FAIL
 					err = setProposal(s, p)
 					if err != nil {
-						return nil, fmt.Errorf("VoteProposal, setProposal p error: %v", err)
+						return nil, fmt.Errorf("VoteProposal, setProposal config error: %v", err)
 					}
 				}
 			}
 
 			// remove from config proposal list
-			err = cleanConfigProposalList(s, params.ID)
+			err = cleanConfigProposalList(s)
 			if err != nil {
 				return nil, fmt.Errorf("VoteProposal, cleanConfigProposalList error: %v", err)
 			}
-		} else {
+		case UpdateCommunityInfo:
+			info := new(node_manager.CommunityInfo)
+			err := rlp.DecodeBytes(proposal.Content, info)
+			if err != nil {
+				return nil, fmt.Errorf("VoteProposal, deserialize community info error: %v", err)
+			}
+			communityInfo, err := node_manager.GetCommunityInfoImpl(s)
+			if err != nil {
+				return nil, fmt.Errorf("VoteProposal, node_manager.GetCommunityInfoImpl error: %v", err)
+			}
+			if info.CommunityAddress != common.EmptyAddress {
+				communityInfo.CommunityAddress = info.CommunityAddress
+			}
+			if info.CommunityRate != nil {
+				communityInfo.CommunityRate = info.CommunityRate
+			}
+			err = node_manager.SetCommunityInfo(s, communityInfo)
+			if err != nil {
+				return nil, fmt.Errorf("VoteProposal, node_manager.SetCommunityInfo error: %v", err)
+			}
+
+			// change other community proposal tp fail
+			communityProposalList, err := getCommunityProposalList(s)
+			if err != nil {
+				return nil, fmt.Errorf("VoteProposal, getCommunityProposalList error: %v", err)
+			}
+			for _, ID := range communityProposalList.CommunityProposalList {
+				if ID.Cmp(proposal.ID) != 0 {
+					p, err := getProposal(s, ID)
+					if err != nil {
+						return nil, fmt.Errorf("VoteProposal, getProposal community error: %v", err)
+					}
+					p.Status = FAIL
+					err = setProposal(s, p)
+					if err != nil {
+						return nil, fmt.Errorf("VoteProposal, setProposal community error: %v", err)
+					}
+				}
+			}
+
+			// remove from community proposal list
+			err = cleanCommunityProposalList(s)
+			if err != nil {
+				return nil, fmt.Errorf("VoteProposal, cleanCommunityProposalList error: %v", err)
+			}
+		case Normal:
 			// remove from proposal list
 			err = removeFromProposalList(s, params.ID)
 			if err != nil {
@@ -360,4 +478,17 @@ func GetConfigProposalList(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("GetConfigProposalList, serialize config proposal list error: %v", err)
 	}
 	return utils.PackOutputs(ABI, MethodGetConfigProposalList, enc)
+}
+
+func GetCommunityProposalList(s *native.NativeContract) ([]byte, error) {
+	communityProposalList, err := getCommunityProposalList(s)
+	if err != nil {
+		return nil, fmt.Errorf("GetCommunityProposalList, getCommunityProposalList error: %v", err)
+	}
+
+	enc, err := rlp.EncodeToBytes(communityProposalList)
+	if err != nil {
+		return nil, fmt.Errorf("GetCommunityProposalList, serialize community proposal list error: %v", err)
+	}
+	return utils.PackOutputs(ABI, MethodGetCommunityProposalList, enc)
 }
