@@ -39,11 +39,11 @@ var (
 )
 
 // the gasUsage for the native contract transaction calculated according to the following formula:
-// *		`gasUsage = basicGas + gasRatio * gasTable[methodId]`
+// *		`gasUsage = gasRatio * gasTable[methodId]`
 // the value in gas table for native tx is the max num for bench test in linux.
 const (
-	basicGas = uint64(600)  // minimum gas spent by failed transaction, the default value is 600 wei.
-	gasRatio = float64(1.0) // gasRatio is used to adjust the final value of gasUsage.
+	basicGas = uint64(21000) // minimum gas spent by transaction which failed before contract.handler, the default value is 21000 wei.
+	gasRatio = float64(1.0)  // gasRatio is used to adjust the final value of gasUsage.
 )
 
 type NativeContract struct {
@@ -93,6 +93,15 @@ func (s *NativeContract) Register(name string, handler MethodHandler) {
 
 // Invoke return execute ret and cost gas
 func (s *NativeContract) Invoke() ([]byte, error) {
+
+	// pre-cost for failed tx which failed before `handler` execution.
+	if gasLeft := s.ref.gasLeft; gasLeft < basicGas {
+		s.ref.gasLeft = 0
+		return nil, fmt.Errorf("gasLeft not enough, need %d, got %d", basicGas, gasLeft)
+	} else {
+		s.ref.gasLeft -= basicGas
+	}
+
 	// check context
 	if !s.ref.CheckContexts() {
 		return nil, fmt.Errorf("context error")
@@ -118,24 +127,23 @@ func (s *NativeContract) Invoke() ([]byte, error) {
 		return nil, fmt.Errorf("failed to find method: [%s]", methodID)
 	}
 
-	// check gasLeft
-	needGas, ok := s.gasTable[methodID]
+	// check gas usage, the min value should be `basicGas`
+	gasUsage, ok := s.gasTable[methodID]
 	if !ok {
 		return nil, fmt.Errorf("failed to find method: [%s]", methodID)
 	}
-	gasLeft := s.ref.gasLeft
-	if gasLeft < needGas {
-		return nil, fmt.Errorf("gasLeft not enough, need %d, got %d", needGas, gasLeft)
+	if gasUsage < basicGas {
+		gasUsage = basicGas
+	}
+	// refund basic gas before tx get into `handler`
+	s.ref.gasLeft += basicGas
+	if gasLeft := s.ref.gasLeft; gasLeft < gasUsage {
+		return nil, fmt.Errorf("gasLeft not enough, need %d, got %d", gasUsage, gasLeft)
 	}
 
 	// execute transaction and cost gas
 	ret, err := handler(s)
-	if err != nil {
-		needGas = basicGas
-	}
-	if needGas > 0 {
-		s.ref.gasLeft -= needGas
-	}
+	s.ref.gasLeft -= gasUsage
 	return ret, err
 }
 
