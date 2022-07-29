@@ -45,9 +45,11 @@ const (
 	WITHDRAW_COMMISSION_EVENT    = "WithdrawCommission"
 )
 
+// the real gas usage of `createValidator`,`changeEpoch`,`endBlock` are 1291500, 5087250 and 343875.
+// in order to lower the total gas usage in an entire block, modify them to be 300000 and 200000, 150000.
 var (
 	gasTable = map[string]uint64{
-		MethodCreateValidator:                1291500,
+		MethodCreateValidator:                300000,
 		MethodUpdateValidator:                170625,
 		MethodUpdateCommission:               126000,
 		MethodStake:                          262500,
@@ -55,10 +57,10 @@ var (
 		MethodWithdraw:                       349125,
 		MethodCancelValidator:                333375,
 		MethodWithdrawValidator:              328125,
-		MethodChangeEpoch:                    5087250,
+		MethodChangeEpoch:                    200000,
 		MethodWithdrawStakeRewards:           286125,
 		MethodWithdrawCommission:             149625,
-		MethodEndBlock:                       343875,
+		MethodEndBlock:                       150000,
 		MethodGetGlobalConfig:                91875,
 		MethodGetCommunityInfo:               81375,
 		MethodGetCurrentEpochInfo:            112875,
