@@ -40,13 +40,13 @@ const (
 var (
 	this     = native.NativeContractAddrMap[native.NativeSideChainManager]
 	gasTable = map[string]uint64{
-		side_chain_manager_abi.MethodGetSideChain:             0,
-		side_chain_manager_abi.MethodRegisterSideChain:        100000,
-		side_chain_manager_abi.MethodApproveRegisterSideChain: 100000,
-		side_chain_manager_abi.MethodUpdateSideChain:          100000,
-		side_chain_manager_abi.MethodApproveUpdateSideChain:   100000,
-		side_chain_manager_abi.MethodQuitSideChain:            100000,
-		side_chain_manager_abi.MethodApproveQuitSideChain:     100000,
+		side_chain_manager_abi.MethodGetSideChain:             9751875,
+		side_chain_manager_abi.MethodRegisterSideChain:        3635625,
+		side_chain_manager_abi.MethodApproveRegisterSideChain: 7263375,
+		side_chain_manager_abi.MethodUpdateSideChain:          5599125,
+		side_chain_manager_abi.MethodApproveUpdateSideChain:   1270500,
+		side_chain_manager_abi.MethodQuitSideChain:            635250,
+		side_chain_manager_abi.MethodApproveQuitSideChain:     223125,
 	}
 
 	ABI *abi.ABI

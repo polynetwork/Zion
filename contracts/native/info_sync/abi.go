@@ -39,11 +39,11 @@ var (
 )
 
 var GasTable = map[string]uint64{
-	MethodContractName:  0,
-	MethodGetInfoHeight: 0,
-	MethodGetInfo:       0,
-	MethodSyncRootInfo:  1000,
-	MethodReplenish:     1000,
+	MethodContractName:  39375,
+	MethodGetInfoHeight: 55125,
+	MethodGetInfo:       65625,
+	MethodSyncRootInfo:  861000,
+	MethodReplenish:     65625,
 }
 
 func GetABI() *abi.ABI {

@@ -38,6 +38,14 @@ var (
 	DebugSpentOpen bool = true
 )
 
+// the gasUsage for the native contract transaction calculated according to the following formula:
+// *		`gasUsage = basicGas + gasRatio * gasTable[methodId]`
+// the value in gas table for native tx is the max num for bench test in linux.
+const (
+	basicGas = uint64(600)  // minimum gas spent by failed transaction, the default value is 600 wei.
+	gasRatio = float64(1.0) // gasRatio is used to adjust the final value of gasUsage.
+)
+
 type NativeContract struct {
 	ref      *ContractRef
 	db       *state.StateDB
@@ -73,10 +81,8 @@ func (s *NativeContract) Prepare(ab *abiPkg.ABI, gasTb map[string]uint64) {
 	s.gasTable = make(map[string]uint64)
 	for name, gas := range gasTb {
 		id := utils.MethodID(s.ab, name)
-		if gas > 0 && gas < FailedTxGasUsage {
-			panic(fmt.Sprintf("Tx writing gas usage should be above %d", FailedTxGasUsage))
-		}
-		s.gasTable[id] = gas
+		final := uint64(float64(basicGas) + float64(gas)*gasRatio)
+		s.gasTable[id] = final
 	}
 }
 
@@ -124,8 +130,8 @@ func (s *NativeContract) Invoke() ([]byte, error) {
 
 	// execute transaction and cost gas
 	ret, err := handler(s)
-	if err != nil && needGas > FailedTxGasUsage {
-		needGas = FailedTxGasUsage
+	if err != nil {
+		needGas = basicGas
 	}
 	if needGas > 0 {
 		s.ref.gasLeft -= needGas
