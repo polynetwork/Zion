@@ -42,12 +42,12 @@ const (
 var (
 	this     = native.NativeContractAddrMap[native.NativeCrossChain]
 	gasTable = map[string]uint64{
-		scom.MethodContractName:        0,
-		scom.MethodImportOuterTransfer: 0,
-		scom.MethodBlackChain:          0,
-		scom.MethodWhiteChain:          0,
-		scom.MethodCheckDone:           0,
-		scom.MethodReplenish:           0,
+		scom.MethodContractName:        21000,
+		scom.MethodImportOuterTransfer: 3291750,
+		scom.MethodBlackChain:          149625,
+		scom.MethodWhiteChain:          152250,
+		scom.MethodCheckDone:           57750,
+		scom.MethodReplenish:           727125,
 	}
 )
 

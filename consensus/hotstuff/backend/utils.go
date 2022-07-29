@@ -31,6 +31,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
+	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -72,18 +73,30 @@ func (c chainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
 	return c.Chain.GetHeader(hash, number)
 }
 
+const (
+	systemGas      = math.MaxUint64 / 2
+	systemGasPrice = int64(0) // consensus txs do not need to participate in gas price bidding
+)
+
 // get system message
 func (s *backend) getSystemMessage(toAddress common.Address, data []byte, value *big.Int) callmsg {
 	return callmsg{
 		ethereum.CallMsg{
 			From:     utils.SystemTxSender,
-			Gas:      math.MaxUint64 / 2,
-			GasPrice: big.NewInt(0), // consensus txs do not need to participate in gas price bidding
+			Gas:      systemGas,
+			GasPrice: big.NewInt(systemGasPrice),
 			Value:    value,
 			To:       &toAddress,
 			Data:     data,
 		},
 	}
+}
+
+// get system caller
+func (s *backend) getSystemCaller(state *state.StateDB, height *big.Int) *native.ContractRef {
+	caller := utils.SystemTxSender
+	hash := common.EmptyHash
+	return native.NewContractRef(state, caller, caller, height, hash, systemGas, nil)
 }
 
 // applyTransaction execute transaction without miner worker, and only succeed tx will be packed in block.

@@ -22,9 +22,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
-// FailedTxGasUsage tx's gas usage should not be greater than an minimum fixed value if it execute failed.
-const FailedTxGasUsage = uint64(100)
-
 const (
 	NativeGovernance         = "governance"
 	NativeSyncCrossChainInfo = "sync_cross_chain_info"

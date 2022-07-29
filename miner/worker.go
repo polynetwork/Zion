@@ -663,7 +663,7 @@ func (w *worker) commitNewWork(parent *types.Block, timestamp int64) {
 		}
 	}
 	if err := w.commit(true, tstart); err != nil {
-		log.Errorf("[miner]", "commit failed", err)
+		log.Error("Failed to commit work", "err", err)
 	}
 }
 

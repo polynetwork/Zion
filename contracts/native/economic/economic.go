@@ -31,9 +31,9 @@ import (
 
 var (
 	gasTable = map[string]uint64{
-		MethodName:        0,
-		MethodTotalSupply: 0,
-		MethodReward:      0,
+		MethodName:        39375,
+		MethodTotalSupply: 23625,
+		MethodReward:      73500,
 	}
 )
 

@@ -275,7 +275,6 @@ func (s *stateObject) SetState(db Database, key common.Hash, value []byte) {
 	}
 	// If the new value is the same as old, don't set
 	prev := s.GetState(db, key)
-	//fmt.Println("----(contract-addr, key, value, prev-value)", s.address.Hex(), key.Hex(), value.Hex(), prev.Hex())
 	if bytes.Equal(prev, value) {
 		return
 	}

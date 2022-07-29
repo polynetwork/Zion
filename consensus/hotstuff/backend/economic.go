@@ -22,8 +22,6 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/economic"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -60,7 +58,7 @@ func (s *backend) slash(ctx *systemTxContext) error {
 
 func (s *backend) getRewardList(state *state.StateDB, height *big.Int) ([]*economic.RewardAmount, error) {
 	caller := s.signer.Address()
-	ref := native.NewContractRef(state, caller, caller, height, common.EmptyHash, 0, nil)
+	ref := s.getSystemCaller(state, height)
 	payload, err := new(economic.MethodRewardInput).Encode()
 	if err != nil {
 		return nil, fmt.Errorf("encode reward input failed: %v", err)
