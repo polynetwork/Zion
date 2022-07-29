@@ -39,15 +39,17 @@ const (
 	BLACKED_CHAIN = "BlackedChain"
 )
 
+// the real gas usage of `importOutTransfer` and `replenish` are 3291750 and 727125.
+// in order to reduce the cross-chain cost, set them to be 300000 and 100000.
 var (
 	this     = native.NativeContractAddrMap[native.NativeCrossChain]
 	gasTable = map[string]uint64{
 		scom.MethodContractName:        21000,
-		scom.MethodImportOuterTransfer: 3291750,
+		scom.MethodImportOuterTransfer: 300000,
 		scom.MethodBlackChain:          149625,
 		scom.MethodWhiteChain:          152250,
 		scom.MethodCheckDone:           57750,
-		scom.MethodReplenish:           727125,
+		scom.MethodReplenish:           100000,
 	}
 )
 

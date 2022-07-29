@@ -19,9 +19,9 @@ package native
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"testing"
-	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -101,13 +101,15 @@ func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *
 	if sender != common.EmptyAddress && caller == common.EmptyAddress {
 		caller = sender
 	}
-	
+
 	blockHeight := new(big.Int).SetInt64(int64(block))
 	contractRef := NewContractRef(sdb, sender, caller, blockHeight, hash, supplyGas, nil)
 	ctx := NewNativeContract(sdb, contractRef)
 
 	// need to break point at the next step, e.g: nativeCall or some contract function
-	ctx.BreakPoint()
+	if DebugSpentOpen {
+		ctx.BreakPoint()
+	}
 	return sdb, ctx
 }
 
@@ -115,18 +117,20 @@ func TestNativeCall(t *testing.T, contract common.Address, name string, payload 
 	_, ctx := GenerateTestContext(t, params...)
 	ref := ctx.ContractRef()
 	res, _, err := ref.NativeCall(ref.caller, contract, payload)
-	t.Logf("contract %s method %s execute time %v us", contract.Hex(), name, ctx.BreakPoint())
+	if DebugSpentOpen {
+		t.Logf("contract %s method %s execute time %v us", contract.Hex(), name, ctx.BreakPoint())
+	}
 	return res, err
 }
 
 type Timer struct {
-	name string
+	name  string
 	since time.Time
 	cases []time.Duration
 }
 
-func NewTimer(name string) *Timer { 
-	return &Timer { name: name }
+func NewTimer(name string) *Timer {
+	return &Timer{name: name}
 }
 
 func (t *Timer) Start() {
@@ -175,4 +179,3 @@ func (t *Timer) ResetAs(name string) {
 	t.name = name
 	t.cases = []time.Duration{}
 }
-
