@@ -317,6 +317,11 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
 		}
 
+		communityInfo, err := node_manager.GetCommunityInfoImpl(s)
+		if err != nil {
+			return nil, fmt.Errorf("VoteProposal, node_manager.GetCommunityInfoImpl error: %v", err)
+		}
+
 		switch proposal.Type {
 		case UpdateGlobalConfig:
 			config := new(node_manager.GlobalConfig)
@@ -368,6 +373,12 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 					if err != nil {
 						return nil, fmt.Errorf("VoteProposal, setProposal config error: %v", err)
 					}
+
+					// transfer token to community pool
+					err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, p.Stake)
+					if err != nil {
+						return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
+					}
 				}
 			}
 
@@ -381,10 +392,6 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			err := rlp.DecodeBytes(proposal.Content, info)
 			if err != nil {
 				return nil, fmt.Errorf("VoteProposal, deserialize community info error: %v", err)
-			}
-			communityInfo, err := node_manager.GetCommunityInfoImpl(s)
-			if err != nil {
-				return nil, fmt.Errorf("VoteProposal, node_manager.GetCommunityInfoImpl error: %v", err)
 			}
 			if info.CommunityAddress != common.EmptyAddress {
 				communityInfo.CommunityAddress = info.CommunityAddress
@@ -412,6 +419,12 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 					err = setProposal(s, p)
 					if err != nil {
 						return nil, fmt.Errorf("VoteProposal, setProposal community error: %v", err)
+					}
+
+					// transfer token to community pool
+					err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, p.Stake)
+					if err != nil {
+						return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
 					}
 				}
 			}
