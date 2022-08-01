@@ -109,7 +109,7 @@ func TestNoAuthSyncRootInfo(t *testing.T) {
 	assert.Nil(t, err)
 
 	caller := crypto.PubkeyToAddress(*pub)
-	extra := uint64(1000)
+	extra := uint64(21000000000000)
 	_, err = native.TestNativeCall(t, utils.InfoSyncContractAddress, "SyncRootInfo", input, caller, caller, extra, sdb)
 	assert.NotNil(t, err)
 }
@@ -129,7 +129,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 
 	for i := 0; i < testGenesisNum; i++ {
 		caller := testGenesisPeers[i]
-		extra := uint64(1000)
+		extra := uint64(21000000000000)
 		digest, err := param.Digest()
 		assert.Nil(t, err)
 		sig, err := crypto.Sign(digest, testGenesisPri[i])
@@ -150,7 +150,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 	}
 	input, err := q1.Encode()
 	assert.Nil(t, err)
-	extra := uint64(10)
+	extra := uint64(21000000000000)
 	ret1, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "GetInfo", input, extra, sdb)
 	rootInfo := new(GetInfoOutput)
 	err = rootInfo.Decode(ret1)
@@ -183,7 +183,7 @@ func TestReplenish(t *testing.T) {
 		ChainID: CHAIN_ID,
 		Heights: []uint32{100, 90},
 	}
-	extra := uint64(1000)
+	extra := uint64(21000000000000)
 	input, err := param.Encode()
 	assert.Nil(t, err)
 	_, err = native.TestNativeCall(t, utils.InfoSyncContractAddress, "Replenish", input, extra, sdb)

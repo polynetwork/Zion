@@ -60,7 +60,7 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Equal(t, m["083c6323"], true)
 
 	blockNumber := big.NewInt(1)
-	extra := uint64(10)
+	extra := uint64(21000000000000)
 	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
 	contract := native.NewNativeContract(sdb, contractRef)
 
@@ -72,7 +72,7 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Equal(t, globalConfig.VoterValidatorNum, GenesisVoterValidatorNum)
 	assert.Equal(t, globalConfig.ConsensusValidatorNum, GenesisConsensusValidatorNum)
 
-	communityInfo, err := getCommunityInfo(contract)
+	communityInfo, err := GetCommunityInfoImpl(contract)
 	assert.Nil(t, err)
 	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(2000))
 	assert.Equal(t, communityInfo.CommunityAddress, common.EmptyAddress)
@@ -133,7 +133,7 @@ func TestCheckGenesis(t *testing.T) {
 func TestStake(t *testing.T) {
 	Init()
 	blockNumber := big.NewInt(399999)
-	extra := uint64(10)
+	extra := uint64(21000000000000)
 	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
 	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
 
@@ -423,7 +423,7 @@ func TestStake(t *testing.T) {
 func TestDistribute(t *testing.T) {
 	Init()
 	blockNumber := big.NewInt(399999)
-	extra := uint64(10)
+	extra := uint64(21000000000000)
 	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
 	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
 
@@ -842,7 +842,7 @@ func TestDistribute(t *testing.T) {
 func TestPerformance(t *testing.T) {
 	Init()
 	blockNumber := 399999
-	extra := uint64(10)
+	extra := uint64(21000000000000)
 
 	type ValidatorKey struct {
 		ConsensusAddr common.Address

@@ -42,12 +42,14 @@ const (
 
 var (
 	gasTable = map[string]uint64{
-		MethodPropose:               0,
-		MethodProposeConfig:         0,
-		MethodVoteProposal:          0,
-		MethodGetProposal:           0,
-		MethodGetProposalList:       0,
-		MethodGetConfigProposalList: 0,
+		MethodPropose:                  979125,
+		MethodProposeConfig:            756000,
+		MethodProposeCommunity:         693000,
+		MethodVoteProposal:             603750,
+		MethodGetProposal:              118125,
+		MethodGetProposalList:          94500,
+		MethodGetConfigProposalList:    73500,
+		MethodGetCommunityProposalList: 84000,
 	}
 )
 
