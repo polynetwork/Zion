@@ -22,6 +22,8 @@ import (
 	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/contract"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -106,6 +108,11 @@ func removeFromProposalList(s *native.NativeContract, ID *big.Int) error {
 }
 
 func removeExpiredFromProposalList(s *native.NativeContract) error {
+	communityInfo, err := node_manager.GetCommunityInfoImpl(s)
+	if err != nil {
+		return fmt.Errorf("removeExpiredFromProposalList, node_manager.GetCommunityInfoImpl error: %v", err)
+	}
+
 	proposalList, err := getProposalList(s)
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromProposalList, getProposalList error: %v", err)
@@ -123,6 +130,12 @@ func removeExpiredFromProposalList(s *native.NativeContract) error {
 		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) > 0 {
 			proposalList.ProposalList[j] = proposalID
 			j++
+		} else {
+			// transfer token to community pool
+			err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, proposal.Stake)
+			if err != nil {
+				return fmt.Errorf("removeExpiredFromProposalList, utils.NativeTransfer error: %v", err)
+			}
 		}
 	}
 	proposalList.ProposalList = proposalList.ProposalList[:j]
@@ -170,6 +183,11 @@ func cleanConfigProposalList(s *native.NativeContract) error {
 }
 
 func removeExpiredFromConfigProposalList(s *native.NativeContract) error {
+	communityInfo, err := node_manager.GetCommunityInfoImpl(s)
+	if err != nil {
+		return fmt.Errorf("removeExpiredFromConfigProposalList, node_manager.GetCommunityInfoImpl error: %v", err)
+	}
+
 	configProposalList, err := getConfigProposalList(s)
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromConfigProposalList, getProposalList error: %v", err)
@@ -187,6 +205,12 @@ func removeExpiredFromConfigProposalList(s *native.NativeContract) error {
 		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) > 0 {
 			configProposalList.ConfigProposalList[j] = proposalID
 			j++
+		} else {
+			// transfer token to community pool
+			err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, proposal.Stake)
+			if err != nil {
+				return fmt.Errorf("removeExpiredFromConfigProposalList, utils.NativeTransfer error: %v", err)
+			}
 		}
 	}
 	configProposalList.ConfigProposalList = configProposalList.ConfigProposalList[:j]
@@ -234,6 +258,11 @@ func cleanCommunityProposalList(s *native.NativeContract) error {
 }
 
 func removeExpiredFromCommunityProposalList(s *native.NativeContract) error {
+	communityInfo, err := node_manager.GetCommunityInfoImpl(s)
+	if err != nil {
+		return fmt.Errorf("removeExpiredFromCommunityProposalList, node_manager.GetCommunityInfoImpl error: %v", err)
+	}
+
 	communityProposalList, err := getCommunityProposalList(s)
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromCommunityProposalList, getCommunityProposalList error: %v", err)
@@ -251,6 +280,12 @@ func removeExpiredFromCommunityProposalList(s *native.NativeContract) error {
 		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) > 0 {
 			communityProposalList.CommunityProposalList[j] = proposalID
 			j++
+		} else {
+			// transfer token to community pool
+			err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, proposal.Stake)
+			if err != nil {
+				return fmt.Errorf("removeExpiredFromCommunityProposalList, utils.NativeTransfer error: %v", err)
+			}
 		}
 	}
 	communityProposalList.CommunityProposalList = communityProposalList.CommunityProposalList[:j]

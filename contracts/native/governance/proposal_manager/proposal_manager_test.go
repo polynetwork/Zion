@@ -249,4 +249,6 @@ func TestProposalManager(t *testing.T) {
 	communityInfo, err = node_manager.GetCommunityInfoImpl(contract)
 	assert.Nil(t, err)
 	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(1000))
+	assert.Equal(t, sdb.GetBalance(common.EmptyAddress), new(big.Int).Mul(big.NewInt(81000), params.ZNT1))
+	assert.Equal(t, sdb.GetBalance(communityInfo.CommunityAddress), new(big.Int).Mul(big.NewInt(81000), params.ZNT1))
 }
