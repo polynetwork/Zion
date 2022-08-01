@@ -87,7 +87,7 @@ func (h *Handler) SyncBlockHeader(native *native.NativeContract) error {
 		}
 	}
 
-	side, err := side_chain_manager.GetSideChainApply(native, headerParams.ChainID)
+	side, err := side_chain_manager.GetSideChain(native, headerParams.ChainID)
 	if err != nil {
 		return fmt.Errorf("zil Handler SyncBlockHeader, GetSideChain error: %v", err)
 	}
