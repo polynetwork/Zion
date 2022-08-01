@@ -706,7 +706,7 @@ func setGenesisCommunityInfo(s *state.CacheDB, communityInfo *CommunityInfo) err
 	return nil
 }
 
-func setCommunityInfo(s *native.NativeContract, communityInfo *CommunityInfo) error {
+func SetCommunityInfo(s *native.NativeContract, communityInfo *CommunityInfo) error {
 	if communityInfo.CommunityRate.Cmp(PercentDecimal) > 0 {
 		return fmt.Errorf("setCommunityInfo, CommunityRate over size")
 	}
@@ -719,15 +719,15 @@ func setCommunityInfo(s *native.NativeContract, communityInfo *CommunityInfo) er
 	return nil
 }
 
-func getCommunityInfo(s *native.NativeContract) (*CommunityInfo, error) {
+func GetCommunityInfoImpl(s *native.NativeContract) (*CommunityInfo, error) {
 	communityInfo := new(CommunityInfo)
 	key := communityInfoKey()
 	store, err := get(s, key)
 	if err != nil {
-		return nil, fmt.Errorf("GetCommunityInfo, get store error: %v", err)
+		return nil, fmt.Errorf("GetCommunityInfoImpl, get store error: %v", err)
 	}
 	if err := rlp.DecodeBytes(store, communityInfo); err != nil {
-		return nil, fmt.Errorf("GetCommunityInfo, deserialize community info error: %v", err)
+		return nil, fmt.Errorf("GetCommunityInfoImpl, deserialize community info error: %v", err)
 	}
 	return communityInfo, nil
 }

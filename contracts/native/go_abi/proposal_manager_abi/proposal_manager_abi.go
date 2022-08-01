@@ -29,9 +29,13 @@ var (
 var (
 	MethodPropose = "propose"
 
+	MethodProposeCommunity = "proposeCommunity"
+
 	MethodProposeConfig = "proposeConfig"
 
 	MethodVoteProposal = "voteProposal"
+
+	MethodGetCommunityProposalList = "getCommunityProposalList"
 
 	MethodGetConfigProposalList = "getConfigProposalList"
 
@@ -41,20 +45,24 @@ var (
 
 	EventPropose = "Propose"
 
+	EventProposeCommunity = "ProposeCommunity"
+
 	EventProposeConfig = "ProposeConfig"
 
 	EventVoteProposal = "VoteProposal"
 )
 
 // IProposalManagerABI is the input ABI used to generate the binding from.
-const IProposalManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"stake\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"content\",\"type\":\"string\"}],\"name\":\"Propose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"stake\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"content\",\"type\":\"string\"}],\"name\":\"ProposeConfig\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"}],\"name\":\"VoteProposal\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"getConfigProposalList\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"ID\",\"type\":\"int256\"}],\"name\":\"getProposal\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getProposalList\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"content\",\"type\":\"bytes\"}],\"name\":\"propose\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"content\",\"type\":\"bytes\"}],\"name\":\"proposeConfig\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"ID\",\"type\":\"int256\"}],\"name\":\"voteProposal\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const IProposalManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"stake\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"content\",\"type\":\"string\"}],\"name\":\"Propose\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"stake\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"content\",\"type\":\"string\"}],\"name\":\"ProposeCommunity\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"caller\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"stake\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"content\",\"type\":\"string\"}],\"name\":\"ProposeConfig\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ID\",\"type\":\"string\"}],\"name\":\"VoteProposal\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"getCommunityProposalList\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getConfigProposalList\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"ID\",\"type\":\"int256\"}],\"name\":\"getProposal\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getProposalList\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"content\",\"type\":\"bytes\"}],\"name\":\"propose\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"content\",\"type\":\"bytes\"}],\"name\":\"proposeCommunity\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"content\",\"type\":\"bytes\"}],\"name\":\"proposeConfig\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"int256\",\"name\":\"ID\",\"type\":\"int256\"}],\"name\":\"voteProposal\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // IProposalManagerFuncSigs maps the 4-byte function signature to its string representation.
 var IProposalManagerFuncSigs = map[string]string{
+	"0085b673": "getCommunityProposalList()",
 	"de63d452": "getConfigProposalList()",
 	"2a69c349": "getProposal(int256)",
 	"346750f3": "getProposalList()",
 	"37558af5": "propose(bytes)",
+	"8682c1d0": "proposeCommunity(bytes)",
 	"529aaa13": "proposeConfig(bytes)",
 	"e3b917ca": "voteProposal(int256)",
 }
@@ -201,6 +209,37 @@ func (_IProposalManager *IProposalManagerTransactorRaw) Transact(opts *bind.Tran
 	return _IProposalManager.Contract.contract.Transact(opts, method, params...)
 }
 
+// GetCommunityProposalList is a free data retrieval call binding the contract method 0x0085b673.
+//
+// Solidity: function getCommunityProposalList() view returns(bytes)
+func (_IProposalManager *IProposalManagerCaller) GetCommunityProposalList(opts *bind.CallOpts) ([]byte, error) {
+	var out []interface{}
+	err := _IProposalManager.contract.Call(opts, &out, "getCommunityProposalList")
+
+	if err != nil {
+		return *new([]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]byte)).(*[]byte)
+
+	return out0, err
+
+}
+
+// GetCommunityProposalList is a free data retrieval call binding the contract method 0x0085b673.
+//
+// Solidity: function getCommunityProposalList() view returns(bytes)
+func (_IProposalManager *IProposalManagerSession) GetCommunityProposalList() ([]byte, error) {
+	return _IProposalManager.Contract.GetCommunityProposalList(&_IProposalManager.CallOpts)
+}
+
+// GetCommunityProposalList is a free data retrieval call binding the contract method 0x0085b673.
+//
+// Solidity: function getCommunityProposalList() view returns(bytes)
+func (_IProposalManager *IProposalManagerCallerSession) GetCommunityProposalList() ([]byte, error) {
+	return _IProposalManager.Contract.GetCommunityProposalList(&_IProposalManager.CallOpts)
+}
+
 // GetConfigProposalList is a free data retrieval call binding the contract method 0xde63d452.
 //
 // Solidity: function getConfigProposalList() view returns(bytes)
@@ -313,6 +352,27 @@ func (_IProposalManager *IProposalManagerSession) Propose(content []byte) (*type
 // Solidity: function propose(bytes content) returns(bool success)
 func (_IProposalManager *IProposalManagerTransactorSession) Propose(content []byte) (*types.Transaction, error) {
 	return _IProposalManager.Contract.Propose(&_IProposalManager.TransactOpts, content)
+}
+
+// ProposeCommunity is a paid mutator transaction binding the contract method 0x8682c1d0.
+//
+// Solidity: function proposeCommunity(bytes content) returns(bool success)
+func (_IProposalManager *IProposalManagerTransactor) ProposeCommunity(opts *bind.TransactOpts, content []byte) (*types.Transaction, error) {
+	return _IProposalManager.contract.Transact(opts, "proposeCommunity", content)
+}
+
+// ProposeCommunity is a paid mutator transaction binding the contract method 0x8682c1d0.
+//
+// Solidity: function proposeCommunity(bytes content) returns(bool success)
+func (_IProposalManager *IProposalManagerSession) ProposeCommunity(content []byte) (*types.Transaction, error) {
+	return _IProposalManager.Contract.ProposeCommunity(&_IProposalManager.TransactOpts, content)
+}
+
+// ProposeCommunity is a paid mutator transaction binding the contract method 0x8682c1d0.
+//
+// Solidity: function proposeCommunity(bytes content) returns(bool success)
+func (_IProposalManager *IProposalManagerTransactorSession) ProposeCommunity(content []byte) (*types.Transaction, error) {
+	return _IProposalManager.Contract.ProposeCommunity(&_IProposalManager.TransactOpts, content)
 }
 
 // ProposeConfig is a paid mutator transaction binding the contract method 0x529aaa13.
@@ -488,6 +548,143 @@ func (_IProposalManager *IProposalManagerFilterer) WatchPropose(opts *bind.Watch
 func (_IProposalManager *IProposalManagerFilterer) ParsePropose(log types.Log) (*IProposalManagerPropose, error) {
 	event := new(IProposalManagerPropose)
 	if err := _IProposalManager.contract.UnpackLog(event, "Propose", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// IProposalManagerProposeCommunityIterator is returned from FilterProposeCommunity and is used to iterate over the raw logs and unpacked data for ProposeCommunity events raised by the IProposalManager contract.
+type IProposalManagerProposeCommunityIterator struct {
+	Event *IProposalManagerProposeCommunity // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *IProposalManagerProposeCommunityIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(IProposalManagerProposeCommunity)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(IProposalManagerProposeCommunity)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *IProposalManagerProposeCommunityIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *IProposalManagerProposeCommunityIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// IProposalManagerProposeCommunity represents a ProposeCommunity event raised by the IProposalManager contract.
+type IProposalManagerProposeCommunity struct {
+	ID      string
+	Caller  string
+	Stake   string
+	Content string
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterProposeCommunity is a free log retrieval operation binding the contract event 0xac6d6135cfcf6030bf2699fe5e4e0fdea6ef460903bb389dede1fe67474049df.
+//
+// Solidity: event ProposeCommunity(string ID, string caller, string stake, string content)
+func (_IProposalManager *IProposalManagerFilterer) FilterProposeCommunity(opts *bind.FilterOpts) (*IProposalManagerProposeCommunityIterator, error) {
+
+	logs, sub, err := _IProposalManager.contract.FilterLogs(opts, "ProposeCommunity")
+	if err != nil {
+		return nil, err
+	}
+	return &IProposalManagerProposeCommunityIterator{contract: _IProposalManager.contract, event: "ProposeCommunity", logs: logs, sub: sub}, nil
+}
+
+// WatchProposeCommunity is a free log subscription operation binding the contract event 0xac6d6135cfcf6030bf2699fe5e4e0fdea6ef460903bb389dede1fe67474049df.
+//
+// Solidity: event ProposeCommunity(string ID, string caller, string stake, string content)
+func (_IProposalManager *IProposalManagerFilterer) WatchProposeCommunity(opts *bind.WatchOpts, sink chan<- *IProposalManagerProposeCommunity) (event.Subscription, error) {
+
+	logs, sub, err := _IProposalManager.contract.WatchLogs(opts, "ProposeCommunity")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(IProposalManagerProposeCommunity)
+				if err := _IProposalManager.contract.UnpackLog(event, "ProposeCommunity", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseProposeCommunity is a log parse operation binding the contract event 0xac6d6135cfcf6030bf2699fe5e4e0fdea6ef460903bb389dede1fe67474049df.
+//
+// Solidity: event ProposeCommunity(string ID, string caller, string stake, string content)
+func (_IProposalManager *IProposalManagerFilterer) ParseProposeCommunity(log types.Log) (*IProposalManagerProposeCommunity, error) {
+	event := new(IProposalManagerProposeCommunity)
+	if err := _IProposalManager.contract.UnpackLog(event, "ProposeCommunity", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

@@ -31,10 +31,11 @@ import (
 var ErrEof = errors.New("EOF")
 
 const (
-	SKP_PROPOSAL_ID          = "st_proposal_id"
-	SKP_PROPOSAL             = "st_proposal"
-	SKP_PROPOSAL_LIST        = "st_proposal_list"
-	SKP_CONFIG_PROPOSAL_LIST = "st_config_proposal_list"
+	SKP_PROPOSAL_ID             = "st_proposal_id"
+	SKP_PROPOSAL                = "st_proposal"
+	SKP_PROPOSAL_LIST           = "st_proposal_list"
+	SKP_CONFIG_PROPOSAL_LIST    = "st_config_proposal_list"
+	SKP_COMMUNITY_PROPOSAL_LIST = "st_community_proposal_list"
 )
 
 func getProposalID(s *native.NativeContract) (*big.Int, error) {
@@ -73,6 +74,16 @@ func getProposalList(s *native.NativeContract) (*ProposalList, error) {
 	return proposalList, nil
 }
 
+func setProposalList(s *native.NativeContract, proposalList *ProposalList) error {
+	key := proposalListKey()
+	store, err := rlp.EncodeToBytes(proposalList)
+	if err != nil {
+		return fmt.Errorf("setProposalList, serialize proposalList error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
 func removeFromProposalList(s *native.NativeContract, ID *big.Int) error {
 	proposalList, err := getProposalList(s)
 	if err != nil {
@@ -99,6 +110,9 @@ func removeExpiredFromProposalList(s *native.NativeContract) error {
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromProposalList, getProposalList error: %v", err)
 	}
+	if len(proposalList.ProposalList) == 0 {
+		return nil
+	}
 
 	j := 0
 	for _, proposalID := range proposalList.ProposalList {
@@ -106,7 +120,7 @@ func removeExpiredFromProposalList(s *native.NativeContract) error {
 		if err != nil {
 			return fmt.Errorf("removeExpiredFromProposalList, getProposal error: %v", err)
 		}
-		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) < 0 {
+		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) > 0 {
 			proposalList.ProposalList[j] = proposalID
 			j++
 		}
@@ -116,16 +130,6 @@ func removeExpiredFromProposalList(s *native.NativeContract) error {
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromProposalList, setProposalList error: %v", err)
 	}
-	return nil
-}
-
-func setProposalList(s *native.NativeContract, proposalList *ProposalList) error {
-	key := proposalListKey()
-	store, err := rlp.EncodeToBytes(proposalList)
-	if err != nil {
-		return fmt.Errorf("setProposalList, serialize proposalList error: %v", err)
-	}
-	set(s, key, store)
 	return nil
 }
 
@@ -147,7 +151,17 @@ func getConfigProposalList(s *native.NativeContract) (*ConfigProposalList, error
 	return configProposalList, nil
 }
 
-func cleanConfigProposalList(s *native.NativeContract, ID *big.Int) error {
+func setConfigProposalList(s *native.NativeContract, configProposalList *ConfigProposalList) error {
+	key := configProposalListKey()
+	store, err := rlp.EncodeToBytes(configProposalList)
+	if err != nil {
+		return fmt.Errorf("setConfigProposalList, serialize config proposal list error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func cleanConfigProposalList(s *native.NativeContract) error {
 	err := setConfigProposalList(s, &ConfigProposalList{make([]*big.Int, 0)})
 	if err != nil {
 		return fmt.Errorf("cleanConfigProposalList, setConfigProposalList error: %v", err)
@@ -160,6 +174,9 @@ func removeExpiredFromConfigProposalList(s *native.NativeContract) error {
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromConfigProposalList, getProposalList error: %v", err)
 	}
+	if len(configProposalList.ConfigProposalList) == 0 {
+		return nil
+	}
 
 	j := 0
 	for _, proposalID := range configProposalList.ConfigProposalList {
@@ -167,7 +184,7 @@ func removeExpiredFromConfigProposalList(s *native.NativeContract) error {
 		if err != nil {
 			return fmt.Errorf("removeExpiredFromConfigProposalList, getProposal error: %v", err)
 		}
-		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) < 0 {
+		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) > 0 {
 			configProposalList.ConfigProposalList[j] = proposalID
 			j++
 		}
@@ -180,13 +197,67 @@ func removeExpiredFromConfigProposalList(s *native.NativeContract) error {
 	return nil
 }
 
-func setConfigProposalList(s *native.NativeContract, configProposalList *ConfigProposalList) error {
-	key := configProposalListKey()
-	store, err := rlp.EncodeToBytes(configProposalList)
+func getCommunityProposalList(s *native.NativeContract) (*CommunityProposalList, error) {
+	communityProposalList := &CommunityProposalList{
+		make([]*big.Int, 0),
+	}
+	key := communityProposalListKey()
+	store, err := get(s, key)
+	if err == ErrEof {
+		return communityProposalList, nil
+	}
 	if err != nil {
-		return fmt.Errorf("setConfigProposalList, serialize config proposal list error: %v", err)
+		return nil, fmt.Errorf("getCommunityProposalList, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, communityProposalList); err != nil {
+		return nil, fmt.Errorf("getCommunityProposalList, deserialize community proposal list error: %v", err)
+	}
+	return communityProposalList, nil
+}
+
+func setCommunityProposalList(s *native.NativeContract, communityProposalList *CommunityProposalList) error {
+	key := communityProposalListKey()
+	store, err := rlp.EncodeToBytes(communityProposalList)
+	if err != nil {
+		return fmt.Errorf("setCommunityProposalList, serialize community proposal list error: %v", err)
 	}
 	set(s, key, store)
+	return nil
+}
+
+func cleanCommunityProposalList(s *native.NativeContract) error {
+	err := setCommunityProposalList(s, &CommunityProposalList{make([]*big.Int, 0)})
+	if err != nil {
+		return fmt.Errorf("cleanCommunityProposalList, setCommunityProposalList error: %v", err)
+	}
+	return nil
+}
+
+func removeExpiredFromCommunityProposalList(s *native.NativeContract) error {
+	communityProposalList, err := getCommunityProposalList(s)
+	if err != nil {
+		return fmt.Errorf("removeExpiredFromCommunityProposalList, getCommunityProposalList error: %v", err)
+	}
+	if len(communityProposalList.CommunityProposalList) == 0 {
+		return nil
+	}
+
+	j := 0
+	for _, proposalID := range communityProposalList.CommunityProposalList {
+		proposal, err := getProposal(s, proposalID)
+		if err != nil {
+			return fmt.Errorf("removeExpiredFromConfigProposalList, getProposal error: %v", err)
+		}
+		if proposal.EndHeight.Cmp(s.ContractRef().BlockHeight()) > 0 {
+			communityProposalList.CommunityProposalList[j] = proposalID
+			j++
+		}
+	}
+	communityProposalList.CommunityProposalList = communityProposalList.CommunityProposalList[:j]
+	err = setCommunityProposalList(s, communityProposalList)
+	if err != nil {
+		return fmt.Errorf("removeExpiredFromCommunityProposalList, setCommunityProposalList error: %v", err)
+	}
 	return nil
 }
 
@@ -270,4 +341,8 @@ func proposalListKey() []byte {
 
 func configProposalListKey() []byte {
 	return utils.ConcatKey(this, []byte(SKP_CONFIG_PROPOSAL_LIST))
+}
+
+func communityProposalListKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_COMMUNITY_PROPOSAL_LIST))
 }

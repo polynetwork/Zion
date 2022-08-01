@@ -50,6 +50,22 @@ func (m *ProposeParam) Encode() ([]byte, error) {
 	return utils.PackMethodWithStruct(ABI, MethodPropose, m)
 }
 
+type ProposeConfigParam struct {
+	Content []byte
+}
+
+func (m *ProposeConfigParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodProposeConfig, m)
+}
+
+type ProposeCommunityParam struct {
+	Content []byte
+}
+
+func (m *ProposeCommunityParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodProposeCommunity, m)
+}
+
 type VoteProposalParam struct {
 	ID *big.Int
 }
@@ -64,4 +80,22 @@ type GetProposalParam struct {
 
 func (m *GetProposalParam) Encode() ([]byte, error) {
 	return utils.PackMethodWithStruct(ABI, MethodGetProposal, m)
+}
+
+type GetProposalListParam struct {}
+
+func (m *GetProposalListParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetProposalList)
+}
+
+type GetConfigProposalListParam struct {}
+
+func (m *GetConfigProposalListParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetConfigProposalList)
+}
+
+type GetCommunityProposalListParam struct {}
+
+func (m *GetCommunityProposalListParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetCommunityProposalList)
 }
