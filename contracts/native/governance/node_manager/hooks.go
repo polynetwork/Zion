@@ -22,6 +22,7 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	"math/big"
 )
 
@@ -54,11 +55,19 @@ func AfterValidatorCreated(s *native.NativeContract, validator *Validator) error
 
 func AfterValidatorRemoved(s *native.NativeContract, validator *Validator) error {
 	// fetch outstanding
-	//outstanding, err := getValidatorOutstandingRewards(s, dec)
-	//if err != nil {
-	//	return fmt.Errorf("AfterValidatorRemoved, getValidatorOutstandingRewards error: %v", err)
-	//}
-	//TODO: transfer outstanding dust to community pool
+	outstanding, err := getValidatorOutstandingRewards(s, validator.ConsensusAddress)
+	if err != nil {
+		return fmt.Errorf("AfterValidatorRemoved, getValidatorOutstandingRewards error: %v", err)
+	}
+	communityInfo, err := GetCommunityInfoImpl(s)
+	if err != nil {
+		return fmt.Errorf("AfterValidatorRemoved, GetCommunityInfoImpl error: %v", err)
+	}
+	// transfer outstanding dust to community pool
+	err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, outstanding.Rewards.BigInt())
+	if err != nil {
+		return fmt.Errorf("AfterValidatorRemoved, nativeTransfer error: %v", err)
+	}
 
 	// delete outstanding
 	delValidatorOutstandingRewards(s, validator.ConsensusAddress)

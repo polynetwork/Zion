@@ -837,6 +837,10 @@ func TestDistribute(t *testing.T) {
 	b7, _ := new(big.Int).SetString("1000092307692307692280000", 10)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), b6)
 	assert.Equal(t, sdb.GetBalance(stakeAddress2), b7)
+	assert.Equal(t, sdb.GetBalance(common.EmptyAddress), new(big.Int).SetUint64(180000))
+	_, found, err := getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, found, false)
 }
 
 func TestPerformance(t *testing.T) {
