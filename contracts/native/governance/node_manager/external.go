@@ -28,17 +28,18 @@ import (
 )
 
 var (
-	GenesisMaxCommissionChange, _        = new(big.Int).SetString("500", 10) // 50%
-	GenesisMinInitialStake               = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
-	GenesisMinProposalStake              = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
+	GenesisMaxCommissionChange, _ = new(big.Int).SetString("500", 10) // 50%
+	GenesisMinInitialStake        = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	GenesisMinProposalStake       = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
 	// TODO: change GenesisBlockPerEpoch to 400000
-	GenesisBlockPerEpoch                 = new(big.Int).SetUint64(10000)
-	GenesisConsensusValidatorNum  uint64 = 4
-	GenesisVoterValidatorNum      uint64 = 4
+	GenesisBlockPerEpoch                = new(big.Int).SetUint64(10000)
+	GenesisConsensusValidatorNum uint64 = 4
+	GenesisVoterValidatorNum     uint64 = 4
 
 	MaxDescLength   int = 4000
 	MaxValidatorNum int = 300
 	MaxUnlockingNum int = 100
+	MaxStakeRate    Dec = NewDecFromBigInt(new(big.Int).SetUint64(5))
 )
 
 func init() {
