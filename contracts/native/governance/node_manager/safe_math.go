@@ -82,6 +82,19 @@ func (t Dec) Sub(t2 Dec) (Dec, error) {
 }
 
 // multiplication with token decimal
+func (t Dec) Mul(t2 Dec) (Dec, error) {
+	if t.IsNil() || t2.IsNil() {
+		return Dec{nil}, DecNilError
+	}
+	if t.IsNegative() || t2.IsNegative() {
+		return Dec{nil}, DecNegError
+	}
+	mul := new(big.Int).Mul(t.I, t2.I)
+
+	return Dec{mul}, nil
+}
+
+// multiplication with token decimal
 func (t Dec) MulWithTokenDecimal(t2 Dec) (Dec, error) {
 	if t.IsNil() || t2.IsNil() {
 		return Dec{nil}, DecNilError

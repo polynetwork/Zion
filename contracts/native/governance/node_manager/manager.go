@@ -349,6 +349,13 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Stake, validator.TotalStake.Add error: %v", err)
 		}
+		maxTotalStake, err := validator.SelfStake.Mul(MaxStakeRate)
+		if err != nil {
+			return nil, fmt.Errorf("Stake, validator.SelfStake.Mul error: %v", err)
+		}
+		if validator.TotalStake.GT(maxTotalStake) {
+			return nil, fmt.Errorf("Stake, stake is more than max stake")
+		}
 	}
 	err = setValidator(s, validator)
 	if err != nil {
