@@ -340,16 +340,16 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			if config.VoterValidatorNum != 0 {
 				globalConfig.VoterValidatorNum = config.VoterValidatorNum
 			}
-			if config.BlockPerEpoch != nil {
+			if config.BlockPerEpoch.Sign() > 0 {
 				globalConfig.BlockPerEpoch = config.BlockPerEpoch
 			}
-			if config.MaxCommissionChange != nil {
+			if config.MaxCommissionChange.Sign() > 0 {
 				globalConfig.MaxCommissionChange = config.MaxCommissionChange
 			}
-			if config.MinInitialStake != nil {
+			if config.MinInitialStake.Sign() > 0 {
 				globalConfig.MinInitialStake = config.MinInitialStake
 			}
-			if config.MinProposalStake != nil {
+			if config.MinProposalStake.Sign() > 0 {
 				globalConfig.MinProposalStake = config.MinProposalStake
 			}
 			err = node_manager.SetGlobalConfig(s, globalConfig)
@@ -396,7 +396,7 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			if info.CommunityAddress != common.EmptyAddress {
 				communityInfo.CommunityAddress = info.CommunityAddress
 			}
-			if info.CommunityRate != nil {
+			if info.CommunityRate.Sign() > 0 {
 				communityInfo.CommunityRate = info.CommunityRate
 			}
 			err = node_manager.SetCommunityInfo(s, communityInfo)
