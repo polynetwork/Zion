@@ -41,6 +41,7 @@ var (
 
 type HotstuffExtra struct {
 	Height        uint64           // denote the epoch start height
+	EndHeight     uint64           // the epoch end height
 	Validators    []common.Address // consensus participants address for next epoch, and in the first block, it contains all genesis validators. keep empty if no epoch change.
 	Seal          []byte           // proposer signature
 	CommittedSeal [][]byte         // consensus participants signatures and it's size should be greater than 2/3 of validators
@@ -51,6 +52,7 @@ type HotstuffExtra struct {
 func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
 		ist.Height,
+		ist.EndHeight,
 		ist.Validators,
 		ist.Seal,
 		ist.CommittedSeal,
@@ -62,6 +64,7 @@ func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	var extra struct {
 		Height        uint64
+		EndHeight     uint64
 		Validators    []common.Address
 		Seal          []byte
 		CommittedSeal [][]byte
@@ -130,7 +133,7 @@ func HotstuffFilteredHeader(h *Header) *Header {
 	return newHeader
 }
 
-func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address, epochStartHeight uint64) error {
+func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address, epochStartHeight uint64, epochEndHeight uint64) error {
 	var buf bytes.Buffer
 
 	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
@@ -144,6 +147,7 @@ func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address, epo
 	}
 	ist := &HotstuffExtra{
 		Height:        epochStartHeight,
+		EndHeight:     epochEndHeight,
 		Validators:    vals,
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},
