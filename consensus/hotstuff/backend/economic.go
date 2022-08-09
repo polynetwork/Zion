@@ -35,11 +35,13 @@ func (s *backend) reward(state *state.StateDB, height *big.Int) error {
 		return nil
 	}
 
+	// get reward info list from native contract of `economic`
 	list, err := s.getRewardList(state, height)
 	if err != nil {
 		return err
 	}
 
+	// add balance to related addresses
 	var sRwd string
 	for _, v := range list {
 		state.AddBalance(v.Address, v.Amount)
