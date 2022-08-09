@@ -33,18 +33,14 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-// 不会有api接口调用verifyHeader这种接口导致epoch顺序错乱。epoch可以使用slice而非map。
-// 此外，可以针对map可以使用具体的结构。[]*epoch在具体使用调用过程中理论上应该是完全逆序(大的epoch在前)添加的。
-// 轻节点的epoch不包含endHeight(无法从链上读取)。
-//
-// 轻节点理论上只会按asc顺序同步节点，verifyHeader更新一组validators，但是不会添加新epoch对应的endHeight。
-// 那么，在根据epoch读取validators验证时，应该避开endHeight的查询。其他的接口可以继续使用endHeight。
-
 var (
 	contractAddr = utils.NodeManagerContractAddress
 	specMethod   = nmabi.GetSpecMethodID()
 )
 
+// FillHeader fulfill the header with validators for miner worker. there are 2 conditions:
+// * governance epoch changed on chain, use the new validators for an new epoch start header.
+// * governance epoch not changed, only set the old epoch start height in header.
 func (s *backend) FillHeader(state *state.StateDB, header *types.Header) error {
 	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
 	if err != nil {
@@ -67,7 +63,6 @@ func (s *backend) FillHeader(state *state.StateDB, header *types.Header) error {
 // 1.whether the block height is the right number to set new validators in block header while mining.
 // 2.whether the block height is the right number to change epoch.
 // return the flags and save epoch in lru cache.
-// 矿工打包新区块时填充区块并判断是否需要重启共识, 此时state高度落后header高度1个区块。
 // todo: globalConfig.epochLength should at least 3 block.
 func (s *backend) CheckPoint(height uint64) {
 	if height <= 1 {
@@ -99,6 +94,7 @@ func (s *backend) CheckPoint(height uint64) {
 	}
 }
 
+// Validators get validators from backend by `consensus core`, param of `mining` is false denote need last epoch validators.
 func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSet {
 	if mining {
 		return s.vals.Copy()
@@ -112,6 +108,7 @@ func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSe
 	return vals
 }
 
+// IsSystemTransaction used by state processor while sync block.
 func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Header) (string, bool) {
 	// consider that tx is deploy transaction, so the tx.to will be nil
 	if tx == nil || len(tx.Data()) < 4 || tx.To() == nil {
@@ -127,7 +124,7 @@ func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Heade
 	return id, true
 }
 
-// header height infront of state height
+// header height in front of state height
 func (s *backend) execEpochChange(state *state.StateDB, header *types.Header, ctx *systemTxContext) error {
 
 	epoch, err := s.getGovernanceInfo(state)
@@ -153,6 +150,7 @@ func (s *backend) execEpochChange(state *state.StateDB, header *types.Header, ct
 	return nil
 }
 
+// getGovernanceInfo call governance contract method and retrieve related info.
 func (s *backend) getGovernanceInfo(state *state.StateDB) (*nm.EpochInfo, error) {
 	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
 	if err != nil {
@@ -161,6 +159,7 @@ func (s *backend) getGovernanceInfo(state *state.StateDB) (*nm.EpochInfo, error)
 	return epoch, nil
 }
 
+// execEndBlock execute governance contract method of `EndBlock`
 func (s *backend) execEndBlock(ctx *systemTxContext) error {
 	payload, err := new(nm.EndBlockParam).Encode()
 	if err != nil {
@@ -169,18 +168,23 @@ func (s *backend) execEndBlock(ctx *systemTxContext) error {
 	return s.executeTransaction(ctx, contractAddr, payload)
 }
 
+// getValidatorsByHeader check if current header height is an new epoch start and retrieve the validators.
 func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain consensus.ChainHeaderReader) (
 	bool, hotstuff.ValidatorSet, error) {
 
+	// extract current header
 	extra, err := types.ExtractHotstuffExtra(header)
 	if err != nil {
 		return false, nil, err
 	}
 
+	// the genesis block is an epoch start, and the validators stored in the field of `header.extra`
 	if header.Number.Uint64() == 0 {
 		return true, NewDefaultValSet(extra.Validators), nil
 	}
 
+	// if the block height equals to the `extra.height`, this block is an epoch start.
+	// the the validators for this header is stored in last epoch start header.
 	isEpoch := extra.Height == header.Number.Uint64()
 	if isEpoch {
 		if parent == nil {
@@ -202,12 +206,9 @@ func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain cons
 	return isEpoch, NewDefaultValSet(extra.Validators), nil
 }
 
-func (s *backend) saveRecentHeader(header *types.Header) {
-	s.recents.Add(header.Number.Uint64(), header)
-}
-
-// todo(fuk): translate 同步时批量获取区块头，但是不会直接将区块头落账，等到所有的区块body执行完之后才会落账。
-// 所以，这里有可能在chain上拿不到区块头，这时候就要从lru cache获取区块头
+// getRecentHeader in block sync module, the block headers are fetched in batches, and these headers will store in
+// chain db until all block body and block receipts executing finished. but the action of `verifyHeader` is continuously.
+// so save all epoch header in LRU is needed.
 func (s *backend) getRecentHeader(height uint64, chain consensus.ChainHeaderReader) *types.Header {
 	header := chain.GetHeaderByNumber(height)
 	if header != nil {
@@ -224,6 +225,10 @@ func (s *backend) getRecentHeader(height uint64, chain consensus.ChainHeaderRead
 		return nil
 	}
 	return header
+}
+
+func (s *backend) saveRecentHeader(header *types.Header) {
+	s.recents.Add(header.Number.Uint64(), header)
 }
 
 // newEpochValidators prepare validators for next block.

@@ -74,11 +74,11 @@ func (c chainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
 }
 
 const (
-	systemGas      = math.MaxUint64 / 2
-	systemGasPrice = int64(0) // consensus txs do not need to participate in gas price bidding
+	systemGas      = math.MaxUint64 / 2 // system tx will be executed in evm, and gas calculating is needed.
+	systemGasPrice = int64(0)           // consensus txs do not need to participate in gas price bidding
 )
 
-// get system message
+// getSystemMessage assemble system calling fields
 func (s *backend) getSystemMessage(toAddress common.Address, data []byte, value *big.Int) callmsg {
 	return callmsg{
 		ethereum.CallMsg{
@@ -92,7 +92,7 @@ func (s *backend) getSystemMessage(toAddress common.Address, data []byte, value 
 	}
 }
 
-// get system caller
+// getSystemCaller use fixed systemCaller as contract caller, and tx hash is useless in contract call.
 func (s *backend) getSystemCaller(state *state.StateDB, height *big.Int) *native.ContractRef {
 	caller := utils.SystemTxSender
 	hash := common.EmptyHash
@@ -171,6 +171,7 @@ func (s *backend) applyTransaction(
 		*sysTxs = (*sysTxs)[1:]
 	}
 
+	// execute system tx and get the receipt
 	state.Prepare(expectedTx.Hash(), common.Hash{}, len(*commonTxs))
 	gasUsed, err := applyMessage(msg, state, header, chain.Config(), chainContext)
 	if err != nil {
@@ -188,7 +189,7 @@ func (s *backend) applyTransaction(
 	receipt.TxHash = expectedTx.Hash()
 	receipt.GasUsed = gasUsed
 
-	// Set the receipt logs and create a bloom for filtering
+	// set the receipt logs and create a bloom for filtering
 	receipt.Logs = state.GetLogs(expectedTx.Hash())
 	receipt.Bloom = types.CreateBloom(types.Receipts{receipt})
 	receipt.BlockHash = state.BlockHash()
