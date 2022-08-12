@@ -36,6 +36,8 @@ type Proposal interface {
 	// Number retrieves the block height number of this proposal.
 	Number() *big.Int
 
+	NumberU64() uint64
+
 	// Hash retrieves the hash of this proposal.
 	Hash() common.Hash
 

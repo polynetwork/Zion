@@ -25,6 +25,26 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/message_set"
 )
 
+func (c *core) currentView() *hotstuff.View {
+	return &hotstuff.View{
+		Height: new(big.Int).Set(c.current.Height()),
+		Round:  new(big.Int).Set(c.current.Round()),
+	}
+}
+
+func (c *core) currentState() State {
+	return c.current.State()
+}
+
+func (c *core) setCurrentState(s State) {
+	c.current.SetState(s)
+	c.processBacklog()
+}
+
+func (c *core) currentProposer() hotstuff.Validator {
+	return c.valSet.GetProposer()
+}
+
 type roundState struct {
 	vs hotstuff.ValidatorSet
 
@@ -70,6 +90,10 @@ func newRoundState(view *hotstuff.View, validatorSet hotstuff.ValidatorSet, prep
 
 func (s *roundState) Height() *big.Int {
 	return s.height
+}
+
+func (s *roundState) HeightU64() uint64 {
+	return s.height.Uint64()
 }
 
 func (s *roundState) Round() *big.Int {

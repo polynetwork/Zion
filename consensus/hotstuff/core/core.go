@@ -19,7 +19,6 @@
 package core
 
 import (
-	"math"
 	"math/big"
 	"time"
 
@@ -62,29 +61,6 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 	return c
 }
 
-func (c *core) Address() common.Address {
-	return c.signer.Address()
-}
-
-func (c *core) IsProposer() bool {
-	return c.valSet.IsProposer(c.backend.Address())
-}
-
-func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
-	if c.current == nil {
-		return false
-	}
-	if proposal := c.current.Proposal(); proposal != nil && proposal.Hash() == blockHash {
-		return true
-	}
-	if req := c.current.PendingRequest(); req != nil && req.Proposal != nil && req.Proposal.Hash() == blockHash {
-		return true
-	}
-	return false
-}
-
-const maxRetry uint64 = 10
-
 func (c *core) startNewRound(round *big.Int) {
 	logger := c.logger.New()
 
@@ -93,49 +69,50 @@ func (c *core) startNewRound(round *big.Int) {
 		return
 	}
 
-	changeView := false
-	catchUpRetryCnt := maxRetry
-	retryPeriod := time.Duration(c.config.RequestTimeout/maxRetry) * time.Millisecond
+	var (
+		changeView                 = false
+		lastProposal, lastProposer = c.backend.LastProposal()
+	)
 
-catchup:
-	lastProposal, lastProposer := c.backend.LastProposal()
-	if c.current == nil {
-		logger.Trace("Start to the initial round")
-	} else if lastProposal == nil {
+	// check last chained block
+	if lastProposal == nil {
 		logger.Warn("Last proposal should not be nil")
 		return
-	} else if lastProposal.Number().Cmp(c.current.Height()) >= 0 {
-		logger.Trace("Catch up latest proposal", "number", lastProposal.Number().Uint64(), "hash", lastProposal.Hash())
-	} else if lastProposal.Number().Cmp(big.NewInt(c.current.Height().Int64()-1)) == 0 {
-		if round.Cmp(common.Big0) == 0 {
-			// chain reader sync last proposal
-			if catchUpRetryCnt -= 1; catchUpRetryCnt <= 0 {
-				logger.Warn("Sync last proposal failed", "height", c.current.Height())
-				return
-			} else {
-				time.Sleep(retryPeriod)
-				goto catchup
-			}
-		} else if round.Cmp(c.current.Round()) < 0 {
-			logger.Warn("New round should not be smaller than current round", "height", lastProposal.Number().Int64(), "new_round", round, "old_round", c.current.Round())
-			return
-		}
-		changeView = true
-	} else {
-		logger.Warn("New height should be larger than current height", "new_height", lastProposal.Number().Int64())
+	}
+
+	// compare the chained block height and current state height, there are 6 conditions:
+	// * current state is nil, it denote that the engine is initialed just now.
+	// * last proposal is greater than current state height, it denote that last proposal has chained.
+	// * last proposal is lower that current state height - 1, it should not happen.
+	// * last proposal is equal to current state height -1, and the round is 0, it denote that last proposal has't chained.
+	// * last proposal is equal to current state height -1, and the round lower than current state round, it should not happen.
+	// * last proposal is equal to current state height -1, and the round greater or equal to current state round, it denote change view.
+	if c.current == nil {
+		logger.Trace("Start to the initial round")
+	} else if lastProposal.NumberU64() >= c.current.HeightU64() {
+		logger.Trace("Catch up latest proposal", "number", lastProposal.NumberU64(), "hash", lastProposal.Hash())
+	} else if lastProposal.NumberU64() < c.current.HeightU64()-1 {
+		logger.Warn("New height should be larger than current height", "new_height", lastProposal.NumberU64)
 		return
+	} else if round.Sign() == 0 {
+		// todo(fuk): delete this log after test
+		logger.Trace("Latest proposal not chained", "chained", lastProposal.NumberU64(), "current", c.current.HeightU64())
+		return
+	} else if round.Cmp(c.current.Round()) < 0 {
+		logger.Warn("New round should not be smaller than current round", "height", lastProposal.NumberU64(), "new_round", round, "old_round", c.current.Round())
+		return
+	} else {
+		changeView = true
 	}
 
 	newView := &hotstuff.View{
 		Height: new(big.Int).Add(lastProposal.Number(), common.Big1),
-		Round:  common.Big0,
+		Round:  new(big.Int),
 	}
 	if changeView {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
-	}
-
-	if newView.Round.Uint64() == 0 {
+	} else {
 		c.backend.CheckPoint(newView.Height.Uint64())
 	}
 
@@ -172,46 +149,6 @@ catchup:
 	c.newRoundChangeTimer()
 }
 
-func (c *core) currentView() *hotstuff.View {
-	return &hotstuff.View{
-		Height: new(big.Int).Set(c.current.Height()),
-		Round:  new(big.Int).Set(c.current.Round()),
-	}
-}
-
-func (c *core) currentState() State {
-	return c.current.State()
-}
-
-func (c *core) setCurrentState(s State) {
-	c.current.SetState(s)
-	c.processBacklog()
-}
-
-func (c *core) currentProposer() hotstuff.Validator {
-	return c.valSet.GetProposer()
-}
-
-func (c *core) Q() int {
-	return c.valSet.Q()
-}
-
-func (c *core) stopTimer() {
-	if c.roundChangeTimer != nil {
-		c.roundChangeTimer.Stop()
-	}
-}
-
-func (c *core) newRoundChangeTimer() {
-	c.stopTimer()
-
-	// set timeout based on the round number
-	timeout := time.Duration(c.config.RequestTimeout) * time.Millisecond
-	round := c.current.Round().Uint64()
-	if round > 0 {
-		timeout += time.Duration(math.Pow(2, float64(round))) * time.Second
-	}
-	c.roundChangeTimer = time.AfterFunc(timeout, func() {
-		c.sendEvent(timeoutEvent{})
-	})
+func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
+	return c.signer.CheckSignature(c.valSet, data, sig)
 }

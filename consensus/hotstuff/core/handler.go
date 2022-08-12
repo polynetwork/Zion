@@ -60,6 +60,30 @@ func (c *core) Stop() error {
 	return nil
 }
 
+// Address implement core.Engine.Address
+func (c *core) Address() common.Address {
+	return c.signer.Address()
+}
+
+// IsProposer implement core.Engine.IsProposer
+func (c *core) IsProposer() bool {
+	return c.valSet.IsProposer(c.backend.Address())
+}
+
+// IsCurrentProposal implement core.Engine.IsCurrentProposal
+func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
+	if c.current == nil {
+		return false
+	}
+	if proposal := c.current.Proposal(); proposal != nil && proposal.Hash() == blockHash {
+		return true
+	}
+	if req := c.current.PendingRequest(); req != nil && req.Proposal != nil && req.Proposal.Hash() == blockHash {
+		return true
+	}
+	return false
+}
+
 // ----------------------------------------------------------------------------
 
 // Subscribe both internal and external events
@@ -109,7 +133,6 @@ func (c *core) handleEvents() {
 			}
 
 		case _, ok := <-c.timeoutSub.Chan():
-			//logger.Trace("handle timeout Event")
 			if !ok {
 				logger.Error("Failed to receive timeout Event")
 				return
