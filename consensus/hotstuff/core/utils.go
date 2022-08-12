@@ -242,10 +242,6 @@ func (c *core) broadcast(msg *hotstuff.Message) {
 	}
 }
 
-func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return c.signer.CheckSignature(c.valSet, data, sig)
-}
-
 func (c *core) preExecuteBlock(proposal hotstuff.Proposal) error {
 	if c.IsProposer() {
 		return nil
@@ -261,6 +257,10 @@ func (c *core) preExecuteBlock(proposal hotstuff.Proposal) error {
 func (c *core) newLogger() log.Logger {
 	logger := c.logger.New("state", c.currentState(), "view", c.currentView())
 	return logger
+}
+
+func (c *core) Q() int {
+	return c.valSet.Q()
 }
 
 func proposal2QC(proposal hotstuff.Proposal, round *big.Int) *hotstuff.QuorumCert {
