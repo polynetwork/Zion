@@ -340,7 +340,7 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			if config.VoterValidatorNum != 0 {
 				globalConfig.VoterValidatorNum = config.VoterValidatorNum
 			}
-			if config.BlockPerEpoch.Sign() > 0 {
+			if config.BlockPerEpoch.Cmp(node_manager.MinBlockPerEpoch) >= 0 {
 				globalConfig.BlockPerEpoch = config.BlockPerEpoch
 			}
 			if config.MaxCommissionChange.Sign() > 0 {
