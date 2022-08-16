@@ -136,7 +136,7 @@ func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (m *MsgNewView) String() string {
-	return fmt.Sprintf("{NewView StartHeight: %d Round: %d}", m.View.Height, m.View.Round)
+	return fmt.Sprintf("{NewView Height: %d Round: %d}", m.View.Height, m.View.Round)
 }
 
 type MsgPrepare struct {
