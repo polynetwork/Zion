@@ -864,7 +864,7 @@ func TestPerformance(t *testing.T) {
 		param.ConsensusAddress = consensusAddr
 		param.SignerAddress = consensusAddr
 		param.ProposalAddress = caller
-		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+		param.InitStake = new(big.Int).Mul(big.NewInt(1000000), params.ZNT1)
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
 		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
@@ -885,7 +885,7 @@ func TestPerformance(t *testing.T) {
 		sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 		param1 := new(StakeParam)
 		param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
-		param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
+		param1.Amount = new(big.Int).Mul(big.NewInt(200), params.ZNT1)
 		input, err := param1.Encode()
 		assert.Nil(t, err)
 		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "Stake", input, stakeAddress, stakeAddress, blockNumber, extra, sdb)
@@ -1074,3 +1074,17 @@ func TestPerformance(t *testing.T) {
 	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UpdateCommission", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
 	assert.Nil(t, err)
 }
+
+//func TestCreateValidator(t *testing.T) {
+//	tests := []struct {
+//		name   string
+//		fields *CreateValidatorParam
+//		want   uint32
+//	}{
+//		{
+//			name:   "test",
+//			fields: fields{Block: blk.Block, Info: blk.Info},
+//			want:   uint32(1),
+//		},
+//	}
+//}
