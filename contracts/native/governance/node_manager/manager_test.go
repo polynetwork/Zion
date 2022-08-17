@@ -20,6 +20,7 @@ package node_manager
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"testing"
 
@@ -1075,16 +1076,275 @@ func TestPerformance(t *testing.T) {
 	assert.Nil(t, err)
 }
 
-//func TestCreateValidator(t *testing.T) {
-//	tests := []struct {
-//		name   string
-//		fields *CreateValidatorParam
-//		want   uint32
-//	}{
-//		{
-//			name:   "test",
-//			fields: fields{Block: blk.Block, Info: blk.Info},
-//			want:   uint32(1),
-//		},
-//	}
-//}
+func TestCreateValidatorParam(t *testing.T) {
+	Init()
+
+	blockNumber := common.Big1
+	extra := uint64(21000000000000)
+
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	caller := crypto.PubkeyToAddress(*acct)
+	sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(100000000), params.ZNT1))
+
+	tests := []struct {
+		name   string
+		params *CreateValidatorParam
+	}{
+		{
+			name: "invalid consensus address",
+			params: &CreateValidatorParam{ConsensusAddress: common.Address{}, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetUint64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
+		},
+		{
+			name: "invalid signer address",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: common.Address{}, ProposalAddress: addr,
+				Commission: new(big.Int).SetUint64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
+		},
+		{
+			name: "invalid proposal address",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: common.Address{},
+				Commission: new(big.Int).SetUint64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
+		},
+		{
+			name: "negative commission",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetInt64(-3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
+		},
+		{
+			name: "large commission",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetInt64(30000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
+		},
+		{
+			name: "negative init stake",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetInt64(3000), InitStake: new(big.Int).Mul(big.NewInt(-100000), params.ZNT1), Desc: "test"},
+		},
+		{
+			name: "small init stake",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetInt64(3000), InitStake: new(big.Int).Mul(big.NewInt(1000), params.ZNT1), Desc: "test"},
+		},
+		{
+			name: "large desc",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetInt64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "Welcome to the Poly Network cross chain technology center!\n\nBlock technology has now undergone over 10 years of gradual development. Even though many public chain systems have emerged, most of the existing blockchain architecture systems focus on experimenting with the scalability and performance of a single blockchain, while for a single blockchain, due to the constraints that come into picture due to the architecture system and development direction, it is difficult to meet all the needs. Therefore, we expect that the future blockchain ecology must be a pattern in which multiple blockchains coexist. Different chains with different characteristics can become part of the blockchain infrastructure, but the chains are still limited to themselves, each forming its own island of value. Chains that are different in nature lack quick interoperability and convenient means of value circulation. In order to build a better next-generation internet infrastructure, we have launched a new cross-chain technology, the Poly Network.\n\nCross-chain technology is a new technical method to allow inter-chain interactions via cross-chain interoperability protocols that are based on the existing single-blockchain architecture design. The cross-chain interoperability protocol was first proposed by Vitalik Buterin in September 2016. He divided the cross-chain interoperability protocol into three modes: Notary schemes, side chains/relays, and hash locking. The notary mechanism refers to the interaction through a trusted third party as part of the process of cross-chain interaction, which is mainly implemented through mechanisms such as \"single sign, multi-sign notary mechanism\"; the side chain/relay mode is a protocol that is currently being used, for example: Cosmos and Polkadot and other popular cross-chain projects all use this protocol. It refers to a technical methodology that can rely on a trusted third party for cross-chain transaction verification and can conduct cross-chain transaction verification on its own; Hash time lock is the underlying technology of the earliest lightning network. The protocol consists of time lock and hash lock. Time lock refers to the agreement between the two parties that the transaction must be submitted within a certain time to be valid. Hash lock refers to a hash value H, where if the original image R is provided such that Hash (R) = H, the promise is deemed valid, otherwise it is invalid. If the two parties involved in the transaction could not succeed for any reason, time lock can allow the parties to the transaction to get their assets back to avoid losses due to fraud or transaction failure."},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.params.Encode()
+			assert.Nil(t, err)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+			fmt.Println("#######", err)
+			assert.NotNil(t, err)
+		})
+	}
+}
+
+func TestUpdateValidatorParam(t *testing.T) {
+	Init()
+
+	blockNumber := common.Big1
+	extra := uint64(21000000000000)
+
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	pk1, _ := crypto.GenerateKey()
+	addr1 := crypto.PubkeyToAddress(pk1.PublicKey)
+	caller := crypto.PubkeyToAddress(*acct)
+
+	// create validator
+	sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(100000000), params.ZNT1))
+	param := new(CreateValidatorParam)
+	param.ConsensusAddress = addr
+	param.SignerAddress = addr
+	param.ProposalAddress = addr
+	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	param.Commission = new(big.Int).SetUint64(2000)
+	param.Desc = "test"
+	input, err := param.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	tests := []struct {
+		name   string
+		params *UpdateValidatorParam
+	}{
+		{
+			name:   "large desc",
+			params: &UpdateValidatorParam{ConsensusAddress: addr, SignerAddress: addr1, ProposalAddress: common.Address{}, Desc: "Welcome to the Poly Network cross chain technology center!\n\nBlock technology has now undergone over 10 years of gradual development. Even though many public chain systems have emerged, most of the existing blockchain architecture systems focus on experimenting with the scalability and performance of a single blockchain, while for a single blockchain, due to the constraints that come into picture due to the architecture system and development direction, it is difficult to meet all the needs. Therefore, we expect that the future blockchain ecology must be a pattern in which multiple blockchains coexist. Different chains with different characteristics can become part of the blockchain infrastructure, but the chains are still limited to themselves, each forming its own island of value. Chains that are different in nature lack quick interoperability and convenient means of value circulation. In order to build a better next-generation internet infrastructure, we have launched a new cross-chain technology, the Poly Network.\n\nCross-chain technology is a new technical method to allow inter-chain interactions via cross-chain interoperability protocols that are based on the existing single-blockchain architecture design. The cross-chain interoperability protocol was first proposed by Vitalik Buterin in September 2016. He divided the cross-chain interoperability protocol into three modes: Notary schemes, side chains/relays, and hash locking. The notary mechanism refers to the interaction through a trusted third party as part of the process of cross-chain interaction, which is mainly implemented through mechanisms such as \"single sign, multi-sign notary mechanism\"; the side chain/relay mode is a protocol that is currently being used, for example: Cosmos and Polkadot and other popular cross-chain projects all use this protocol. It refers to a technical methodology that can rely on a trusted third party for cross-chain transaction verification and can conduct cross-chain transaction verification on its own; Hash time lock is the underlying technology of the earliest lightning network. The protocol consists of time lock and hash lock. Time lock refers to the agreement between the two parties that the transaction must be submitted within a certain time to be valid. Hash lock refers to a hash value H, where if the original image R is provided such that Hash (R) = H, the promise is deemed valid, otherwise it is invalid. If the two parties involved in the transaction could not succeed for any reason, time lock can allow the parties to the transaction to get their assets back to avoid losses due to fraud or transaction failure."},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.params.Encode()
+			assert.Nil(t, err)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+			fmt.Println("#######", err)
+			assert.NotNil(t, err)
+		})
+	}
+}
+
+func TestUpdateCommissionParam(t *testing.T) {
+	Init()
+
+	blockNumber := common.Big1
+	extra := uint64(21000000000000)
+
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	caller := crypto.PubkeyToAddress(*acct)
+
+	// create validator
+	sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(100000000), params.ZNT1))
+	param := new(CreateValidatorParam)
+	param.ConsensusAddress = addr
+	param.SignerAddress = addr
+	param.ProposalAddress = addr
+	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	param.Commission = new(big.Int).SetUint64(2000)
+	param.Desc = "test"
+	input, err := param.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	tests := []struct {
+		name   string
+		params *UpdateCommissionParam
+	}{
+		{
+			name:   "negative commission",
+			params: &UpdateCommissionParam{ConsensusAddress: addr, Commission: new(big.Int).SetInt64(-3000)},
+		},
+		{
+			name:   "too large commission",
+			params: &UpdateCommissionParam{ConsensusAddress: addr, Commission: new(big.Int).SetInt64(30000)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.params.Encode()
+			assert.Nil(t, err)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+			fmt.Println("#######", err)
+			assert.NotNil(t, err)
+		})
+	}
+}
+
+func TestStakeParam(t *testing.T) {
+	Init()
+
+	blockNumber := common.Big1
+	extra := uint64(21000000000000)
+
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	caller := crypto.PubkeyToAddress(*acct)
+
+	// create validator
+	sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(100000000), params.ZNT1))
+	param := new(CreateValidatorParam)
+	param.ConsensusAddress = addr
+	param.SignerAddress = addr
+	param.ProposalAddress = addr
+	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	param.Commission = new(big.Int).SetUint64(2000)
+	param.Desc = "test"
+	input, err := param.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	tests := []struct {
+		name   string
+		params *StakeParam
+	}{
+		{
+			name:   "negative amount",
+			params: &StakeParam{ConsensusAddress: addr, Amount: new(big.Int).Mul(big.NewInt(-10), params.ZNT1)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.params.Encode()
+			assert.Nil(t, err)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+			fmt.Println("#######", err)
+			assert.NotNil(t, err)
+		})
+	}
+}
+
+func TestUnStakeParam(t *testing.T) {
+	Init()
+
+	blockNumber := common.Big1
+	extra := uint64(21000000000000)
+
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	caller := crypto.PubkeyToAddress(*acct)
+
+	// create validator
+	sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(100000000), params.ZNT1))
+	param := new(CreateValidatorParam)
+	param.ConsensusAddress = addr
+	param.SignerAddress = addr
+	param.ProposalAddress = addr
+	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	param.Commission = new(big.Int).SetUint64(2000)
+	param.Desc = "test"
+	input, err := param.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// stake
+	param2 := new(StakeParam)
+	param2.ConsensusAddress = addr
+	param2.Amount = new(big.Int).Mul(big.NewInt(10), params.ZNT1)
+	input, err = param2.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	tests := []struct {
+		name   string
+		params *UnStakeParam
+	}{
+		{
+			name:   "negative amount",
+			params: &UnStakeParam{ConsensusAddress: addr, Amount: new(big.Int).Mul(big.NewInt(-10), params.ZNT1)},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.params.Encode()
+			assert.Nil(t, err)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+			fmt.Println("#######", err)
+			assert.NotNil(t, err)
+		})
+	}
+}
