@@ -237,6 +237,9 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 	if params.ProposalAddress != common.EmptyAddress {
 		validator.ProposalAddress = params.ProposalAddress
 	}
+	if params.SignerAddress != common.EmptyAddress {
+		validator.SignerAddress = params.SignerAddress
+	}
 
 	if params.Desc != "" {
 		// check desc
@@ -760,7 +763,7 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("SystemTx authority failed")
 	}
 
-	// contract balance = totalpool + outstanding + new block reward
+	// contract balance = totalpool + outstanding + reward
 	balance := NewDecFromBigInt(s.StateDB().GetBalance(this))
 
 	totalPool, err := getTotalPool(s)
