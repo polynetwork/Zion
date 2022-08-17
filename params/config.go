@@ -55,9 +55,9 @@ var CheckpointOracles = map[common.Hash]*CheckpointOracleConfig{
 var (
 	// The chain id should avoid other side chain ids of Ethereum to be compatible with apps such as metamask,
 	// e.g: eth mainnet at 1, ropsten at 3, bsc at 76, heco at 7. ref: https://chainlist.org/
-	MainnetMainChainID uint64 = 60801
-	TestnetMainChainID uint64 = 60802
-	DevnetMainChainID  uint64 = 60803
+	MainnetChainID uint64 = 60801
+	TestnetChainID uint64 = 60802
+	DevnetChainID  uint64 = 60803
 
 	// zion token alias, decimal is 18
 	ZNT1, _        = new(big.Int).SetString("1000000000000000000", 10)
@@ -66,9 +66,9 @@ var (
 	GenesisSupply  = new(big.Int).Mul(ZNT1, uGenesisSupply)
 )
 
-func IsMainChain(chainID uint64) bool {
+func CheckZionChain(chainID uint64) bool {
 	switch chainID {
-	case MainnetMainChainID, TestnetMainChainID, DevnetMainChainID:
+	case MainnetChainID, TestnetChainID, DevnetChainID:
 		return true
 	default:
 		return false
