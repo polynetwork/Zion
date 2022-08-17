@@ -40,7 +40,7 @@ var (
 	MaxDescLength    int = 2000
 	MaxValidatorNum  int = 300
 	MaxUnlockingNum  int = 100
-	MaxStakeRate     Dec = NewDecFromBigInt(new(big.Int).SetUint64(5))
+	MaxStakeRate     Dec = NewDecFromBigInt(new(big.Int).SetUint64(6))   // user stake can not more than 5 times of self stake
 	MinBlockPerEpoch     = new(big.Int).SetUint64(10000)
 )
 
