@@ -42,7 +42,7 @@ var (
 // * governance epoch changed on chain, use the new validators for an new epoch start header.
 // * governance epoch not changed, only set the old epoch start height in header.
 func (s *backend) FillHeader(state *state.StateDB, header *types.Header) error {
-	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
+	epoch, err := s.getGovernanceInfo(state)
 	if err != nil {
 		return err
 	}
@@ -64,7 +64,6 @@ func (s *backend) FillHeader(state *state.StateDB, header *types.Header) error {
 // 1.whether the block height is the right number to set new validators in block header while mining.
 // 2.whether the block height is the right number to change epoch.
 // return the flags and save epoch in lru cache.
-// todo: globalConfig.epochLength should at least 3 block.
 func (s *backend) CheckPoint(height uint64) {
 	if height <= 1 {
 		return
@@ -75,7 +74,7 @@ func (s *backend) CheckPoint(height uint64) {
 		log.Warn("CheckPoint", "get state failed", err)
 		return
 	}
-	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
+	epoch, err := s.getGovernanceInfo(state)
 	if err != nil {
 		log.Warn("CheckPoint", "get current epoch info, height", height, "err", err)
 		return
@@ -186,7 +185,7 @@ func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain cons
 
 	// if the block height equals to the `extra.height`, this block is an epoch start.
 	// the the validators for this header is stored in last epoch start header.
-	isEpoch := extra.Height == header.Number.Uint64()
+	isEpoch := extra.StartHeight == header.Number.Uint64()
 	if isEpoch {
 		if parent == nil {
 			parent = chain.GetHeaderByHash(header.ParentHash)
@@ -196,9 +195,9 @@ func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain cons
 		}
 	}
 
-	epoch := s.getRecentHeader(extra.Height, chain)
+	epoch := s.getRecentHeader(extra.StartHeight, chain)
 	if epoch == nil {
-		return isEpoch, nil, fmt.Errorf("header %d neither on chain nor in lru cache", extra.Height)
+		return isEpoch, nil, fmt.Errorf("header %d neither on chain nor in lru cache", extra.StartHeight)
 	}
 	if extra, err = types.ExtractHotstuffExtra(epoch); err != nil {
 		return isEpoch, nil, err
@@ -245,11 +244,11 @@ start:
 	}
 
 	// the next block use parent extra.validators as valset
-	if extra.Height == header.Number.Uint64() {
+	if extra.StartHeight == header.Number.Uint64() {
 		vs = NewDefaultValSet(extra.Validators)
 		return
 	}
 
-	header = s.chain.GetHeaderByNumber(extra.Height)
+	header = s.chain.GetHeaderByNumber(extra.StartHeight)
 	goto start
 }

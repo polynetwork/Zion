@@ -22,6 +22,7 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/log"
@@ -285,7 +286,9 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 	//}
 	st.refundGas(params.RefundQuotientEIP3529)
 	log.Trace("Refund Gas", "gas price", st.gasPrice.String(), "gas used", st.gasUsed())
-	st.state.AddBalance(st.evm.Context.Coinbase, new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice))
+	// Gas fee as reward will be deposited into governance contract instead of st.evm.Context.Coinbase like in pow mode
+	gasFee := new(big.Int).Mul(new(big.Int).SetUint64(st.gasUsed()), st.gasPrice)
+	st.state.AddBalance(utils.NodeManagerContractAddress, gasFee)
 
 	return &ExecutionResult{
 		UsedGas:    st.gasUsed(),

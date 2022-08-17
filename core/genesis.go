@@ -327,7 +327,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 }
 
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
-	if params.IsMainChain(g.Config.ChainID.Uint64()) {
+	if params.CheckZionChain(g.Config.ChainID.Uint64()) {
 		db.CreateAccount(addr)
 		db.SetCode(addr, addr[:])
 		initBlockNumber := big.NewInt(0)
@@ -338,14 +338,14 @@ func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 }
 
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
-	if params.IsMainChain(g.Config.ChainID.Uint64()) {
+	if params.CheckZionChain(g.Config.ChainID.Uint64()) {
 		// check total balance
 		total := new(big.Int)
 		for _, account := range g.Alloc {
 			total = new(big.Int).Add(total, account.Balance)
 		}
-		if total.Cmp(params.GenesisSupply) > 0 {
-			panic("alloc amount greater than genesis supply")
+		if total.Cmp(params.GenesisSupply) != 0 {
+			panic("alloc amount should be equal to genesis supply")
 		}
 
 		for addr, account := range g.Alloc {
@@ -401,7 +401,7 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 	}
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
 	g.Config = &params.ChainConfig{
-		ChainID:  new(big.Int).SetUint64(params.MainnetMainChainID),
+		ChainID:  new(big.Int).SetUint64(params.MainnetChainID),
 		HotStuff: &params.HotStuffConfig{},
 	}
 	return g.MustCommit(db)

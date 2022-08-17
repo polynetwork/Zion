@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
+	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -48,7 +49,8 @@ func EncodeGenesisExtra(validators []common.Address) (string, error) {
 
 	// 3. construct extra
 	ist := &types.HotstuffExtra{
-		Height:        0,
+		StartHeight:   0,
+		EndHeight:     nm.GenesisBlockPerEpoch.Uint64(),
 		Validators:    validators,
 		Seal:          make([]byte, types.HotstuffExtraSeal),
 		CommittedSeal: [][]byte{},
