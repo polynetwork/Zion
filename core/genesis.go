@@ -283,6 +283,11 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	if db == nil {
 		db = rawdb.NewMemoryDatabase()
 	}
+
+	// check genesis fields
+	g.checkGovernance()
+	g.checkExtra()
+	
 	statedb, err := state.New(common.Hash{}, state.NewDatabase(db), nil)
 	if err != nil {
 		panic(err)
@@ -324,6 +329,37 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	statedb.Database().TrieDB().Commit(root, true, nil)
 
 	return types.NewBlock(head, nil, nil, nil, trie.NewStackTrie(nil))
+}
+
+// checkExtra validators should be sorted and do not allow dump validators.
+func (g *Genesis) checkExtra() {
+	extra, err := types.ExtractHotstuffExtraPayload(g.ExtraData)
+	if err != nil {
+		panic("extra invalid")
+	}
+
+	vs := extra.Validators
+	for i := 1; i < len(vs); i++ {
+		if strings.Compare(vs[i].String(), vs[i-1].String()) <= 0 {
+			panic("validators dump or not sorted as asc")
+		}
+	}
+}
+
+// checkGovernance governance address and signer address can't be repeated
+func (g *Genesis) checkGovernance() {
+	data := make(map[common.Address]int)
+
+	for _, v := range g.Governance {
+		data[v.Validator] += 1
+		data[v.Signer] += 1
+	}
+
+	for addr, cnt := range data {
+		if cnt > 1 {
+			panic(fmt.Sprintf("address %s repeated %d", addr.String(), cnt))
+		}
+	}
 }
 
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
