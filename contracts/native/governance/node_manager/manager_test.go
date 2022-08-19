@@ -267,7 +267,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 	totalPool, err = getTotalPool(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
@@ -330,7 +330,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 	param8 := new(WithdrawValidatorParam)
 	param8.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param8.Encode()
@@ -1033,7 +1033,7 @@ func TestPerformance(t *testing.T) {
 	input, err = utils.PackMethod(ABI, MethodWithdraw)
 	assert.Nil(t, err)
 	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "Withdraw", input, stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
-	assert.Nil(t, err)
+	assert.NotNil(t, err)
 
 	// cancel validator && withdraw validator
 	param4 := new(CancelValidatorParam)

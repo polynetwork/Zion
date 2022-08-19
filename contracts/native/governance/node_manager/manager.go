@@ -444,6 +444,8 @@ func Withdraw(s *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Withdraw, nativeTransfer error: %v", err)
 		}
+	} else {
+		return nil, fmt.Errorf("Withdraw, no asset to withdraw")
 	}
 
 	err = s.AddNotify(ABI, []string{WITHDRAW_EVENT}, caller.Hex(), amount.BigInt().String())
