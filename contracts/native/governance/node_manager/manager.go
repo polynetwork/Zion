@@ -76,6 +76,7 @@ var (
 		MethodGetValidatorOutstandingRewards: 65625,
 		MethodGetTotalPool:                   60375,
 		MethodGetOutstandingRewards:          60375,
+		MethodGetStakeRewards:                128625,
 	}
 )
 
@@ -116,6 +117,7 @@ func RegisterNodeManagerContract(s *native.NativeContract) {
 	s.Register(MethodGetValidatorOutstandingRewards, GetValidatorOutstandingRewards)
 	s.Register(MethodGetTotalPool, GetTotalPool)
 	s.Register(MethodGetOutstandingRewards, GetOutstandingRewards)
+	s.Register(MethodGetStakeRewards, GetStakeRewards)
 }
 
 func CreateValidator(s *native.NativeContract) ([]byte, error) {
@@ -444,6 +446,8 @@ func Withdraw(s *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Withdraw, nativeTransfer error: %v", err)
 		}
+	} else {
+		return nil, fmt.Errorf("Withdraw, no asset to withdraw")
 	}
 
 	err = s.AddNotify(ABI, []string{WITHDRAW_EVENT}, caller.Hex(), amount.BigInt().String())
@@ -1073,4 +1077,62 @@ func GetOutstandingRewards(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("GetOutstandingRewards, serialize outstandingRewards error: %v", err)
 	}
 	return utils.PackOutputs(ABI, MethodGetOutstandingRewards, enc)
+}
+
+func GetStakeRewards(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	params := &GetStakeRewardsParam{}
+	if err := utils.UnpackMethod(ABI, MethodGetStakeRewards, params, ctx.Payload); err != nil {
+		return nil, fmt.Errorf("GetStakeRewards, unpack params error: %v", err)
+	}
+
+	validator, found, err := getValidator(s, params.ConsensusAddress)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeRewards, node_manager.getValidator error: %v", err)
+	}
+	if !found {
+		return nil, fmt.Errorf("GetStakeRewards, validator not found")
+	}
+
+	// fetch current rewards
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(s, validator.ConsensusAddress)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeRewards, getValidatorAccumulatedRewards error: %v", err)
+	}
+	// calculate current ratio
+	// mul decimal
+	ratio, err := validatorAccumulatedRewards.Rewards.DivWithTokenDecimal(validator.TotalStake)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeRewards, validatorAccumulatedRewards.Rewards.DivWithTokenDecimal error: %v", err)
+	}
+	// fetch starting info for delegation
+	startingInfo, err := getStakeStartingInfo(s, params.StakeAddress, params.ConsensusAddress)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeRewards, getStakeStartingInfo error: %v", err)
+	}
+
+	startPeriod := startingInfo.StartPeriod
+	stake := startingInfo.Stake
+
+	// return staking * (ending - starting)
+	starting, err := getValidatorSnapshotRewards(s, params.ConsensusAddress, startPeriod)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeRewards, getValidatorSnapshotRewards start error: %v", err)
+	}
+	difference, err := ratio.Sub(starting.AccumulatedRewardsRatio)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeRewards error: %v", err)
+	}
+	rewards, err := difference.MulWithTokenDecimal(stake)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeRewards error: %v", err)
+	}
+
+	enc, err := rlp.EncodeToBytes(&StakeRewards{Rewards: rewards})
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeRewards, serialize stake rewards error: %v", err)
+	}
+
+	return utils.PackOutputs(ABI, MethodGetStakeRewards, enc)
 }

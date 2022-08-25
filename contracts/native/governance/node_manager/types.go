@@ -274,6 +274,20 @@ func (m *OutstandingRewards) Decode(payload []byte) error {
 	return rlp.DecodeBytes(data.OutstandingRewards, m)
 }
 
+type StakeRewards struct {
+	Rewards Dec
+}
+
+func (m *StakeRewards) Decode(payload []byte) error {
+	var data struct {
+		StakeRewards []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetOutstandingRewards, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.StakeRewards, m)
+}
+
 type ValidatorSnapshotRewards struct {
 	AccumulatedRewardsRatio Dec // ratio already mul decimal
 	ReferenceCount          uint64

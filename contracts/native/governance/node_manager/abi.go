@@ -254,3 +254,12 @@ type GetOutstandingRewardsParam struct{}
 func (m *GetOutstandingRewardsParam) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodGetOutstandingRewards)
 }
+
+type GetStakeRewardsParam struct {
+	ConsensusAddress common.Address
+	StakeAddress     common.Address
+}
+
+func (m *GetStakeRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetStakeRewards, m)
+}
