@@ -961,4 +961,3 @@ func (_IProposalManager *IProposalManagerFilterer) ParseVoteProposal(log types.L
 	event.Raw = log
 	return event, nil
 }
-

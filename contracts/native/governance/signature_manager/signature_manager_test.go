@@ -112,7 +112,7 @@ func TestAddSignature(t *testing.T) {
 			chainID   = big.NewInt(2)
 			supplyGas = gasTable[name]
 			subject   = []byte{'a'}
-			errSig = []byte{'b'}
+			errSig    = []byte{'b'}
 		)
 
 		payload, err := utils.PackMethod(ABI, name, sender, chainID, subject, errSig)

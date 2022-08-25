@@ -675,7 +675,7 @@ func TestDistribute(t *testing.T) {
 	// check getStakeRewards
 	p13 := &GetStakeRewardsParam{
 		ConsensusAddress: validatorsKey[0].ConsensusAddr,
-		StakeAddress: stakeAddress,
+		StakeAddress:     stakeAddress,
 	}
 	input, err = p13.Encode()
 	assert.Nil(t, err)

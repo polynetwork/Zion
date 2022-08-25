@@ -337,13 +337,16 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			if config.ConsensusValidatorNum >= node_manager.GenesisConsensusValidatorNum {
 				globalConfig.ConsensusValidatorNum = config.ConsensusValidatorNum
 			}
-			if config.VoterValidatorNum != 0 {
+			if config.VoterValidatorNum >= node_manager.GenesisVoterValidatorNum {
 				globalConfig.VoterValidatorNum = config.VoterValidatorNum
 			}
-			if config.BlockPerEpoch.Cmp(node_manager.MinBlockPerEpoch) >= 0 {
+			if globalConfig.ConsensusValidatorNum < config.VoterValidatorNum {
+				globalConfig.VoterValidatorNum = globalConfig.ConsensusValidatorNum
+			}
+			if config.BlockPerEpoch.Cmp(node_manager.MinBlockPerEpoch) > 0 {
 				globalConfig.BlockPerEpoch = config.BlockPerEpoch
 			}
-			if config.MaxCommissionChange.Sign() > 0 {
+			if config.MaxCommissionChange.Cmp(node_manager.GenesisMaxCommissionChange) < 0 {
 				globalConfig.MaxCommissionChange = config.MaxCommissionChange
 			}
 			if config.MinInitialStake.Sign() > 0 {

@@ -41,7 +41,7 @@ func init() {
 }
 
 var (
-	sdb  *state.StateDB
+	sdb     *state.StateDB
 	signers []common.Address
 )
 
@@ -53,7 +53,6 @@ func init() {
 	node_manager.StoreGenesisEpoch(sdb, signers, signers)
 	node_manager.StoreGenesisGlobalConfig(sdb)
 }
-
 
 func testRegisterSideChainManager(t *testing.T) {
 	param := new(RegisterSideChainParam)
@@ -221,7 +220,7 @@ func testApproveUpdateSideChain(t *testing.T) {
 		assert.Equal(t, leftOverGas, extra)
 
 		contract := native.NewNativeContract(sdb, contractRef)
-		sideChain, err := GetSideChainObject(contract, 8 + uint64(i))
+		sideChain, err := GetSideChainObject(contract, 8+uint64(i))
 		assert.Nil(t, err)
 		assert.NotNil(t, sideChain)
 		if i == 0 {
@@ -246,7 +245,6 @@ func testApproveUpdateSideChain(t *testing.T) {
 	tr.Dump()
 	tr1.Dump()
 }
-
 
 func testQuiteSideChain(t *testing.T) {
 	testApproveUpdateSideChain(t)
@@ -278,8 +276,6 @@ func testQuiteSideChain(t *testing.T) {
 	}
 	tr.Dump()
 }
-
-
 
 func TestApproveQuiteSideChain(t *testing.T) {
 	testQuiteSideChain(t)
@@ -322,7 +318,7 @@ func TestApproveQuiteSideChain(t *testing.T) {
 		assert.Equal(t, leftOverGas, extra)
 
 		contract := native.NewNativeContract(sdb, contractRef)
-		sideChain, err := GetSideChainObject(contract, 8 + uint64(i))
+		sideChain, err := GetSideChainObject(contract, 8+uint64(i))
 		assert.Nil(t, err)
 		assert.Nil(t, sideChain)
 	}

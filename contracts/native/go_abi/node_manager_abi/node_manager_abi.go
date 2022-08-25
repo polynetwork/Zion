@@ -2516,4 +2516,3 @@ func (_INodeManager *INodeManagerFilterer) ParseWithdrawValidator(log types.Log)
 	event.Raw = log
 	return event, nil
 }
-

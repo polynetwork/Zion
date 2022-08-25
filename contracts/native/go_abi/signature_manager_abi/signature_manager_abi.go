@@ -338,4 +338,3 @@ func (_ISignatureManager *ISignatureManagerFilterer) ParseAddSignatureQuorumEven
 	event.Raw = log
 	return event, nil
 }
-

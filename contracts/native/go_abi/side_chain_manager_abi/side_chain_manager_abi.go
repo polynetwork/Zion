@@ -1379,4 +1379,3 @@ func (_ISideChainManager *ISideChainManagerFilterer) ParseUpdateSideChain(log ty
 	event.Raw = log
 	return event, nil
 }
-

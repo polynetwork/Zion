@@ -25,24 +25,24 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	icom "github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
+	icom "github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/light"
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/trie"
 )
- 
- type Handler struct {}
- 
- func NewHandler() *Handler {
-	 return new(Handler)
- }
- 
- func (h *Handler) MakeDepositProposal(service *native.NativeContract) (txParam *scom.MakeTxParam, err error) {
+
+type Handler struct{}
+
+func NewHandler() *Handler {
+	return new(Handler)
+}
+
+func (h *Handler) MakeDepositProposal(service *native.NativeContract) (txParam *scom.MakeTxParam, err error) {
 	ctx := service.ContractRef().CurrentContext()
 	params := &scom.EntranceParam{}
 	if err := utils.UnpackMethod(scom.ABI, scom.MethodImportOuterTransfer, params, ctx.Payload); err != nil {
@@ -73,9 +73,9 @@ import (
 		return
 	}
 	return
- }
- 
- func (h *Handler) VerifyDepositProposal(service *native.NativeContract,
+}
+
+func (h *Handler) VerifyDepositProposal(service *native.NativeContract,
 	sideChain *side_chain_manager.SideChain, params *scom.EntranceParam) (txParam *scom.MakeTxParam, err error) {
 
 	// Verify eth proof
@@ -110,9 +110,9 @@ import (
 
 	txParam, err = scom.DecodeTxParam(params.Extra)
 	return
- }
+}
 
- // Proof ...
+// Proof ...
 type Proof struct {
 	Address       string         `json:"address"`
 	Balance       string         `json:"balance"`
@@ -132,7 +132,7 @@ type StorageProof struct {
 
 // ProofAccount ...
 type ProofAccount struct {
-	Nonce   *big.Int
+	Nonce    *big.Int
 	Balance  *big.Int
 	Storage  common.Hash
 	Codehash common.Hash
@@ -174,9 +174,9 @@ func VerifyCrossChainProof(value []byte, proof *Proof, root common.Hash, address
 	}
 	storageHash := common.HexToHash(proof.StorageHash)
 	accountBytes, err := rlp.EncodeToBytes(&ProofAccount{
-		Nonce: nonce,
-		Balance: balance,
-		Storage: storageHash,
+		Nonce:    nonce,
+		Balance:  balance,
+		Storage:  storageHash,
 		Codehash: common.HexToHash(proof.CodeHash),
 	})
 	if err != nil {
@@ -221,7 +221,7 @@ func CheckProofResult(result, value []byte) (err error) {
 		return
 	}
 	var hash []byte
-	for i := len(temp); i< 32; i++ {
+	for i := len(temp); i < 32; i++ {
 		hash = append(hash, 0)
 	}
 	hash = append(hash, temp...)
@@ -236,11 +236,12 @@ type Header struct {
 	Root common.Hash `json:"stateRoot" gencodec:"required"`
 }
 
-
-// Decode header 
+// Decode header
 func DecodeHeader(data []byte) (h *Header, err error) {
 	h = new(Header)
 	err = json.Unmarshal(data, h)
-	if err != nil { h = nil }
+	if err != nil {
+		h = nil
+	}
 	return
 }

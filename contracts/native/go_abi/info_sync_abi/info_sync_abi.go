@@ -601,4 +601,3 @@ func (_IInfoSync *IInfoSyncFilterer) ParseSyncRootInfoEvent(log types.Log) (*IIn
 	event.Raw = log
 	return event, nil
 }
-

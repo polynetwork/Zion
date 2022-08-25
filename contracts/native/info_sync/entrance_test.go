@@ -146,7 +146,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 	}
 	q1 := GetInfoParam{
 		ChainID: CHAIN_ID,
-		Height: 100,
+		Height:  100,
 	}
 	input, err := q1.Encode()
 	assert.Nil(t, err)
@@ -158,7 +158,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 	assert.Equal(t, rootInfo.Info, []byte{0x01, 0x02})
 	q2 := GetInfoParam{
 		ChainID: CHAIN_ID,
-		Height: 98,
+		Height:  98,
 	}
 	input, err = q2.Encode()
 	assert.Nil(t, err)
