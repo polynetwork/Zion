@@ -672,6 +672,22 @@ func TestDistribute(t *testing.T) {
 		assert.Equal(t, outstandingRewards.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
 	}
 
+	// check getStakeRewards
+	p13 := &GetStakeRewardsParam{
+		ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		StakeAddress: stakeAddress,
+	}
+	input, err = p13.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+	ret, _, err := contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	stakeRewards := new(StakeRewards)
+	err = stakeRewards.Decode(ret)
+	assert.Nil(t, err)
+	s, _ := new(big.Int).SetString("15384615384615380000", 10)
+	assert.Equal(t, stakeRewards.Rewards.BigInt(), s)
+
 	// withdraw stake rewards and commission
 	param4 := new(WithdrawStakeRewardsParam)
 	param4.ConsensusAddress = validatorsKey[0].ConsensusAddr

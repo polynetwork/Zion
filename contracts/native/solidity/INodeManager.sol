@@ -28,6 +28,7 @@ interface INodeManager {
     function getValidatorOutstandingRewards(address consensusAddress) external view returns (bytes memory);
     function getTotalPool() external view returns (bytes memory);
     function getOutstandingRewards() external view returns (bytes memory);
+    function getStakeRewards(address consensusAddress, address stakeAddress) external view returns (bytes memory);
 
     event CreateValidator(string consensusAddress);
     event UpdateValidator(string consensusAddress);
