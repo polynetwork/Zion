@@ -36,10 +36,10 @@ func NewDecFromBigInt(i *big.Int) Dec {
 	return Dec{I: i}
 }
 
-func (t Dec) IsNil() bool         { return t.I == nil }           // is token nil
-func (t Dec) IsZero() bool        { return (t.I).Sign() == 0 }    // is equal to zero
-func (t Dec) IsNegative() bool    { return (t.I).Sign() == -1 }   // is negative
-func (t Dec) IsPositive() bool    { return (t.I).Sign() == 1 }    // is positive
+func (t Dec) IsNil() bool       { return t.I == nil }           // is token nil
+func (t Dec) IsZero() bool      { return (t.I).Sign() == 0 }    // is equal to zero
+func (t Dec) IsNegative() bool  { return (t.I).Sign() == -1 }   // is negative
+func (t Dec) IsPositive() bool  { return (t.I).Sign() == 1 }    // is positive
 func (t Dec) Equal(t2 Dec) bool { return (t.I).Cmp(t2.I) == 0 } // equal decimals
 func (t Dec) GT(t2 Dec) bool    { return (t.I).Cmp(t2.I) > 0 }  // greater than
 func (t Dec) GTE(t2 Dec) bool   { return (t.I).Cmp(t2.I) >= 0 } // greater than or equal

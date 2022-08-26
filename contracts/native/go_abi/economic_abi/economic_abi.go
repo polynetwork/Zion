@@ -278,4 +278,3 @@ func (_IEconomic *IEconomicSession) TotalSupply() (*big.Int, error) {
 func (_IEconomic *IEconomicCallerSession) TotalSupply() (*big.Int, error) {
 	return _IEconomic.Contract.TotalSupply(&_IEconomic.CallOpts)
 }
-

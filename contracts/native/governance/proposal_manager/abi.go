@@ -82,19 +82,19 @@ func (m *GetProposalParam) Encode() ([]byte, error) {
 	return utils.PackMethodWithStruct(ABI, MethodGetProposal, m)
 }
 
-type GetProposalListParam struct {}
+type GetProposalListParam struct{}
 
 func (m *GetProposalListParam) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodGetProposalList)
 }
 
-type GetConfigProposalListParam struct {}
+type GetConfigProposalListParam struct{}
 
 func (m *GetConfigProposalListParam) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodGetConfigProposalList)
 }
 
-type GetCommunityProposalListParam struct {}
+type GetCommunityProposalListParam struct{}
 
 func (m *GetCommunityProposalListParam) Encode() ([]byte, error) {
 	return utils.PackMethod(ABI, MethodGetCommunityProposalList)

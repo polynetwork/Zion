@@ -615,4 +615,3 @@ func (_ICrossChainManager *ICrossChainManagerFilterer) ParseMakeProof(log types.
 	event.Raw = log
 	return event, nil
 }
-

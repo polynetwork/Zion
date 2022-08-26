@@ -292,7 +292,7 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 	if params.Commission.Sign() == -1 {
 		return nil, fmt.Errorf("UpdateCommission, commission must be positive")
 	}
-	if params.Commission.Cmp(new(big.Int).SetUint64(10000)) == 1 {
+	if params.Commission.Cmp(PercentDecimal) == 1 {
 		return nil, fmt.Errorf("UpdateCommission, commission can not more than 100 percent")
 	}
 	// abs(old commission - new commission)
