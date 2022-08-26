@@ -154,8 +154,30 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ProposeConfig, content is more than max length")
 	}
 
+	config := new(node_manager.GlobalConfig)
+	err := rlp.DecodeBytes(params.Content, config)
+	if err != nil {
+		return nil, fmt.Errorf("ProposeConfig, deserialize global config error: %v", err)
+	}
+
+	if config.ConsensusValidatorNum != 0 && config.ConsensusValidatorNum < node_manager.GenesisConsensusValidatorNum {
+		return nil, fmt.Errorf("ProposeConfig, consensus num is less than %d", node_manager.GenesisConsensusValidatorNum)
+	}
+	if config.BlockPerEpoch.Cmp(node_manager.MinBlockPerEpoch) < 0 {
+		return nil, fmt.Errorf("ProposeConfig, block per epoch is less than %d", node_manager.MinBlockPerEpoch)
+	}
+	if config.MaxCommissionChange.Cmp(node_manager.GenesisMaxCommissionChange) > 0 {
+		return nil, fmt.Errorf("ProposeConfig, MaxCommissionChange is more than %d", node_manager.GenesisMaxCommissionChange)
+	}
+	if config.MinInitialStake.Sign() < 0 {
+		return nil, fmt.Errorf("ProposeConfig, MinInitialStake is negative")
+	}
+	if config.MinProposalStake.Sign() < 0 {
+		return nil, fmt.Errorf("ProposeConfig, MinProposalStake is negative")
+	}
+
 	// remove expired proposal
-	err := removeExpiredFromConfigProposalList(s)
+	err = removeExpiredFromConfigProposalList(s)
 	if err != nil {
 		return nil, fmt.Errorf("ProposeConfig, removeExpiredFromConfigProposalList error: %v", err)
 	}
@@ -223,8 +245,20 @@ func ProposeCommunity(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ProposeCommunity, content is more than max length")
 	}
 
+	info := new(node_manager.CommunityInfo)
+	err := rlp.DecodeBytes(params.Content, info)
+	if err != nil {
+		return nil, fmt.Errorf("ProposeCommunity, deserialize community info error: %v", err)
+	}
+	if info.CommunityRate.Sign() == -1 {
+		return nil, fmt.Errorf("UpdateCommission, communityRate is negative")
+	}
+	if info.CommunityRate.Cmp(node_manager.PercentDecimal) == 1 {
+		return nil, fmt.Errorf("UpdateCommission, communityRate can not more than 100 percent")
+	}
+
 	// remove expired proposal
-	err := removeExpiredFromCommunityProposalList(s)
+	err = removeExpiredFromCommunityProposalList(s)
 	if err != nil {
 		return nil, fmt.Errorf("ProposeCommunity, removeExpiredFromCommunityProposalList error: %v", err)
 	}
@@ -337,10 +371,10 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			if config.ConsensusValidatorNum >= node_manager.GenesisConsensusValidatorNum {
 				globalConfig.ConsensusValidatorNum = config.ConsensusValidatorNum
 			}
-			if config.VoterValidatorNum >= node_manager.GenesisVoterValidatorNum {
+			if config.VoterValidatorNum > 0 {
 				globalConfig.VoterValidatorNum = config.VoterValidatorNum
 			}
-			if globalConfig.ConsensusValidatorNum < config.VoterValidatorNum {
+			if globalConfig.ConsensusValidatorNum < globalConfig.VoterValidatorNum {
 				globalConfig.VoterValidatorNum = globalConfig.ConsensusValidatorNum
 			}
 			if config.BlockPerEpoch.Cmp(node_manager.MinBlockPerEpoch) > 0 {
