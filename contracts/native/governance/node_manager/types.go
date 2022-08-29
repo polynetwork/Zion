@@ -282,7 +282,7 @@ func (m *StakeRewards) Decode(payload []byte) error {
 	var data struct {
 		StakeRewards []byte
 	}
-	if err := utils.UnpackOutputs(ABI, MethodGetOutstandingRewards, &data, payload); err != nil {
+	if err := utils.UnpackOutputs(ABI, MethodGetStakeRewards, &data, payload); err != nil {
 		return err
 	}
 	return rlp.DecodeBytes(data.StakeRewards, m)

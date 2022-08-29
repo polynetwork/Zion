@@ -1100,11 +1100,19 @@ func GetStakeRewards(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("GetStakeRewards, getValidatorAccumulatedRewards error: %v", err)
 	}
+	now, err := getValidatorSnapshotRewards(s, params.ConsensusAddress, validatorAccumulatedRewards.Period-1)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeRewards, getValidatorSnapshotRewards now error: %v", err)
+	}
 	// calculate current ratio
 	// mul decimal
 	ratio, err := validatorAccumulatedRewards.Rewards.DivWithTokenDecimal(validator.TotalStake)
 	if err != nil {
 		return nil, fmt.Errorf("GetStakeRewards, validatorAccumulatedRewards.Rewards.DivWithTokenDecimal error: %v", err)
+	}
+	newRatio, err := now.AccumulatedRewardsRatio.Add(ratio)
+	if err != nil {
+		return nil, fmt.Errorf("GetStakeRewards, now.AccumulatedRewardsRatio.Add error: %v", err)
 	}
 	// fetch starting info for delegation
 	startingInfo, err := getStakeStartingInfo(s, params.StakeAddress, params.ConsensusAddress)
@@ -1120,13 +1128,13 @@ func GetStakeRewards(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("GetStakeRewards, getValidatorSnapshotRewards start error: %v", err)
 	}
-	difference, err := ratio.Sub(starting.AccumulatedRewardsRatio)
+	difference, err := newRatio.Sub(starting.AccumulatedRewardsRatio)
 	if err != nil {
-		return nil, fmt.Errorf("GetStakeRewards error: %v", err)
+		return nil, fmt.Errorf("GetStakeRewards, newRatio.Sub error: %v", err)
 	}
 	rewards, err := difference.MulWithTokenDecimal(stake)
 	if err != nil {
-		return nil, fmt.Errorf("GetStakeRewards error: %v", err)
+		return nil, fmt.Errorf("GetStakeRewards, difference.MulWithTokenDecimal error: %v", err)
 	}
 
 	enc, err := rlp.EncodeToBytes(&StakeRewards{Rewards: rewards})
