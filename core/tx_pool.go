@@ -546,7 +546,8 @@ func (pool *TxPool) validateTx(tx *types.Transaction, local bool) error {
 	}
 	// gas manager check
 	if tx.Value().Cmp(common.Big0) > 0 {
-		if native_client.IsGasManageEnable(pool.currentState) && !native_client.IsGasManager(pool.currentState, &from) && !native_client.IsGasManager(pool.currentState, tx.To()) {
+		if native_client.IsGasManageEnable(pool.currentState) && !native_client.IsGasManager(pool.currentState, &from) &&
+			!native_client.IsGasManager(pool.currentState, tx.To()) && !native_client.IsGasUser(pool.currentState, tx.To()) {
 			return native_client.ErrNotGasManager
 		}
 	}

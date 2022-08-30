@@ -32,15 +32,17 @@ const (
 	GAS_MANAGE_ENABLE = "gas_manage_enable"
 	NODE_WHITELIST    = "node_whitelist"
 	GAS_MANAGER_LIST  = "gas_manager_list"
+	GAS_USER_LIST     = "gas_user_list"
+	GAS_ADMIN_LIST    = "gas_admin_list"
 )
 
 var (
 	blacklistKey       = utils.ConcatKey(this, []byte(BLACKLIST))
 	ownerKey           = utils.ConcatKey(this, []byte(OWNER))
-	nodeWhiteEnableKey = utils.ConcatKey(this, []byte(NODE_WHITE_ENABLE))
-	nodeWhitelistKey   = utils.ConcatKey(this, []byte(NODE_WHITELIST))
 	gasManageEnableKey = utils.ConcatKey(this, []byte(GAS_MANAGE_ENABLE))
 	gasManagerListKey  = utils.ConcatKey(this, []byte(GAS_MANAGER_LIST))
+	gasUserListKey     = utils.ConcatKey(this, []byte(GAS_USER_LIST))
+	gasAdminListKey    = utils.ConcatKey(this, []byte(GAS_ADMIN_LIST))
 )
 
 // ====================================================================

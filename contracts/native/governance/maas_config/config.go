@@ -43,6 +43,14 @@ var (
 		MethodIsGasManageEnabled: 0,
 		MethodIsGasManager:       0,
 		MethodGetGasManagerList:  0,
+
+		MethodSetGasUsers:    30000,
+		MethodIsGasUser:      0,
+		MethodGetGasUserList: 0,
+
+		MethodSetAdmins:    30000,
+		MethodIsAdmin:      0,
+		MethodGetAdminList: 0,
 	}
 )
 
@@ -67,6 +75,14 @@ func RegisterMaasConfigContract(s *native.NativeContract) {
 	s.Register(MethodIsGasManageEnabled, IsGasManageEnabled)
 	s.Register(MethodIsGasManager, IsGasManager)
 	s.Register(MethodGetGasManagerList, GetGasManagerList)
+
+	s.Register(MethodSetGasUsers, SetGasUsers)
+	s.Register(MethodIsGasUser, IsGasUser)
+	s.Register(MethodGetGasUserList, GetGasUserList)
+
+	s.Register(MethodSetAdmins, SetAdmins)
+	s.Register(MethodIsAdmin, IsAdmin)
+	s.Register(MethodGetAdminList, GetAdminList)
 }
 
 func Name(s *native.NativeContract) ([]byte, error) {
@@ -78,16 +94,15 @@ func ChangeOwner(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	caller := ctx.Caller
 
-	// check authority
+	// check caller == origin
 	if err := contract.ValidateOwner(s, caller); err != nil {
-		return utils.ByteFailed, errors.New("invalid authority for caller")
+		return utils.ByteFailed, errors.New("caller is not equal to origin")
 	}
 
+	// check owner
 	currentOwner := getOwner(s)
-	if currentOwner != common.EmptyAddress {
-		if err := contract.ValidateOwner(s, currentOwner); err != nil {
-			return utils.ByteFailed, errors.New("invalid authority for owner")
-		}
+	if currentOwner != common.EmptyAddress && caller != currentOwner {
+		return utils.ByteFailed, errors.New("invalid authority for owner")
 	}
 
 	// decode input
@@ -133,17 +148,35 @@ func getOwner(s *native.NativeContract) common.Address {
 	return common.BytesToAddress(value)
 }
 
-func validateOwner(s *native.NativeContract) error {
+func checkOwner(s *native.NativeContract) error {
 	caller := s.ContractRef().CurrentContext().Caller
-	if err := contract.ValidateOwner(s, caller); err != nil {
-		log.Trace("validateOwner", "ValidateOwner caller failed", err)
-		return errors.New("invalid authority for caller")
+	origin := s.ContractRef().TxOrigin()
+	if caller != origin {
+		return errors.New("caller is not equal to origin")
 	}
 
-	currentOwner := getOwner(s)
-	if err := contract.ValidateOwner(s, currentOwner); err != nil {
-		log.Trace("validateOwner", "ValidateOwner owner failed", err)
+	if origin != getOwner(s) {
 		return errors.New("invalid authority for owner")
+	}
+	return nil
+}
+
+func isAdmin(s *native.NativeContract) bool {
+	origin := s.ContractRef().TxOrigin()
+	m := getAddressMap(s, gasAdminListKey)
+	_, ok := m[origin]
+	return ok
+}
+
+func checkOwnerOrAdmin(s *native.NativeContract) error {
+	caller := s.ContractRef().CurrentContext().Caller
+	origin := s.ContractRef().TxOrigin()
+	if caller != origin {
+		return errors.New("caller is not equal to origin")
+	}
+
+	if origin != getOwner(s) && !isAdmin(s) {
+		return errors.New("invalid authority for owner or admin")
 	}
 	return nil
 }
@@ -153,7 +186,7 @@ func BlockAccount(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
 	// check owner
-	if err := validateOwner(s); err != nil {
+	if err := checkOwner(s); err != nil {
 		return utils.ByteFailed, err
 	}
 
@@ -242,7 +275,7 @@ func EnableGasManage(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
 	// check owner
-	if err := validateOwner(s); err != nil {
+	if err := checkOwner(s); err != nil {
 		return utils.ByteFailed, err
 	}
 
@@ -282,7 +315,7 @@ func SetGasManager(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 
 	// check owner
-	if err := validateOwner(s); err != nil {
+	if err := checkOwner(s); err != nil {
 		return utils.ByteFailed, err
 	}
 
@@ -346,4 +379,149 @@ func GetGasManagerList(s *native.NativeContract) ([]byte, error) {
 	result, _ := json.Marshal(list)
 	output := &MethodStringOutput{Result: string(result)}
 	return output.Encode(MethodGetGasManagerList)
+}
+
+// set gas users
+func SetGasUsers(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// check owner
+	if err := checkOwnerOrAdmin(s); err != nil {
+		return utils.ByteFailed, err
+	}
+
+	// decode input
+	input := new(MethodSetGasUsersInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("SetGasUsers", "decode input failed", err)
+		return utils.ByteFailed, errors.New("invalid input")
+	}
+
+	m := getAddressMap(s, gasUserListKey)
+	for _, v := range input.Addrs {
+		if input.AddOrRemove {
+			m[v] = struct{}{}
+		} else {
+			delete(m, v)
+		}
+	}
+
+	value, err := json.Marshal(m)
+	if err != nil {
+		log.Trace("SetGasUsers", "encode value failed", err)
+		return utils.ByteFailed, errors.New("encode value failed")
+	}
+	set(s, gasUserListKey, value)
+
+	// emit event log
+	if err := s.AddNotify(ABI, []string{EventSetGasUsers}, input.Addrs, input.AddOrRemove); err != nil {
+		log.Trace("SetGasUsers", "emit event log failed", err)
+		return utils.ByteFailed, errors.New("emit EventSetGasUsers error")
+	}
+
+	return utils.ByteSuccess, nil
+}
+
+// check if address is in gas user list
+func IsGasUser(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// decode input
+	input := new(MethodIsGasUserInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("IsGasUser", "decode input failed", err)
+		return utils.ByteFailed, errors.New("invalid input")
+	}
+
+	// get value
+	m := getAddressMap(s, gasUserListKey)
+	_, ok := m[input.Addr]
+	output := &MethodBoolOutput{Success: ok}
+
+	return output.Encode(MethodIsGasUser)
+}
+
+// get gas user list json
+func GetGasUserList(s *native.NativeContract) ([]byte, error) {
+	// get value
+	m := getAddressMap(s, gasUserListKey)
+	list := make([]common.Address, 0, len(m))
+	for key := range m {
+		list = append(list, key)
+	}
+	result, _ := json.Marshal(list)
+	output := &MethodStringOutput{Result: string(result)}
+	return output.Encode(MethodGetGasUserList)
+}
+
+// set admins
+func SetAdmins(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// check owner
+	if err := checkOwner(s); err != nil {
+		return utils.ByteFailed, err
+	}
+
+	// decode input
+	input := new(MethodSetAdminsInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("SetAdmins", "decode input failed", err)
+		return utils.ByteFailed, errors.New("invalid input")
+	}
+
+	m := getAddressMap(s, gasAdminListKey)
+	for _, v := range input.Addrs {
+		if input.AddOrRemove {
+			m[v] = struct{}{}
+		} else {
+			delete(m, v)
+		}
+	}
+
+	value, err := json.Marshal(m)
+	if err != nil {
+		log.Trace("SetAdmins", "encode value failed", err)
+		return utils.ByteFailed, errors.New("encode value failed")
+	}
+	set(s, gasAdminListKey, value)
+
+	// emit event log
+	if err := s.AddNotify(ABI, []string{EventSetAdmins}, input.Addrs, input.AddOrRemove); err != nil {
+		log.Trace("SetAdmins", "emit event log failed", err)
+		return utils.ByteFailed, errors.New("emit EventSetAdmins error")
+	}
+
+	return utils.ByteSuccess, nil
+}
+
+// check if address is in admin list
+func IsAdmin(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+
+	// decode input
+	input := new(MethodIsAdminInput)
+	if err := input.Decode(ctx.Payload); err != nil {
+		log.Trace("IsAdmin", "decode input failed", err)
+		return utils.ByteFailed, errors.New("invalid input")
+	}
+
+	// get value
+	m := getAddressMap(s, gasAdminListKey)
+	_, ok := m[input.Addr]
+	output := &MethodBoolOutput{Success: ok}
+
+	return output.Encode(MethodIsAdmin)
+}
+
+// get admin list json
+func GetAdminList(s *native.NativeContract) ([]byte, error) {
+	m := getAddressMap(s, gasAdminListKey)
+	list := make([]common.Address, 0, len(m))
+	for key := range m {
+		list = append(list, key)
+	}
+	result, _ := json.Marshal(list)
+	output := &MethodStringOutput{Result: string(result)}
+	return output.Encode(MethodGetAdminList)
 }

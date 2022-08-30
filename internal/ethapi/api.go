@@ -1783,7 +1783,8 @@ func (s *PublicTransactionPoolAPI) SendTransaction(ctx context.Context, args Sen
 	}
 	// gas manager check
 	if args.Value.ToInt().Cmp(common.Big0) > 0 {
-		if native_client.IsGasManageEnable(state) && !native_client.IsGasManager(state, &args.From) && !native_client.IsGasManager(state, args.To) {
+		if native_client.IsGasManageEnable(state) && !native_client.IsGasManager(state, &args.From) &&
+			!native_client.IsGasManager(state, args.To) && !native_client.IsGasUser(state, args.To) {
 			return common.Hash{}, native_client.ErrNotGasManager
 		}
 	}
@@ -1852,7 +1853,8 @@ func (s *PublicTransactionPoolAPI) SendRawTransaction(ctx context.Context, input
 	}
 	// gas manager check
 	if tx.Value().Cmp(common.Big0) > 0 {
-		if native_client.IsGasManageEnable(state) && !native_client.IsGasManager(state, &from) && !native_client.IsGasManager(state, tx.To()) {
+		if native_client.IsGasManageEnable(state) && !native_client.IsGasManager(state, &from) &&
+			!native_client.IsGasManager(state, tx.To()) && !native_client.IsGasUser(state, tx.To()) {
 			return common.Hash{}, native_client.ErrNotGasManager
 		}
 	}

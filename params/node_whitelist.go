@@ -41,7 +41,7 @@ func StartNodeWhiteLoadTask(filepath string) {
 		for {
 			stat, err := os.Stat(filepath)
 			if err != nil {
-				log.Warn("### StartConfigLoadTask os.Stat error. " + err.Error())
+				log.Warn("StartNodeWhiteLoadTask", "os.Stat error, filepath: "+filepath, err)
 				time.Sleep(time.Second)
 				continue
 			}
@@ -50,7 +50,7 @@ func StartNodeWhiteLoadTask(filepath string) {
 				err = loadNodeWhiteConfig(filepath)
 				initialStat = stat
 				if err != nil {
-					log.Warn("### StartConfigLoadTask file failed. " + err.Error())
+					log.Warn("StartNodeWhiteLoadTask", "loadNodeWhiteConfig error, filepath: "+filepath, err)
 				}
 			}
 

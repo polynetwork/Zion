@@ -29,7 +29,7 @@ import (
 )
 
 var ErrAccountBlocked = errors.New("account is in blacklist")
-var ErrNotGasManager = errors.New("address is not in gas manager list")
+var ErrNotGasManager = errors.New("address is not in gas manager or user list")
 
 func IsBlocked(state *state.StateDB, address *common.Address) bool {
 	if address == nil {
@@ -97,6 +97,31 @@ func IsGasManager(state *state.StateDB, address *common.Address) bool {
 	output := new(maas_config.MethodBoolOutput)
 	if err := output.Decode(enc, maas_config.MethodIsGasManager); err != nil {
 		log.Error("[native call]", "unpack `IsGasManager` output failed", err)
+		return false
+	}
+
+	return output.Success
+}
+
+func IsGasUser(state *state.StateDB, address *common.Address) bool {
+	if address == nil {
+		return false
+	}
+	caller := common.EmptyAddress
+	ref := native.NewContractRef(state, caller, caller, big.NewInt(-1), common.EmptyHash, 0, nil)
+
+	payload, err := (&maas_config.MethodIsGasUserInput{Addr: *address}).Encode()
+	if err != nil {
+		log.Error("[PackMethod]", "pack `IsGasUser` input failed", err)
+		return false
+	}
+	enc, _, err := ref.NativeCall(caller, utils.MaasConfigContractAddress, payload)
+	if err != nil {
+		return false
+	}
+	output := new(maas_config.MethodBoolOutput)
+	if err := output.Decode(enc, maas_config.MethodIsGasUser); err != nil {
+		log.Error("[native call]", "unpack `IsGasUser` output failed", err)
 		return false
 	}
 

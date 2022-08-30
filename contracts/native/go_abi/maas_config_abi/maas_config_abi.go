@@ -33,19 +33,23 @@ var (
 
 	MethodEnableGasManage = "enableGasManage"
 
-	MethodEnableNodeWhite = "enableNodeWhite"
+	MethodSetAdmins = "setAdmins"
 
 	MethodSetGasManager = "setGasManager"
 
-	MethodSetNodeWhite = "setNodeWhite"
+	MethodSetGasUsers = "setGasUsers"
+
+	MethodGetAdminList = "getAdminList"
 
 	MethodGetBlacklist = "getBlacklist"
 
 	MethodGetGasManagerList = "getGasManagerList"
 
-	MethodGetNodeWhitelist = "getNodeWhitelist"
+	MethodGetGasUserList = "getGasUserList"
 
 	MethodGetOwner = "getOwner"
+
+	MethodIsAdmin = "isAdmin"
 
 	MethodIsBlocked = "isBlocked"
 
@@ -53,9 +57,7 @@ var (
 
 	MethodIsGasManager = "isGasManager"
 
-	MethodIsInNodeWhite = "isInNodeWhite"
-
-	MethodIsNodeWhiteEnabled = "isNodeWhiteEnabled"
+	MethodIsGasUser = "isGasUser"
 
 	MethodName = "name"
 
@@ -65,15 +67,15 @@ var (
 
 	EventEnableGasManage = "EnableGasManage"
 
-	EventEnableNodeWhite = "EnableNodeWhite"
+	EventSetAdmins = "SetAdmins"
 
 	EventSetGasManager = "SetGasManager"
 
-	EventSetNodeWhite = "SetNodeWhite"
+	EventSetGasUsers = "SetGasUsers"
 )
 
 // MaasConfigABI is the input ABI used to generate the binding from.
-const MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"ChangeOwner\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doEnable\",\"type\":\"bool\"}],\"name\":\"EnableGasManage\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doEnable\",\"type\":\"bool\"}],\"name\":\"EnableNodeWhite\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isManager\",\"type\":\"bool\"}],\"name\":\"SetGasManager\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isWhite\",\"type\":\"bool\"}],\"name\":\"SetNodeWhite\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"doEnable\",\"type\":\"bool\"}],\"name\":\"enableGasManage\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"doEnable\",\"type\":\"bool\"}],\"name\":\"enableNodeWhite\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBlacklist\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getGasManagerList\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getNodeWhitelist\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isGasManageEnabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isGasManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isInNodeWhite\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isNodeWhiteEnabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isManager\",\"type\":\"bool\"}],\"name\":\"setGasManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isWhite\",\"type\":\"bool\"}],\"name\":\"setNodeWhite\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const MaasConfigABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"BlockAccount\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"oldOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"ChangeOwner\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"doEnable\",\"type\":\"bool\"}],\"name\":\"EnableGasManage\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"addrs\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"addOrRemove\",\"type\":\"bool\"}],\"name\":\"SetAdmins\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"isManager\",\"type\":\"bool\"}],\"name\":\"SetGasManager\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address[]\",\"name\":\"addrs\",\"type\":\"address[]\"},{\"indexed\":false,\"internalType\":\"bool\",\"name\":\"addOrRemove\",\"type\":\"bool\"}],\"name\":\"SetGasUsers\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"doBlock\",\"type\":\"bool\"}],\"name\":\"blockAccount\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"changeOwner\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bool\",\"name\":\"doEnable\",\"type\":\"bool\"}],\"name\":\"enableGasManage\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getAdminList\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getBlacklist\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getGasManagerList\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getGasUserList\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"getOwner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isAdmin\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isBlocked\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"isGasManageEnabled\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isGasManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"}],\"name\":\"isGasUser\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addrs\",\"type\":\"address[]\"},{\"internalType\":\"bool\",\"name\":\"addOrRemove\",\"type\":\"bool\"}],\"name\":\"setAdmins\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"addr\",\"type\":\"address\"},{\"internalType\":\"bool\",\"name\":\"isManager\",\"type\":\"bool\"}],\"name\":\"setGasManager\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address[]\",\"name\":\"addrs\",\"type\":\"address[]\"},{\"internalType\":\"bool\",\"name\":\"addOrRemove\",\"type\":\"bool\"}],\"name\":\"setGasUsers\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // MaasConfig is an auto generated Go binding around an Ethereum contract.
 type MaasConfig struct {
@@ -217,6 +219,37 @@ func (_MaasConfig *MaasConfigTransactorRaw) Transact(opts *bind.TransactOpts, me
 	return _MaasConfig.Contract.contract.Transact(opts, method, params...)
 }
 
+// GetAdminList is a free data retrieval call binding the contract method 0xd9f774fc.
+//
+// Solidity: function getAdminList() view returns(string)
+func (_MaasConfig *MaasConfigCaller) GetAdminList(opts *bind.CallOpts) (string, error) {
+	var out []interface{}
+	err := _MaasConfig.contract.Call(opts, &out, "getAdminList")
+
+	if err != nil {
+		return *new(string), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(string)).(*string)
+
+	return out0, err
+
+}
+
+// GetAdminList is a free data retrieval call binding the contract method 0xd9f774fc.
+//
+// Solidity: function getAdminList() view returns(string)
+func (_MaasConfig *MaasConfigSession) GetAdminList() (string, error) {
+	return _MaasConfig.Contract.GetAdminList(&_MaasConfig.CallOpts)
+}
+
+// GetAdminList is a free data retrieval call binding the contract method 0xd9f774fc.
+//
+// Solidity: function getAdminList() view returns(string)
+func (_MaasConfig *MaasConfigCallerSession) GetAdminList() (string, error) {
+	return _MaasConfig.Contract.GetAdminList(&_MaasConfig.CallOpts)
+}
+
 // GetBlacklist is a free data retrieval call binding the contract method 0x338d6c30.
 //
 // Solidity: function getBlacklist() view returns(string)
@@ -279,12 +312,12 @@ func (_MaasConfig *MaasConfigCallerSession) GetGasManagerList() (string, error) 
 	return _MaasConfig.Contract.GetGasManagerList(&_MaasConfig.CallOpts)
 }
 
-// GetNodeWhitelist is a free data retrieval call binding the contract method 0xcb62a163.
+// GetGasUserList is a free data retrieval call binding the contract method 0xd46af6ae.
 //
-// Solidity: function getNodeWhitelist() view returns(string)
-func (_MaasConfig *MaasConfigCaller) GetNodeWhitelist(opts *bind.CallOpts) (string, error) {
+// Solidity: function getGasUserList() view returns(string)
+func (_MaasConfig *MaasConfigCaller) GetGasUserList(opts *bind.CallOpts) (string, error) {
 	var out []interface{}
-	err := _MaasConfig.contract.Call(opts, &out, "getNodeWhitelist")
+	err := _MaasConfig.contract.Call(opts, &out, "getGasUserList")
 
 	if err != nil {
 		return *new(string), err
@@ -296,18 +329,18 @@ func (_MaasConfig *MaasConfigCaller) GetNodeWhitelist(opts *bind.CallOpts) (stri
 
 }
 
-// GetNodeWhitelist is a free data retrieval call binding the contract method 0xcb62a163.
+// GetGasUserList is a free data retrieval call binding the contract method 0xd46af6ae.
 //
-// Solidity: function getNodeWhitelist() view returns(string)
-func (_MaasConfig *MaasConfigSession) GetNodeWhitelist() (string, error) {
-	return _MaasConfig.Contract.GetNodeWhitelist(&_MaasConfig.CallOpts)
+// Solidity: function getGasUserList() view returns(string)
+func (_MaasConfig *MaasConfigSession) GetGasUserList() (string, error) {
+	return _MaasConfig.Contract.GetGasUserList(&_MaasConfig.CallOpts)
 }
 
-// GetNodeWhitelist is a free data retrieval call binding the contract method 0xcb62a163.
+// GetGasUserList is a free data retrieval call binding the contract method 0xd46af6ae.
 //
-// Solidity: function getNodeWhitelist() view returns(string)
-func (_MaasConfig *MaasConfigCallerSession) GetNodeWhitelist() (string, error) {
-	return _MaasConfig.Contract.GetNodeWhitelist(&_MaasConfig.CallOpts)
+// Solidity: function getGasUserList() view returns(string)
+func (_MaasConfig *MaasConfigCallerSession) GetGasUserList() (string, error) {
+	return _MaasConfig.Contract.GetGasUserList(&_MaasConfig.CallOpts)
 }
 
 // GetOwner is a free data retrieval call binding the contract method 0x893d20e8.
@@ -339,6 +372,37 @@ func (_MaasConfig *MaasConfigSession) GetOwner() (common.Address, error) {
 // Solidity: function getOwner() view returns(address)
 func (_MaasConfig *MaasConfigCallerSession) GetOwner() (common.Address, error) {
 	return _MaasConfig.Contract.GetOwner(&_MaasConfig.CallOpts)
+}
+
+// IsAdmin is a free data retrieval call binding the contract method 0x24d7806c.
+//
+// Solidity: function isAdmin(address addr) view returns(bool)
+func (_MaasConfig *MaasConfigCaller) IsAdmin(opts *bind.CallOpts, addr common.Address) (bool, error) {
+	var out []interface{}
+	err := _MaasConfig.contract.Call(opts, &out, "isAdmin", addr)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
+}
+
+// IsAdmin is a free data retrieval call binding the contract method 0x24d7806c.
+//
+// Solidity: function isAdmin(address addr) view returns(bool)
+func (_MaasConfig *MaasConfigSession) IsAdmin(addr common.Address) (bool, error) {
+	return _MaasConfig.Contract.IsAdmin(&_MaasConfig.CallOpts, addr)
+}
+
+// IsAdmin is a free data retrieval call binding the contract method 0x24d7806c.
+//
+// Solidity: function isAdmin(address addr) view returns(bool)
+func (_MaasConfig *MaasConfigCallerSession) IsAdmin(addr common.Address) (bool, error) {
+	return _MaasConfig.Contract.IsAdmin(&_MaasConfig.CallOpts, addr)
 }
 
 // IsBlocked is a free data retrieval call binding the contract method 0xfbac3951.
@@ -434,12 +498,12 @@ func (_MaasConfig *MaasConfigCallerSession) IsGasManager(addr common.Address) (b
 	return _MaasConfig.Contract.IsGasManager(&_MaasConfig.CallOpts, addr)
 }
 
-// IsInNodeWhite is a free data retrieval call binding the contract method 0xe8e99643.
+// IsGasUser is a free data retrieval call binding the contract method 0xbcf3e01e.
 //
-// Solidity: function isInNodeWhite(address addr) view returns(bool)
-func (_MaasConfig *MaasConfigCaller) IsInNodeWhite(opts *bind.CallOpts, addr common.Address) (bool, error) {
+// Solidity: function isGasUser(address addr) view returns(bool)
+func (_MaasConfig *MaasConfigCaller) IsGasUser(opts *bind.CallOpts, addr common.Address) (bool, error) {
 	var out []interface{}
-	err := _MaasConfig.contract.Call(opts, &out, "isInNodeWhite", addr)
+	err := _MaasConfig.contract.Call(opts, &out, "isGasUser", addr)
 
 	if err != nil {
 		return *new(bool), err
@@ -451,49 +515,18 @@ func (_MaasConfig *MaasConfigCaller) IsInNodeWhite(opts *bind.CallOpts, addr com
 
 }
 
-// IsInNodeWhite is a free data retrieval call binding the contract method 0xe8e99643.
+// IsGasUser is a free data retrieval call binding the contract method 0xbcf3e01e.
 //
-// Solidity: function isInNodeWhite(address addr) view returns(bool)
-func (_MaasConfig *MaasConfigSession) IsInNodeWhite(addr common.Address) (bool, error) {
-	return _MaasConfig.Contract.IsInNodeWhite(&_MaasConfig.CallOpts, addr)
+// Solidity: function isGasUser(address addr) view returns(bool)
+func (_MaasConfig *MaasConfigSession) IsGasUser(addr common.Address) (bool, error) {
+	return _MaasConfig.Contract.IsGasUser(&_MaasConfig.CallOpts, addr)
 }
 
-// IsInNodeWhite is a free data retrieval call binding the contract method 0xe8e99643.
+// IsGasUser is a free data retrieval call binding the contract method 0xbcf3e01e.
 //
-// Solidity: function isInNodeWhite(address addr) view returns(bool)
-func (_MaasConfig *MaasConfigCallerSession) IsInNodeWhite(addr common.Address) (bool, error) {
-	return _MaasConfig.Contract.IsInNodeWhite(&_MaasConfig.CallOpts, addr)
-}
-
-// IsNodeWhiteEnabled is a free data retrieval call binding the contract method 0xba4e9e75.
-//
-// Solidity: function isNodeWhiteEnabled() view returns(bool)
-func (_MaasConfig *MaasConfigCaller) IsNodeWhiteEnabled(opts *bind.CallOpts) (bool, error) {
-	var out []interface{}
-	err := _MaasConfig.contract.Call(opts, &out, "isNodeWhiteEnabled")
-
-	if err != nil {
-		return *new(bool), err
-	}
-
-	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
-
-	return out0, err
-
-}
-
-// IsNodeWhiteEnabled is a free data retrieval call binding the contract method 0xba4e9e75.
-//
-// Solidity: function isNodeWhiteEnabled() view returns(bool)
-func (_MaasConfig *MaasConfigSession) IsNodeWhiteEnabled() (bool, error) {
-	return _MaasConfig.Contract.IsNodeWhiteEnabled(&_MaasConfig.CallOpts)
-}
-
-// IsNodeWhiteEnabled is a free data retrieval call binding the contract method 0xba4e9e75.
-//
-// Solidity: function isNodeWhiteEnabled() view returns(bool)
-func (_MaasConfig *MaasConfigCallerSession) IsNodeWhiteEnabled() (bool, error) {
-	return _MaasConfig.Contract.IsNodeWhiteEnabled(&_MaasConfig.CallOpts)
+// Solidity: function isGasUser(address addr) view returns(bool)
+func (_MaasConfig *MaasConfigCallerSession) IsGasUser(addr common.Address) (bool, error) {
+	return _MaasConfig.Contract.IsGasUser(&_MaasConfig.CallOpts, addr)
 }
 
 // Name is a free data retrieval call binding the contract method 0x06fdde03.
@@ -590,25 +623,25 @@ func (_MaasConfig *MaasConfigTransactorSession) EnableGasManage(doEnable bool) (
 	return _MaasConfig.Contract.EnableGasManage(&_MaasConfig.TransactOpts, doEnable)
 }
 
-// EnableNodeWhite is a paid mutator transaction binding the contract method 0x1dc4f476.
+// SetAdmins is a paid mutator transaction binding the contract method 0x030e2c88.
 //
-// Solidity: function enableNodeWhite(bool doEnable) returns(bool)
-func (_MaasConfig *MaasConfigTransactor) EnableNodeWhite(opts *bind.TransactOpts, doEnable bool) (*types.Transaction, error) {
-	return _MaasConfig.contract.Transact(opts, "enableNodeWhite", doEnable)
+// Solidity: function setAdmins(address[] addrs, bool addOrRemove) returns(bool)
+func (_MaasConfig *MaasConfigTransactor) SetAdmins(opts *bind.TransactOpts, addrs []common.Address, addOrRemove bool) (*types.Transaction, error) {
+	return _MaasConfig.contract.Transact(opts, "setAdmins", addrs, addOrRemove)
 }
 
-// EnableNodeWhite is a paid mutator transaction binding the contract method 0x1dc4f476.
+// SetAdmins is a paid mutator transaction binding the contract method 0x030e2c88.
 //
-// Solidity: function enableNodeWhite(bool doEnable) returns(bool)
-func (_MaasConfig *MaasConfigSession) EnableNodeWhite(doEnable bool) (*types.Transaction, error) {
-	return _MaasConfig.Contract.EnableNodeWhite(&_MaasConfig.TransactOpts, doEnable)
+// Solidity: function setAdmins(address[] addrs, bool addOrRemove) returns(bool)
+func (_MaasConfig *MaasConfigSession) SetAdmins(addrs []common.Address, addOrRemove bool) (*types.Transaction, error) {
+	return _MaasConfig.Contract.SetAdmins(&_MaasConfig.TransactOpts, addrs, addOrRemove)
 }
 
-// EnableNodeWhite is a paid mutator transaction binding the contract method 0x1dc4f476.
+// SetAdmins is a paid mutator transaction binding the contract method 0x030e2c88.
 //
-// Solidity: function enableNodeWhite(bool doEnable) returns(bool)
-func (_MaasConfig *MaasConfigTransactorSession) EnableNodeWhite(doEnable bool) (*types.Transaction, error) {
-	return _MaasConfig.Contract.EnableNodeWhite(&_MaasConfig.TransactOpts, doEnable)
+// Solidity: function setAdmins(address[] addrs, bool addOrRemove) returns(bool)
+func (_MaasConfig *MaasConfigTransactorSession) SetAdmins(addrs []common.Address, addOrRemove bool) (*types.Transaction, error) {
+	return _MaasConfig.Contract.SetAdmins(&_MaasConfig.TransactOpts, addrs, addOrRemove)
 }
 
 // SetGasManager is a paid mutator transaction binding the contract method 0xab75fbe7.
@@ -632,25 +665,25 @@ func (_MaasConfig *MaasConfigTransactorSession) SetGasManager(addr common.Addres
 	return _MaasConfig.Contract.SetGasManager(&_MaasConfig.TransactOpts, addr, isManager)
 }
 
-// SetNodeWhite is a paid mutator transaction binding the contract method 0x677ff41c.
+// SetGasUsers is a paid mutator transaction binding the contract method 0x99e3017d.
 //
-// Solidity: function setNodeWhite(address addr, bool isWhite) returns(bool)
-func (_MaasConfig *MaasConfigTransactor) SetNodeWhite(opts *bind.TransactOpts, addr common.Address, isWhite bool) (*types.Transaction, error) {
-	return _MaasConfig.contract.Transact(opts, "setNodeWhite", addr, isWhite)
+// Solidity: function setGasUsers(address[] addrs, bool addOrRemove) returns(bool)
+func (_MaasConfig *MaasConfigTransactor) SetGasUsers(opts *bind.TransactOpts, addrs []common.Address, addOrRemove bool) (*types.Transaction, error) {
+	return _MaasConfig.contract.Transact(opts, "setGasUsers", addrs, addOrRemove)
 }
 
-// SetNodeWhite is a paid mutator transaction binding the contract method 0x677ff41c.
+// SetGasUsers is a paid mutator transaction binding the contract method 0x99e3017d.
 //
-// Solidity: function setNodeWhite(address addr, bool isWhite) returns(bool)
-func (_MaasConfig *MaasConfigSession) SetNodeWhite(addr common.Address, isWhite bool) (*types.Transaction, error) {
-	return _MaasConfig.Contract.SetNodeWhite(&_MaasConfig.TransactOpts, addr, isWhite)
+// Solidity: function setGasUsers(address[] addrs, bool addOrRemove) returns(bool)
+func (_MaasConfig *MaasConfigSession) SetGasUsers(addrs []common.Address, addOrRemove bool) (*types.Transaction, error) {
+	return _MaasConfig.Contract.SetGasUsers(&_MaasConfig.TransactOpts, addrs, addOrRemove)
 }
 
-// SetNodeWhite is a paid mutator transaction binding the contract method 0x677ff41c.
+// SetGasUsers is a paid mutator transaction binding the contract method 0x99e3017d.
 //
-// Solidity: function setNodeWhite(address addr, bool isWhite) returns(bool)
-func (_MaasConfig *MaasConfigTransactorSession) SetNodeWhite(addr common.Address, isWhite bool) (*types.Transaction, error) {
-	return _MaasConfig.Contract.SetNodeWhite(&_MaasConfig.TransactOpts, addr, isWhite)
+// Solidity: function setGasUsers(address[] addrs, bool addOrRemove) returns(bool)
+func (_MaasConfig *MaasConfigTransactorSession) SetGasUsers(addrs []common.Address, addOrRemove bool) (*types.Transaction, error) {
+	return _MaasConfig.Contract.SetGasUsers(&_MaasConfig.TransactOpts, addrs, addOrRemove)
 }
 
 // MaasConfigBlockAccountIterator is returned from FilterBlockAccount and is used to iterate over the raw logs and unpacked data for BlockAccount events raised by the MaasConfig contract.
@@ -1085,9 +1118,9 @@ func (_MaasConfig *MaasConfigFilterer) ParseEnableGasManage(log types.Log) (*Maa
 	return event, nil
 }
 
-// MaasConfigEnableNodeWhiteIterator is returned from FilterEnableNodeWhite and is used to iterate over the raw logs and unpacked data for EnableNodeWhite events raised by the MaasConfig contract.
-type MaasConfigEnableNodeWhiteIterator struct {
-	Event *MaasConfigEnableNodeWhite // Event containing the contract specifics and raw log
+// MaasConfigSetAdminsIterator is returned from FilterSetAdmins and is used to iterate over the raw logs and unpacked data for SetAdmins events raised by the MaasConfig contract.
+type MaasConfigSetAdminsIterator struct {
+	Event *MaasConfigSetAdmins // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1101,7 +1134,7 @@ type MaasConfigEnableNodeWhiteIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *MaasConfigEnableNodeWhiteIterator) Next() bool {
+func (it *MaasConfigSetAdminsIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1110,7 +1143,7 @@ func (it *MaasConfigEnableNodeWhiteIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(MaasConfigEnableNodeWhite)
+			it.Event = new(MaasConfigSetAdmins)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1125,7 +1158,7 @@ func (it *MaasConfigEnableNodeWhiteIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(MaasConfigEnableNodeWhite)
+		it.Event = new(MaasConfigSetAdmins)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1141,41 +1174,42 @@ func (it *MaasConfigEnableNodeWhiteIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *MaasConfigEnableNodeWhiteIterator) Error() error {
+func (it *MaasConfigSetAdminsIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *MaasConfigEnableNodeWhiteIterator) Close() error {
+func (it *MaasConfigSetAdminsIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// MaasConfigEnableNodeWhite represents a EnableNodeWhite event raised by the MaasConfig contract.
-type MaasConfigEnableNodeWhite struct {
-	DoEnable bool
-	Raw      types.Log // Blockchain specific contextual infos
+// MaasConfigSetAdmins represents a SetAdmins event raised by the MaasConfig contract.
+type MaasConfigSetAdmins struct {
+	Addrs       []common.Address
+	AddOrRemove bool
+	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterEnableNodeWhite is a free log retrieval operation binding the contract event 0x8ad912d00d9bb358589af50d96f1aa99f69f5397d22aa98de8133c3428b4780a.
+// FilterSetAdmins is a free log retrieval operation binding the contract event 0x32150139712a20940bb7e316d890207124a84bd89e7a101f92d4280f5bfcfd7b.
 //
-// Solidity: event EnableNodeWhite(bool doEnable)
-func (_MaasConfig *MaasConfigFilterer) FilterEnableNodeWhite(opts *bind.FilterOpts) (*MaasConfigEnableNodeWhiteIterator, error) {
+// Solidity: event SetAdmins(address[] addrs, bool addOrRemove)
+func (_MaasConfig *MaasConfigFilterer) FilterSetAdmins(opts *bind.FilterOpts) (*MaasConfigSetAdminsIterator, error) {
 
-	logs, sub, err := _MaasConfig.contract.FilterLogs(opts, "EnableNodeWhite")
+	logs, sub, err := _MaasConfig.contract.FilterLogs(opts, "SetAdmins")
 	if err != nil {
 		return nil, err
 	}
-	return &MaasConfigEnableNodeWhiteIterator{contract: _MaasConfig.contract, event: "EnableNodeWhite", logs: logs, sub: sub}, nil
+	return &MaasConfigSetAdminsIterator{contract: _MaasConfig.contract, event: "SetAdmins", logs: logs, sub: sub}, nil
 }
 
-// WatchEnableNodeWhite is a free log subscription operation binding the contract event 0x8ad912d00d9bb358589af50d96f1aa99f69f5397d22aa98de8133c3428b4780a.
+// WatchSetAdmins is a free log subscription operation binding the contract event 0x32150139712a20940bb7e316d890207124a84bd89e7a101f92d4280f5bfcfd7b.
 //
-// Solidity: event EnableNodeWhite(bool doEnable)
-func (_MaasConfig *MaasConfigFilterer) WatchEnableNodeWhite(opts *bind.WatchOpts, sink chan<- *MaasConfigEnableNodeWhite) (event.Subscription, error) {
+// Solidity: event SetAdmins(address[] addrs, bool addOrRemove)
+func (_MaasConfig *MaasConfigFilterer) WatchSetAdmins(opts *bind.WatchOpts, sink chan<- *MaasConfigSetAdmins) (event.Subscription, error) {
 
-	logs, sub, err := _MaasConfig.contract.WatchLogs(opts, "EnableNodeWhite")
+	logs, sub, err := _MaasConfig.contract.WatchLogs(opts, "SetAdmins")
 	if err != nil {
 		return nil, err
 	}
@@ -1185,8 +1219,8 @@ func (_MaasConfig *MaasConfigFilterer) WatchEnableNodeWhite(opts *bind.WatchOpts
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(MaasConfigEnableNodeWhite)
-				if err := _MaasConfig.contract.UnpackLog(event, "EnableNodeWhite", log); err != nil {
+				event := new(MaasConfigSetAdmins)
+				if err := _MaasConfig.contract.UnpackLog(event, "SetAdmins", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1207,12 +1241,12 @@ func (_MaasConfig *MaasConfigFilterer) WatchEnableNodeWhite(opts *bind.WatchOpts
 	}), nil
 }
 
-// ParseEnableNodeWhite is a log parse operation binding the contract event 0x8ad912d00d9bb358589af50d96f1aa99f69f5397d22aa98de8133c3428b4780a.
+// ParseSetAdmins is a log parse operation binding the contract event 0x32150139712a20940bb7e316d890207124a84bd89e7a101f92d4280f5bfcfd7b.
 //
-// Solidity: event EnableNodeWhite(bool doEnable)
-func (_MaasConfig *MaasConfigFilterer) ParseEnableNodeWhite(log types.Log) (*MaasConfigEnableNodeWhite, error) {
-	event := new(MaasConfigEnableNodeWhite)
-	if err := _MaasConfig.contract.UnpackLog(event, "EnableNodeWhite", log); err != nil {
+// Solidity: event SetAdmins(address[] addrs, bool addOrRemove)
+func (_MaasConfig *MaasConfigFilterer) ParseSetAdmins(log types.Log) (*MaasConfigSetAdmins, error) {
+	event := new(MaasConfigSetAdmins)
+	if err := _MaasConfig.contract.UnpackLog(event, "SetAdmins", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -1364,9 +1398,9 @@ func (_MaasConfig *MaasConfigFilterer) ParseSetGasManager(log types.Log) (*MaasC
 	return event, nil
 }
 
-// MaasConfigSetNodeWhiteIterator is returned from FilterSetNodeWhite and is used to iterate over the raw logs and unpacked data for SetNodeWhite events raised by the MaasConfig contract.
-type MaasConfigSetNodeWhiteIterator struct {
-	Event *MaasConfigSetNodeWhite // Event containing the contract specifics and raw log
+// MaasConfigSetGasUsersIterator is returned from FilterSetGasUsers and is used to iterate over the raw logs and unpacked data for SetGasUsers events raised by the MaasConfig contract.
+type MaasConfigSetGasUsersIterator struct {
+	Event *MaasConfigSetGasUsers // Event containing the contract specifics and raw log
 
 	contract *bind.BoundContract // Generic contract to use for unpacking event data
 	event    string              // Event name to use for unpacking event data
@@ -1380,7 +1414,7 @@ type MaasConfigSetNodeWhiteIterator struct {
 // Next advances the iterator to the subsequent event, returning whether there
 // are any more events found. In case of a retrieval or parsing error, false is
 // returned and Error() can be queried for the exact failure.
-func (it *MaasConfigSetNodeWhiteIterator) Next() bool {
+func (it *MaasConfigSetGasUsersIterator) Next() bool {
 	// If the iterator failed, stop iterating
 	if it.fail != nil {
 		return false
@@ -1389,7 +1423,7 @@ func (it *MaasConfigSetNodeWhiteIterator) Next() bool {
 	if it.done {
 		select {
 		case log := <-it.logs:
-			it.Event = new(MaasConfigSetNodeWhite)
+			it.Event = new(MaasConfigSetGasUsers)
 			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 				it.fail = err
 				return false
@@ -1404,7 +1438,7 @@ func (it *MaasConfigSetNodeWhiteIterator) Next() bool {
 	// Iterator still in progress, wait for either a data or an error event
 	select {
 	case log := <-it.logs:
-		it.Event = new(MaasConfigSetNodeWhite)
+		it.Event = new(MaasConfigSetGasUsers)
 		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
 			it.fail = err
 			return false
@@ -1420,52 +1454,42 @@ func (it *MaasConfigSetNodeWhiteIterator) Next() bool {
 }
 
 // Error returns any retrieval or parsing error occurred during filtering.
-func (it *MaasConfigSetNodeWhiteIterator) Error() error {
+func (it *MaasConfigSetGasUsersIterator) Error() error {
 	return it.fail
 }
 
 // Close terminates the iteration process, releasing any pending underlying
 // resources.
-func (it *MaasConfigSetNodeWhiteIterator) Close() error {
+func (it *MaasConfigSetGasUsersIterator) Close() error {
 	it.sub.Unsubscribe()
 	return nil
 }
 
-// MaasConfigSetNodeWhite represents a SetNodeWhite event raised by the MaasConfig contract.
-type MaasConfigSetNodeWhite struct {
-	Addr    common.Address
-	IsWhite bool
-	Raw     types.Log // Blockchain specific contextual infos
+// MaasConfigSetGasUsers represents a SetGasUsers event raised by the MaasConfig contract.
+type MaasConfigSetGasUsers struct {
+	Addrs       []common.Address
+	AddOrRemove bool
+	Raw         types.Log // Blockchain specific contextual infos
 }
 
-// FilterSetNodeWhite is a free log retrieval operation binding the contract event 0xd6cea84eec31298ee796c9179fae030ff59b0f5a1802123104d81d727ed202cb.
+// FilterSetGasUsers is a free log retrieval operation binding the contract event 0xae3ffcd4711b2ae3218d54fe92ec1487fcd8b6db2c6033db7651da3c57e7cc45.
 //
-// Solidity: event SetNodeWhite(address indexed addr, bool isWhite)
-func (_MaasConfig *MaasConfigFilterer) FilterSetNodeWhite(opts *bind.FilterOpts, addr []common.Address) (*MaasConfigSetNodeWhiteIterator, error) {
+// Solidity: event SetGasUsers(address[] addrs, bool addOrRemove)
+func (_MaasConfig *MaasConfigFilterer) FilterSetGasUsers(opts *bind.FilterOpts) (*MaasConfigSetGasUsersIterator, error) {
 
-	var addrRule []interface{}
-	for _, addrItem := range addr {
-		addrRule = append(addrRule, addrItem)
-	}
-
-	logs, sub, err := _MaasConfig.contract.FilterLogs(opts, "SetNodeWhite", addrRule)
+	logs, sub, err := _MaasConfig.contract.FilterLogs(opts, "SetGasUsers")
 	if err != nil {
 		return nil, err
 	}
-	return &MaasConfigSetNodeWhiteIterator{contract: _MaasConfig.contract, event: "SetNodeWhite", logs: logs, sub: sub}, nil
+	return &MaasConfigSetGasUsersIterator{contract: _MaasConfig.contract, event: "SetGasUsers", logs: logs, sub: sub}, nil
 }
 
-// WatchSetNodeWhite is a free log subscription operation binding the contract event 0xd6cea84eec31298ee796c9179fae030ff59b0f5a1802123104d81d727ed202cb.
+// WatchSetGasUsers is a free log subscription operation binding the contract event 0xae3ffcd4711b2ae3218d54fe92ec1487fcd8b6db2c6033db7651da3c57e7cc45.
 //
-// Solidity: event SetNodeWhite(address indexed addr, bool isWhite)
-func (_MaasConfig *MaasConfigFilterer) WatchSetNodeWhite(opts *bind.WatchOpts, sink chan<- *MaasConfigSetNodeWhite, addr []common.Address) (event.Subscription, error) {
+// Solidity: event SetGasUsers(address[] addrs, bool addOrRemove)
+func (_MaasConfig *MaasConfigFilterer) WatchSetGasUsers(opts *bind.WatchOpts, sink chan<- *MaasConfigSetGasUsers) (event.Subscription, error) {
 
-	var addrRule []interface{}
-	for _, addrItem := range addr {
-		addrRule = append(addrRule, addrItem)
-	}
-
-	logs, sub, err := _MaasConfig.contract.WatchLogs(opts, "SetNodeWhite", addrRule)
+	logs, sub, err := _MaasConfig.contract.WatchLogs(opts, "SetGasUsers")
 	if err != nil {
 		return nil, err
 	}
@@ -1475,8 +1499,8 @@ func (_MaasConfig *MaasConfigFilterer) WatchSetNodeWhite(opts *bind.WatchOpts, s
 			select {
 			case log := <-logs:
 				// New log arrived, parse the event and forward to the user
-				event := new(MaasConfigSetNodeWhite)
-				if err := _MaasConfig.contract.UnpackLog(event, "SetNodeWhite", log); err != nil {
+				event := new(MaasConfigSetGasUsers)
+				if err := _MaasConfig.contract.UnpackLog(event, "SetGasUsers", log); err != nil {
 					return err
 				}
 				event.Raw = log
@@ -1497,12 +1521,12 @@ func (_MaasConfig *MaasConfigFilterer) WatchSetNodeWhite(opts *bind.WatchOpts, s
 	}), nil
 }
 
-// ParseSetNodeWhite is a log parse operation binding the contract event 0xd6cea84eec31298ee796c9179fae030ff59b0f5a1802123104d81d727ed202cb.
+// ParseSetGasUsers is a log parse operation binding the contract event 0xae3ffcd4711b2ae3218d54fe92ec1487fcd8b6db2c6033db7651da3c57e7cc45.
 //
-// Solidity: event SetNodeWhite(address indexed addr, bool isWhite)
-func (_MaasConfig *MaasConfigFilterer) ParseSetNodeWhite(log types.Log) (*MaasConfigSetNodeWhite, error) {
-	event := new(MaasConfigSetNodeWhite)
-	if err := _MaasConfig.contract.UnpackLog(event, "SetNodeWhite", log); err != nil {
+// Solidity: event SetGasUsers(address[] addrs, bool addOrRemove)
+func (_MaasConfig *MaasConfigFilterer) ParseSetGasUsers(log types.Log) (*MaasConfigSetGasUsers, error) {
+	event := new(MaasConfigSetGasUsers)
+	if err := _MaasConfig.contract.UnpackLog(event, "SetGasUsers", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

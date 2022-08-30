@@ -1255,8 +1255,7 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		ctx.GlobalSet(NodeWhitePath.Name, "node-whitelist.json")
 	}
 	cfg.NodeWhitePath = ctx.GlobalString(NodeWhitePath.Name)
-	log.Warn("### NodeWhite file path: " + cfg.NodeWhitePath)
-	params.StartNodeWhiteLoadTask(cfg.NodeWhitePath)
+	// params.StartNodeWhiteLoadTask(cfg.NodeWhitePath)
 }
 
 func setSmartCard(ctx *cli.Context, cfg *node.Config) {
