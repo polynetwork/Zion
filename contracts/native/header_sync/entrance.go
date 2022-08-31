@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/okex"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/ont"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/header_sync/zilliqa"
@@ -171,6 +172,8 @@ func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
 		return polygon.NewBorHandler(), nil
 	case utils.COSMOS_ROUTER:
 		return cosmos.NewCosmosHandler(), nil
+	case utils.ONT_ROUTER:
+		return ont.NewONTHandler(), nil
 	case utils.ZILLIQA_ROUTER:
 		return zilliqa.NewHandler(), nil
 	default:

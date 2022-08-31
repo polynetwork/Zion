@@ -30,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/ont"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
@@ -88,6 +89,8 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return polygon.NewHandler(), nil
 	case utils.COSMOS_ROUTER:
 		return cosmos.NewCosmosHandler(), nil
+	case utils.ONT_ROUTER:
+		return ont.NewONTHandler(), nil
 	case utils.ZILLIQA_ROUTER:
 		return zilliqa.NewHandler(), nil
 	default:
