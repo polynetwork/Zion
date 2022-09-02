@@ -41,4 +41,19 @@ var (
 
 	// errInvalidSigner is returned if the msg is unsigned
 	errInvalidSigner = errors.New("message not signed by the sender")
+
+	// errInvalidRawData is returned if the raw input is nil
+	errInvalidRawData = errors.New("raw input is invalid")
+
+	// errInvalidRawHash is returned if the raw hash is nil
+	errInvalidRawHash = errors.New("raw hash is invalid")
+
+	// errInvalidHeader is returned if the raw header is nil
+	errInvalidHeader = errors.New("raw header is invalid")
+
+	// errInvalidValset is returned if the validator set is nil
+	errInvalidValset = errors.New("valset is nil")
+
+	// errInvalidQC is returned if the quorum cert is nil
+	errInvalidQC = errors.New("qc is nil")
 )

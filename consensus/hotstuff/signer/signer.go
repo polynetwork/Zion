@@ -61,6 +61,9 @@ func (s *SignerImpl) Address() common.Address {
 }
 
 func (s *SignerImpl) Sign(data []byte) ([]byte, error) {
+	if data == nil {
+		return nil, errInvalidRawData
+	}
 	if s.privateKey == nil {
 		return nil, errInvalidSigner
 	}
@@ -69,11 +72,20 @@ func (s *SignerImpl) Sign(data []byte) ([]byte, error) {
 }
 
 func (s *SignerImpl) SignHash(hash common.Hash) ([]byte, error) {
+	if hash == common.EmptyHash {
+		return nil, errInvalidRawHash
+	}
 	wrapHash := s.wrapCommittedSeal(hash)
 	return s.Sign(wrapHash)
 }
 
 func (s *SignerImpl) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
+	if tx == nil {
+		return nil, errInvalidRawData
+	}
+	if signer == nil {
+		return nil, errInvalidSigner
+	}
 	return types.SignTx(tx, signer, s.privateKey)
 }
 
@@ -95,6 +107,10 @@ func (s *SignerImpl) SigHash(header *types.Header) (hash common.Hash) {
 
 // Recover extracts the proposer address from a signed header.
 func (s *SignerImpl) Recover(header *types.Header) (common.Address, *types.HotstuffExtra, error) {
+	if header == nil {
+		return common.EmptyAddress, nil, errInvalidHeader
+	}
+
 	hash := header.Hash()
 	if s.signatures != nil {
 		if data, ok := s.signatures.Get(hash); ok {
@@ -129,6 +145,10 @@ func (s *SignerImpl) Recover(header *types.Header) (common.Address, *types.Hotst
 
 // SignerSeal proposer sign the header hash and fill extra seal with signature.
 func (s *SignerImpl) SealBeforeCommit(h *types.Header) error {
+	if h == nil {
+		return errInvalidHeader
+	}
+
 	sigHash := s.SigHash(h)
 	seal, err := s.Sign(sigHash.Bytes())
 	if err != nil {
@@ -154,6 +174,9 @@ func (s *SignerImpl) SealBeforeCommit(h *types.Header) error {
 
 // SealAfterCommit writes the extra-data field of a block header with given committed seals.
 func (s *SignerImpl) SealAfterCommit(h *types.Header, committedSeals [][]byte) error {
+	if h == nil {
+		return errInvalidHeader
+	}
 	if len(committedSeals) == 0 {
 		return errInvalidCommittedSeals
 	}
@@ -182,6 +205,13 @@ func (s *SignerImpl) SealAfterCommit(h *types.Header, committedSeals [][]byte) e
 }
 
 func (s *SignerImpl) VerifyHeader(header *types.Header, valSet hotstuff.ValidatorSet, seal bool) (*types.HotstuffExtra, error) {
+	if header == nil {
+		return nil, errInvalidHeader
+	}
+	if valSet == nil {
+		return nil, errInvalidValset
+	}
+
 	// Verifying the genesis block is not supported
 	number := header.Number.Uint64()
 	if number == 0 {
@@ -220,6 +250,13 @@ func (s *SignerImpl) VerifyHeader(header *types.Header, valSet hotstuff.Validato
 }
 
 func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.ValidatorSet) error {
+	if qc == nil {
+		return errInvalidQC
+	}
+	if valSet == nil {
+		return errInvalidValset
+	}
+
 	if qc.View.Height.Uint64() == 0 {
 		return nil
 	}
@@ -252,6 +289,10 @@ func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.Validator
 }
 
 func (s *SignerImpl) CheckQCParticipant(qc *hotstuff.QuorumCert, signer common.Address) error {
+	if qc == nil {
+		return errInvalidQC
+	}
+
 	if qc.View.Height.Uint64() == 0 {
 		return nil
 	}
@@ -283,6 +324,16 @@ func (s *SignerImpl) CheckQCParticipant(qc *hotstuff.QuorumCert, signer common.A
 }
 
 func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, sig []byte) (common.Address, error) {
+	if valSet == nil {
+		return common.EmptyAddress, errInvalidValset
+	}
+	if data == nil {
+		return common.EmptyAddress, errInvalidRawData
+	}
+	if sig == nil {
+		return common.EmptyAddress, errInvalidSignature
+	}
+
 	// 1. Get signature address
 	signer, err := getSignatureAddress(data, sig)
 	if err != nil {
@@ -298,6 +349,16 @@ func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, s
 }
 
 func (s *SignerImpl) VerifyHash(valSet hotstuff.ValidatorSet, hash common.Hash, sig []byte) error {
+	if valSet == nil {
+		return errInvalidValset
+	}
+	if hash == common.EmptyHash {
+		return errInvalidRawHash
+	}
+	if sig == nil {
+		return errInvalidSignature
+	}
+
 	data := s.wrapCommittedSeal(hash)
 	signer, err := getSignatureAddress(data, sig)
 	if err != nil {
@@ -312,6 +373,16 @@ func (s *SignerImpl) VerifyHash(valSet hotstuff.ValidatorSet, hash common.Hash, 
 }
 
 func (s *SignerImpl) VerifyCommittedSeal(valSet hotstuff.ValidatorSet, hash common.Hash, committedSeals [][]byte) error {
+	if valSet == nil {
+		return errInvalidValset
+	}
+	if hash == common.EmptyHash {
+		return errInvalidRawHash
+	}
+	if committedSeals == nil {
+		return errInvalidCommittedSeals
+	}
+
 	signers, err := s.GetSignersFromCommittedSeals(hash, committedSeals)
 	if err != nil {
 		return err
