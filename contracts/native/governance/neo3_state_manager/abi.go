@@ -19,6 +19,8 @@ package neo3_state_manager
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/rlp"
+	"io"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -26,23 +28,29 @@ import (
 )
 
 const (
-	EventApproveRegisterStateValidator = "approveRegisterStateValidator"
-	EventApproveRemoveStateValidator   = "approveRemoveStateValidator"
+	EventRegisterStateValidator = "evtRegisterStateValidator"
+	EventApproveRegisterStateValidator = "evtApproveRegisterStateValidator"
+	EventRemoveStateValidator = "evtRemoveStateValidator"
+	EventApproveRemoveStateValidator   = "evtApproveRemoveStateValidator"
+
 )
 
-const abijson = `[
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRegisterStateValidator + `","type":"event"},
-    {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRemoveStateValidator + `","type":"event"},
-    {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRegisterStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRemoveStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[],"name":"` + MethodGetCurrentStateValidator + `","outputs":[{"internalType":"bytes","name":"Validator","type":"bytes"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"string[]","name":"StateValidators","type":"string[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRegisterStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
-    {"inputs":[{"internalType":"string[]","name":"StateValidators","type":"string[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRemoveStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
+const abiJson = `[
+   {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventRegisterStateValidator + `","type":"event"},
+   {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRegisterStateValidator + `","type":"event"},
+   {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventRemoveStateValidator + `","type":"event"},
+   {"anonymous":false,"inputs":[{"indexed":false,"internalType":"uint64","name":"ID","type":"uint64"}],"name":"` + EventApproveRemoveStateValidator + `","type":"event"},
+   {"inputs":[],"name":"` + MethodContractName + `","outputs":[{"internalType":"string","name":"Name","type":"string"}],"stateMutability":"nonpayable","type":"function"},
+   {"inputs":[],"name":"` + MethodGetCurrentStateValidator + `","outputs":[{"internalType":"bytes","name":"Validator","type":"bytes"}],"stateMutability":"nonpayable","type":"function"},   
+   {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRegisterStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+   {"inputs":[{"internalType":"uint64","name":"ID","type":"uint64"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodApproveRemoveStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+   {"inputs":[{"internalType":"string[]","name":"StateValidators","type":"string[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRegisterStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"},
+   {"inputs":[{"internalType":"string[]","name":"StateValidators","type":"string[]"},{"internalType":"address","name":"Address","type":"address"}],"name":"` + MethodRemoveStateValidator + `","outputs":[{"internalType":"bool","name":"success","type":"bool"}],"stateMutability":"nonpayable","type":"function"}
 ]`
 
 func GetABI() *abi.ABI {
-	ab, err := abi.JSON(strings.NewReader(abijson))
+	//ab, err := abi.JSON(strings.NewReader(neo3_state_manager_abi.Neo3StateManagerABI))
+	ab, err := abi.JSON(strings.NewReader(abiJson))
 	if err != nil {
 		panic(fmt.Sprintf("failed to load abi json string: [%v]", err))
 	}
@@ -50,11 +58,27 @@ func GetABI() *abi.ABI {
 }
 
 type StateValidatorListParam struct {
-	StateValidators []string       // public key strings in encoded format, each is 33 bytes in []byte
-	Address         common.Address // for check witness?
+	StateValidators []string // public key strings in encoded format, each is 33 bytes in []byte
+	Address         common.Address
+}
+
+func (this *StateValidatorListParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{this.StateValidators, this.Address})
+}
+func (this *StateValidatorListParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		StateValidators []string
+		Address         common.Address
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	this.StateValidators, this.Address = data.StateValidators, data.Address
+	return nil
 }
 
 type ApproveStateValidatorParam struct {
-	ID      uint64         // StateValidatorApproveID
-	Address common.Address // for check witness?
+	ID      uint64 // StateValidatorApproveID
+	Address common.Address
 }

@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/heco"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/msc"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/neo3"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/polygon"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/quorum"
@@ -80,6 +81,8 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return heco.NewHecoHandler(), nil
 	case utils.MSC_ROUTER:
 		return msc.NewHandler(), nil
+	case utils.NEO3_ROUTER:
+		return neo3.NewHandler(), nil
 	case utils.OKEX_ROUTER:
 		return okex.NewHandler(), nil
 	case utils.QUORUM_ROUTER:

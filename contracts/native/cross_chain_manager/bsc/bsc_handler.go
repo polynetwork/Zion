@@ -57,19 +57,19 @@ func (h *Handler) MakeDepositProposal(service *native.NativeContract) (*scom.Mak
 
 	sideChain, err := side_chain_manager.GetSideChain(service, params.SourceChainID)
 	if err != nil {
-		return nil, fmt.Errorf("eth MakeDepositProposal, side_chain_manager.GetSideChain error: %v", err)
+		return nil, fmt.Errorf("bsc MakeDepositProposal, side_chain_manager.GetSideChain error: %v", err)
 	}
 
 	value, err := verifyFromTx(service, params.Proof, params.Extra, params.SourceChainID, params.Height, sideChain)
 	if err != nil {
-		return nil, fmt.Errorf("eth MakeDepositProposal, verifyFromEthTx error: %s", err)
+		return nil, fmt.Errorf("bsc MakeDepositProposal, verifyFromEthTx error: %v", err)
 	}
 
 	if err := scom.CheckDoneTx(service, value.CrossChainID, params.SourceChainID); err != nil {
-		return nil, fmt.Errorf("eth MakeDepositProposal, check done transaction error:%s", err)
+		return nil, fmt.Errorf("bsc MakeDepositProposal, check done transaction error: %v", err)
 	}
 	if err := scom.PutDoneTx(service, value.CrossChainID, params.SourceChainID); err != nil {
-		return nil, fmt.Errorf("eth MakeDepositProposal, PutDoneTx error:%s", err)
+		return nil, fmt.Errorf("bsc MakeDepositProposal, PutDoneTx error: %v", err)
 	}
 	return value, nil
 }

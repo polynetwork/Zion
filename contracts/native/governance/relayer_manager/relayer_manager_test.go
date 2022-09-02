@@ -112,8 +112,8 @@ func TestRegisterRelayer(t *testing.T) {
 
 		contract := native.NewNativeContract(sdb, contractRef)
 		ok, err := node_manager.CheckConsensusSigns(contract, MethodApproveRegisterRelayer, utils.GetUint64Bytes(0), caller)
-		assert.Nil(t, err)
-		assert.Equal(t, true, ok)
+		assert.NotNil(t, err) // the signer is already stored
+		assert.Equal(t, false, ok)
 	}
 
 }
@@ -167,7 +167,7 @@ func TestRemoveRelayer(t *testing.T) {
 
 		contract := native.NewNativeContract(sdb, contractRef)
 		ok, err := node_manager.CheckConsensusSigns(contract, MethodApproveRemoveRelayer, utils.GetUint64Bytes(0), caller)
-		assert.Nil(t, err)
-		assert.Equal(t, true, ok)
+		assert.NotNil(t, err) // the signer is already stored
+		assert.Equal(t, false, ok)
 	}
 }
