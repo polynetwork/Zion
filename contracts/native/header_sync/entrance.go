@@ -19,6 +19,7 @@ package header_sync
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/contracts/native/header_sync/neo3"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
@@ -161,6 +162,8 @@ func GetChainHandler(router uint64) (hscommon.HeaderSyncHandler, error) {
 		return heco.NewHecoHandler(), nil
 	case utils.MSC_ROUTER:
 		return msc.NewHandler(), nil
+	case utils.NEO3_ROUTER:
+		return neo3.NewHandler(), nil
 	case utils.OKEX_ROUTER:
 		return okex.NewHandler(), nil
 	case utils.QUORUM_ROUTER:

@@ -87,11 +87,11 @@ func RegisterRelayer(native *native.NativeContract) ([]byte, error) {
 	//check witness
 	err := contract.ValidateOwner(native, params.Address)
 	if err != nil {
-		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+		return nil, fmt.Errorf("RegisterRelayer, checkWitness error: %v", err)
 	}
 
 	if err := putRelayerApply(native, params); err != nil {
-		return nil, fmt.Errorf("RegisterRelayer, putRelayer error: %v", err)
+		return nil, fmt.Errorf("RegisterRelayer, putRelayerApply error: %v", err)
 	}
 
 	return utils.PackOutputs(ABI, MethodRegisterRelayer, true)
@@ -107,7 +107,7 @@ func ApproveRegisterRelayer(native *native.NativeContract) ([]byte, error) {
 	//check witness
 	err := contract.ValidateOwner(native, params.Address)
 	if err != nil {
-		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+		return nil, fmt.Errorf("ApproveRegisterRelayer, checkWitness error: %v", err)
 	}
 
 	relayerListParam, err := getRelayerApply(native, params.ID)
@@ -150,12 +150,12 @@ func RemoveRelayer(native *native.NativeContract) ([]byte, error) {
 	//check witness
 	err := contract.ValidateOwner(native, params.Address)
 	if err != nil {
-		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+		return nil, fmt.Errorf("RemoveRelayer, checkWitness error: %v", err)
 	}
 
 	err = putRelayerRemove(native, params)
 	if err != nil {
-		return nil, fmt.Errorf("RemoveRelayer, putRelayer error: %v", err)
+		return nil, fmt.Errorf("RemoveRelayer, putRelayerRemove error: %v", err)
 	}
 
 	return utils.PackOutputs(ABI, MethodRemoveRelayer, true)
@@ -171,7 +171,7 @@ func ApproveRemoveRelayer(native *native.NativeContract) ([]byte, error) {
 	//check witness
 	err := contract.ValidateOwner(native, params.Address)
 	if err != nil {
-		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+		return nil, fmt.Errorf("ApproveRemoveRelayer, checkWitness error: %v", err)
 	}
 
 	relayerListParam, err := getRelayerRemove(native, params.ID)
