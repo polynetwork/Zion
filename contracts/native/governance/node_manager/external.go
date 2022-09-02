@@ -29,7 +29,7 @@ import (
 
 var (
 	// genesis config
-	GenesisMaxCommissionChange, _        = new(big.Int).SetString("500", 10) // 50%
+	GenesisMaxCommissionChange, _        = new(big.Int).SetString("500", 10) // 5%
 	GenesisMinInitialStake               = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	GenesisMinProposalStake              = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
 	GenesisBlockPerEpoch                 = new(big.Int).SetUint64(400000)
@@ -37,10 +37,10 @@ var (
 	GenesisVoterValidatorNum      uint64 = 4
 
 	// const
-	MaxDescLength    int = 4000
+	MaxDescLength    int = 2000
 	MaxValidatorNum  int = 300
 	MaxUnlockingNum  int = 100
-	MaxStakeRate     Dec = NewDecFromBigInt(new(big.Int).SetUint64(5))
+	MaxStakeRate     Dec = NewDecFromBigInt(new(big.Int).SetUint64(6)) // user stake can not more than 5 times of self stake
 	MinBlockPerEpoch     = new(big.Int).SetUint64(10000)
 )
 
