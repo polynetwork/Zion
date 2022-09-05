@@ -36,13 +36,13 @@ $ make all
 
 利用 genesisTool 生成节点初始化配置文件
 ```
-./geth genesisTool generate <nodeNumber> --basePath <outputPath>
+./geth genesisTool generate --basePath <outputPath> --nodeCount <nodeCount> --nodePass <nodePass>
 ```
 
 以下是生成4节点配置文件示例：
 
 ```
-./geth genesisTool generate 4 --basePath ./genesisOutput
+./geth genesisTool generate --basePath ./genesisOutput --nodeCount 4 --nodePass 1234
 ```
 
 生成三份文件：
@@ -97,16 +97,31 @@ $ make all
 ```json
 [
 	{
-		"address": "0x3cb93deC5106917488cfFbfd2c074A661bb60892",
-		"nodeKey": "0xff2a67681b7cf0560db2fd045f0c063ea3a03a7953f98ac43aae82d41fce3ae7",
-		"pubKey": "0x02f460929ebaf0ec94f872246c653a5e47c137ca9c8bddb2c872c6cd96d209311e",
-		"static": "enode://f460929ebaf0ec94f872246c653a5e47c137ca9c8bddb2c872c6cd96d209311ec2380242061e0f5cc6015d137a51430877167c4442099d86a608d2af8b857004@127.0.0.1:30300?discport=0"
-	},
-	{
-		"address": "0x772C06cE1532C1e0D2E5650B7EF043fCc804002A",
-		"nodeKey": "0x46f4d08455704060e27ad398ea3a382d22144cf823363ab13365bc8cd6a7bd01",
-		"pubKey": "0x0293a5568672fa325a1c36b0a73c974489c36d6658f71bf56da7b3aa6cc46a3397",
-		"static": "enode://93a5568672fa325a1c36b0a73c974489c36d6658f71bf56da7b3aa6cc46a3397688a6ae289f7cde8c585c6368aa5a92e0eeedc62888f9cb16c274681e1f040c2@127.0.0.1:30300?discport=0"
+		"address": "0x1D3a781db87D57a2091f968734186c8C72353116",
+		"nodeKey": "0x1ca9dcf44053a4241b2b8350b08dcade1b52ecba340237be69004caf76d6ab43",
+		"keystore": {
+			"address": "1d3a781db87d57a2091f968734186c8c72353116",
+			"crypto": {
+				"cipher": "aes-128-ctr",
+				"ciphertext": "2d5c5cc5ff6c7e2f2e49cb53859df5457fbada13b179f41e160bb6d80897d87f",
+				"cipherparams": {
+					"iv": "978375653c56f3255763bd509336782b"
+				},
+				"kdf": "scrypt",
+				"kdfparams": {
+					"dklen": 32,
+					"n": 262144,
+					"p": 1,
+					"r": 8,
+					"salt": "de8296b9cdb58b1f220841c1c84bbc2452a87fbce2d4d7c9cfbaf16e5501dee2"
+				},
+				"mac": "40cecc8a51db200f9afde4b85d7715951be0295723d148dfaa46ca7da20b0643"
+			},
+			"id": "93415801-0d57-4d62-8329-f82ebae37939",
+			"version": 3
+		},
+		"pubKey": "0x02b68faf75dd7ec8f2e9a3a23354795069c77e7955ee6b2bdb42e8858d06968a2a",
+		"static": "enode://b68faf75dd7ec8f2e9a3a23354795069c77e7955ee6b2bdb42e8858d06968a2a4bfe1073f3a74e3b61b3efa86bb25d655b664a2c106c5fbc07b4455039f84742@127.0.0.1:30300?discport=0"
 	},
     ........
 ```
@@ -144,7 +159,7 @@ $ cp *.json /your/instal/folder/setup/.
 cd setup
 ```
 
-顺序修改node0-node3中的nodekey和pubkey，nodekey需要去除0x前缀
+顺序修改node0-node3中的nodekey和pubkey，nodekey为keystore, pubkey为pubKey
 
 ### 1.4.4. 修改setup/static-nodes.json的ip和端口
 
