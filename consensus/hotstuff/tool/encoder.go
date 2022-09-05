@@ -23,12 +23,14 @@ import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
 	"fmt"
+	"strings"
+
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
-	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
 	//"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -55,9 +57,10 @@ func Encode(validators []common.Address) (string, error) {
 }
 
 type Node struct {
-	Address string
-	NodeKey string
-	Static  string
+	Address  string
+	NodeKey  string
+	Static   string
+	KeyStore string
 }
 
 func SortNodes(src []*Node) []*Node {

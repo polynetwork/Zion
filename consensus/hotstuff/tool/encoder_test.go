@@ -20,8 +20,10 @@ package tool
 
 import (
 	"encoding/json"
+	"log"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -138,6 +140,22 @@ func TestEncodeSalt(t *testing.T) {
 func TestGenerateAndEncode(t *testing.T) {
 	nodes := generateNodes(7)
 	dumpNodes(t, nodes)
+}
+
+func TestGenerateKeyStore(t *testing.T) {
+	nodekey := "26cc96a0d256d45e1515bf325bec1925746d796b3637b147f35a01d6c2d6399b"
+	passphrase := "Onchain@Maas"
+
+	privateKey, err := crypto.HexToECDSA(nodekey)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	keyjson, err := keystore.GenerateKeyJson(privateKey, passphrase)
+	if err != nil {
+		t.Fatalf("Error encrypting key: %v", err)
+	}
+	log.Println(string(keyjson))
 }
 
 func dumpNodes(t *testing.T, nodes []*Node) {

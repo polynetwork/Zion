@@ -28,31 +28,31 @@ import (
 
 type MaasGenesis struct {
 	Config struct {
-		ChainId uint64 `json:"chainId"`
-		HomesteadBlock uint64 `json:"homesteadBlock"`
-		Eip150Block uint64 `json:"eip150Block"`
-		Eip155Block uint64 `json:"eip155Block"`
-		Eip158Block uint64 `json:"eip158Block"`
-		ByzantiumBlock uint64 `json:"byzantiumBlock"`
+		ChainId             uint64 `json:"chainId"`
+		HomesteadBlock      uint64 `json:"homesteadBlock"`
+		Eip150Block         uint64 `json:"eip150Block"`
+		Eip155Block         uint64 `json:"eip155Block"`
+		Eip158Block         uint64 `json:"eip158Block"`
+		ByzantiumBlock      uint64 `json:"byzantiumBlock"`
 		ConstantinopleBlock uint64 `json:"constantinopleBlock"`
-		PetersburgBlock uint64 `json:"petersburgBlock"`
-		IstanbulBlock uint64 `json:"istanbulBlock"`
-		HotStuff struct {
+		PetersburgBlock     uint64 `json:"petersburgBlock"`
+		IstanbulBlock       uint64 `json:"istanbulBlock"`
+		HotStuff            struct {
 			Protocol string `json:"protocol"`
 		} `json:"hotstuff"`
 	} `json:"config"`
 	Alloc map[string]struct {
 		PublicKey string `json:"publicKey"`
-		Balance string `json:"balance"`
+		Balance   string `json:"balance"`
 	} `json:"alloc"`
-	Coinbase string `json:"coinbase"`
+	Coinbase   string `json:"coinbase"`
 	Difficulty string `json:"difficulty"`
-	ExtraData string `json:"extraData"`
-	GasLimit string `json:"gasLimit"`
-	Nonce string `json:"nonce"`
-	Mixhash string `json:"mixhash"`
+	ExtraData  string `json:"extraData"`
+	GasLimit   string `json:"gasLimit"`
+	Nonce      string `json:"nonce"`
+	Mixhash    string `json:"mixhash"`
 	ParentHash string `json:"parentHash"`
-	Timestamp string `json:"timestamp"`
+	Timestamp  string `json:"timestamp"`
 }
 
 func (m *MaasGenesis) Encode() (string, error) {
@@ -66,26 +66,27 @@ func (m *MaasGenesis) Decode(data string) error {
 	return err
 }
 
-
 // Default genesis is not a valid block
 // it's used only for initialization purpose
 func (m *MaasGenesis) Default() {
-	m.Config =  struct{
-		ChainId uint64 `json:"chainId"`
-		HomesteadBlock uint64 `json:"homesteadBlock"`
-		Eip150Block uint64 `json:"eip150Block"`
-		Eip155Block uint64 `json:"eip155Block"`
-		Eip158Block uint64 `json:"eip158Block"`
-		ByzantiumBlock uint64 `json:"byzantiumBlock"`
+	m.Config = struct {
+		ChainId             uint64 `json:"chainId"`
+		HomesteadBlock      uint64 `json:"homesteadBlock"`
+		Eip150Block         uint64 `json:"eip150Block"`
+		Eip155Block         uint64 `json:"eip155Block"`
+		Eip158Block         uint64 `json:"eip158Block"`
+		ByzantiumBlock      uint64 `json:"byzantiumBlock"`
 		ConstantinopleBlock uint64 `json:"constantinopleBlock"`
-		PetersburgBlock uint64 `json:"petersburgBlock"`
-		IstanbulBlock uint64 `json:"istanbulBlock"`
-		HotStuff struct {
+		PetersburgBlock     uint64 `json:"petersburgBlock"`
+		IstanbulBlock       uint64 `json:"istanbulBlock"`
+		HotStuff            struct {
 			Protocol string `json:"protocol"`
 		} `json:"hotstuff"`
 	}{
-		10898,0,0,0,0,0,0,0,0,
-		struct {Protocol string `json:"protocol"`} {
+		10898, 0, 0, 0, 0, 0, 0, 0, 0,
+		struct {
+			Protocol string `json:"protocol"`
+		}{
 			"basic",
 		},
 	}
@@ -106,12 +107,11 @@ func DumpGenesis(filePaths [3]string, contents [3]string) error {
 		if err != nil {
 			return err
 		}
-		f,err := os.Create(file_)
-		defer f.Close()
-
-		if err !=nil {
+		f, err := os.Create(file_)
+		if err != nil {
 			return err
 		}
+		defer f.Close()
 		_, err = f.Write([]byte(contents[k]))
 		if err != nil {
 			return err
@@ -130,18 +130,18 @@ func ensureBaseDir(fpath string) error {
 	return os.MkdirAll(baseDir, 0755)
 }
 
-
 func DefaultBasePath() (basePath string) {
 	exePath, _ := os.Executable()
 	dir := filepath.Dir(exePath) + "/"
 	return dir
 }
 
-type Node struct{
-	Address string `json:"address"`
-	NodeKey string `json:"nodeKey"`
-	PubKey string `json:"pubKey"`
-	Static string `json:"static"`
+type Node struct {
+	Address  string      `json:"address"`
+	NodeKey  string      `json:"nodeKey"`
+	KeyStore interface{} `json:"keystore"`
+	PubKey   string      `json:"pubKey"`
+	Static   string      `json:"static"`
 }
 
 func (m *Node) Encode() (string, error) {

@@ -236,7 +236,7 @@ var (
 	}
 	WhitelistFlag = cli.StringFlag{
 		Name:  "whitelist",
-		Usage: "Comma separated block number-to-hash mappings to enforce (<number>=<hash>)",
+		Usage: "Only address in whitelist can connect",
 	}
 	BloomFilterSizeFlag = cli.Uint64Flag{
 		Name:  "bloomfilter.size",
@@ -501,7 +501,7 @@ var (
 		Name:  "allow-insecure-unlock",
 		Usage: "Allow insecure account unlocking when account-related RPCs are exposed by http",
 	}
-	NodeWhitePath = cli.StringFlag{
+	NodeWhitePathFlag = cli.StringFlag{
 		Name:  "node.whitelist",
 		Usage: "node whitelist config file path",
 	}
@@ -1251,10 +1251,10 @@ func SetNodeConfig(ctx *cli.Context, cfg *node.Config) {
 		cfg.InsecureUnlockAllowed = ctx.GlobalBool(InsecureUnlockAllowedFlag.Name)
 	}
 	// set node whitelist file path
-	if !ctx.GlobalIsSet(NodeWhitePath.Name) {
-		ctx.GlobalSet(NodeWhitePath.Name, "node-whitelist.json")
+	if !ctx.GlobalIsSet(NodeWhitePathFlag.Name) {
+		ctx.GlobalSet(NodeWhitePathFlag.Name, "node-whitelist.json")
 	}
-	cfg.NodeWhitePath = ctx.GlobalString(NodeWhitePath.Name)
+	cfg.NodeWhitePath = ctx.GlobalString(NodeWhitePathFlag.Name)
 	// params.StartNodeWhiteLoadTask(cfg.NodeWhitePath)
 }
 

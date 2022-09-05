@@ -37,6 +37,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/google/uuid"
 )
 
 var (
@@ -504,4 +505,25 @@ func zeroKey(k *ecdsa.PrivateKey) {
 	for i := range b {
 		b[i] = 0
 	}
+}
+
+func GenerateKeyJson(key *ecdsa.PrivateKey, password string) (string, error) {
+	// Create the keyfile object with a random UUID.
+	UUID, err := uuid.NewRandom()
+	if err != nil {
+		return "", err
+	}
+	keyStore := &Key{
+		Id:         UUID,
+		Address:    crypto.PubkeyToAddress(key.PublicKey),
+		PrivateKey: key,
+	}
+
+	// Encrypt key with passphrase.
+	scryptN, scryptP := StandardScryptN, StandardScryptP
+	keyjson, err := EncryptKey(keyStore, password, scryptN, scryptP)
+	if err != nil {
+		return "", err
+	}
+	return string(keyjson), nil
 }
