@@ -4,6 +4,10 @@ echo "input node index"
 read nodeIndex
 node="node$nodeIndex"
 
+echo "input node pass"
+read -s pass
+export NODE_PASS=$pass
+
 if [ ! -f $node/genesis.json ]
 then
 	mkdir -p $node/geth/

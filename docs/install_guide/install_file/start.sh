@@ -4,6 +4,10 @@ echo "input node index"
 read nodeIndex
 node="node$nodeIndex"
 
+echo "input node pass"
+read -s pass
+export NODE_PASS=$pass
+
 startP2PPort=30300
 startRPCPort=8545
 mod=`expr $nodeIndex`
