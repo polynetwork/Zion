@@ -326,6 +326,9 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 	if err := utils.UnpackMethod(ABI, MethodStake, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("Stake, unpack params error: %v", err)
 	}
+	if params.Amount.Sign() <= 0 {
+		return nil, fmt.Errorf("Stake, amount must be positive")
+	}
 	amount := NewDecFromBigInt(params.Amount)
 
 	// check to see if the pubkey has been registered
@@ -381,6 +384,9 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 	params := &UnStakeParam{}
 	if err := utils.UnpackMethod(ABI, MethodUnStake, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("UnStake, unpack params error: %v", err)
+	}
+	if params.Amount.Sign() <= 0 {
+		return nil, fmt.Errorf("UnStake, amount must be positive")
 	}
 	amount := NewDecFromBigInt(params.Amount)
 
