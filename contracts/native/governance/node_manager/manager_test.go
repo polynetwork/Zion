@@ -421,6 +421,81 @@ func TestStake(t *testing.T) {
 	assert.Equal(t, validator.Status, Lock)
 }
 
+func TestChangeEpoch(t *testing.T) {
+	Init()
+	blockNumber := big.NewInt(0)
+	extra := uint64(21000000000000)
+	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
+
+	type ValidatorKey struct {
+		ConsensusAddr common.Address
+		StakeAddress  common.Address
+	}
+	// create validator
+	loop := 6
+	validatorsKey := make([]*ValidatorKey, 0, loop)
+	for i := 0; i < loop; i++ {
+		pk, _ := crypto.GenerateKey()
+		consensusAddr := crypto.PubkeyToAddress(pk.PublicKey)
+		caller := crypto.PubkeyToAddress(*acct)
+		sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+		param := new(CreateValidatorParam)
+		param.ConsensusAddress = consensusAddr
+		param.SignerAddress = consensusAddr
+		param.ProposalAddress = caller
+		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+		param.Commission = new(big.Int).SetUint64(2000)
+		param.Desc = "test"
+		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
+		input, err := param.Encode()
+		assert.Nil(t, err)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+		_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+	}
+
+	blockNumber = new(big.Int).SetUint64(399999)
+	// change epoch
+	input, err := utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	epochInfo, err := GetCurrentEpochInfoImpl(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, epochInfo.ID, common.Big2)
+	fmt.Println(epochInfo.Validators)
+
+	//stake
+	pkStake, _ := crypto.GenerateKey()
+	staker := &pkStake.PublicKey
+	stakeAddress := crypto.PubkeyToAddress(*staker)
+	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+	param1 := new(StakeParam)
+	param1.ConsensusAddress = validatorsKey[4].ConsensusAddr
+	param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
+	input, err = param1.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	blockNumber = new(big.Int).SetUint64(799999)
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	epochInfo, err = GetCurrentEpochInfoImpl(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, epochInfo.ID, common.Big3)
+	fmt.Println(epochInfo.Validators)
+}
+
 func TestDistribute(t *testing.T) {
 	Init()
 	blockNumber := big.NewInt(399999)
