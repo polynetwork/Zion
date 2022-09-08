@@ -352,6 +352,10 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Stake, validator.SelfStake.Add error: %v", err)
 		}
+		validator.TotalStake, err = validator.TotalStake.Add(amount)
+		if err != nil {
+			return nil, fmt.Errorf("Stake, validator.TotalStake.Add error: %v", err)
+		}
 	} else {
 		validator.TotalStake, err = validator.TotalStake.Add(amount)
 		if err != nil {
