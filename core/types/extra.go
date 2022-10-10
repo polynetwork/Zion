@@ -22,8 +22,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -40,6 +40,8 @@ var (
 )
 
 type HotstuffExtra struct {
+	StartHeight   uint64           // denote the epoch start height
+	EndHeight     uint64           // the epoch end height
 	Validators    []common.Address // consensus participants address for next epoch, and in the first block, it contains all genesis validators. keep empty if no epoch change.
 	Seal          []byte           // proposer signature
 	CommittedSeal [][]byte         // consensus participants signatures and it's size should be greater than 2/3 of validators
@@ -49,6 +51,8 @@ type HotstuffExtra struct {
 // EncodeRLP serializes ist into the Ethereum RLP format.
 func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 	return rlp.Encode(w, []interface{}{
+		ist.StartHeight,
+		ist.EndHeight,
 		ist.Validators,
 		ist.Seal,
 		ist.CommittedSeal,
@@ -59,6 +63,8 @@ func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
 func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	var extra struct {
+		Height        uint64
+		EndHeight     uint64
 		Validators    []common.Address
 		Seal          []byte
 		CommittedSeal [][]byte
@@ -67,7 +73,7 @@ func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&extra); err != nil {
 		return err
 	}
-	ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
+	ist.StartHeight, ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.Height, extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
 	return nil
 }
 
@@ -77,13 +83,16 @@ func (ist *HotstuffExtra) Dump() string {
 	for _, v := range ist.CommittedSeal {
 		seals = append(seals, hexutil.Encode(v))
 	}
-	return fmt.Sprintf("{Validators: %v, Seal: %s, CommittedSeal: %v}", ist.Validators, hexutil.Encode(ist.Seal), seals)
+	return fmt.Sprintf("{StartHeight: %v, EndHeight: %v, Validators: %v}", ist.StartHeight, ist.EndHeight, ist.Validators)
 }
 
 // ExtractHotstuffExtra extracts all values of the HotstuffExtra from the header. It returns an
 // error if the length of the given extra-data is less than 32 bytes or the extra-data can not
 // be decoded.
 func ExtractHotstuffExtra(h *Header) (*HotstuffExtra, error) {
+	if h == nil || h.Extra == nil {
+		return nil, fmt.Errorf("invalid header")
+	}
 	return ExtractHotstuffExtraPayload(h.Extra)
 }
 
@@ -103,18 +112,16 @@ func ExtractHotstuffExtraPayload(extra []byte) (*HotstuffExtra, error) {
 // HotstuffFilteredHeader returns a filtered header which some information (like seal, committed seals)
 // are clean to fulfill the Istanbul hash rules. It returns nil if the extra-data cannot be
 // decoded/encoded by rlp.
-func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
+func HotstuffFilteredHeader(h *Header) *Header {
 	newHeader := CopyHeader(h)
 	extra, err := ExtractHotstuffExtra(newHeader)
 	if err != nil {
 		return nil
 	}
 
-	if !keepSeal {
-		extra.Seal = []byte{}
-	}
+	// fields of `seal` and `committedSeal` related with consensus voting and DON't participants in hash generating
+	extra.Seal = []byte{}
 	extra.CommittedSeal = [][]byte{}
-	//extra.Salt = []byte{}
 
 	payload, err := rlp.EncodeToBytes(&extra)
 	if err != nil {
@@ -126,7 +133,7 @@ func HotstuffFilteredHeader(h *Header, keepSeal bool) *Header {
 	return newHeader
 }
 
-func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address) error {
+func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address, epochStartHeight uint64, epochEndHeight uint64) error {
 	var buf bytes.Buffer
 
 	// compensate the lack bytes if header.Extra is not enough IstanbulExtraVanity bytes.
@@ -139,6 +146,8 @@ func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address) err
 		vals = []common.Address{}
 	}
 	ist := &HotstuffExtra{
+		StartHeight:   epochStartHeight,
+		EndHeight:     epochEndHeight,
 		Validators:    vals,
 		Seal:          []byte{},
 		CommittedSeal: [][]byte{},

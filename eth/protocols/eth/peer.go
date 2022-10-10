@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -540,6 +541,29 @@ func (p *Peer) RequestTxs(hashes []common.Hash) error {
 		})
 	}
 	return p2p.Send(p.rw, GetPooledTransactionsMsg, GetPooledTransactionsPacket(hashes))
+}
+
+// RequestStaticNodes fetches a batch of static nodes from a remote node
+func (p *Peer) RequestStaticNodes(local *enode.Node) error {
+	if p.Version() == HOTSTUFF {
+		id := rand.Uint64()
+
+		requestTracker.Track(p.id, p.version, GetStaticNodesMsg, StaticNodesMsg, id)
+		return p2p.Send(p.rw, GetStaticNodesMsg, &GetStaticNodesPacket{
+			RequestId: id,
+			Local:     local,
+		})
+	}
+	return nil
+}
+
+func (p *Peer) ReplyGetStaticNodes(list []*enode.Node) error {
+	if p.Version() == HOTSTUFF {
+		return p2p.Send(p.rw, StaticNodesMsg, &StaticNodesPacket{
+			List: list,
+		})
+	}
+	return nil
 }
 
 // Send writes an RLP-encoded message with the given code.

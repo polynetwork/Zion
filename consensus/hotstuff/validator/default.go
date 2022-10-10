@@ -145,6 +145,15 @@ func (valSet *defaultSet) CalcProposerByIndex(index uint64) {
 	valSet.proposer = valSet.validators[index]
 }
 
+func (valSet *defaultSet) String() string {
+	str := "["
+	for _, v := range valSet.validators {
+		str += v.Address().Hex() + " "
+	}
+	str += "]"
+	return str
+}
+
 func calcSeed(valSet hotstuff.ValidatorSet, proposer common.Address, round uint64) uint64 {
 	offset := 0
 	if idx, val := valSet.GetByAddress(proposer); val != nil {
@@ -263,7 +272,7 @@ func (valSet *defaultSet) CheckQuorum(committers []common.Address) error {
 
 func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
 
-func (valSet *defaultSet) Q() int { return int(math.Ceil(float64(2*valSet.Size()) / 3)) }
+func (valSet *defaultSet) Q() int { return valSet.Size() - valSet.F() }
 
 func (valSet *defaultSet) Policy() hotstuff.SelectProposerPolicy { return valSet.policy }
 
@@ -272,5 +281,20 @@ func (valSet *defaultSet) Cmp(src hotstuff.ValidatorSet) bool {
 	if n != valSet.Size() || n != src.Size() {
 		return false
 	}
+	return true
+}
+
+func (valSet *defaultSet) Equal(src hotstuff.ValidatorSet) bool {
+	for _, v := range valSet.validators {
+		if index, _ := src.GetByAddress(v.Address()); index < 0 {
+			return false
+		}
+	}
+	for _, v := range src.AddressList() {
+		if index, _ := valSet.GetByAddress(v); index < 0 {
+			return false
+		}
+	}
+
 	return true
 }

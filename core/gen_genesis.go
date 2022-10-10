@@ -15,20 +15,24 @@ import (
 
 var _ = (*genesisSpecMarshaling)(nil)
 
+// MarshalJSON marshals as JSON.
 func (g Genesis) MarshalJSON() ([]byte, error) {
 	type Genesis struct {
-		Config     *params.ChainConfig                         `json:"config"`
-		Nonce      math.HexOrDecimal64                         `json:"nonce"`
-		Timestamp  math.HexOrDecimal64                         `json:"timestamp"`
-		ExtraData  hexutil.Bytes                               `json:"extraData"`
-		GasLimit   math.HexOrDecimal64                         `json:"gasLimit"   gencodec:"required"`
-		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
-		Mixhash    common.Hash                                 `json:"mixHash"`
-		Coinbase   common.Address                              `json:"coinbase"`
-		Alloc      map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
-		Number     math.HexOrDecimal64                         `json:"number"`
-		GasUsed    math.HexOrDecimal64                         `json:"gasUsed"`
-		ParentHash common.Hash                                 `json:"parentHash"`
+		Config           *params.ChainConfig                         `json:"config"`
+		Nonce            math.HexOrDecimal64                         `json:"nonce"`
+		Timestamp        math.HexOrDecimal64                         `json:"timestamp"`
+		ExtraData        hexutil.Bytes                               `json:"extraData"`
+		GasLimit         math.HexOrDecimal64                         `json:"gasLimit"   gencodec:"required"`
+		Difficulty       *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
+		Mixhash          common.Hash                                 `json:"mixHash"`
+		Coinbase         common.Address                              `json:"coinbase"`
+		Alloc            map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
+		Governance       GenesisGovernance                           `json:"governance" gencodec:"required"`
+		CommunityRate    *big.Int                                    `json:"community_rate" gencodec:"required"`
+		CommunityAddress common.Address                              `json:"community_address" gencodec:"required"`
+		Number           math.HexOrDecimal64                         `json:"number"`
+		GasUsed          math.HexOrDecimal64                         `json:"gasUsed"`
+		ParentHash       common.Hash                                 `json:"parentHash"`
 	}
 	var enc Genesis
 	enc.Config = g.Config
@@ -45,26 +49,33 @@ func (g Genesis) MarshalJSON() ([]byte, error) {
 			enc.Alloc[common.UnprefixedAddress(k)] = v
 		}
 	}
+	enc.Governance = g.Governance
+	enc.CommunityRate = g.CommunityRate
+	enc.CommunityAddress = g.CommunityAddress
 	enc.Number = math.HexOrDecimal64(g.Number)
 	enc.GasUsed = math.HexOrDecimal64(g.GasUsed)
 	enc.ParentHash = g.ParentHash
 	return json.Marshal(&enc)
 }
 
+// UnmarshalJSON unmarshals from JSON.
 func (g *Genesis) UnmarshalJSON(input []byte) error {
 	type Genesis struct {
-		Config     *params.ChainConfig                         `json:"config"`
-		Nonce      *math.HexOrDecimal64                        `json:"nonce"`
-		Timestamp  *math.HexOrDecimal64                        `json:"timestamp"`
-		ExtraData  *hexutil.Bytes                              `json:"extraData"`
-		GasLimit   *math.HexOrDecimal64                        `json:"gasLimit"   gencodec:"required"`
-		Difficulty *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
-		Mixhash    *common.Hash                                `json:"mixHash"`
-		Coinbase   *common.Address                             `json:"coinbase"`
-		Alloc      map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
-		Number     *math.HexOrDecimal64                        `json:"number"`
-		GasUsed    *math.HexOrDecimal64                        `json:"gasUsed"`
-		ParentHash *common.Hash                                `json:"parentHash"`
+		Config           *params.ChainConfig                         `json:"config"`
+		Nonce            *math.HexOrDecimal64                        `json:"nonce"`
+		Timestamp        *math.HexOrDecimal64                        `json:"timestamp"`
+		ExtraData        *hexutil.Bytes                              `json:"extraData"`
+		GasLimit         *math.HexOrDecimal64                        `json:"gasLimit"   gencodec:"required"`
+		Difficulty       *math.HexOrDecimal256                       `json:"difficulty" gencodec:"required"`
+		Mixhash          *common.Hash                                `json:"mixHash"`
+		Coinbase         *common.Address                             `json:"coinbase"`
+		Alloc            map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
+		Governance       *GenesisGovernance                          `json:"governance" gencodec:"required"`
+		CommunityRate    *big.Int                                    `json:"community_rate" gencodec:"required"`
+		CommunityAddress *common.Address                             `json:"community_address" gencodec:"required"`
+		Number           *math.HexOrDecimal64                        `json:"number"`
+		GasUsed          *math.HexOrDecimal64                        `json:"gasUsed"`
+		ParentHash       *common.Hash                                `json:"parentHash"`
 	}
 	var dec Genesis
 	if err := json.Unmarshal(input, &dec); err != nil {
@@ -103,6 +114,18 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	for k, v := range dec.Alloc {
 		g.Alloc[common.Address(k)] = v
 	}
+	if dec.Governance == nil {
+		return errors.New("missing required field 'governance' for Genesis")
+	}
+	g.Governance = *dec.Governance
+	if dec.CommunityRate == nil {
+		return errors.New("missing required field 'community_rate' for Genesis")
+	}
+	g.CommunityRate = dec.CommunityRate
+	if dec.CommunityAddress == nil {
+		return errors.New("missing required field 'community_address' for Genesis")
+	}
+	g.CommunityAddress = *dec.CommunityAddress
 	if dec.Number != nil {
 		g.Number = uint64(*dec.Number)
 	}

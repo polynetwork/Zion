@@ -19,40 +19,37 @@ package boot
 
 import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager"
-	mlp "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/mainchain/lock_proxy"
-	slp "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zion/sidechain/lock_proxy"
+	"github.com/ethereum/go-ethereum/contracts/native/economic"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/neo3_state_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/governance/relayer_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/proposal_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/signature_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/log"
 )
 
-func InitMainChainNativeContracts() {
-	header_sync.InitHeaderSync()
-	cross_chain_manager.InitCrossChainManager()
-	neo3_state_manager.InitNeo3StateManager()
+func InitNativeContracts() {
 	node_manager.InitNodeManager()
-	relayer_manager.InitRelayerManager()
+	economic.InitEconomic()
+	info_sync.InitInfoSync()
+	cross_chain_manager.InitCrossChainManager()
 	side_chain_manager.InitSideChainManager()
-	mlp.InitLockProxy()
+	neo3_state_manager.InitNeo3StateManager()
+	signature_manager.InitSignatureManager()
+	proposal_manager.InitProposalManager()
 
 	log.Info("Initialize main chain native contracts",
-		"header sync", utils.HeaderSyncContractAddress.Hex(),
+		"node manager", utils.NodeManagerContractAddress.Hex(),
+		"economic", utils.EconomicContractAddress.Hex(),
+		"header sync", utils.InfoSyncContractAddress.Hex(),
 		"cross chain manager", utils.CrossChainManagerContractAddress.Hex(),
-		"neo3 state manager", utils.Neo3StateManagerContractAddress.Hex(),
-		"node manager", utils.NodeManagerContractAddress.Hex(),
-		"relayer manager", utils.RelayerManagerContractAddress.Hex(),
 		"side chain manager", utils.SideChainManagerContractAddress.Hex(),
-		"native lock proxy", utils.LockProxyContractAddress.Hex())
-}
+		"relayer manager", utils.RelayerManagerContractAddress.Hex(),
+		"neo3 state manager", utils.Neo3StateManagerContractAddress.Hex(),
+		"signature manager", utils.SignatureManagerContractAddress.Hex(),
+		"proposal manager", utils.ProposalManagerContractAddress.Hex(),
+	)
 
-func InitSideChainNativeContracts() {
-	node_manager.InitNodeManager()
-	slp.InitLockProxy()
-	log.Info("Initialize side chain native contracts",
-		"node manager", utils.NodeManagerContractAddress.Hex(),
-		"native lock proxy", utils.LockProxyContractAddress.Hex())
 }

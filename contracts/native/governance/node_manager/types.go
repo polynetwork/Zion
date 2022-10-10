@@ -19,262 +19,308 @@
 package node_manager
 
 import (
-	"fmt"
-	"io"
-	"math"
-	"strings"
-	"sync/atomic"
-
 	"github.com/ethereum/go-ethereum/common"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
+	"math"
+	"math/big"
+	"sync/atomic"
 )
 
-type PeerInfo struct {
-	PubKey  string
-	Address common.Address
-}
-
-func (m *PeerInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.PubKey, m.Address})
-}
-
-func (m *PeerInfo) DecodeRLP(s *rlp.Stream) error {
-	var peer struct {
-		PubKey  string
-		Address common.Address
-	}
-
-	if err := s.Decode(&peer); err != nil {
-		return err
-	}
-	m.PubKey, m.Address = peer.PubKey, peer.Address
-	return nil
-}
-
-func (m *PeerInfo) String() string {
-	return fmt.Sprintf("{Address: %s PubKey: %s}", m.Address.Hex(), m.PubKey)
-}
-
-type Peers struct {
-	List []*PeerInfo
-}
-
-func (m *Peers) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.List})
-}
-
-func (m *Peers) DecodeRLP(s *rlp.Stream) error {
-	var peers struct {
-		List []*PeerInfo
-	}
-
-	if err := s.Decode(&peers); err != nil {
-		return err
-	}
-	m.List = peers.List
-	return nil
-}
-
-func (m *Peers) Len() int {
-	if m == nil || m.List == nil {
-		return 0
-	}
-	return len(m.List)
-}
-
-func (m *Peers) Less(i, j int) bool {
-	return strings.Compare(m.List[i].Address.Hex(), m.List[j].Address.Hex()) < 0
-}
-
-func (m *Peers) Swap(i, j int) {
-	m.List[i], m.List[j] = m.List[j], m.List[i]
-}
-
-func (m *Peers) Copy() *Peers {
-	enc, err := rlp.EncodeToBytes(m)
-	if err != nil {
-		return nil
-	}
-	var cp *Peers
-	if err := rlp.DecodeBytes(enc, &cp); err != nil {
-		return nil
-	}
-	return cp
-}
-
-type ProposalStatusType uint8
+type LockStatus uint8
 
 const (
-	ProposalStatusUnknown ProposalStatusType = 0
-	ProposalStatusPropose ProposalStatusType = 1
-	ProposalStatusPassed  ProposalStatusType = 2
+	Unspecified LockStatus = 0
+	Unlock      LockStatus = 1
+	Lock        LockStatus = 2
+	Remove      LockStatus = 3
 )
 
-func (p ProposalStatusType) String() string {
-	switch p {
-	case ProposalStatusPropose:
-		return "STATUS_PROPOSE"
-	case ProposalStatusPassed:
-		return "STATUS_PASSED"
-	default:
-		return "STATUS_UNKNOWN"
+type AllValidators struct {
+	AllValidators []common.Address
+}
+
+func (m *AllValidators) Decode(payload []byte) error {
+	var data struct {
+		AllValidators []byte
 	}
+	if err := utils.UnpackOutputs(ABI, MethodGetAllValidators, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.AllValidators, m)
+}
+
+type Validator struct {
+	StakeAddress     common.Address
+	ConsensusAddress common.Address
+	SignerAddress    common.Address
+	ProposalAddress  common.Address
+	Commission       *Commission
+	Status           LockStatus
+	Jailed           bool
+	UnlockHeight     *big.Int
+	TotalStake       Dec
+	SelfStake        Dec
+	Desc             string
+}
+
+func (m *Validator) Decode(payload []byte) error {
+	var data struct {
+		Validator []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetValidator, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.Validator, m)
+}
+
+// IsLocked checks if the validator status equals Locked
+func (m Validator) IsLocked() bool {
+	return m.Status == Lock
+}
+
+// IsUnlocked checks if the validator status equals Unlocked
+func (m Validator) IsUnlocked(height *big.Int) bool {
+	return m.Status == Unlock && m.UnlockHeight.Cmp(height) <= 0
+}
+
+// IsUnlocking checks if the validator status equals Unlocking
+func (m Validator) IsUnlocking(height *big.Int) bool {
+	return m.Status == Unlock && m.UnlockHeight.Cmp(height) > 0
+}
+
+// IsRemoved checks if the validator status equals Unlocked
+func (m Validator) IsRemoved(height *big.Int) bool {
+	return m.Status == Remove && m.UnlockHeight.Cmp(height) <= 0
+}
+
+// IsRemoving checks if the validator status equals Unlocking
+func (m Validator) IsRemoving(height *big.Int) bool {
+	return m.Status == Remove && m.UnlockHeight.Cmp(height) > 0
+}
+
+type Commission struct {
+	Rate         Dec
+	UpdateHeight *big.Int
+}
+
+type GlobalConfig struct {
+	MaxCommissionChange   *big.Int
+	MinInitialStake       *big.Int
+	MinProposalStake      *big.Int
+	BlockPerEpoch         *big.Int
+	ConsensusValidatorNum uint64
+	VoterValidatorNum     uint64
+}
+
+func (m *GlobalConfig) Decode(payload []byte) error {
+	var data struct {
+		GlobalConfig []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetGlobalConfig, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.GlobalConfig, m)
+}
+
+type StakeInfo struct {
+	StakeAddress  common.Address
+	ConsensusAddr common.Address
+	Amount        Dec
+}
+
+func (m *StakeInfo) Decode(payload []byte) error {
+	var data struct {
+		StakeInfo []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetStakeInfo, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.StakeInfo, m)
+}
+
+type UnlockingInfo struct {
+	StakeAddress   common.Address
+	UnlockingStake []*UnlockingStake
+}
+
+func (m *UnlockingInfo) Decode(payload []byte) error {
+	var data struct {
+		UnlockingInfo []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetUnlockingInfo, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.UnlockingInfo, m)
+}
+
+type UnlockingStake struct {
+	Height           *big.Int
+	CompleteHeight   *big.Int
+	ConsensusAddress common.Address
+	Amount           Dec
 }
 
 type EpochInfo struct {
-	ID          uint64
-	Peers       *Peers
-	StartHeight uint64
-	Proposer    common.Address // hash generating without fields of `Proposer` and `Status`
-	Status      ProposalStatusType
-
-	hash atomic.Value
+	ID          *big.Int
+	Validators  []common.Address
+	Signers     []common.Address
+	Voters      []common.Address
+	Proposers   []common.Address
+	StartHeight *big.Int
+	EndHeight   *big.Int
 }
 
-func (m *EpochInfo) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ID, m.Peers, m.StartHeight, m.Proposer, uint8(m.Status)})
-}
-
-func (m *EpochInfo) DecodeRLP(s *rlp.Stream) error {
+func (m *EpochInfo) Decode(payload []byte) error {
 	var data struct {
-		ID          uint64
-		Peers       *Peers
-		StartHeight uint64
-		Proposer    common.Address
-		Status      uint8
+		EpochInfo []byte
 	}
-
-	if err := s.Decode(&data); err != nil {
+	if err := utils.UnpackOutputs(ABI, MethodGetCurrentEpochInfo, &data, payload); err != nil {
 		return err
 	}
-	m.ID, m.Peers, m.StartHeight, m.Proposer, m.Status = data.ID, data.Peers, data.StartHeight, data.Proposer, ProposalStatusType(data.Status)
-	return nil
+	return rlp.DecodeBytes(data.EpochInfo, m)
 }
 
-func (m *EpochInfo) String() string {
-	pstr := ""
-	if m.Peers != nil && m.Peers.List != nil {
-		for _, v := range m.Peers.List {
-			pstr += fmt.Sprintf("peer: %s, pubkey: %s\r\n", v.Address.Hex(), v.PubKey)
-		}
+func (m *EpochInfo) SignerQuorumSize() int {
+	if m == nil || m.Signers == nil {
+		return 0
 	}
-	return fmt.Sprintf("epochHash:%s\r\nepochId: %d\r\n%sstartHeight: %d\r\nproposer:%s\r\nstatus:%s",
-		m.Hash().Hex(), m.ID, pstr, m.StartHeight, m.Proposer.Hex(), m.Status.String())
+	total := len(m.Signers)
+	return int(math.Ceil(float64(2*total) / 3))
 }
 
-func (m *EpochInfo) Hash() common.Hash {
-	if hash := m.hash.Load(); hash != nil {
-		return hash.(common.Hash)
+func (m *EpochInfo) VoterQuorumSize() int {
+	if m == nil || m.Voters == nil {
+		return 0
 	}
-	var inf = struct {
-		ID          uint64
-		Peers       *Peers
-		StartHeight uint64
-	}{
-		ID:          m.ID,
-		Peers:       m.Peers,
-		StartHeight: m.StartHeight,
-	}
-	v := utils.RLPHash(inf)
-	m.hash.Store(v)
-	return v
+	total := len(m.Voters)
+	return int(math.Ceil(float64(2*total) / 3))
 }
 
-func (m *EpochInfo) Members() map[common.Address]struct{} {
-	if m == nil || m.Peers == nil || m.Peers.List == nil || len(m.Peers.List) == 0 {
-		return nil
+func (m *EpochInfo) ProposerQuorumSize() int {
+	if m == nil || m.Proposers == nil {
+		return 0
 	}
-	data := make(map[common.Address]struct{})
-	for _, v := range m.Peers.List {
-		data[v.Address] = struct{}{}
-	}
-	return data
+	total := len(m.Proposers)
+	return int(math.Ceil(float64(2*total) / 3))
 }
 
 func (m *EpochInfo) MemberList() []common.Address {
 	list := make([]common.Address, 0)
-	if m == nil || m.Peers == nil || m.Peers.List == nil || len(m.Peers.List) == 0 {
+	if m == nil || m.Validators == nil || len(m.Validators) == 0 {
 		return list
 	}
-	for _, v := range m.Peers.List {
-		list = append(list, v.Address)
+	for _, v := range m.Validators {
+		list = append(list, v)
 	}
 	return list
 }
 
-func (m *EpochInfo) QuorumSize() int {
-	if m == nil || m.Peers == nil {
-		return 0
-	}
-	total := m.Peers.Len()
-	return int(math.Ceil(float64(2*total) / 3))
+type AccumulatedCommission struct {
+	Amount Dec
 }
 
-func (m *EpochInfo) OldMemberNum(peers *Peers) int {
-	if m == nil || m.Peers == nil || m.Peers.List == nil || len(m.Peers.List) == 0 {
-		return 0
-	}
-	if peers == nil || peers.List == nil || len(peers.List) == 0 {
-		return 0
-	}
-
-	isOldMember := func(addr common.Address) bool {
-		for _, v := range m.Peers.List {
-			if v.Address == addr {
-				return true
-			}
-		}
-		return false
-	}
-
-	num := 0
-	for _, v := range peers.List {
-		if isOldMember(v.Address) {
-			num += 1
-		}
-	}
-	return num
-}
-
-type HashList struct {
-	List []common.Hash
-}
-
-func (m *HashList) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.List})
-}
-
-func (m *HashList) DecodeRLP(s *rlp.Stream) error {
+func (m *AccumulatedCommission) Decode(payload []byte) error {
 	var data struct {
-		List []common.Hash
+		AccumulatedCommission []byte
 	}
-
-	if err := s.Decode(&data); err != nil {
+	if err := utils.UnpackOutputs(ABI, MethodGetAccumulatedCommission, &data, payload); err != nil {
 		return err
 	}
-	m.List = data.List
-	return nil
+	return rlp.DecodeBytes(data.AccumulatedCommission, m)
+}
+
+type ValidatorAccumulatedRewards struct {
+	Rewards Dec
+	Period  uint64
+}
+
+func (m *ValidatorAccumulatedRewards) Decode(payload []byte) error {
+	var data struct {
+		ValidatorAccumulatedRewards []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetValidatorAccumulatedRewards, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.ValidatorAccumulatedRewards, m)
+}
+
+type ValidatorOutstandingRewards struct {
+	Rewards Dec
+}
+
+func (m *ValidatorOutstandingRewards) Decode(payload []byte) error {
+	var data struct {
+		ValidatorOutstandingRewards []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetValidatorOutstandingRewards, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.ValidatorOutstandingRewards, m)
+}
+
+type OutstandingRewards struct {
+	Rewards Dec
+}
+
+func (m *OutstandingRewards) Decode(payload []byte) error {
+	var data struct {
+		OutstandingRewards []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetOutstandingRewards, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.OutstandingRewards, m)
+}
+
+type StakeRewards struct {
+	Rewards Dec
+}
+
+func (m *StakeRewards) Decode(payload []byte) error {
+	var data struct {
+		StakeRewards []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetStakeRewards, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.StakeRewards, m)
+}
+
+type ValidatorSnapshotRewards struct {
+	AccumulatedRewardsRatio Dec // ratio already mul decimal
+	ReferenceCount          uint64
+}
+
+func (m *ValidatorSnapshotRewards) Decode(payload []byte) error {
+	var data struct {
+		ValidatorSnapshotRewards []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetValidatorSnapshotRewards, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.ValidatorSnapshotRewards, m)
+}
+
+type StakeStartingInfo struct {
+	StartPeriod uint64
+	Stake       Dec
+	Height      *big.Int
+}
+
+func (m *StakeStartingInfo) Decode(payload []byte) error {
+	var data struct {
+		StakeStartingInfo []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetStakeStartingInfo, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.StakeStartingInfo, m)
 }
 
 type AddressList struct {
 	List []common.Address
-}
-
-func (m *AddressList) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.List})
-}
-
-func (m *AddressList) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		List []common.Address
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.List = data.List
-	return nil
 }
 
 type ConsensusSign struct {
@@ -283,21 +329,6 @@ type ConsensusSign struct {
 	hash   atomic.Value
 }
 
-func (m *ConsensusSign) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Method, m.Input})
-}
-func (m *ConsensusSign) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Method string
-		Input  []byte
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.Method, m.Input = data.Method, data.Input
-	return nil
-}
 func (m *ConsensusSign) Hash() common.Hash {
 	if hash := m.hash.Load(); hash != nil {
 		return hash.(common.Hash)
@@ -312,4 +343,33 @@ func (m *ConsensusSign) Hash() common.Hash {
 	v := utils.RLPHash(inf)
 	m.hash.Store(v)
 	return v
+}
+
+type CommunityInfo struct {
+	CommunityRate    *big.Int
+	CommunityAddress common.Address
+}
+
+func (m *CommunityInfo) Decode(payload []byte) error {
+	var data struct {
+		CommunityInfo []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetCommunityInfo, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.CommunityInfo, m)
+}
+
+type TotalPool struct {
+	TotalPool Dec
+}
+
+func (m *TotalPool) Decode(payload []byte) error {
+	var data struct {
+		TotalPool []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetTotalPool, &data, payload); err != nil {
+		return err
+	}
+	return rlp.DecodeBytes(data.TotalPool, m)
 }

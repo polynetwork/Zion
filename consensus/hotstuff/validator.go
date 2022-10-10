@@ -85,8 +85,12 @@ type ValidatorSet interface {
 	Q() int
 	// Get speaker policy
 	Policy() SelectProposerPolicy
-	// Cmp compare with another validator set, return false if not the same
+	// Cmp compare with another validator set size, return false if the size not equal
 	Cmp(src ValidatorSet) bool
+	// Equal compare with another validator set, return false if not the same
+	Equal(src ValidatorSet) bool
+	// String retrieve the address hex slice
+	String() string
 }
 
 // ----------------------------------------------------------------------------

@@ -20,351 +20,730 @@ package node_manager
 
 import (
 	"errors"
+	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/rlp"
+
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
-const (
-	StartEpochID uint64 = 1 // epoch started from 1, NOT 0!
-)
+var StartEpochID = common.Big1 // epoch started from 1, NOT 0!
 
 var ErrEof = errors.New("EOF")
 
 // storage key prefix
 const (
-	SKP_EPOCH     = "st_epoch"
-	SKP_PROOF     = "st_proof"
-	SKP_PROPOSAL  = "st_proposal"
-	SKP_VOTE      = "st_vote"
-	SKP_VOTE_TO   = "st_vote_to"
-	SKP_CUR_EPOCH = "st_cur_epoch"
-	SKP_SIGN      = "st_sign"
-	SKP_SIGNER    = "st_signer"
+	SKP_GLOBAL_CONFIG                 = "st_global_config"
+	SKP_VALIDATOR                     = "st_validator"
+	SKP_ALL_VALIDATOR                 = "st_all_validator"
+	SKP_TOTAL_POOL                    = "st_lock_pool"
+	SKP_STAKE_INFO                    = "st_stake_info"
+	SKP_UNLOCK_INFO                   = "st_unlock_info"
+	SKP_CURRENT_EPOCH                 = "st_current_epoch"
+	SKP_EPOCH_INFO                    = "st_epoch_info"
+	SKP_ACCUMULATED_COMMISSION        = "st_accumulated_commission"
+	SKP_VALIDATOR_ACCUMULATED_REWARDS = "st_validator_accumulated_rewards"
+	SKP_VALIDATOR_OUTSTANDING_REWARDS = "st_validator_outstanding_rewards"
+	SKP_OUTSTANDING_REWARDS           = "st_outstanding_rewards"
+	SKP_VALIDATOR_SNAPSHOT_REWARDS    = "st_validator_snapshot_rewards"
+	SKP_STAKE_STARTING_INFO           = "st_stake_starting_info"
+	SKP_SIGN                          = "st_sign"
+	SKP_SIGNER                        = "st_signer"
+	SKP_COMMUNITY_INFO                = "st_community_info"
 )
 
-// ====================================================================
-//
-// `epoch` storage
-//
-// ====================================================================
-func storeEpoch(s *native.NativeContract, epoch *EpochInfo) error {
-	return setEpoch(s.GetCacheDB(), epoch)
-}
-
-func getEpoch(s *native.NativeContract, epochHash common.Hash) (*EpochInfo, error) {
-	key := epochKey(epochHash)
-	enc, err := get(s, key)
+func setAccumulatedCommission(s *native.NativeContract, consensusAddr common.Address, accumulatedCommission *AccumulatedCommission) error {
+	key := accumulatedCommissionKey(consensusAddr)
+	store, err := rlp.EncodeToBytes(accumulatedCommission)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("setAccumulatedCommission, serialize accumulatedCommission error: %v", err)
 	}
-
-	epoch := new(EpochInfo)
-	if err := rlp.DecodeBytes(enc, epoch); err != nil {
-		return nil, err
-	}
-
-	return epoch, nil
+	set(s, key, store)
+	return nil
 }
 
-func delEpoch(s *native.NativeContract, epochHash common.Hash) {
-	key := epochKey(epochHash)
+func getAccumulatedCommission(s *native.NativeContract, consensusAddr common.Address) (*AccumulatedCommission, error) {
+	accumulatedCommission := &AccumulatedCommission{}
+	key := accumulatedCommissionKey(consensusAddr)
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("getAccumulatedCommission, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, accumulatedCommission); err != nil {
+		return nil, fmt.Errorf("getAccumulatedCommission, deserialize accumulatedCommission error: %v", err)
+	}
+	return accumulatedCommission, nil
+}
+
+func delAccumulatedCommission(s *native.NativeContract, consensusAddr common.Address) {
+	key := accumulatedCommissionKey(consensusAddr)
 	del(s, key)
 }
 
-func setEpoch(s *state.CacheDB, epoch *EpochInfo) error {
-	hash := epoch.Hash()
-	key := epochKey(hash)
-
-	value, err := rlp.EncodeToBytes(epoch)
+func setValidatorAccumulatedRewards(s *native.NativeContract, consensusAddr common.Address, validatorAccumulatedRewards *ValidatorAccumulatedRewards) error {
+	key := validatorAccumulatedRewardsKey(consensusAddr)
+	store, err := rlp.EncodeToBytes(validatorAccumulatedRewards)
 	if err != nil {
-		return err
+		return fmt.Errorf("setValidatorAccumulatedRewards, serialize validatorAccumulatedRewards error: %v", err)
 	}
-
-	s.Put(key, value)
+	set(s, key, store)
 	return nil
 }
 
-// ====================================================================
-//
-// `current epoch hash` storage
-//
-// ====================================================================
-func storeCurrentEpochHash(s *native.NativeContract, epochHash common.Hash) {
-	key := curEpochKey()
-	set(s, key, epochHash.Bytes())
-}
-
-func getCurrentEpochHash(s *native.NativeContract) (common.Hash, error) {
-	key := curEpochKey()
-	value, err := get(s, key)
+func getValidatorAccumulatedRewards(s *native.NativeContract, consensusAddr common.Address) (*ValidatorAccumulatedRewards, error) {
+	validatorAccumulatedRewards := &ValidatorAccumulatedRewards{}
+	key := validatorAccumulatedRewardsKey(consensusAddr)
+	store, err := get(s, key)
 	if err != nil {
-		return common.EmptyHash, err
+		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, get store error: %v", err)
 	}
-	return common.BytesToHash(value), nil
+	if err := rlp.DecodeBytes(store, validatorAccumulatedRewards); err != nil {
+		return nil, fmt.Errorf("GetValidatorAccumulatedRewards, deserialize validatorAccumulatedRewards error: %v", err)
+	}
+	return validatorAccumulatedRewards, nil
 }
 
-// ====================================================================
-//
-// `epoch proof` storage
-//
-// ====================================================================
-
-func storeEpochProof(s *native.NativeContract, epochID uint64, epochHash common.Hash) {
-	key := epochProofKey(EpochProofHash(epochID))
-	set(s, key, epochHash.Bytes())
+func delValidatorAccumulatedRewards(s *native.NativeContract, consensusAddr common.Address) {
+	key := validatorAccumulatedRewardsKey(consensusAddr)
+	del(s, key)
 }
 
-func getEpochProof(s *native.NativeContract, epochID uint64) (common.Hash, error) {
-	key := epochProofKey(EpochProofHash(epochID))
-	value, err := get(s, key)
+func setValidatorOutstandingRewards(s *native.NativeContract, consensusAddr common.Address, validatorOutstandingRewards *ValidatorOutstandingRewards) error {
+	key := validatorOutstandingRewardsKey(consensusAddr)
+	store, err := rlp.EncodeToBytes(validatorOutstandingRewards)
 	if err != nil {
-		return common.EmptyHash, nil
+		return fmt.Errorf("setValidatorOutstandingRewards, serialize validatorOutstandingRewards error: %v", err)
 	}
-	return common.BytesToHash(value), nil
+	set(s, key, store)
+	return nil
 }
 
-var EpochProofDigest = common.HexToHash("e4bf3526f07c80af3a5de1411dd34471c71bdd5d04eedbfa1040da2c96802041")
-
-func EpochProofHash(epochID uint64) common.Hash {
-	enc := EpochProofDigest.Bytes()
-	enc = append(enc, utils.GetUint64Bytes(epochID)...)
-	return crypto.Keccak256Hash(enc)
-}
-
-// ====================================================================
-//
-// `epoch hash(proposal)` storage
-//
-// ====================================================================
-func storeProposal(s *native.NativeContract, epochID uint64, hash common.Hash) error {
-	list, err := getProposals(s, epochID)
+func getValidatorOutstandingRewards(s *native.NativeContract, consensusAddr common.Address) (*ValidatorOutstandingRewards, error) {
+	validatorOutstandingRewards := &ValidatorOutstandingRewards{}
+	key := validatorOutstandingRewardsKey(consensusAddr)
+	store, err := get(s, key)
 	if err != nil {
-		if err.Error() == "EOF" {
-			list = make([]common.Hash, 0)
-		} else {
-			return err
-		}
+		return nil, fmt.Errorf("getValidatorOutstandingRewards, get store error: %v", err)
 	}
-	list = append(list, hash)
-	return setProposals(s, epochID, list)
+	if err := rlp.DecodeBytes(store, validatorOutstandingRewards); err != nil {
+		return nil, fmt.Errorf("getValidatorOutstandingRewards, deserialize validatorOutstandingRewards error: %v", err)
+	}
+	return validatorOutstandingRewards, nil
 }
 
-func checkProposal(s *native.NativeContract, epochID uint64, epochHash common.Hash) bool {
-	list, err := getProposals(s, epochID)
-	if err != nil {
-		return false
-	}
-	for _, v := range list {
-		if v == epochHash {
-			return true
-		}
-	}
-	return false
+func delValidatorOutstandingRewards(s *native.NativeContract, consensusAddr common.Address) {
+	key := validatorOutstandingRewardsKey(consensusAddr)
+	del(s, key)
 }
 
-func findProposal(s *native.NativeContract, epochID uint64, epochHash common.Hash) bool {
-	list, err := getProposals(s, epochID)
+func setOutstandingRewards(s *native.NativeContract, outstandingRewards *OutstandingRewards) error {
+	key := outstandingRewardsKey()
+	store, err := rlp.EncodeToBytes(outstandingRewards)
 	if err != nil {
-		return false
+		return fmt.Errorf("setOutstandingRewards, serialize outstandingRewards error: %v", err)
 	}
-	for _, v := range list {
-		if v == epochHash {
-			return true
-		}
-	}
-	return false
+	set(s, key, store)
+	return nil
 }
 
-func totalProposalsNum(s *native.NativeContract, epochID uint64) int {
-	list, err := getProposals(s, epochID)
-	if err != nil {
-		return 0
+func getOutstandingRewards(s *native.NativeContract) (*OutstandingRewards, error) {
+	outstandingRewards := &OutstandingRewards{
+		Rewards: NewDecFromBigInt(new(big.Int)),
 	}
-	return len(list)
+	key := outstandingRewardsKey()
+	store, err := get(s, key)
+	if err == ErrEof {
+		return outstandingRewards, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getOutstandingRewards, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, outstandingRewards); err != nil {
+		return nil, fmt.Errorf("getOutstandingRewards, deserialize outstandingRewards error: %v", err)
+	}
+	return outstandingRewards, nil
 }
 
-func delProposal(s *native.NativeContract, epochID uint64, epochHash common.Hash) error {
-	list, err := getProposals(s, epochID)
+func increaseReferenceCount(s *native.NativeContract, consensusAddr common.Address, period uint64) error {
+	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, consensusAddr, period)
 	if err != nil {
-		return err
+		return fmt.Errorf("increaseReferenceCount, getValidatorSnapshotRewards error: %v", err)
 	}
+	if validatorSnapshotRewards.ReferenceCount > 2 {
+		panic("reference count should never exceed 2")
+	}
+	validatorSnapshotRewards.ReferenceCount++
+	err = setValidatorSnapshotRewards(s, consensusAddr, period, validatorSnapshotRewards)
+	if err != nil {
+		return fmt.Errorf("increaseReferenceCount, setValidatorSnapshotRewards error: %v", err)
+	}
+	return nil
+}
 
-	dst := make([]common.Hash, 0)
-	for _, v := range list {
-		if v == epochHash {
-			continue
-		} else {
-			dst = append(dst, v)
-		}
+func decreaseReferenceCount(s *native.NativeContract, consensusAddr common.Address, period uint64) error {
+	validatorSnapshotRewards, err := getValidatorSnapshotRewards(s, consensusAddr, period)
+	if err != nil {
+		return fmt.Errorf("decreaseReferenceCount, getValidatorSnapshotRewards error: %v", err)
 	}
-	if len(dst) > 0 {
-		return setProposals(s, epochID, dst)
+	if validatorSnapshotRewards.ReferenceCount == 0 {
+		panic("cannot set negative reference count")
+	}
+	validatorSnapshotRewards.ReferenceCount--
+	if validatorSnapshotRewards.ReferenceCount == 0 {
+		delValidatorSnapshotRewards(s, consensusAddr, period)
 	} else {
-		del(s, proposalsKey(epochID))
-		return nil
+		err = setValidatorSnapshotRewards(s, consensusAddr, period, validatorSnapshotRewards)
+		if err != nil {
+			return fmt.Errorf("decreaseReferenceCount, setValidatorSnapshotRewards error: %v", err)
+		}
 	}
-}
-
-func setProposals(s *native.NativeContract, epochID uint64, list []common.Hash) error {
-	value, err := rlp.EncodeToBytes(&HashList{List: list})
-	if err != nil {
-		return err
-	}
-
-	key := proposalsKey(epochID)
-	set(s, key, value)
 	return nil
 }
 
-func getProposals(s *native.NativeContract, epochID uint64) ([]common.Hash, error) {
-	key := proposalsKey(epochID)
-	enc, err := get(s, key)
+func setValidatorSnapshotRewards(s *native.NativeContract, consensusAddr common.Address, period uint64, validatorSnapshotRewards *ValidatorSnapshotRewards) error {
+	key := validatorSnapshotRewardsKey(consensusAddr, period)
+	store, err := rlp.EncodeToBytes(validatorSnapshotRewards)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("setValidatorSnapshotRewards, serialize validatorSnapshotRewards error: %v", err)
 	}
-
-	var data *HashList
-	if err := rlp.DecodeBytes(enc, &data); err != nil {
-		return nil, err
-	}
-	return data.List, nil
+	set(s, key, store)
+	return nil
 }
 
-func proposalsNum(s *native.NativeContract, epochID uint64, proposer common.Address) int {
-	list, err := getProposals(s, epochID)
+func getValidatorSnapshotRewards(s *native.NativeContract, consensusAddr common.Address, period uint64) (*ValidatorSnapshotRewards, error) {
+	validatorSnapshotRewards := &ValidatorSnapshotRewards{}
+	key := validatorSnapshotRewardsKey(consensusAddr, period)
+	store, err := get(s, key)
 	if err != nil {
-		return 0
+		return nil, fmt.Errorf("getValidatorSnapshotRewards, get store error: %v", err)
 	}
-	num := 0
-	for _, v := range list {
-		if epoch, err := getEpoch(s, v); err == nil {
-			if epoch.Proposer == proposer {
-				num += 1
+	if err := rlp.DecodeBytes(store, validatorSnapshotRewards); err != nil {
+		return nil, fmt.Errorf("getValidatorSnapshotRewards, deserialize validatorSnapshotRewards error: %v", err)
+	}
+	return validatorSnapshotRewards, nil
+}
+
+func delValidatorSnapshotRewards(s *native.NativeContract, consensusAddr common.Address, period uint64) {
+	key := validatorSnapshotRewardsKey(consensusAddr, period)
+	del(s, key)
+}
+
+func setStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, consensusAddr common.Address, stakeStartingInfo *StakeStartingInfo) error {
+	key := stakeStartingInfoKey(stakeAddress, consensusAddr)
+	store, err := rlp.EncodeToBytes(stakeStartingInfo)
+	if err != nil {
+		return fmt.Errorf("setStakeStartingInfo, serialize stakeStartingInfo error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func getStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, consensusAddr common.Address) (*StakeStartingInfo, error) {
+	stakeStartingInfo := &StakeStartingInfo{}
+	key := stakeStartingInfoKey(stakeAddress, consensusAddr)
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("getStakeStartingInfo, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, stakeStartingInfo); err != nil {
+		return nil, fmt.Errorf("getStakeStartingInfo, deserialize stakeStartingInfo error: %v", err)
+	}
+	return stakeStartingInfo, nil
+}
+
+func delStakeStartingInfo(s *native.NativeContract, stakeAddress common.Address, consensusAddr common.Address) {
+	key := stakeStartingInfoKey(stakeAddress, consensusAddr)
+	del(s, key)
+}
+
+func SetGlobalConfig(s *native.NativeContract, globalConfig *GlobalConfig) error {
+	if globalConfig.MaxCommissionChange.Cmp(PercentDecimal) > 0 {
+		return fmt.Errorf("SetGlobalConfig, MaxCommissionChange over size")
+	}
+	key := globalConfigKey()
+	store, err := rlp.EncodeToBytes(globalConfig)
+	if err != nil {
+		return fmt.Errorf("setGlobalConfig, serialize globalConfig error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func setGenesisGlobalConfig(s *state.CacheDB, globalConfig *GlobalConfig) error {
+	if globalConfig.MaxCommissionChange.Cmp(PercentDecimal) > 0 {
+		return fmt.Errorf("setGenesisGlobalConfig, MaxCommissionChange over size")
+	}
+	key := globalConfigKey()
+	store, err := rlp.EncodeToBytes(globalConfig)
+	if err != nil {
+		return fmt.Errorf("setGenesisGlobalConfig, serialize globalConfig error: %v", err)
+	}
+	customSet(s, key, store)
+	return nil
+}
+
+func GetGlobalConfigImpl(s *native.NativeContract) (*GlobalConfig, error) {
+	key := globalConfigKey()
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetGlobalConfigImpl, get store error: %v", err)
+	}
+	globalConfig := new(GlobalConfig)
+	if err := rlp.DecodeBytes(store, globalConfig); err != nil {
+		return nil, fmt.Errorf("GetGlobalConfigImpl, deserialize globalConfig error: %v", err)
+	}
+	return globalConfig, nil
+}
+
+func GetGlobalConfigFromDB(s *state.StateDB) (*GlobalConfig, error) {
+	cache := (*state.CacheDB)(s)
+
+	globalConfig := new(GlobalConfig)
+	key := globalConfigKey()
+	store, err := customGet(cache, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetGlobalConfigFromDB, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, globalConfig); err != nil {
+		return nil, fmt.Errorf("GetGlobalConfigFromDB, deserialize globalConfig error: %v", err)
+	}
+	return globalConfig, nil
+}
+
+func addToAllValidators(s *native.NativeContract, consensusAddr common.Address) error {
+	allValidators, err := getAllValidators(s)
+	if err != nil {
+		return fmt.Errorf("addToAllValidators, getAllValidators error: %v", err)
+	}
+	allValidators.AllValidators = append(allValidators.AllValidators, consensusAddr)
+	if len(allValidators.AllValidators) > MaxValidatorNum {
+		return fmt.Errorf("addToAllValidators, validator num is more than max")
+	}
+	err = setAllValidators(s, allValidators)
+	if err != nil {
+		return fmt.Errorf("addToAllValidators, set all validators error: %v", err)
+	}
+	return nil
+}
+
+func removeFromAllValidators(s *native.NativeContract, consensusAddr common.Address) error {
+	allValidators, err := getAllValidators(s)
+	if err != nil {
+		return fmt.Errorf("removeFromAllValidators, getAllValidators error: %v", err)
+	}
+	j := 0
+	for _, validator := range allValidators.AllValidators {
+		if validator != consensusAddr {
+			allValidators.AllValidators[j] = validator
+			j++
+		}
+	}
+	allValidators.AllValidators = allValidators.AllValidators[:j]
+	err = setAllValidators(s, allValidators)
+	if err != nil {
+		return fmt.Errorf("removeFromAllValidators, set all validators error: %v", err)
+	}
+	return nil
+}
+
+func setValidator(s *native.NativeContract, validator *Validator) error {
+	key := validatorKey(validator.ConsensusAddress)
+	store, err := rlp.EncodeToBytes(validator)
+	if err != nil {
+		return fmt.Errorf("setValidator, serialize validator error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func delValidator(s *native.NativeContract, consensusAddr common.Address) {
+	key := validatorKey(consensusAddr)
+	del(s, key)
+}
+
+func getValidator(s *native.NativeContract, consensusAddr common.Address) (*Validator, bool, error) {
+	key := validatorKey(consensusAddr)
+	store, err := get(s, key)
+	if err == ErrEof {
+		return nil, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("getValidator, get store error: %v", err)
+	}
+	validator := new(Validator)
+	if err := rlp.DecodeBytes(store, validator); err != nil {
+		return nil, false, fmt.Errorf("getValidator, deserialize validator error: %v", err)
+	}
+	return validator, true, nil
+}
+
+func setAllValidators(s *native.NativeContract, allValidators *AllValidators) error {
+	key := allValidatorKey()
+	store, err := rlp.EncodeToBytes(allValidators)
+	if err != nil {
+		return fmt.Errorf("setAllValidators, serialize all validators error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func getAllValidators(s *native.NativeContract) (*AllValidators, error) {
+	allValidators := &AllValidators{
+		AllValidators: make([]common.Address, 0),
+	}
+	key := allValidatorKey()
+	store, err := get(s, key)
+	if err == ErrEof {
+		return allValidators, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getAllValidators, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, allValidators); err != nil {
+		return nil, fmt.Errorf("getAllValidators, deserialize all validators error: %v", err)
+	}
+	return allValidators, nil
+}
+
+func depositTotalPool(s *native.NativeContract, amount Dec) error {
+	totalPool, err := getTotalPool(s)
+	if err != nil {
+		return fmt.Errorf("depositTotalPool, get total pool error: %v", err)
+	}
+	totalPool.TotalPool, err = totalPool.TotalPool.Add(amount)
+	if err != nil {
+		return fmt.Errorf("depositTotalPool, totalPool.TotalPool.Add error: %v", err)
+	}
+	err = setTotalPool(s, totalPool)
+	if err != nil {
+		return fmt.Errorf("depositTotalPool, setTotalPool error: %v", err)
+	}
+	return nil
+}
+
+func withdrawTotalPool(s *native.NativeContract, amount Dec) error {
+	totalPool, err := getTotalPool(s)
+	if err != nil {
+		return fmt.Errorf("withdrawTotalPool, get total pool error: %v", err)
+	}
+	totalPool.TotalPool, err = totalPool.TotalPool.Sub(amount)
+	if err != nil {
+		return fmt.Errorf("withdrawTotalPool, totalPool.Sub error: %v", err)
+	}
+	err = setTotalPool(s, totalPool)
+	if err != nil {
+		return fmt.Errorf("withdrawTotalPool, setTotalPool error: %v", err)
+	}
+	return nil
+}
+
+func setTotalPool(s *native.NativeContract, totalPool *TotalPool) error {
+	key := totalPoolKey()
+	store, err := rlp.EncodeToBytes(totalPool)
+	if err != nil {
+		return fmt.Errorf("setStakeInfo, serialize stake info error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func getTotalPool(s *native.NativeContract) (*TotalPool, error) {
+	totalPool := &TotalPool{NewDecFromBigInt(new(big.Int))}
+	key := totalPoolKey()
+	store, err := get(s, key)
+	if err == ErrEof {
+		return totalPool, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("getTotalPool, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, totalPool); err != nil {
+		return nil, fmt.Errorf("getTotalPool, deserialize totalPool error: %v", err)
+	}
+	return totalPool, nil
+}
+
+func setStakeInfo(s *native.NativeContract, stakeInfo *StakeInfo) error {
+	key := stakeInfoKey(stakeInfo.StakeAddress, stakeInfo.ConsensusAddr)
+	store, err := rlp.EncodeToBytes(stakeInfo)
+	if err != nil {
+		return fmt.Errorf("setStakeInfo, serialize stake info error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func delStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusAddr common.Address) {
+	key := stakeInfoKey(stakeAddress, consensusAddr)
+	del(s, key)
+}
+
+func getStakeInfo(s *native.NativeContract, stakeAddress common.Address, consensusAddr common.Address) (*StakeInfo, bool, error) {
+	stakeInfo := &StakeInfo{
+		StakeAddress:  stakeAddress,
+		ConsensusAddr: consensusAddr,
+		Amount:        NewDecFromBigInt(new(big.Int)),
+	}
+	key := stakeInfoKey(stakeAddress, consensusAddr)
+	store, err := get(s, key)
+	if err == ErrEof {
+		return stakeInfo, false, nil
+	}
+	if err != nil {
+		return nil, false, fmt.Errorf("getStakeInfo, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, stakeInfo); err != nil {
+		return nil, false, fmt.Errorf("getStakeInfo, deserialize stakeInfo error: %v", err)
+	}
+	return stakeInfo, true, nil
+}
+
+func addUnlockingInfo(s *native.NativeContract, stakeAddress common.Address, unlockingStake *UnlockingStake) error {
+	unlockingInfo, err := getUnlockingInfo(s, stakeAddress)
+	if err != nil {
+		return fmt.Errorf("addUnlockingInfo, GetUnlockingInfo error: %v", err)
+	}
+	unlockingInfo.UnlockingStake = append(unlockingInfo.UnlockingStake, unlockingStake)
+	if len(unlockingInfo.UnlockingStake) > MaxUnlockingNum {
+		return fmt.Errorf("addUnlockingInfo, unlocking info more than max")
+	}
+	err = setUnlockingInfo(s, unlockingInfo)
+	if err != nil {
+		return fmt.Errorf("addUnlockingInfo, setUnlockingInfo error: %v", err)
+	}
+	return nil
+}
+
+func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (Dec, error) {
+	height := s.ContractRef().BlockHeight()
+	unlockingInfo, err := getUnlockingInfo(s, stakeAddress)
+	if err != nil {
+		return Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, GetUnlockingInfo error: %v", err)
+	}
+	j := 0
+	expiredSum := NewDecFromBigInt(new(big.Int))
+	for _, unlockingStake := range unlockingInfo.UnlockingStake {
+		if unlockingStake.CompleteHeight.Cmp(height) == 1 {
+			unlockingInfo.UnlockingStake[j] = unlockingStake
+			j++
+		} else {
+			expiredSum, err = expiredSum.Add(unlockingStake.Amount)
+			if err != nil {
+				return Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, expiredSum.Add error: %v", err)
 			}
 		}
 	}
-	return num
-}
-
-// ====================================================================
-//
-// `vote` storage
-//
-// ====================================================================
-
-func storeVote(s *native.NativeContract, epochHash common.Hash, voter common.Address) error {
-	list, err := getVotes(s, epochHash)
-	if err != nil {
-		if err.Error() == ErrEof.Error() {
-			list = make([]common.Address, 0)
-		} else {
-			return err
-		}
-	}
-
-	list = append(list, voter)
-	return setVotes(s, epochHash, list)
-}
-
-func voteSize(s *native.NativeContract, epochHash common.Hash) int {
-	list, err := getVotes(s, epochHash)
-	if err != nil {
-		return 0
-	}
-	return len(list)
-}
-
-func findVote(s *native.NativeContract, epochHash common.Hash, voter common.Address) bool {
-	list, err := getVotes(s, epochHash)
-	if err != nil {
-		return false
-	}
-	for _, addr := range list {
-		if addr == voter {
-			return true
-		}
-	}
-	return false
-}
-
-func deleteVote(s *native.NativeContract, epochHash common.Hash, voter common.Address) error {
-	list, err := getVotes(s, epochHash)
-	if err != nil {
-		return err
-	}
-	dst := make([]common.Address, 0)
-	for _, addr := range list {
-		if addr == voter {
-			continue
-		} else {
-			dst = append(dst, addr)
-		}
-	}
-	if len(dst) > 0 {
-		return setVotes(s, epochHash, dst)
+	unlockingInfo.UnlockingStake = unlockingInfo.UnlockingStake[:j]
+	if len(unlockingInfo.UnlockingStake) == 0 {
+		delUnlockingInfo(s, stakeAddress)
 	} else {
-		del(s, voteKey(epochHash))
-		return nil
+		err = setUnlockingInfo(s, unlockingInfo)
+		if err != nil {
+			return Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, setUnlockingInfo error: %v", err)
+		}
 	}
+	return expiredSum, nil
 }
 
-func clearVotes(s *native.NativeContract, epochHash common.Hash) {
-	key := voteKey(epochHash)
-	del(s, key)
-}
-
-func setVotes(s *native.NativeContract, epochHash common.Hash, list []common.Address) error {
-	key := voteKey(epochHash)
-
-	value, err := rlp.EncodeToBytes(&AddressList{List: list})
+func setUnlockingInfo(s *native.NativeContract, unlockingInfo *UnlockingInfo) error {
+	key := unlockingInfoKey(unlockingInfo.StakeAddress)
+	store, err := rlp.EncodeToBytes(unlockingInfo)
 	if err != nil {
-		return err
+		return fmt.Errorf("setUnlockingInfo, serialize unlock info error: %v", err)
 	}
-
-	set(s, key, value)
+	set(s, key, store)
 	return nil
 }
 
-func getVotes(s *native.NativeContract, epochHash common.Hash) ([]common.Address, error) {
-	key := voteKey(epochHash)
-	enc, err := get(s, key)
-	if err != nil {
-		return nil, err
-	}
-	var data *AddressList
-	if err := rlp.DecodeBytes(enc, &data); err != nil {
-		return nil, err
-	}
-	return data.List, nil
-}
-
-// ====================================================================
-//
-// `vote to` storage
-//
-// ====================================================================
-func storeVoteTo(s *native.NativeContract, epochID uint64, voter common.Address, proposal common.Hash) {
-	key := voteToKey(epochID, voter)
-	set(s, key, proposal.Bytes())
-}
-
-func delVoteTo(s *native.NativeContract, epochID uint64, voter common.Address) {
-	key := voteToKey(epochID, voter)
+func delUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) {
+	key := unlockingInfoKey(stakeAddress)
 	del(s, key)
 }
 
-func findVoteTo(s *native.NativeContract, epochID uint64, voter common.Address) common.Hash {
-	key := voteToKey(epochID, voter)
-	value, err := get(s, key)
-	if err != nil {
-		return common.EmptyHash
+func getUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (*UnlockingInfo, error) {
+	unlockingInfo := &UnlockingInfo{
+		StakeAddress:   stakeAddress,
+		UnlockingStake: make([]*UnlockingStake, 0),
 	}
-	return common.BytesToHash(value)
+	key := unlockingInfoKey(stakeAddress)
+	store, err := get(s, key)
+	if err == ErrEof {
+		return unlockingInfo, nil
+	}
+	if err != nil {
+		return nil, fmt.Errorf("GetUnlockingInfo, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, unlockingInfo); err != nil {
+		return nil, fmt.Errorf("GetUnlockingInfo, deserialize unlocking info error: %v", err)
+	}
+	return unlockingInfo, nil
+}
+
+func setCurrentEpoch(s *native.NativeContract, ID *big.Int) {
+	key := currentEpochKey()
+	set(s, key, ID.Bytes())
+}
+
+func getCurrentEpoch(s *native.NativeContract) (*big.Int, error) {
+	key := currentEpochKey()
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpoch, get store error: %v", err)
+	}
+	return new(big.Int).SetBytes(store), nil
+}
+
+func setCurrentEpochInfo(s *native.NativeContract, epochInfo *EpochInfo) error {
+	// set current epoch
+	setCurrentEpoch(s, epochInfo.ID)
+	//set epoch info
+	err := setEpochInfo(s, epochInfo)
+	if err != nil {
+		return fmt.Errorf("setCurrentEpochInfo, setEpochInfo error: %v", err)
+	}
+	return nil
+}
+
+func setGenesisEpochInfo(s *state.CacheDB, epochInfo *EpochInfo) error {
+	// set current epoch
+	key1 := currentEpochKey()
+	customSet(s, key1, epochInfo.ID.Bytes())
+	//set epoch info
+	key2 := epochInfoKey(epochInfo.ID)
+	store, err := rlp.EncodeToBytes(epochInfo)
+	if err != nil {
+		return fmt.Errorf("setGenesisEpochInfo, serialize epoch info error: %v", err)
+	}
+	customSet(s, key2, store)
+	return nil
+}
+
+func GetCurrentEpochInfoImpl(s *native.NativeContract) (*EpochInfo, error) {
+	ID, err := getCurrentEpoch(s)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfoImpl, getCurrentEpochInfo error: %v", err)
+	}
+	epochInfo, err := getEpochInfo(s, ID)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfoImpl, getEpochInfo error: %v", err)
+	}
+	return epochInfo, nil
+}
+
+func GetCurrentEpochInfoFromDB(s *state.StateDB) (*EpochInfo, error) {
+	cache := (*state.CacheDB)(s)
+	key := currentEpochKey()
+	store, err := customGet(cache, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get key store error: %v", err)
+	}
+	ID := new(big.Int).SetBytes(store)
+
+	epochInfo := new(EpochInfo)
+	key = epochInfoKey(ID)
+	store, err = customGet(cache, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, get info store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, epochInfo); err != nil {
+		return nil, fmt.Errorf("GetCurrentEpochInfoFromDB, deserialize epoch info error: %v", err)
+	}
+	return epochInfo, nil
+}
+
+func setEpochInfo(s *native.NativeContract, epochInfo *EpochInfo) error {
+	key := epochInfoKey(epochInfo.ID)
+	store, err := rlp.EncodeToBytes(epochInfo)
+	if err != nil {
+		return fmt.Errorf("setEpochInfo, serialize epoch info error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func getEpochInfo(s *native.NativeContract, ID *big.Int) (*EpochInfo, error) {
+	epochInfo := new(EpochInfo)
+	key := epochInfoKey(ID)
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetEpochInfo, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, epochInfo); err != nil {
+		return nil, fmt.Errorf("GetEpochInfo, deserialize epoch info error: %v", err)
+	}
+	return epochInfo, nil
+}
+
+func GetEpochInfoFromDB(s *state.StateDB, ID *big.Int) (*EpochInfo, error) {
+	cache := (*state.CacheDB)(s)
+
+	epochInfo := new(EpochInfo)
+	key := epochInfoKey(ID)
+	store, err := customGet(cache, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetEpochInfoFromDB, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, epochInfo); err != nil {
+		return nil, fmt.Errorf("GetEpochInfoFromDB, deserialize epoch info error: %v", err)
+	}
+	return epochInfo, nil
+}
+
+func setGenesisCommunityInfo(s *state.CacheDB, communityInfo *CommunityInfo) error {
+	if communityInfo.CommunityRate.Cmp(PercentDecimal) > 0 {
+		return fmt.Errorf("setGenesisCommunityInfo, CommunityRate over size")
+	}
+	key := communityInfoKey()
+	store, err := rlp.EncodeToBytes(communityInfo)
+	if err != nil {
+		return fmt.Errorf("setCommunityInfo, serialize community info error: %v", err)
+	}
+	customSet(s, key, store)
+	return nil
+}
+
+func SetCommunityInfo(s *native.NativeContract, communityInfo *CommunityInfo) error {
+	if communityInfo.CommunityRate.Cmp(PercentDecimal) > 0 {
+		return fmt.Errorf("setCommunityInfo, CommunityRate over size")
+	}
+	key := communityInfoKey()
+	store, err := rlp.EncodeToBytes(communityInfo)
+	if err != nil {
+		return fmt.Errorf("setCommunityInfo, serialize community info error: %v", err)
+	}
+	set(s, key, store)
+	return nil
+}
+
+func GetCommunityInfoImpl(s *native.NativeContract) (*CommunityInfo, error) {
+	communityInfo := new(CommunityInfo)
+	key := communityInfoKey()
+	store, err := get(s, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetCommunityInfoImpl, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, communityInfo); err != nil {
+		return nil, fmt.Errorf("GetCommunityInfoImpl, deserialize community info error: %v", err)
+	}
+	return communityInfo, nil
+}
+
+func GetCommunityInfoFromDB(s *state.StateDB) (*CommunityInfo, error) {
+	cache := (*state.CacheDB)(s)
+	communityInfo := new(CommunityInfo)
+	key := communityInfoKey()
+	store, err := customGet(cache, key)
+	if err != nil {
+		return nil, fmt.Errorf("GetCommunityInfoFromDB, get store error: %v", err)
+	}
+	if err := rlp.DecodeBytes(store, communityInfo); err != nil {
+		return nil, fmt.Errorf("GetCommunityInfoFromDB, deserialize community info error: %v", err)
+	}
+	return communityInfo, nil
 }
 
 // ====================================================================
@@ -505,28 +884,60 @@ func customDel(db *state.CacheDB, key []byte) {
 //
 // ====================================================================
 
-func epochKey(epochHash common.Hash) []byte {
-	return utils.ConcatKey(this, []byte(SKP_EPOCH), epochHash.Bytes())
+func globalConfigKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_GLOBAL_CONFIG))
 }
 
-func epochProofKey(proofHashKey common.Hash) []byte {
-	return utils.ConcatKey(this, []byte(SKP_PROOF), proofHashKey.Bytes())
+func validatorKey(consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR), consensusAddr[:])
 }
 
-func curEpochKey() []byte {
-	return utils.ConcatKey(this, []byte(SKP_CUR_EPOCH), []byte("1"))
+func allValidatorKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_ALL_VALIDATOR))
 }
 
-func proposalsKey(epochID uint64) []byte {
-	return utils.ConcatKey(this, []byte(SKP_PROPOSAL), utils.GetUint64Bytes(epochID))
+func totalPoolKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_TOTAL_POOL))
 }
 
-func voteKey(epochHash common.Hash) []byte {
-	return utils.ConcatKey(this, []byte(SKP_VOTE), epochHash.Bytes())
+func stakeInfoKey(stakeAddress common.Address, consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_STAKE_INFO), stakeAddress[:], consensusAddr[:])
 }
 
-func voteToKey(epochID uint64, voter common.Address) []byte {
-	return utils.ConcatKey(this, []byte(SKP_VOTE_TO), utils.GetUint64Bytes(epochID), voter.Bytes())
+func unlockingInfoKey(stakeAddress common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_UNLOCK_INFO), stakeAddress[:])
+}
+
+func currentEpochKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_CURRENT_EPOCH))
+}
+
+func epochInfoKey(ID *big.Int) []byte {
+	return utils.ConcatKey(this, []byte(SKP_EPOCH_INFO), ID.Bytes())
+}
+
+func accumulatedCommissionKey(consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_ACCUMULATED_COMMISSION), consensusAddr[:])
+}
+
+func validatorAccumulatedRewardsKey(consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_ACCUMULATED_REWARDS), consensusAddr[:])
+}
+
+func validatorOutstandingRewardsKey(consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_OUTSTANDING_REWARDS), consensusAddr[:])
+}
+
+func outstandingRewardsKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_OUTSTANDING_REWARDS))
+}
+
+func validatorSnapshotRewardsKey(consensusAddr common.Address, period uint64) []byte {
+	return utils.ConcatKey(this, []byte(SKP_VALIDATOR_SNAPSHOT_REWARDS), consensusAddr[:], utils.Uint64Bytes(period))
+}
+
+func stakeStartingInfoKey(stakeAddress common.Address, consensusAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_STAKE_STARTING_INFO), stakeAddress[:], consensusAddr[:])
 }
 
 func signKey(hash common.Hash) []byte {
@@ -535,4 +946,8 @@ func signKey(hash common.Hash) []byte {
 
 func signerKey(hash common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_SIGNER), hash.Bytes())
+}
+
+func communityInfoKey() []byte {
+	return utils.ConcatKey(this, []byte(SKP_COMMUNITY_INFO))
 }

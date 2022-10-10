@@ -29,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -43,6 +42,7 @@ import (
 
 //go:generate gencodec -type Genesis -field-override genesisSpecMarshaling -out gen_genesis.go
 //go:generate gencodec -type GenesisAccount -field-override genesisAccountMarshaling -out gen_genesis_account.go
+//go:generate gencodec -type GovernanceAccount -field-override genesisGovernanceMarshaling -out gen_genesis_governance.go
 
 var errGenesisNoConfig = errors.New("genesis has no chain configuration")
 
@@ -58,6 +58,10 @@ type Genesis struct {
 	Mixhash    common.Hash         `json:"mixHash"`
 	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
+	Governance GenesisGovernance   `json:"governance" gencodec:"required"`
+	// config of community pool
+	CommunityRate    *big.Int       `json:"community_rate" gencodec:"required"`
+	CommunityAddress common.Address `json:"community_address" gencodec:"required"`
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
@@ -87,8 +91,15 @@ type GenesisAccount struct {
 	Storage    map[common.Hash]common.Hash `json:"storage,omitempty"`
 	Balance    *big.Int                    `json:"balance" gencodec:"required"`
 	Nonce      uint64                      `json:"nonce,omitempty"`
-	PublicKey  []byte                      `json:"publicKey" gencodec:"required"`
 	PrivateKey []byte                      `json:"secretKey,omitempty"` // for tests
+}
+
+// GenesisGovernance map validator address to signer address
+type GenesisGovernance []GovernanceAccount
+
+type GovernanceAccount struct {
+	Validator common.Address `json:"validator" gencodec:"required"`
+	Signer    common.Address `json:"signer" gencodec:"required"`
 }
 
 // field type overrides for gencodec
@@ -109,6 +120,11 @@ type genesisAccountMarshaling struct {
 	Nonce      math.HexOrDecimal64
 	Storage    map[storageJSON]storageJSON
 	PrivateKey hexutil.Bytes
+}
+
+type genesisGovernanceMarshaling struct {
+	Validator common.UnprefixedAddress
+	Signer    common.UnprefixedAddress
 }
 
 // storageJSON represents a 256 bit byte array, but allows less than 256 bits when
@@ -258,10 +274,7 @@ func (g *Genesis) configOrDefault(ghash common.Hash) *params.ChainConfig {
 
 var (
 	// RegGenesis store genesis validators and public keys in governance contract
-	RegGenesis func(db *state.StateDB, data GenesisAlloc) error
-
-	// StoreGenesis store genesis validators in consensus snapshot
-	StoreGenesis func(db ethdb.Database, header *types.Header) error
+	RegGenesis func(db *state.StateDB, genesis *Genesis) error
 )
 
 // ToBlock creates the genesis block and writes state of a genesis specification
@@ -270,6 +283,11 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	if db == nil {
 		db = rawdb.NewMemoryDatabase()
 	}
+
+	// check genesis fields
+	g.checkGovernance()
+	g.checkExtra()
+	
 	statedb, err := state.New(common.Hash{}, state.NewDatabase(db), nil)
 	if err != nil {
 		panic(err)
@@ -282,7 +300,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	for _, v := range native.NativeContractAddrMap {
 		g.createNativeContract(statedb, v)
 	}
-	RegGenesis(statedb, g.Alloc)
+	RegGenesis(statedb, g)
 
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{
@@ -309,12 +327,43 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 	}
 	statedb.Commit(false)
 	statedb.Database().TrieDB().Commit(root, true, nil)
-	StoreGenesis(db, head)
+
 	return types.NewBlock(head, nil, nil, nil, trie.NewStackTrie(nil))
 }
 
+// checkExtra validators should be sorted and do not allow dump validators.
+func (g *Genesis) checkExtra() {
+	extra, err := types.ExtractHotstuffExtraPayload(g.ExtraData)
+	if err != nil {
+		panic("extra invalid")
+	}
+
+	vs := extra.Validators
+	for i := 1; i < len(vs); i++ {
+		if strings.Compare(vs[i].String(), vs[i-1].String()) <= 0 {
+			panic("validators dump or not sorted as asc")
+		}
+	}
+}
+
+// checkGovernance governance address and signer address can't be repeated
+func (g *Genesis) checkGovernance() {
+	data := make(map[common.Address]int)
+
+	for _, v := range g.Governance {
+		data[v.Validator] += 1
+		data[v.Signer] += 1
+	}
+
+	for addr, cnt := range data {
+		if cnt > 1 {
+			panic(fmt.Sprintf("address %s repeated %d", addr.String(), cnt))
+		}
+	}
+}
+
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
-	if params.IsMainChain(g.Config.ChainID.Uint64()) || addr == utils.LockProxyContractAddress || addr == utils.NodeManagerContractAddress {
+	if params.CheckZionChain(g.Config.ChainID.Uint64()) {
 		db.CreateAccount(addr)
 		db.SetCode(addr, addr[:])
 		initBlockNumber := big.NewInt(0)
@@ -325,13 +374,22 @@ func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 }
 
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
-	if params.IsMainChain(g.Config.ChainID.Uint64()) {
+	if params.CheckZionChain(g.Config.ChainID.Uint64()) {
+		// check total balance
+		total := new(big.Int)
+		for _, account := range g.Alloc {
+			total = new(big.Int).Add(total, account.Balance)
+		}
+		if total.Cmp(params.GenesisSupply) != 0 {
+			panic("alloc amount should be equal to genesis supply")
+		}
+
 		for addr, account := range g.Alloc {
 			statedb.AddBalance(addr, account.Balance)
 			statedb.SetCode(addr, account.Code)
 			statedb.SetNonce(addr, account.Nonce)
 			for key, value := range account.Storage {
-				statedb.SetState(addr, key, value)
+				statedb.SetState(addr, key, value[:])
 			}
 		}
 	}
@@ -374,7 +432,14 @@ func (g *Genesis) MustCommit(db ethdb.Database) *types.Block {
 
 // GenesisBlockForTesting creates and writes a block in which addr has the given wei balance.
 func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big.Int) *types.Block {
+	RegGenesis = func(db *state.StateDB, genesis *Genesis) error {
+		return nil
+	}
 	g := Genesis{Alloc: GenesisAlloc{addr: {Balance: balance}}}
+	g.Config = &params.ChainConfig{
+		ChainID:  new(big.Int).SetUint64(params.MainnetChainID),
+		HotStuff: &params.HotStuffConfig{},
+	}
 	return g.MustCommit(db)
 }
 

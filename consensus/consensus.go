@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -60,6 +61,11 @@ type ChainReader interface {
 
 	// PreExecuteBlock pre-execute block transactions and validate states
 	PreExecuteBlock(block *types.Block) error
+
+	CurrentBlock() *types.Block
+
+	// State returns a new mutable state based on the current HEAD block.
+	State() (*state.StateDB, error)
 }
 
 // Engine is an algorithm agnostic consensus engine.
@@ -93,8 +99,8 @@ type Engine interface {
 	//
 	// Note: The block header and state database might be updated to reflect any
 	// consensus rules that happen at finalization (e.g. block rewards).
-	Finalize(chain ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-		uncles []*types.Header)
+	Finalize(chain ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
+		uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error
 
 	// FinalizeAndAssemble runs any post-transaction state modifications (e.g. block
 	// rewards) and assembles the final block.
@@ -102,7 +108,7 @@ type Engine interface {
 	// Note: The block header and state database might be updated to reflect any
 	// consensus rules that happen at finalization (e.g. block rewards).
 	FinalizeAndAssemble(chain ChainHeaderReader, header *types.Header, state *state.StateDB, txs []*types.Transaction,
-		uncles []*types.Header, receipts []*types.Receipt) (*types.Block, error)
+		uncles []*types.Header, receipts []*types.Receipt) (*types.Block, []*types.Receipt, error)
 
 	// Seal generates a new sealing request for the given input block and pushes
 	// the result into the given channel.
@@ -149,13 +155,18 @@ type HotStuff interface {
 
 	// Authorize(signer common.Address, signFn func(accounts.Account, string, []byte) ([]byte, error))
 	// Start starts the engine
-	Start(chain ChainReader, currentBlock func() *types.Block, getBlockByHash func(hash common.Hash) *types.Block, hasBadBlock func(hash common.Hash) bool) error
+	Start(chain ChainReader, hasBadBlock func(hash common.Hash) bool) error
 
 	// Stop stops the engine
 	Stop() error
 
-	// ChangeEpoch save validators and start height for next epoch
-	ChangeEpoch(epochStartHeight uint64, list []common.Address) error
+	// CheckPoint retrieve the flags of whether epoch change and next validator set.
+	//CheckPoint(state *state.StateDB, header *types.Header, fillHeader bool) (restart bool, err error)
+
+	FillHeader(state *state.StateDB, header *types.Header) error
+
+	// IsSystemCall whether the method id is the governance tx method
+	IsSystemTransaction(tx *types.Transaction, header *types.Header) (string, bool)
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message
@@ -168,6 +179,12 @@ type Handler interface {
 
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster)
+
+	// SubscribeRequest event subscribe for mining proposal with parent block
+	SubscribeRequest(ch chan<- types.Block) event.Subscription
+
+	// SubscribeNodes event subscribe for listening static nodes in eth handler
+	SubscribeNodes(ch chan<- StaticNodesEvent) event.Subscription
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -178,7 +195,19 @@ type PoW interface {
 	Hashrate() float64
 }
 
-type AskRequest struct {
-	Parent *types.Block
-	Number *big.Int
+type StaticNodesEvent struct{ Validators []common.Address }
+
+type EpochChainConfig struct {
+	StartHeight uint64
+	EndHeight   uint64
+	Validators  []common.Address
 }
+
+type CheckPointStatus uint8
+
+const (
+	CheckPointStateUnknown CheckPointStatus = iota
+	CheckPointStatePrepare                  // before epoch change start
+	CheckPointStateChange                   // set new validators in header extra
+	CheckPointStateStarted                  // restart worker and engine
+)

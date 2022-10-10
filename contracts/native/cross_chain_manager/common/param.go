@@ -18,61 +18,24 @@
 package common
 
 import (
-	"fmt"
 	"io"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const (
-	KEY_PREFIX_BTC = "btc"
-
-	KEY_PREFIX_BTC_VOTE = "btcVote"
-	REQUEST             = "request"
-	DONE_TX             = "doneTx"
+	REQUEST = "request"
+	DONE_TX = "doneTx"
 
 	NOTIFY_MAKE_PROOF_EVENT = "makeProof"
+	REPLENISH_EVENT         = "ReplenishEvent"
 )
 
 type ChainHandler interface {
 	MakeDepositProposal(service *native.NativeContract) (*MakeTxParam, error)
-}
-
-type InitRedeemScriptParam struct {
-	RedeemScript string
-}
-
-type EntranceParam struct {
-	SourceChainID         uint64 `json:"sourceChainId"`
-	Height                uint32 `json:"height"`
-	Proof                 []byte `json:"proof"`
-	RelayerAddress        []byte `json:"relayerAddress"` //in zion can be empty because caller can get through ctx
-	Extra                 []byte `json:"extra"`
-	HeaderOrCrossChainMsg []byte `json:"headerOrCrossChainMsg"`
-}
-
-func (this *EntranceParam) String() string {
-	str := "{"
-	str += fmt.Sprintf("source chain id: %d,", this.SourceChainID)
-	str += fmt.Sprintf("height: %d,", this.Height)
-	if this.Proof != nil && len(this.Proof) > 0 {
-		str += fmt.Sprintf("proof: %s,", hexutil.Encode(this.Proof))
-	}
-	if this.RelayerAddress != nil && len(this.RelayerAddress) > 0 {
-		str += fmt.Sprintf("relayer address: %s,", hexutil.Encode(this.RelayerAddress))
-	}
-	if this.Extra != nil && len(this.Extra) > 0 {
-		str += fmt.Sprintf("extra: %s,", hexutil.Encode(this.Extra))
-	}
-	if this.HeaderOrCrossChainMsg != nil && len(this.HeaderOrCrossChainMsg) > 0 {
-		str += fmt.Sprintf("header or cross chain msg: %s", hexutil.Encode(this.HeaderOrCrossChainMsg))
-	}
-	str += "}"
-	return str
 }
 
 type MakeTxParam struct {

@@ -19,632 +19,1423 @@
 package node_manager
 
 import (
-	"crypto/rand"
+	"crypto/ecdsa"
+	"fmt"
 	"math/big"
-	"os"
-	"sort"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/core/rawdb"
+	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/stretchr/testify/assert"
 )
 
 var (
-	testStateDB  *state.StateDB
-	testEmptyCtx *native.NativeContract
-
-	testSupplyGas    uint64 = 100000000000000000
-	testGenesisNum   int    = 4
-	testCaller       common.Address
-	testGenesisEpoch *EpochInfo
+	sdb              *state.StateDB
+	testGenesisNum   = 4
+	acct             *ecdsa.PublicKey
+	testGenesisPeers []common.Address
 )
 
-func TestMain(m *testing.M) {
-	db := rawdb.NewMemoryDatabase()
-	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
-	testGenesisPeers := GenerateTestPeers(testGenesisNum)
-	testGenesisEpoch, _ = storeGenesisEpoch(testStateDB, testGenesisPeers)
+func Init() {
+	key, _ := crypto.GenerateKey()
+	acct = &key.PublicKey
+
 	InitNodeManager()
-
-	os.Exit(m.Run())
+	sdb = native.NewTestStateDB()
+	testGenesisPeers, _ = native.GenerateTestPeers(testGenesisNum)
+	StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
+	StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
+	StoreGenesisGlobalConfig(sdb)
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/contracts/native/governance/node_manager -run TestPropose
-func TestPropose(t *testing.T) {
-	type TestCase struct {
-		BlockNum      int
-		StartHeight   uint64
-		Payload       []byte
-		BeforeHandler func(c *TestCase, ctx *native.NativeContract)
-		AfterHandler  func(c *TestCase, ctx *native.NativeContract)
-		Index         int
-		Expect        error
+func TestCheckGenesis(t *testing.T) {
+	Init()
+	// check get spec methodID
+	m := GetSpecMethodID()
+	assert.Equal(t, m["fe6f86f8"], true)
+	assert.Equal(t, m["083c6323"], true)
+
+	blockNumber := big.NewInt(1)
+	extra := uint64(21000000000000)
+	contractRef := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+	contract := native.NewNativeContract(sdb, contractRef)
+
+	globalConfig, err := GetGlobalConfigImpl(contract)
+	assert.Nil(t, err)
+	assert.Equal(t, globalConfig.BlockPerEpoch, GenesisBlockPerEpoch)
+	assert.Equal(t, globalConfig.MaxCommissionChange, GenesisMaxCommissionChange)
+	assert.Equal(t, globalConfig.MinInitialStake, GenesisMinInitialStake)
+	assert.Equal(t, globalConfig.VoterValidatorNum, GenesisVoterValidatorNum)
+	assert.Equal(t, globalConfig.ConsensusValidatorNum, GenesisConsensusValidatorNum)
+
+	communityInfo, err := GetCommunityInfoImpl(contract)
+	assert.Nil(t, err)
+	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(2000))
+	assert.Equal(t, communityInfo.CommunityAddress, common.EmptyAddress)
+
+	epochInfo, err := GetCurrentEpochInfoImpl(contract)
+	assert.Nil(t, err)
+	assert.Equal(t, epochInfo.ID, common.Big1)
+
+	// check query method
+	param1 := new(GetGlobalConfigParam)
+	input, err := param1.Encode()
+	assert.Nil(t, err)
+	ret, _, err := contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	globalConfig2 := new(GlobalConfig)
+	err = globalConfig2.Decode(ret)
+	assert.Nil(t, err)
+	assert.Equal(t, globalConfig2.BlockPerEpoch, GenesisBlockPerEpoch)
+	assert.Equal(t, globalConfig2.MaxCommissionChange, GenesisMaxCommissionChange)
+	assert.Equal(t, globalConfig2.MinInitialStake, GenesisMinInitialStake)
+	assert.Equal(t, globalConfig2.VoterValidatorNum, GenesisVoterValidatorNum)
+	assert.Equal(t, globalConfig2.ConsensusValidatorNum, GenesisConsensusValidatorNum)
+	assert.Equal(t, globalConfig2.MinProposalStake, GenesisMinProposalStake)
+
+	param2 := new(GetCommunityInfoParam)
+	input, err = param2.Encode()
+	assert.Nil(t, err)
+	ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	communityInfo2 := new(CommunityInfo)
+	err = communityInfo2.Decode(ret)
+	assert.Nil(t, err)
+	assert.Equal(t, communityInfo2.CommunityRate, big.NewInt(2000))
+	assert.Equal(t, communityInfo2.CommunityAddress, common.EmptyAddress)
+
+	param3 := new(GetCurrentEpochInfoParam)
+	input, err = param3.Encode()
+	assert.Nil(t, err)
+	ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	currentEpochInfo := new(EpochInfo)
+	err = currentEpochInfo.Decode(ret)
+	assert.Nil(t, err)
+	assert.Equal(t, currentEpochInfo.ID, big.NewInt(1))
+	assert.Equal(t, currentEpochInfo.StartHeight, big.NewInt(0))
+	assert.Equal(t, uint64(len(currentEpochInfo.Validators)), GenesisConsensusValidatorNum)
+	assert.Equal(t, uint64(len(currentEpochInfo.Voters)), GenesisVoterValidatorNum)
+
+	currentEpochInfo, err = GetCurrentEpochInfoFromDB(sdb)
+	assert.Nil(t, err)
+	assert.Equal(t, currentEpochInfo.ID, big.NewInt(1))
+
+	globalConfig, err = GetGlobalConfigFromDB(sdb)
+	assert.Nil(t, err)
+	assert.Equal(t, globalConfig.BlockPerEpoch, GenesisBlockPerEpoch)
+}
+
+func TestStake(t *testing.T) {
+	Init()
+	blockNumber := big.NewInt(399999)
+	extra := uint64(21000000000000)
+	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
+
+	type ValidatorKey struct {
+		ConsensusAddr common.Address
+		StakeAddress  common.Address
+	}
+	// create validator
+	loop := 6
+	validatorsKey := make([]*ValidatorKey, 0, loop)
+	for i := 0; i < loop; i++ {
+		pk, _ := crypto.GenerateKey()
+		consensusAddr := crypto.PubkeyToAddress(pk.PublicKey)
+		caller := crypto.PubkeyToAddress(*acct)
+		sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+		param := new(CreateValidatorParam)
+		param.ConsensusAddress = consensusAddr
+		param.SignerAddress = consensusAddr
+		param.ProposalAddress = caller
+		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+		param.Commission = new(big.Int).SetUint64(2000)
+		param.Desc = "test"
+		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
+		input, err := param.Encode()
+		assert.Nil(t, err)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+		_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+	}
+	// check
+	allValidators, err := getAllValidators(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, len(allValidators.AllValidators), loop)
+	validator, _, err := getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
+	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
+	assert.Equal(t, validator.Status, Unlock)
+	assert.Equal(t, validator.Commission.Rate.BigInt(), new(big.Int).SetUint64(2000))
+	assert.Equal(t, validator.UnlockHeight, new(big.Int))
+
+	//stake
+	pkStake, _ := crypto.GenerateKey()
+	staker := &pkStake.PublicKey
+	stakeAddress := crypto.PubkeyToAddress(*staker)
+	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+	param1 := new(StakeParam)
+	param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
+	input, err := param1.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	// check
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(110000), params.ZNT1))
+	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
+	assert.Equal(t, validator.Status, Unlock)
+	assert.Equal(t, validator.Commission.Rate.BigInt(), new(big.Int).SetUint64(2000))
+	assert.Equal(t, validator.UnlockHeight, new(big.Int))
+	totalPool, err := getTotalPool(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(610000), params.ZNT1))
+
+	// unstake
+	param2 := new(UnStakeParam)
+	param2.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param2.Amount = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
+	input, err = param2.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(109000), params.ZNT1))
+	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
+	assert.Equal(t, validator.Status, Unlock)
+	assert.Equal(t, validator.UnlockHeight, new(big.Int))
+	totalPool, err = getTotalPool(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
+	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(991000), params.ZNT1))
+
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	epochInfo, err := GetCurrentEpochInfoImpl(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, epochInfo.ID, common.Big2)
+	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(400000))
+	assert.Equal(t, len(epochInfo.Validators), 4)
+	assert.Equal(t, len(epochInfo.Voters), 4)
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.Status, Lock)
+	totalPool, err = getTotalPool(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
+
+	// unstake
+	param3 := new(UnStakeParam)
+	param3.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param3.Amount = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
+	input, err = param3.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(108000), params.ZNT1))
+	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
+	assert.Equal(t, validator.Status, Lock)
+	assert.Equal(t, validator.UnlockHeight, new(big.Int))
+
+	// withdraw
+	input, err = utils.PackMethod(ABI, MethodWithdraw)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.NotNil(t, err)
+	totalPool, err = getTotalPool(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(609000), params.ZNT1))
+	blockNumber = big.NewInt(800000)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	totalPool, err = getTotalPool(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(608000), params.ZNT1))
+
+	// update validator
+	param4 := new(UpdateValidatorParam)
+	param4.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param4.Desc = "test2"
+	input, err = param4.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param5 := new(UpdateCommissionParam)
+	param5.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param5.Commission = new(big.Int).SetUint64(2500)
+	input, err = param5.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(108000), params.ZNT1))
+	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
+	assert.Equal(t, validator.ProposalAddress, validatorsKey[0].StakeAddress)
+	assert.Equal(t, validator.Status, Lock)
+	assert.Equal(t, validator.Commission.Rate.BigInt(), new(big.Int).SetUint64(2500))
+	assert.Equal(t, validator.Commission.UpdateHeight, new(big.Int).SetUint64(800000))
+	assert.Equal(t, validator.UnlockHeight, new(big.Int))
+	assert.Equal(t, validator.Desc, "test2")
+
+	// cancel validator && unstake && withdraw validator
+	param6 := new(CancelValidatorParam)
+	param6.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param6.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param7 := new(UnStakeParam)
+	param7.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param7.Amount = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
+	input, err = param7.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	blockNumber = new(big.Int).SetUint64(1000000)
+	input, err = utils.PackMethod(ABI, MethodWithdraw)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.NotNil(t, err)
+	param8 := new(WithdrawValidatorParam)
+	param8.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param8.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
+	assert.NotNil(t, err)
+	allValidators, err = getAllValidators(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, len(allValidators.AllValidators), loop-1)
+
+	// check
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.Status, Remove)
+	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(992000), params.ZNT1))
+
+	blockNumber = new(big.Int).SetUint64(799999)
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	blockNumber = new(big.Int).SetUint64(1199999)
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// add block num
+	blockNumber = new(big.Int).SetUint64(1599999)
+	input, err = utils.PackMethod(ABI, MethodWithdraw)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param9 := new(WithdrawValidatorParam)
+	param9.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param9.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.Status, Remove)
+	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(993000), params.ZNT1))
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].StakeAddress), new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+
+	// unstake
+	param10 := new(UnStakeParam)
+	param10.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param10.Amount = new(big.Int).Mul(big.NewInt(7000), params.ZNT1)
+	input, err = param10.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	validator, found, err := getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, found, false)
+	assert.Equal(t, sdb.GetBalance(stakeAddress), new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	epochInfo, err = GetCurrentEpochInfoImpl(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, epochInfo.ID, new(big.Int).SetUint64(5))
+	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(1600000))
+	assert.Equal(t, len(epochInfo.Validators), 4)
+	assert.Equal(t, len(epochInfo.Voters), 4)
+	validator, _, err = getValidator(contractQuery, validatorsKey[4].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validator.Status, Lock)
+}
+
+func TestChangeEpoch(t *testing.T) {
+	Init()
+	blockNumber := big.NewInt(0)
+	extra := uint64(21000000000000)
+	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
+
+	type ValidatorKey struct {
+		ConsensusAddr common.Address
+		StakeAddress  common.Address
+	}
+	// create validator
+	loop := 6
+	validatorsKey := make([]*ValidatorKey, 0, loop)
+	for i := 0; i < loop; i++ {
+		pk, _ := crypto.GenerateKey()
+		consensusAddr := crypto.PubkeyToAddress(pk.PublicKey)
+		caller := crypto.PubkeyToAddress(*acct)
+		sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+		param := new(CreateValidatorParam)
+		param.ConsensusAddress = consensusAddr
+		param.SignerAddress = consensusAddr
+		param.ProposalAddress = caller
+		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+		param.Commission = new(big.Int).SetUint64(2000)
+		param.Desc = "test"
+		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
+		input, err := param.Encode()
+		assert.Nil(t, err)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+		_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
 	}
 
-	cases := []*TestCase{
+	blockNumber = new(big.Int).SetUint64(399999)
+	// change epoch
+	input, err := utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	epochInfo, err := GetCurrentEpochInfoImpl(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, epochInfo.ID, common.Big2)
+	fmt.Println(epochInfo.Validators)
+
+	//stake
+	pkStake, _ := crypto.GenerateKey()
+	staker := &pkStake.PublicKey
+	stakeAddress := crypto.PubkeyToAddress(*staker)
+	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+	param1 := new(StakeParam)
+	param1.ConsensusAddress = validatorsKey[4].ConsensusAddr
+	param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
+	input, err = param1.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	blockNumber = new(big.Int).SetUint64(799999)
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	epochInfo, err = GetCurrentEpochInfoImpl(contractQuery)
+	assert.Nil(t, err)
+	assert.Equal(t, epochInfo.ID, common.Big3)
+	fmt.Println(epochInfo.Validators)
+}
+
+func TestDistribute(t *testing.T) {
+	Init()
+	blockNumber := big.NewInt(399999)
+	extra := uint64(21000000000000)
+	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
+
+	type ValidatorKey struct {
+		ConsensusAddr common.Address
+		StakeAddress  common.Address
+	}
+	// create validator
+	// 6 address with 1000000 token and  create 6 validators with 100000 init stake
+	loop := 6
+	validatorsKey := make([]*ValidatorKey, 0, loop)
+	for i := 0; i < loop; i++ {
+		pk, _ := crypto.GenerateKey()
+		consensusAddr := crypto.PubkeyToAddress(pk.PublicKey)
+		caller := crypto.PubkeyToAddress(*acct)
+		sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+		param := new(CreateValidatorParam)
+		param.ConsensusAddress = consensusAddr
+		param.SignerAddress = consensusAddr
+		param.ProposalAddress = caller
+		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+		param.Commission = new(big.Int).SetUint64(2000)
+		param.Desc = "test"
+		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
+		input, err := param.Encode()
+		assert.Nil(t, err)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+		_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+	}
+
+	// stake
+	// 2 address with 1000000 token and stake 10000, 20000 to first validator
+	pkStake, _ := crypto.GenerateKey()
+	staker := &pkStake.PublicKey
+	stakeAddress := crypto.PubkeyToAddress(*staker)
+	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+	param1 := new(StakeParam)
+	param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
+	input, err := param1.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	pkStake2, _ := crypto.GenerateKey()
+	staker2 := &pkStake2.PublicKey
+	stakeAddress2 := crypto.PubkeyToAddress(*staker2)
+	sdb.SetBalance(stakeAddress2, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+	param2 := new(StakeParam)
+	param2.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param2.Amount = new(big.Int).Mul(big.NewInt(20000), params.ZNT1)
+	input, err = param2.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress2, stakeAddress2, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress2, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// here we have 4 validators with 100000 self stake, and validator 1 have 10000, 20000 user stake, and commission is 20%
+	// first add 1000 balance of node_manager contract to distribute
+	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
+	// call endblock
+	param3 := new(EndBlockParam)
+	input, err = param3.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	accumulatedCommission, err := getAccumulatedCommission(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, accumulatedCommission.Amount.BigInt(), new(big.Int).Mul(big.NewInt(50), params.ZNT1))
+	validatorAccumulatedRewards, err := getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validatorAccumulatedRewards.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(200), params.ZNT1))
+
+	accumulatedCommission2, err := getAccumulatedCommission(contractQuery, validatorsKey[1].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, accumulatedCommission2.Amount.BigInt(), new(big.Int).Mul(big.NewInt(50), params.ZNT1))
+	validatorAccumulatedRewards2, err := getValidatorAccumulatedRewards(contractQuery, validatorsKey[1].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validatorAccumulatedRewards2.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(200), params.ZNT1))
+
+	// test query method
+	{
+		p1 := &GetEpochInfoParam{
+			ID: common.Big1,
+		}
+		input, err = p1.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err := contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		epochInfo := new(EpochInfo)
+		err = epochInfo.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, epochInfo.ID, common.Big1)
+
+		p2 := &GetAllValidatorsParam{}
+		input, err = p2.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		allValidators := new(AllValidators)
+		err = allValidators.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, len(allValidators.AllValidators), loop)
+
+		p3 := &GetValidatorParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p3.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		validator := new(Validator)
+		err = validator.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, validator.ConsensusAddress, validatorsKey[0].ConsensusAddr)
+
+		p4 := &GetStakeInfoParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			StakeAddress:     stakeAddress,
+		}
+		input, err = p4.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		stakeInfo := new(StakeInfo)
+		err = stakeInfo.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, stakeInfo.ConsensusAddr, validatorsKey[0].ConsensusAddr)
+
+		p5 := &GetUnlockingInfoParam{
+			StakeAddress: stakeAddress,
+		}
+		input, err = p5.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		unlockingInfo := new(UnlockingInfo)
+		err = unlockingInfo.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, unlockingInfo.StakeAddress, stakeAddress)
+
+		p6 := &GetStakeStartingInfoParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			StakeAddress:     stakeAddress,
+		}
+		input, err = p6.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		stakeStartingInfo := new(StakeStartingInfo)
+		err = stakeStartingInfo.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, stakeStartingInfo.Stake.BigInt(), new(big.Int).Mul(big.NewInt(10000), params.ZNT1))
+
+		p7 := &GetAccumulatedCommissionParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p7.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		accumulatedCommission = new(AccumulatedCommission)
+		err = accumulatedCommission.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, accumulatedCommission.Amount.BigInt(), new(big.Int).Mul(big.NewInt(50), params.ZNT1))
+
+		p8 := &GetValidatorSnapshotRewardsParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			Period:           3,
+		}
+		input, err = p8.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		validatorSnapshotRewards := new(ValidatorSnapshotRewards)
+		err = validatorSnapshotRewards.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, validatorSnapshotRewards.ReferenceCount, uint64(2))
+
+		p9 := &GetValidatorAccumulatedRewardsParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p9.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		validatorAccumulatedRewards = new(ValidatorAccumulatedRewards)
+		err = validatorAccumulatedRewards.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, validatorAccumulatedRewards.Period, uint64(4))
+
+		p10 := &GetValidatorOutstandingRewardsParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p10.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		validatorOutstandingRewards := new(ValidatorOutstandingRewards)
+		err = validatorOutstandingRewards.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, validatorOutstandingRewards.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(250), params.ZNT1))
+
+		p11 := &GetTotalPoolParam{}
+		input, err = p11.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		totalPool := new(TotalPool)
+		err = totalPool.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, totalPool.TotalPool.BigInt(), new(big.Int).Mul(big.NewInt(630000), params.ZNT1))
+
+		p12 := &GetOutstandingRewardsParam{}
+		input, err = p12.Encode()
+		assert.Nil(t, err)
+		contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+		ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+		assert.Nil(t, err)
+		outstandingRewards := new(OutstandingRewards)
+		err = outstandingRewards.Decode(ret)
+		assert.Nil(t, err)
+		assert.Equal(t, outstandingRewards.Rewards.BigInt(), new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
+	}
+
+	// check getStakeRewards
+	p13 := &GetStakeRewardsParam{
+		ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		StakeAddress:     stakeAddress,
+	}
+	input, err = p13.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
+	ret, _, err := contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	stakeRewards := new(StakeRewards)
+	err = stakeRewards.Decode(ret)
+	assert.Nil(t, err)
+	s, _ := new(big.Int).SetString("15384615384615380000", 10)
+	assert.Equal(t, stakeRewards.Rewards.BigInt(), s)
+
+	// withdraw stake rewards and commission
+	param4 := new(WithdrawStakeRewardsParam)
+	param4.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param4.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param5 := new(WithdrawStakeRewardsParam)
+	param5.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param5.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress2, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress2, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param6 := new(WithdrawCommissionParam)
+	param6.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param6.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check balance
+	b1, _ := new(big.Int).SetString("990015384615384615380000", 10)
+	b2, _ := new(big.Int).SetString("980030769230769230760000", 10)
+	assert.Equal(t, sdb.GetBalance(stakeAddress), b1)
+	assert.Equal(t, sdb.GetBalance(stakeAddress2), b2)
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].StakeAddress), new(big.Int).Mul(big.NewInt(900050), params.ZNT1))
+
+	// check states
+	validatorAccumulatedRewards, err = getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validatorAccumulatedRewards.Rewards.BigInt(), new(big.Int))
+	assert.Equal(t, validatorAccumulatedRewards.Period, uint64(6))
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 0)
+	assert.NotNil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 1)
+	assert.Nil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 2)
+	assert.NotNil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 3)
+	assert.NotNil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 4)
+	assert.Nil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 5)
+	assert.Nil(t, err)
+
+	// withdraw validator stake rewards
+	param7 := new(WithdrawStakeRewardsParam)
+	param7.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param7.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param8 := new(WithdrawStakeRewardsParam)
+	param8.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param8.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	b3, _ := new(big.Int).SetString("900203846153846153800000", 10)
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].StakeAddress), b3)
+	validatorOutstandingRewards, err := getValidatorOutstandingRewards(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	b4, _ := new(big.Int).SetString("60000", 10)
+	assert.Equal(t, validatorOutstandingRewards.Rewards.BigInt(), b4)
+	validatorAccumulatedRewards, err = getValidatorAccumulatedRewards(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, validatorAccumulatedRewards.Rewards.BigInt(), new(big.Int))
+	assert.Equal(t, validatorAccumulatedRewards.Period, uint64(8))
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 0)
+	assert.NotNil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 1)
+	assert.NotNil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 2)
+	assert.NotNil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 3)
+	assert.NotNil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 4)
+	assert.Nil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 5)
+	assert.Nil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 6)
+	assert.NotNil(t, err)
+	_, err = getValidatorSnapshotRewards(contractQuery, validatorsKey[0].ConsensusAddr, 7)
+	assert.Nil(t, err)
+
+	// here we have 4 validators with 100000 self stake, and validator 1 have 10000, 20000 user stake, and commission is 20%
+	// add 2000 balance of node_manager contract to distribute
+	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
+	// call endblock
+	param9 := new(EndBlockParam)
+	input, err = param9.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
+	// call endblock
+	param10 := new(EndBlockParam)
+	input, err = param10.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// cancel validator
+	param11 := new(CancelValidatorParam)
+	param11.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param11.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	blockNumber = big.NewInt(799999)
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, utils.SystemTxSender, utils.SystemTxSender, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(utils.SystemTxSender, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	blockNumber = big.NewInt(900000)
+	// withdraw validator
+	param12 := new(WithdrawValidatorParam)
+	param12.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param12.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(validatorsKey[0].StakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	b5, _ := new(big.Int).SetString("1000611538461538461400000", 10) // include commission and stake rewards
+	assert.Equal(t, sdb.GetBalance(validatorsKey[0].StakeAddress), b5)
+
+	// unstake
+	param13 := new(UnStakeParam)
+	param13.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param13.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
+	input, err = param13.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+	param14 := new(UnStakeParam)
+	param14.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param14.Amount = new(big.Int).Mul(big.NewInt(20000), params.ZNT1)
+	input, err = param14.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, stakeAddress2, stakeAddress2, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(stakeAddress2, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
+
+	// check
+	b6, _ := new(big.Int).SetString("1000046153846153846140000", 10)
+	b7, _ := new(big.Int).SetString("1000092307692307692280000", 10)
+	assert.Equal(t, sdb.GetBalance(stakeAddress), b6)
+	assert.Equal(t, sdb.GetBalance(stakeAddress2), b7)
+	assert.Equal(t, sdb.GetBalance(common.EmptyAddress), new(big.Int).SetUint64(180000))
+	_, found, err := getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
+	assert.Nil(t, err)
+	assert.Equal(t, found, false)
+}
+
+func TestPerformance(t *testing.T) {
+	Init()
+	blockNumber := 399999
+	extra := uint64(21000000000000)
+
+	type ValidatorKey struct {
+		ConsensusAddr common.Address
+		StakeAddress  common.Address
+	}
+	// create validator
+	loop := 300
+	validatorsKey := make([]*ValidatorKey, 0, loop)
+	for i := 0; i < loop; i++ {
+		pk, _ := crypto.GenerateKey()
+		consensusAddr := crypto.PubkeyToAddress(pk.PublicKey)
+		caller := crypto.PubkeyToAddress(*acct)
+		sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+		param := new(CreateValidatorParam)
+		param.ConsensusAddress = consensusAddr
+		param.SignerAddress = consensusAddr
+		param.ProposalAddress = caller
+		param.InitStake = new(big.Int).Mul(big.NewInt(1000000), params.ZNT1)
+		param.Commission = new(big.Int).SetUint64(2000)
+		param.Desc = "test"
+		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
+		input, err := param.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "CreateValidator", input, caller, caller, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+	}
+
+	loop = 10000
+	stakeAddressList := make([]common.Address, 0, loop)
+	for i := 0; i < loop; i++ {
+		//stake
+		pkStake, _ := crypto.GenerateKey()
+		staker := &pkStake.PublicKey
+		stakeAddress := crypto.PubkeyToAddress(*staker)
+		stakeAddressList = append(stakeAddressList, stakeAddress)
+		sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
+		param1 := new(StakeParam)
+		param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
+		param1.Amount = new(big.Int).Mul(big.NewInt(200), params.ZNT1)
+		input, err := param1.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "Stake", input, stakeAddress, stakeAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+	}
+
+	// change epoch
+	input, err := utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "ChangeEpoch", input, utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	// call endblock
+	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(10000000), params.ZNT1))
+	param := new(EndBlockParam)
+	input, err = param.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "EndBlock", input, utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	// withdraw stake rewards and commission
+	param1 := new(WithdrawStakeRewardsParam)
+	param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param1.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawStakeRewards", input, stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
+	assert.Nil(t, err)
+	param2 := new(WithdrawCommissionParam)
+	param2.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param2.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawCommission", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	loop = 100
+	for i := 0; i < loop; i++ {
+		// unstake
+		param3 := new(UnStakeParam)
+		param3.ConsensusAddress = validatorsKey[0].ConsensusAddr
+		param3.Amount = new(big.Int).Mul(big.NewInt(1), params.ZNT1)
+		input, err = param3.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UnStake", input, stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
+		assert.Nil(t, err)
+	}
+
+	// query
+	{
+		p1 := &GetEpochInfoParam{
+			ID: common.Big1,
+		}
+		input, err = p1.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetEpochInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p2 := &GetAllValidatorsParam{}
+		input, err = p2.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetAllValidators", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p3 := &GetValidatorParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p3.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidator", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p4 := &GetStakeInfoParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			StakeAddress:     stakeAddressList[0],
+		}
+		input, err = p4.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetStakeInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p5 := &GetUnlockingInfoParam{
+			StakeAddress: stakeAddressList[0],
+		}
+		input, err = p5.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetUnlockingInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p6 := &GetStakeStartingInfoParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			StakeAddress:     stakeAddressList[0],
+		}
+		input, err = p6.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetStakeStartingInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p7 := &GetAccumulatedCommissionParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p7.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetAccumulatedCommission", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p8 := &GetValidatorSnapshotRewardsParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+			Period:           3,
+		}
+		input, err = p8.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorSnapshotRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p9 := &GetValidatorAccumulatedRewardsParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p9.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorAccumulatedRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p10 := &GetValidatorOutstandingRewardsParam{
+			ConsensusAddress: validatorsKey[0].ConsensusAddr,
+		}
+		input, err = p10.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorOutstandingRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p11 := &GetTotalPoolParam{}
+		input, err = p11.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetTotalPool", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+
+		p12 := &GetOutstandingRewardsParam{}
+		input, err = p12.Encode()
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetOutstandingRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		assert.Nil(t, err)
+	}
+
+	// withdraw
+	input, err = utils.PackMethod(ABI, MethodWithdraw)
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "Withdraw", input, stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
+	assert.NotNil(t, err)
+
+	// cancel validator && withdraw validator
+	param4 := new(CancelValidatorParam)
+	param4.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param4.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "CancelValidator", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	blockNumber = 799999
+	// change epoch
+	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "ChangeEpoch", input, utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	blockNumber = 900000
+	// withdraw validator
+	param5 := new(WithdrawValidatorParam)
+	param5.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	input, err = param5.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawValidator", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+
+	// update validator
+	param6 := new(UpdateValidatorParam)
+	param6.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param6.Desc = "test2"
+	input, err = param6.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UpdateValidator", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+	param7 := new(UpdateCommissionParam)
+	param7.ConsensusAddress = validatorsKey[0].ConsensusAddr
+	param7.Commission = new(big.Int).SetUint64(2500)
+	input, err = param7.Encode()
+	assert.Nil(t, err)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UpdateCommission", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	assert.Nil(t, err)
+}
+
+func TestCreateValidatorParam(t *testing.T) {
+	Init()
+
+	blockNumber := common.Big1
+	extra := uint64(21000000000000)
+
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	caller := crypto.PubkeyToAddress(*acct)
+	sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(100000000), params.ZNT1))
+
+	tests := []struct {
+		name   string
+		params *CreateValidatorParam
+	}{
 		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       1,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := GenerateTestPeers(2)
-				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
-				c.Payload, _ = input.Encode()
-				delEpoch(ctx, testGenesisEpoch.Hash())
-			},
-			Expect: ErrEpochNotExist,
+			name: "invalid consensus address",
+			params: &CreateValidatorParam{ConsensusAddress: common.Address{}, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetUint64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
 		},
 		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       2,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := GenerateTestPeers(2)
-				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
-				c.Payload, _ = input.Encode()
-				testCaller = GenerateTestAddress(78)
-			},
-			Expect: ErrInvalidAuthority,
+			name: "invalid signer address",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: common.Address{}, ProposalAddress: addr,
+				Commission: new(big.Int).SetUint64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
 		},
 		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       3,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				input := &MethodProposeInput{StartHeight: 0, Peers: nil}
-				payload, _ := input.Encode()
-				c.Payload = payload[0 : len(payload)-2]
-			},
-			Expect: ErrInvalidInput,
+			name: "invalid proposal address",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: common.Address{},
+				Commission: new(big.Int).SetUint64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
 		},
 		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       4,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := GenerateTestPeers(3)
-				peers.List = nil
-				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrInvalidPeers,
+			name: "negative commission",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetInt64(-3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
 		},
 		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       5,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := GenerateTestPeers(MinProposalPeersLen - 1)
-				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrPeersNum,
+			name: "large commission",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetInt64(30000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
 		},
 		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       6,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := GenerateTestPeers(MaxProposalPeersLen + 1)
-				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrPeersNum,
+			name: "negative init stake",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetInt64(3000), InitStake: new(big.Int).Mul(big.NewInt(-100000), params.ZNT1), Desc: "test"},
 		},
 		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       7,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := GenerateTestPeers(MinProposalPeersLen + 1)
-				peers.List[0].PubKey = "0ruf8nkj"
-				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrInvalidPubKey,
+			name: "small init stake",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetInt64(3000), InitStake: new(big.Int).Mul(big.NewInt(1000), params.ZNT1), Desc: "test"},
 		},
 		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       8,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := testGenesisEpoch.Peers.Copy()
-				newPeers := GenerateTestPeers(len(peers.List))
-				for i, _ := range peers.List {
-					if i%2 == 0 {
-						peers.List[i] = newPeers.List[i]
-					}
-				}
-				input := &MethodProposeInput{StartHeight: 0, Peers: peers}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrOldParticipantsNumber,
-		},
-		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       9,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := testGenesisEpoch.Peers.Copy()
-				peers.List = append(peers.List, GenerateTestPeers(1).List...)
-				c.StartHeight += MinEpochValidPeriod - 1
-				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrProposalStartHeight,
-		},
-		{
-			BlockNum:    3,
-			StartHeight: 2,
-			Index:       10,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := testGenesisEpoch.Peers.Copy()
-				peers.List = append(peers.List, GenerateTestPeers(1).List...)
-				c.StartHeight += MaxEpochValidPeriod + 10
-				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrProposalStartHeight,
-		},
-		{
-			BlockNum:    3,
-			StartHeight: MinEpochValidPeriod + 10,
-			Index:       11,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := testGenesisEpoch.Peers.Copy()
-				peers.List = append(peers.List, GenerateTestPeers(1).List...)
-				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
-				sort.Sort(peers)
-				epoch := &EpochInfo{
-					ID:          testGenesisEpoch.ID + 1,
-					StartHeight: c.StartHeight,
-					Peers:       peers,
-					Proposer:    ctx.ContractRef().TxOrigin(),
-				}
-				storeProposal(ctx, epoch.ID, epoch.Hash())
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrDuplicateProposal,
-		},
-		{
-			BlockNum:    3,
-			StartHeight: MinEpochValidPeriod + 10,
-			Index:       12,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := testGenesisEpoch.Peers.Copy()
-				peers.List = append(peers.List, GenerateTestPeers(1).List...)
-				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
-				sort.Sort(peers)
-				proposer := ctx.ContractRef().TxOrigin()
-				for i := 0; i < MaxProposalNumPerEpoch; i++ {
-					epoch := &EpochInfo{
-						ID:          testGenesisEpoch.ID + 1,
-						StartHeight: c.StartHeight + 2 + uint64(i),
-						Peers:       peers,
-						Proposer:    proposer,
-					}
-					storeProposal(ctx, epoch.ID, epoch.Hash())
-					storeEpoch(ctx, epoch)
-				}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrProposalsNum,
-		},
-		{
-			BlockNum:    3,
-			StartHeight: MinEpochValidPeriod + 10,
-			Index:       13,
-			BeforeHandler: func(c *TestCase, ctx *native.NativeContract) {
-				peers := testGenesisEpoch.Peers.Copy()
-				peers.List = append(peers.List, GenerateTestPeers(1).List...)
-				input := &MethodProposeInput{StartHeight: c.StartHeight, Peers: peers}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: nil,
+			name: "large desc",
+			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
+				Commission: new(big.Int).SetInt64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "Welcome to the Poly Network cross chain technology center!\n\nBlock technology has now undergone over 10 years of gradual development. Even though many public chain systems have emerged, most of the existing blockchain architecture systems focus on experimenting with the scalability and performance of a single blockchain, while for a single blockchain, due to the constraints that come into picture due to the architecture system and development direction, it is difficult to meet all the needs. Therefore, we expect that the future blockchain ecology must be a pattern in which multiple blockchains coexist. Different chains with different characteristics can become part of the blockchain infrastructure, but the chains are still limited to themselves, each forming its own island of value. Chains that are different in nature lack quick interoperability and convenient means of value circulation. In order to build a better next-generation internet infrastructure, we have launched a new cross-chain technology, the Poly Network.\n\nCross-chain technology is a new technical method to allow inter-chain interactions via cross-chain interoperability protocols that are based on the existing single-blockchain architecture design. The cross-chain interoperability protocol was first proposed by Vitalik Buterin in September 2016. He divided the cross-chain interoperability protocol into three modes: Notary schemes, side chains/relays, and hash locking. The notary mechanism refers to the interaction through a trusted third party as part of the process of cross-chain interaction, which is mainly implemented through mechanisms such as \"single sign, multi-sign notary mechanism\"; the side chain/relay mode is a protocol that is currently being used, for example: Cosmos and Polkadot and other popular cross-chain projects all use this protocol. It refers to a technical methodology that can rely on a trusted third party for cross-chain transaction verification and can conduct cross-chain transaction verification on its own; Hash time lock is the underlying technology of the earliest lightning network. The protocol consists of time lock and hash lock. Time lock refers to the agreement between the two parties that the transaction must be submitted within a certain time to be valid. Hash lock refers to a hash value H, where if the original image R is provided such that Hash (R) = H, the promise is deemed valid, otherwise it is invalid. If the two parties involved in the transaction could not succeed for any reason, time lock can allow the parties to the transaction to get their assets back to avoid losses due to fraud or transaction failure."},
 		},
 	}
 
-	for _, v := range cases {
-		resetTestContext()
-		ctx := generateNativeContract(testCaller, v.BlockNum)
-		if v.BeforeHandler != nil {
-			v.BeforeHandler(v, ctx)
-		}
-		_, _, err := ctx.ContractRef().NativeCall(testCaller, this, v.Payload)
-		assert.Equal(t, v.Expect, err)
-		if v.AfterHandler != nil {
-			v.AfterHandler(v, ctx)
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.params.Encode()
+			assert.Nil(t, err)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+			fmt.Println("#######", err)
+			assert.NotNil(t, err)
+		})
 	}
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/contracts/native/governance/node_manager -run TestVote
-func TestVote(t *testing.T) {
-	epochID := uint64(2)
+func TestUpdateValidatorParam(t *testing.T) {
+	Init()
 
-	type TestCase struct {
-		ProposeBlockNum     int
-		ProposalStartHeight uint64
-		NeedProposal        bool
-		Epoch               *EpochInfo
-		OldMembers          []common.Address
-		NewMembers          []common.Address
-		Caller              common.Address
-		Ctx                 *native.NativeContract
-		VoteBlockNum        int
-		Payload             []byte
-		BeforeHandler       func(c *TestCase)
-		AfterHandler        func()
-		Index               int
-		Expect              error
-	}
+	blockNumber := common.Big1
+	extra := uint64(21000000000000)
 
-	proposal := func(c *TestCase) {
-		peers := testGenesisEpoch.Peers.Copy()
-		c.OldMembers = make([]common.Address, 0)
-		c.NewMembers = make([]common.Address, 0)
-		for _, v := range peers.List {
-			c.OldMembers = append(c.OldMembers, v.Address)
-		}
-		newList := GenerateTestPeers(1)
-		for _, v := range newList.List {
-			c.NewMembers = append(c.NewMembers, v.Address)
-		}
-		peers.List = append(peers.List, newList.List...)
-		sort.Sort(peers)
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	pk1, _ := crypto.GenerateKey()
+	addr1 := crypto.PubkeyToAddress(pk1.PublicKey)
+	caller := crypto.PubkeyToAddress(*acct)
 
-		c.Epoch = &EpochInfo{StartHeight: c.ProposalStartHeight, Peers: peers, ID: epochID}
-		input := &MethodProposeInput{StartHeight: c.Epoch.StartHeight, Peers: c.Epoch.Peers}
-		payload, err := input.Encode()
-		if err != nil {
-			t.Fatal(err)
-		}
-		proposer := c.OldMembers[0]
-		ctx := generateNativeContract(proposer, c.ProposeBlockNum)
-		if _, _, err := ctx.ContractRef().NativeCall(proposer, this, payload); err != nil {
-			t.Fatal(err)
-		}
-	}
+	// create validator
+	sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(100000000), params.ZNT1))
+	param := new(CreateValidatorParam)
+	param.ConsensusAddress = addr
+	param.SignerAddress = addr
+	param.ProposalAddress = addr
+	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	param.Commission = new(big.Int).SetUint64(2000)
+	param.Desc = "test"
+	input, err := param.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
 
-	cases := []*TestCase{
+	tests := []struct {
+		name   string
+		params *UpdateValidatorParam
+	}{
 		{
-			ProposeBlockNum:     0,
-			ProposalStartHeight: 0,
-			NeedProposal:        false,
-			VoteBlockNum:        3,
-			Index:               1,
-			BeforeHandler: func(c *TestCase) {
-				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: epochID, EpochHash: GenerateTestHash(12)}
-				c.Payload, _ = input.Encode()
-
-				delEpoch(c.Ctx, testGenesisEpoch.Hash())
-			},
-			Expect: ErrEpochNotExist,
-		},
-		{
-			ProposeBlockNum:     3,
-			ProposalStartHeight: MinEpochValidPeriod + 10,
-			NeedProposal:        true,
-			VoteBlockNum:        3,
-			Index:               2,
-			BeforeHandler: func(c *TestCase) {
-				c.Caller = GenerateTestAddress(1)
-				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrInvalidAuthority,
-		},
-		{
-			ProposeBlockNum:     3,
-			ProposalStartHeight: MinEpochValidPeriod + 10,
-			NeedProposal:        true,
-			VoteBlockNum:        3,
-			Index:               3,
-			BeforeHandler: func(c *TestCase) {
-				c.Caller = c.NewMembers[0]
-				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrInvalidAuthority,
-		},
-		{
-			ProposeBlockNum:     3,
-			ProposalStartHeight: MinEpochValidPeriod + 10,
-			NeedProposal:        true,
-			VoteBlockNum:        0,
-			Index:               4,
-			BeforeHandler: func(c *TestCase) {
-				c.Caller = c.OldMembers[0]
-				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod - 10)
-				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
-				payload, _ := input.Encode()
-				c.Payload = payload[0 : len(payload)-2]
-			},
-			Expect: ErrInvalidInput,
-		},
-		{
-			ProposeBlockNum:     3,
-			ProposalStartHeight: MinEpochValidPeriod + 10,
-			NeedProposal:        true,
-			VoteBlockNum:        0,
-			Index:               5,
-			BeforeHandler: func(c *TestCase) {
-				c.Caller = c.OldMembers[0]
-				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod - 10)
-				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID + 1, EpochHash: c.Epoch.Hash()}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrInvalidInput,
-		},
-		{
-			ProposeBlockNum:     3,
-			ProposalStartHeight: MinEpochValidPeriod + 10,
-			NeedProposal:        true,
-			VoteBlockNum:        0,
-			Index:               6,
-			BeforeHandler: func(c *TestCase) {
-				c.Caller = c.OldMembers[0]
-				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod - 10)
-				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
-				c.Payload, _ = input.Encode()
-
-				delProposal(c.Ctx, c.Epoch.ID, c.Epoch.Hash())
-
-			},
-			Expect: ErrProposalNotExist,
-		},
-		{
-			ProposeBlockNum:     3,
-			ProposalStartHeight: MinEpochValidPeriod + 10,
-			NeedProposal:        true,
-			VoteBlockNum:        0,
-			Index:               7,
-			BeforeHandler: func(c *TestCase) {
-				c.Caller = c.OldMembers[0]
-				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod - 10)
-				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
-				c.Payload, _ = input.Encode()
-
-				epoch, _ := getEpoch(c.Ctx, c.Epoch.Hash())
-				epoch.Status = ProposalStatusPassed
-				storeEpoch(c.Ctx, epoch)
-			},
-			Expect: ErrProposalPassed,
-		},
-		{
-			ProposeBlockNum:     3,
-			ProposalStartHeight: MinEpochValidPeriod + 10,
-			NeedProposal:        true,
-			VoteBlockNum:        0,
-			Index:               8,
-			BeforeHandler: func(c *TestCase) {
-				c.Caller = c.OldMembers[0]
-				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod + 1)
-				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: ErrVoteHeight,
-		},
-		{
-			ProposeBlockNum:     3,
-			ProposalStartHeight: MinEpochValidPeriod + 10,
-			NeedProposal:        true,
-			VoteBlockNum:        0,
-			Index:               8,
-			BeforeHandler: func(c *TestCase) {
-				c.Caller = c.OldMembers[0]
-				c.VoteBlockNum = int(c.ProposalStartHeight - MinVoteEffectivePeriod - 10)
-				c.Ctx = generateNativeContract(c.Caller, c.VoteBlockNum)
-				input := &MethodVoteInput{EpochID: c.Epoch.ID, EpochHash: c.Epoch.Hash()}
-				c.Payload, _ = input.Encode()
-			},
-			Expect: nil,
+			name:   "large desc",
+			params: &UpdateValidatorParam{ConsensusAddress: addr, SignerAddress: addr1, ProposalAddress: common.Address{}, Desc: "Welcome to the Poly Network cross chain technology center!\n\nBlock technology has now undergone over 10 years of gradual development. Even though many public chain systems have emerged, most of the existing blockchain architecture systems focus on experimenting with the scalability and performance of a single blockchain, while for a single blockchain, due to the constraints that come into picture due to the architecture system and development direction, it is difficult to meet all the needs. Therefore, we expect that the future blockchain ecology must be a pattern in which multiple blockchains coexist. Different chains with different characteristics can become part of the blockchain infrastructure, but the chains are still limited to themselves, each forming its own island of value. Chains that are different in nature lack quick interoperability and convenient means of value circulation. In order to build a better next-generation internet infrastructure, we have launched a new cross-chain technology, the Poly Network.\n\nCross-chain technology is a new technical method to allow inter-chain interactions via cross-chain interoperability protocols that are based on the existing single-blockchain architecture design. The cross-chain interoperability protocol was first proposed by Vitalik Buterin in September 2016. He divided the cross-chain interoperability protocol into three modes: Notary schemes, side chains/relays, and hash locking. The notary mechanism refers to the interaction through a trusted third party as part of the process of cross-chain interaction, which is mainly implemented through mechanisms such as \"single sign, multi-sign notary mechanism\"; the side chain/relay mode is a protocol that is currently being used, for example: Cosmos and Polkadot and other popular cross-chain projects all use this protocol. It refers to a technical methodology that can rely on a trusted third party for cross-chain transaction verification and can conduct cross-chain transaction verification on its own; Hash time lock is the underlying technology of the earliest lightning network. The protocol consists of time lock and hash lock. Time lock refers to the agreement between the two parties that the transaction must be submitted within a certain time to be valid. Hash lock refers to a hash value H, where if the original image R is provided such that Hash (R) = H, the promise is deemed valid, otherwise it is invalid. If the two parties involved in the transaction could not succeed for any reason, time lock can allow the parties to the transaction to get their assets back to avoid losses due to fraud or transaction failure."},
 		},
 	}
 
-	for _, v := range cases {
-		resetTestContext()
-
-		if v.NeedProposal {
-			proposal(v)
-		}
-
-		if v.BeforeHandler != nil {
-			v.BeforeHandler(v)
-		}
-		_, _, err := v.Ctx.ContractRef().NativeCall(v.Caller, this, v.Payload)
-		assert.Equal(t, v.Expect, err)
-		if v.AfterHandler != nil {
-			v.AfterHandler()
-		}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.params.Encode()
+			assert.Nil(t, err)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+			fmt.Println("#######", err)
+			assert.NotNil(t, err)
+		})
 	}
 }
 
-func TestProposalPassed(t *testing.T) {
-	resetTestContext()
+func TestUpdateCommissionParam(t *testing.T) {
+	Init()
 
-	// prepare propose data
-	peers := testGenesisEpoch.Peers.Copy()
-	oldMembers := make([]common.Address, 0)
-	for _, v := range peers.List {
-		oldMembers = append(oldMembers, v.Address)
-	}
-	newList := GenerateTestPeers(1)
-	peers.List = append(peers.List, newList.List...)
-	sort.Sort(peers)
+	blockNumber := common.Big1
+	extra := uint64(21000000000000)
 
-	epochID := uint64(2)
-	proposeBlockNum := 9
-	proposalStartHeight := uint64(proposeBlockNum) + MinEpochValidPeriod + 1
-	epoch := &EpochInfo{StartHeight: proposalStartHeight, Peers: peers, ID: epochID, Status: ProposalStatusPropose}
-	input := &MethodProposeInput{StartHeight: epoch.StartHeight, Peers: epoch.Peers}
-	payload, _ := input.Encode()
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	caller := crypto.PubkeyToAddress(*acct)
 
-	// propose
-	proposer := oldMembers[0]
-	ctx := generateNativeContract(proposer, proposeBlockNum)
-	_, _, _ = ctx.ContractRef().NativeCall(proposer, this, payload)
+	// create validator
+	sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(100000000), params.ZNT1))
+	param := new(CreateValidatorParam)
+	param.ConsensusAddress = addr
+	param.SignerAddress = addr
+	param.ProposalAddress = addr
+	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	param.Commission = new(big.Int).SetUint64(2000)
+	param.Desc = "test"
+	input, err := param.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
 
-	curEpoch, err := getCurrentEpoch(ctx)
-	assert.NoError(t, err)
-
-	// prepare vote data
-	n := curEpoch.QuorumSize()
-	voteBlockNum := proposeBlockNum + 1
-	voteInput := &MethodVoteInput{EpochID: epoch.ID, EpochHash: epoch.Hash()}
-	votePayload, err := voteInput.Encode()
-	assert.NoError(t, err)
-
-	// proposal not passed
-	for i := 0; i < n-1; i++ {
-		voter := oldMembers[i]
-		ctx = generateNativeContract(voter, voteBlockNum)
-		_, _, err := ctx.ContractRef().NativeCall(voter, this, votePayload)
-		assert.NoError(t, err)
-	}
-	curEpoch, err = getEpoch(ctx, epoch.Hash())
-	assert.NoError(t, err)
-	assert.Equal(t, ProposalStatusPropose, curEpoch.Status)
-
-	// proposal passed
-	voter := oldMembers[n-1]
-	ctx = generateNativeContract(voter, voteBlockNum)
-	_, _, err = ctx.ContractRef().NativeCall(voter, this, votePayload)
-	assert.NoError(t, err)
-	curEpoch, err = getEpoch(ctx, epoch.Hash())
-	assert.NoError(t, err)
-	assert.Equal(t, ProposalStatusPassed, curEpoch.Status)
-}
-
-func TestDirtyJob(t *testing.T) {
-	resetTestContext()
-
-	s := testEmptyCtx
-	epochID := uint64(2)
-	peers := GenerateTestPeers(12)
-	voters := []common.Address{peers.List[2].Address, peers.List[3].Address}
-
-	// store last epoch
-	lastEpoch := &EpochInfo{ID: epochID - 1, Proposer: peers.List[0].Address, Peers: peers, StartHeight: 60}
-	assert.NoError(t, storeEpoch(s, lastEpoch))
-	assert.NoError(t, storeProposal(s, lastEpoch.ID, lastEpoch.Hash()))
-
-	// store current useless epoch and votes
-	eps := []*EpochInfo{
-		{ID: epochID, Proposer: peers.List[0].Address, Peers: &Peers{List: peers.List[:5]}, StartHeight: 270},
-		{ID: epochID, Proposer: peers.List[1].Address, Peers: &Peers{List: peers.List[:6]}, StartHeight: 290},
-	}
-	for i, v := range eps {
-		assert.NoError(t, storeEpoch(s, v))
-		assert.NoError(t, storeProposal(s, v.ID, v.Hash()))
-		assert.NoError(t, storeVote(s, v.Hash(), voters[i]))
-		storeVoteTo(s, v.ID, voters[i], v.Hash())
+	tests := []struct {
+		name   string
+		params *UpdateCommissionParam
+	}{
+		{
+			name:   "negative commission",
+			params: &UpdateCommissionParam{ConsensusAddress: addr, Commission: new(big.Int).SetInt64(-3000)},
+		},
+		{
+			name:   "too large commission",
+			params: &UpdateCommissionParam{ConsensusAddress: addr, Commission: new(big.Int).SetInt64(30000)},
+		},
 	}
 
-	curEpoch := GenerateTestEpochInfo(epochID, 270, 13)
-	assert.NoError(t, storeEpoch(s, curEpoch))
-	assert.NoError(t, storeProposal(s, curEpoch.ID, curEpoch.Hash()))
-
-	// before dirty job
-	list, err := getProposals(s, epochID)
-	assert.NoError(t, err)
-	assert.Equal(t, 1+len(eps), len(list))
-	for _, v := range eps {
-		assert.Equal(t, 1, voteSize(s, v.Hash()))
-	}
-
-	dirtyJob(s, lastEpoch, curEpoch)
-
-	// after dirty job
-	// proposal number should be only 1 with same epochID
-	list, err = getProposals(s, epochID)
-	assert.NoError(t, err)
-	assert.Equal(t, int(1), len(list))
-	assert.Equal(t, curEpoch.Hash(), list[0])
-
-	for _, v := range eps {
-		inf, _ := getEpoch(s, v.Hash())
-		assert.Nil(t, inf)
-		assert.Equal(t, 0, voteSize(s, v.Hash()))
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.params.Encode()
+			assert.Nil(t, err)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+			fmt.Println("#######", err)
+			assert.NotNil(t, err)
+		})
 	}
 }
 
-func TestGetEpochByID(t *testing.T) {
-	resetTestContext()
+func TestStakeParam(t *testing.T) {
+	Init()
 
-	s := testEmptyCtx
+	blockNumber := common.Big1
+	extra := uint64(21000000000000)
 
-	block := uint64(100)
-	epoch := GenerateTestEpochInfo(2, block, 7)
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	caller := crypto.PubkeyToAddress(*acct)
 
-	assert.NoError(t, storeEpoch(s, epoch))
-	assert.NoError(t, storeProposal(s, epoch.ID, epoch.Hash()))
-	storeEpochProof(s, epoch.ID, epoch.Hash())
+	// create validator
+	sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(100000000), params.ZNT1))
+	param := new(CreateValidatorParam)
+	param.ConsensusAddress = addr
+	param.SignerAddress = addr
+	param.ProposalAddress = addr
+	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	param.Commission = new(big.Int).SetUint64(2000)
+	param.Desc = "test"
+	input, err := param.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
 
-	input := new(MethodGetEpochByIDInput)
-	input.EpochID = epoch.ID
-	payload, err := input.Encode()
-	assert.NoError(t, err)
-	ctx := generateNativeContract(common.EmptyAddress, int(block+1))
-	enc, _, err := ctx.ContractRef().NativeCall(common.EmptyAddress, this, payload)
-	assert.NoError(t, err)
+	tests := []struct {
+		name   string
+		params *StakeParam
+	}{
+		{
+			name:   "negative amount",
+			params: &StakeParam{ConsensusAddress: addr, Amount: new(big.Int).Mul(big.NewInt(-10), params.ZNT1)},
+		},
+	}
 
-	output := new(MethodEpochOutput)
-	assert.NoError(t, output.Decode(enc))
-	assert.Equal(t, epoch.Hash(), output.Epoch.Hash())
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.params.Encode()
+			assert.Nil(t, err)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+			fmt.Println("#######", err)
+			assert.NotNil(t, err)
+		})
+	}
 }
 
-func TestGetProofByID(t *testing.T) {
-	resetTestContext()
+func TestUnStakeParam(t *testing.T) {
+	Init()
 
-	s := testEmptyCtx
+	blockNumber := common.Big1
+	extra := uint64(21000000000000)
 
-	block := uint64(100)
-	epoch := GenerateTestEpochInfo(2, block, 7)
-	storeEpochProof(s, epoch.ID, epoch.Hash())
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	caller := crypto.PubkeyToAddress(*acct)
 
-	input := new(MethodProofInput)
-	input.EpochID = epoch.ID
-	payload, err := input.Encode()
-	assert.NoError(t, err)
-	ctx := generateNativeContract(common.EmptyAddress, int(block+1))
-	enc, _, err := ctx.ContractRef().NativeCall(common.EmptyAddress, this, payload)
-	assert.NoError(t, err)
+	// create validator
+	sdb.SetBalance(caller, new(big.Int).Mul(big.NewInt(100000000), params.ZNT1))
+	param := new(CreateValidatorParam)
+	param.ConsensusAddress = addr
+	param.SignerAddress = addr
+	param.ProposalAddress = addr
+	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	param.Commission = new(big.Int).SetUint64(2000)
+	param.Desc = "test"
+	input, err := param.Encode()
+	assert.Nil(t, err)
+	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
 
-	output := new(MethodProofOutput)
-	assert.NoError(t, output.Decode(enc))
-	assert.Equal(t, epoch.Hash(), output.Hash)
-}
+	// stake
+	param2 := new(StakeParam)
+	param2.ConsensusAddress = addr
+	param2.Amount = new(big.Int).Mul(big.NewInt(10), params.ZNT1)
+	input, err = param2.Encode()
+	assert.Nil(t, err)
+	contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+	assert.Nil(t, err)
 
-func generateNativeContractRef(origin common.Address, blockNum int) *native.ContractRef {
-	token := make([]byte, common.HashLength)
-	rand.Read(token)
-	hash := common.BytesToHash(token)
-	return native.NewContractRef(testStateDB, origin, origin, big.NewInt(int64(blockNum)), hash, testSupplyGas, nil)
-}
+	tests := []struct {
+		name   string
+		params *UnStakeParam
+	}{
+		{
+			name:   "negative amount",
+			params: &UnStakeParam{ConsensusAddress: addr, Amount: new(big.Int).Mul(big.NewInt(-10), params.ZNT1)},
+		},
+	}
 
-func generateNativeContract(origin common.Address, blockNum int) *native.NativeContract {
-	ref := generateNativeContractRef(origin, blockNum)
-	return native.NewNativeContract(testStateDB, ref)
-}
-
-func resetTestContext() {
-	db := rawdb.NewMemoryDatabase()
-	testStateDB, _ = state.New(common.Hash{}, state.NewDatabase(db), nil)
-	testEmptyCtx = native.NewNativeContract(testStateDB, nil)
-	testGenesisPeers := GenerateTestPeers(testGenesisNum)
-	testGenesisEpoch, _ = storeGenesisEpoch(testStateDB, testGenesisPeers)
-	testCaller = testGenesisEpoch.Peers.List[0].Address
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			input, err := tt.params.Encode()
+			assert.Nil(t, err)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
+			fmt.Println("#######", err)
+			assert.NotNil(t, err)
+		})
+	}
 }

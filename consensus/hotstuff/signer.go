@@ -35,6 +35,9 @@ type Signer interface {
 	// SignHash returns an signature of wrapped proposal hash which used as an vote
 	SignHash(hash common.Hash) ([]byte, error)
 
+	// SignTx sign transaction and full fill it with signature
+	SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error)
+
 	// Recover extracts the proposer address from a signed header.
 	Recover(h *types.Header) (common.Address, *types.HotstuffExtra, error)
 

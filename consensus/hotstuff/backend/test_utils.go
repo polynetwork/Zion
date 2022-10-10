@@ -127,7 +127,7 @@ func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types
 	header := makeHeader(parent, engine.config)
 	engine.Prepare(chain, header)
 	state, _ := chain.StateAt(parent.Root())
-	block, _ := engine.FinalizeAndAssemble(chain, header, state, nil, nil, nil)
+	block, _, _ := engine.FinalizeAndAssemble(chain, header, state, nil, nil, nil)
 	return block
 }
 
@@ -137,14 +137,16 @@ func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types
 func singleNodeChain() (*core.BlockChain, *backend) {
 	testLogger.SetHandler(elog.StdoutHandler)
 
-	genesis, nodeKeys, valset := getGenesisAndKeys(1)
+	genesis, nodeKeys, _ := getGenesisAndKeys(1)
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
 	b, _ := New(config, nodeKeys[0], memDB).(*backend)
-	b.epochs = map[uint64]*Epoch{
-		0: {StartHeight: 0, ValSet: valset},
-	}
+	//b.snaps = &snapshots{
+	//	list: []*snapshot{
+	//		{ID: 1, Start: 0, ValSet: valset},
+	//	},
+	//}
 	genesis.MustCommit(memDB)
 
 	txLookUpLimit := uint64(100)
@@ -158,7 +160,7 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 		panic(err)
 	}
 
-	b.Start(blockchain, blockchain.CurrentBlock, blockchain.GetBlockByHash, nil)
+	b.Start(blockchain, nil)
 
 	return blockchain, b
 }

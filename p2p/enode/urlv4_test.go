@@ -198,3 +198,17 @@ func TestNodeString(t *testing.T) {
 		}
 	}
 }
+
+func TestCopyNode(t *testing.T) {
+	urlv4 := "enode://c07fb7d48eac559a2483e249d27841c18c7ce5dbbbf2796a6963cc9cef27cabd2e1bc9c456a83f0777a98dfd6e7baf272739b9e5f8febf0077dc09509c2dfa48@127.0.0.1:30300?discport=0"
+	rawip := "132.168.9.12"
+	tcp, udp := 30301, 50500
+
+	ip := net.ParseIP(rawip)
+	node, err := CopyUrlv4(urlv4, ip, tcp, udp)
+	if err != nil {
+		t.Error(err)
+	}
+
+	t.Log(node.URLv4())
+}

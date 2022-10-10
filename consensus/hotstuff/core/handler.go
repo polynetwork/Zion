@@ -39,7 +39,6 @@ func (c *core) Start(chain consensus.ChainReader) error {
 	})
 
 	c.isRunning = true
-	c.requests = newRequestSet()
 	c.backlogs = newBackLog()
 	c.current = nil
 
@@ -59,6 +58,30 @@ func (c *core) Stop() error {
 	c.unsubscribeEvents()
 	c.isRunning = false
 	return nil
+}
+
+// Address implement core.Engine.Address
+func (c *core) Address() common.Address {
+	return c.signer.Address()
+}
+
+// IsProposer implement core.Engine.IsProposer
+func (c *core) IsProposer() bool {
+	return c.valSet.IsProposer(c.backend.Address())
+}
+
+// IsCurrentProposal implement core.Engine.IsCurrentProposal
+func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
+	if c.current == nil {
+		return false
+	}
+	if proposal := c.current.Proposal(); proposal != nil && proposal.Hash() == blockHash {
+		return true
+	}
+	if req := c.current.PendingRequest(); req != nil && req.Proposal != nil && req.Proposal.Hash() == blockHash {
+		return true
+	}
+	return false
 }
 
 // ----------------------------------------------------------------------------
@@ -94,7 +117,7 @@ func (c *core) handleEvents() {
 		select {
 		case event, ok := <-c.events.Chan():
 			if !ok {
-				logger.Error("Failed to receive msg Event")
+				logger.Error("Failed to receive msg Event", "err", "subscribe event chan out empty")
 				return
 			}
 			// A real Event arrived, process interesting content
@@ -110,7 +133,6 @@ func (c *core) handleEvents() {
 			}
 
 		case _, ok := <-c.timeoutSub.Chan():
-			//logger.Trace("handle timeout Event")
 			if !ok {
 				logger.Error("Failed to receive timeout Event")
 				return
@@ -175,6 +197,8 @@ func (c *core) handleCheckedMsg(msg *hotstuff.Message, src hotstuff.Validator) (
 		err = c.handleCommit(msg, src)
 	case MsgTypeCommitVote:
 		err = c.handleCommitVote(msg, src)
+	case MsgTypeDecide:
+		err = c.handleDecide(msg, src)
 	default:
 		err = errInvalidMessage
 		c.logger.Error("msg type invalid", "unknown type", msg.Code)

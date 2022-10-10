@@ -20,14 +20,12 @@ package node_manager
 
 import (
 	"fmt"
-	"strings"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/rlp"
+	"math/big"
+	"strings"
 )
 
 const contractName = "node manager"
@@ -45,206 +43,223 @@ var (
 	this = utils.NodeManagerContractAddress
 )
 
-type MethodContractNameInput struct{}
-
-func (m *MethodContractNameInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodName)
-}
-func (m *MethodContractNameInput) Decode(payload []byte) error { return nil }
-
-type MethodContractNameOutput struct {
-	Name string
+type CreateValidatorParam struct {
+	ConsensusAddress common.Address
+	SignerAddress    common.Address
+	ProposalAddress  common.Address
+	Commission       *big.Int
+	InitStake        *big.Int
+	Desc             string
 }
 
-func (m *MethodContractNameOutput) Encode() ([]byte, error) {
-	m.Name = contractName
-	return utils.PackOutputs(ABI, MethodName, m.Name)
-}
-func (m *MethodContractNameOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodName, m, payload)
+func (m *CreateValidatorParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodCreateValidator, m)
 }
 
-type MethodProposeInput struct {
-	StartHeight uint64
-	Peers       *Peers
+type UpdateValidatorParam struct {
+	ConsensusAddress common.Address
+	SignerAddress    common.Address
+	ProposalAddress  common.Address
+	Desc             string
 }
 
-func (m *MethodProposeInput) Encode() ([]byte, error) {
-	enc, err := rlp.EncodeToBytes(m.Peers)
-	if err != nil {
-		return nil, err
-	}
-	return utils.PackMethod(ABI, MethodPropose, m.StartHeight, enc)
-}
-func (m *MethodProposeInput) Decode(payload []byte) error {
-	var data struct {
-		StartHeight uint64
-		Peers       []byte
-	}
-	if err := utils.UnpackMethod(ABI, MethodPropose, &data, payload); err != nil {
-		return err
-	}
-	m.StartHeight = data.StartHeight
-	return rlp.DecodeBytes(data.Peers, &m.Peers)
+func (m *UpdateValidatorParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodUpdateValidator, m)
 }
 
-type MethodProposeOutput struct {
-	Success bool
+type UpdateCommissionParam struct {
+	ConsensusAddress common.Address
+	Commission       *big.Int
 }
 
-func (m *MethodProposeOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodPropose, m.Success)
-}
-func (m *MethodProposeOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodPropose, m, payload)
+func (m *UpdateCommissionParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodUpdateCommission, m)
 }
 
-type MethodVoteInput struct {
-	EpochID   uint64
-	EpochHash common.Hash
+type StakeParam struct {
+	ConsensusAddress common.Address
+	Amount           *big.Int
 }
 
-func (m *MethodVoteInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodVote, m.EpochID, m.EpochHash.Bytes())
-}
-func (m *MethodVoteInput) Decode(payload []byte) error {
-	var data struct {
-		EpochID   uint64
-		EpochHash []byte
-	}
-	if err := utils.UnpackMethod(ABI, MethodVote, &data, payload); err != nil {
-		return err
-	}
-
-	m.EpochID = data.EpochID
-	m.EpochHash = common.BytesToHash(data.EpochHash)
-	return nil
+func (m *StakeParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodStake, m)
 }
 
-type MethodVoteOutput struct {
-	Success bool
+type UnStakeParam struct {
+	ConsensusAddress common.Address
+	Amount           *big.Int
 }
 
-func (m *MethodVoteOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodVote, m.Success)
-}
-func (m *MethodVoteOutput) Decode(payload []byte) error {
-	return utils.UnpackOutputs(ABI, MethodVote, m, payload)
+func (m *UnStakeParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodUnStake, m)
 }
 
-// useless input
-type MethodEpochInput struct{}
-
-func (m *MethodEpochInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodEpoch)
-}
-func (m *MethodEpochInput) Decode(payload []byte) error { return nil }
-
-type MethodEpochOutput struct {
-	Epoch *EpochInfo
+type CancelValidatorParam struct {
+	ConsensusAddress common.Address
 }
 
-func (m *MethodEpochOutput) Encode() ([]byte, error) {
-	enc, err := rlp.EncodeToBytes(m.Epoch)
-	if err != nil {
-		return nil, err
-	}
-	return utils.PackOutputs(ABI, MethodEpoch, enc)
-}
-func (m *MethodEpochOutput) Decode(payload []byte) error {
-	var data struct {
-		Epoch []byte
-	}
-	if err := utils.UnpackOutputs(ABI, MethodEpoch, &data, payload); err != nil {
-		return err
-	}
-	return rlp.DecodeBytes(data.Epoch, &m.Epoch)
+func (m *CancelValidatorParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodCancelValidator, m)
 }
 
-// useless input
-type MethodGetChangingEpochInput struct{}
-
-func (m *MethodGetChangingEpochInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodGetChangingEpoch)
-}
-func (m *MethodGetChangingEpochInput) Decode(payload []byte) error { return nil }
-
-type MethodGetEpochByIDInput struct {
-	EpochID uint64
+type WithdrawValidatorParam struct {
+	ConsensusAddress common.Address
 }
 
-func (m *MethodGetEpochByIDInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodGetEpochByID, m.EpochID)
-}
-func (m *MethodGetEpochByIDInput) Decode(payload []byte) error {
-	var data struct {
-		EpochID uint64
-	}
-	if err := utils.UnpackMethod(ABI, MethodGetEpochByID, &data, payload); err != nil {
-		return err
-	}
-	m.EpochID = data.EpochID
-	return nil
+func (m *WithdrawValidatorParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodWithdrawValidator, m)
 }
 
-type MethodProofInput struct {
-	EpochID uint64
+type WithdrawStakeRewardsParam struct {
+	ConsensusAddress common.Address
 }
 
-func (m *MethodProofInput) Encode() ([]byte, error) {
-	return utils.PackMethod(ABI, MethodProof, m.EpochID)
-}
-func (m *MethodProofInput) Decode(payload []byte) error {
-	var data struct {
-		EpochID uint64
-	}
-	if err := utils.UnpackMethod(ABI, MethodProof, &data, payload); err != nil {
-		return err
-	}
-	m.EpochID = data.EpochID
-	return nil
+func (m *WithdrawStakeRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodWithdrawStakeRewards, m)
 }
 
-type MethodProofOutput struct {
-	Hash common.Hash
+type WithdrawCommissionParam struct {
+	ConsensusAddress common.Address
 }
 
-func (m *MethodProofOutput) Encode() ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodProof, m.Hash.Bytes())
-}
-func (m *MethodProofOutput) Decode(payload []byte) error {
-	var data common.Hash
-	if err := utils.UnpackOutputs(ABI, MethodProof, &data, payload); err != nil {
-		return err
-	}
-	m.Hash = data
-	return nil
+func (m *WithdrawCommissionParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodWithdrawCommission, m)
 }
 
-func emitEventProposed(s *native.NativeContract, epoch *EpochInfo) error {
-	enc, err := rlp.EncodeToBytes(epoch)
-	if err != nil {
-		return err
-	}
-	return s.AddNotify(ABI, []string{EventProposed}, enc)
+type ChangeEpochParam struct{}
+
+func (m *ChangeEpochParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodChangeEpoch)
 }
 
-func emitEventVoted(s *native.NativeContract, epochID uint64, hash common.Hash, curVotedNum int, groupSize int) error {
-	return s.AddNotify(ABI, []string{EventVoted}, epochID, hash.Bytes(), uint64(curVotedNum), uint64(groupSize))
+type WithdrawParam struct{}
+
+func (m *WithdrawParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodWithdraw)
 }
 
-func emitEpochChange(s *native.NativeContract, curEpoch, nextEpoch *EpochInfo) error {
-	curEnc, err := rlp.EncodeToBytes(curEpoch)
-	if err != nil {
-		return err
-	}
-	nextEnc, err := rlp.EncodeToBytes(nextEpoch)
-	if err != nil {
-		return err
-	}
-	return s.AddNotify(ABI, []string{EventEpochChanged}, curEnc, nextEnc)
+type EndBlockParam struct{}
+
+func (m *EndBlockParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodEndBlock)
 }
 
-func emitConsensusSign(s *native.NativeContract, sign *ConsensusSign, signer common.Address, num int) error {
-	return s.AddNotify(ABI, []string{EventConsensusSigned}, sign.Method, sign.Input, signer, uint64(num))
+type GetGlobalConfigParam struct{}
+
+func (m *GetGlobalConfigParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetGlobalConfig)
+}
+
+type GetCommunityInfoParam struct{}
+
+func (m *GetCommunityInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetCommunityInfo)
+}
+
+type GetCurrentEpochInfoParam struct{}
+
+func (m *GetCurrentEpochInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetCurrentEpochInfo)
+}
+
+type GetEpochInfoParam struct {
+	ID *big.Int
+}
+
+func (m *GetEpochInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetEpochInfo, m)
+}
+
+type GetAllValidatorsParam struct{}
+
+func (m *GetAllValidatorsParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetAllValidators)
+}
+
+type GetValidatorParam struct {
+	ConsensusAddress common.Address
+}
+
+func (m *GetValidatorParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetValidator, m)
+}
+
+type GetStakeInfoParam struct {
+	ConsensusAddress common.Address
+	StakeAddress     common.Address
+}
+
+func (m *GetStakeInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetStakeInfo, m)
+}
+
+type GetUnlockingInfoParam struct {
+	StakeAddress common.Address
+}
+
+func (m *GetUnlockingInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetUnlockingInfo, m)
+}
+
+type GetStakeStartingInfoParam struct {
+	ConsensusAddress common.Address
+	StakeAddress     common.Address
+}
+
+func (m *GetStakeStartingInfoParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetStakeStartingInfo, m)
+}
+
+type GetAccumulatedCommissionParam struct {
+	ConsensusAddress common.Address
+}
+
+func (m *GetAccumulatedCommissionParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetAccumulatedCommission, m)
+}
+
+type GetValidatorSnapshotRewardsParam struct {
+	ConsensusAddress common.Address
+	Period           uint64
+}
+
+func (m *GetValidatorSnapshotRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetValidatorSnapshotRewards, m)
+}
+
+type GetValidatorAccumulatedRewardsParam struct {
+	ConsensusAddress common.Address
+}
+
+func (m *GetValidatorAccumulatedRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetValidatorAccumulatedRewards, m)
+}
+
+type GetValidatorOutstandingRewardsParam struct {
+	ConsensusAddress common.Address
+}
+
+func (m *GetValidatorOutstandingRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetValidatorOutstandingRewards, m)
+}
+
+type GetTotalPoolParam struct{}
+
+func (m *GetTotalPoolParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetTotalPool)
+}
+
+type GetOutstandingRewardsParam struct{}
+
+func (m *GetOutstandingRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethod(ABI, MethodGetOutstandingRewards)
+}
+
+type GetStakeRewardsParam struct {
+	ConsensusAddress common.Address
+	StakeAddress     common.Address
+}
+
+func (m *GetStakeRewardsParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodGetStakeRewards, m)
 }

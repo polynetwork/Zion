@@ -33,7 +33,7 @@ type Backend interface {
 	Address() common.Address
 
 	// Validators returns current epoch participants
-	Validators(height uint64) ValidatorSet
+	Validators(hash common.Hash, inConsensus bool) ValidatorSet
 
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux
@@ -49,9 +49,6 @@ type Backend interface {
 
 	// PreCommit write seal to header and assemble new qc
 	PreCommit(proposal Proposal, seals [][]byte) (Proposal, error)
-
-	// ForwardCommit assemble unsealed block and sealed extra into an new full block
-	ForwardCommit(proposal Proposal, extra []byte) (Proposal, error)
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
@@ -73,6 +70,11 @@ type Backend interface {
 
 	// ValidateBlock execute block which contained in prepare message, and validate block state
 	ValidateBlock(block *types.Block) error
+
+	// AskMiningProposalWithParent ask for mining proposal with parent block as parameters.
+	AskMiningProposalWithParent(parent *types.Block)
+
+	CheckPoint(height uint64)
 
 	Close() error
 }

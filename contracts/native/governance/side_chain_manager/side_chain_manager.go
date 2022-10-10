@@ -15,59 +15,38 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package side_chain_manager
 
 import (
-	"encoding/hex"
+	"errors"
 	"fmt"
-	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/btcsuite/btcd/txscript"
-	"github.com/btcsuite/btcutil"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/contract"
+	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
-const contractName = "side chain manager"
-
 const (
-	//function name
-	MethodContractName             = "name"
-	MethodRegisterSideChain        = "registerSideChain"
-	MethodApproveRegisterSideChain = "approveRegisterSideChain"
-	MethodUpdateSideChain          = "updateSideChain"
-	MethodApproveUpdateSideChain   = "approveUpdateSideChain"
-	MethodQuitSideChain            = "quitSideChain"
-	MethodApproveQuitSideChain     = "approveQuitSideChain"
-	MethodRegisterRedeem           = "registerRedeem"
-	MethodSetBtcTxParam            = "setBtcTxParam"
-
 	//key prefix
 	SIDE_CHAIN_APPLY          = "sideChainApply"
 	UPDATE_SIDE_CHAIN_REQUEST = "updateSideChainRequest"
 	QUIT_SIDE_CHAIN_REQUEST   = "quitSideChainRequest"
 	SIDE_CHAIN                = "sideChain"
-	REDEEM_BIND               = "redeemBind"
-	BIND_SIGN_INFO            = "bindSignInfo"
-	BTC_TX_PARAM              = "btcTxParam"
-	REDEEM_SCRIPT             = "redeemScript"
 )
 
 var (
 	this     = native.NativeContractAddrMap[native.NativeSideChainManager]
 	gasTable = map[string]uint64{
-		// MethodContractName:             0,
-		MethodRegisterSideChain:        0,
-		MethodApproveRegisterSideChain: 100000,
-		MethodUpdateSideChain:          0,
-		MethodApproveUpdateSideChain:   0,
-		MethodQuitSideChain:            0,
-		MethodApproveQuitSideChain:     0,
-		MethodRegisterRedeem:           0,
-		MethodSetBtcTxParam:            0,
+		side_chain_manager_abi.MethodGetSideChain:             9751875,
+		side_chain_manager_abi.MethodRegisterSideChain:        3635625,
+		side_chain_manager_abi.MethodApproveRegisterSideChain: 7263375,
+		side_chain_manager_abi.MethodUpdateSideChain:          5599125,
+		side_chain_manager_abi.MethodApproveUpdateSideChain:   1270500,
+		side_chain_manager_abi.MethodQuitSideChain:            635250,
+		side_chain_manager_abi.MethodApproveQuitSideChain:     223125,
 	}
 
 	ABI *abi.ABI
@@ -82,44 +61,58 @@ func RegisterSideChainManagerContract(s *native.NativeContract) {
 	s.Prepare(ABI, gasTable)
 
 	// s.Register(MethodContractName, Name)
-	s.Register(MethodRegisterSideChain, RegisterSideChain)
-	s.Register(MethodApproveRegisterSideChain, ApproveRegisterSideChain)
-	s.Register(MethodUpdateSideChain, UpdateSideChain)
-	s.Register(MethodApproveUpdateSideChain, ApproveUpdateSideChain)
-	s.Register(MethodQuitSideChain, QuitSideChain)
-	s.Register(MethodApproveQuitSideChain, ApproveQuitSideChain)
-	s.Register(MethodRegisterRedeem, RegisterRedeem)
-	s.Register(MethodSetBtcTxParam, SetBtcTxParam)
+	s.Register(side_chain_manager_abi.MethodGetSideChain, GetSideChain)
+	s.Register(side_chain_manager_abi.MethodRegisterSideChain, RegisterSideChain)
+	s.Register(side_chain_manager_abi.MethodApproveRegisterSideChain, ApproveRegisterSideChain)
+	s.Register(side_chain_manager_abi.MethodUpdateSideChain, UpdateSideChain)
+	s.Register(side_chain_manager_abi.MethodApproveUpdateSideChain, ApproveUpdateSideChain)
+	s.Register(side_chain_manager_abi.MethodQuitSideChain, QuitSideChain)
+	s.Register(side_chain_manager_abi.MethodApproveQuitSideChain, ApproveQuitSideChain)
 }
 
-func Name(s *native.NativeContract) ([]byte, error) {
-	return utils.PackOutputs(ABI, MethodContractName, contractName)
+func GetSideChain(s *native.NativeContract) ([]byte, error) {
+	ctx := s.ContractRef().CurrentContext()
+	params := &ChainIDParam{}
+	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodGetSideChain, params, ctx.Payload); err != nil {
+		return nil, err
+	}
+	sideChain, err := GetSideChainObject(s, params.ChainID)
+	if err != nil {
+		return nil, fmt.Errorf("GetSideChain error: %v", err)
+	}
+	if sideChain == nil {
+		return nil, fmt.Errorf("GetSideChain error: side chain %v not exist", params.ChainID)
+	}
+	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodGetSideChain, sideChain)
 }
 
 func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	params := &RegisterSideChainParam{}
-	if err := utils.UnpackMethod(ABI, MethodRegisterSideChain, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodRegisterSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	if native.IsMainChain(params.ChainId) {
-		return nil, fmt.Errorf("RegisterSideChain, relay chain `register` is forbidden")
+	if len(params.Name) > 100 {
+		return nil, errors.New("param name too long, max is 100")
 	}
 
-	//check witness
-	err := contract.ValidateOwner(s, params.Address)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+	if len(params.ExtraInfo) > 1000000 {
+		return nil, errors.New("param extra info too long, max is 1000000")
 	}
-	registerSideChain, err := GetSideChainApply(s, params.ChainId)
+
+	if len(params.CCMCAddress) > 1000 {
+		return nil, errors.New("param extra info too long, max is 1000")
+	}
+
+	registerSideChain, err := GetSideChainApply(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("RegisterSideChain, getRegisterSideChain error: %v", err)
 	}
 	if registerSideChain != nil {
 		return nil, fmt.Errorf("RegisterSideChain, chainid already requested")
 	}
-	sideChain, err := GetSideChain(s, params.ChainId)
+	sideChain, err := GetSideChainObject(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("RegisterSideChain, getSideChain error: %v", err)
 	}
@@ -128,8 +121,8 @@ func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 	}
 
 	sideChain = &SideChain{
-		Address:      params.Address,
-		ChainId:      params.ChainId,
+		Owner:        s.ContractRef().TxOrigin(),
+		ChainID:      params.ChainID,
 		Router:       params.Router,
 		Name:         params.Name,
 		BlocksToWait: params.BlocksToWait,
@@ -141,31 +134,21 @@ func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("RegisterSideChain, putRegisterSideChain error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{EventRegisterSideChain}, params.ChainId, params.Router, params.Name, params.BlocksToWait)
+	err = s.AddNotify(ABI, []string{EventRegisterSideChain}, params.ChainID, params.Router, params.Name, params.BlocksToWait)
 	if err != nil {
 		return nil, fmt.Errorf("RegisterSideChain, AddNotify error: %v", err)
 	}
-	return utils.PackOutputs(ABI, MethodRegisterSideChain, true)
+	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodRegisterSideChain)
 }
 
 func ApproveRegisterSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &ChainidParam{}
-	if err := utils.UnpackMethod(ABI, MethodApproveRegisterSideChain, params, ctx.Payload); err != nil {
+	params := &ChainIDParam{}
+	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodApproveRegisterSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	if native.IsMainChain(params.Chainid) {
-		return nil, fmt.Errorf("ApproveRegisterSideChain, relay chain `register approve` is forbidden")
-	}
-
-	//check witness
-	err := contract.ValidateOwner(s, params.Address)
-	if err != nil {
-		return nil, fmt.Errorf("ApproveRegisterSideChain, checkWitness error: %v", err)
-	}
-
-	registerSideChain, err := GetSideChainApply(s, params.Chainid)
+	registerSideChain, err := GetSideChainApply(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, getRegisterSideChain error: %v", err)
 	}
@@ -173,13 +156,13 @@ func ApproveRegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, chainid is not requested")
 	}
 
-	ok, err := node_manager.CheckConsensusSigns(s, MethodApproveRegisterSideChain, utils.GetUint64Bytes(params.Chainid),
-		params.Address)
+	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveRegisterSideChain, utils.GetUint64Bytes(params.ChainID),
+		s.ContractRef().TxOrigin(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, CheckConsensusSigns error: %v", err)
 	}
 	if !ok {
-		return utils.PackOutputs(ABI, MethodApproveRegisterSideChain, true)
+		return utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveRegisterSideChain, true)
 	}
 
 	err = PutSideChain(s, registerSideChain)
@@ -187,44 +170,46 @@ func ApproveRegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, putSideChain error: %v", err)
 	}
 
-	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(SIDE_CHAIN_APPLY), utils.GetUint64Bytes(params.Chainid)))
-	err = s.AddNotify(ABI, []string{EventApproveRegisterSideChain}, params.Chainid)
+	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(SIDE_CHAIN_APPLY), utils.GetUint64Bytes(params.ChainID)))
+	err = s.AddNotify(ABI, []string{EventApproveRegisterSideChain}, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveRegisterSideChain, AddNotify error: %v", err)
 	}
-	return utils.PackOutputs(ABI, MethodApproveRegisterSideChain, true)
+	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveRegisterSideChain, true)
 }
 
 func UpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	params := &RegisterSideChainParam{}
-	if err := utils.UnpackMethod(ABI, MethodUpdateSideChain, params, ctx.Payload); err != nil {
+	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodUpdateSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	if native.IsMainChain(params.ChainId) {
-		return nil, fmt.Errorf("ApproveRegisterSideChain, relay chain `update` is forbidden")
+	if len(params.Name) > 100 {
+		return nil, errors.New("param name too long, max is 100")
 	}
 
-	//check witness
-	err := contract.ValidateOwner(s, params.Address)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterSideChain, checkWitness error: %v", err)
+	if len(params.ExtraInfo) > 1000000 {
+		return nil, errors.New("param extra info too long, max is 1000000")
 	}
 
-	sideChain, err := GetSideChain(s, params.ChainId)
+	if len(params.CCMCAddress) > 1000 {
+		return nil, errors.New("param extra info too long, max is 1000")
+	}
+
+	sideChain, err := GetSideChainObject(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateSideChain, getSideChain error: %v", err)
 	}
 	if sideChain == nil {
 		return nil, fmt.Errorf("UpdateSideChain, side chain is not registered")
 	}
-	if sideChain.Address != params.Address {
+	if sideChain.Owner != s.ContractRef().TxOrigin() {
 		return nil, fmt.Errorf("UpdateSideChain, side chain owner is wrong")
 	}
 	updateSideChain := &SideChain{
-		Address:      params.Address,
-		ChainId:      params.ChainId,
+		Owner:        s.ContractRef().TxOrigin(),
+		ChainID:      params.ChainID,
 		Router:       params.Router,
 		Name:         params.Name,
 		BlocksToWait: params.BlocksToWait,
@@ -235,31 +220,22 @@ func UpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UpdateSideChain, putUpdateSideChain error: %v", err)
 	}
-	err = s.AddNotify(ABI, []string{EventUpdateSideChain}, params.ChainId, params.Router, params.Name, params.BlocksToWait)
+	err = s.AddNotify(ABI, []string{EventUpdateSideChain}, params.ChainID, params.Router, params.Name, params.BlocksToWait)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateSideChain, AddNotify error: %v", err)
 	}
 
-	return utils.PackOutputs(ABI, MethodUpdateSideChain, true)
+	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodUpdateSideChain)
 }
 
 func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &ChainidParam{}
-	if err := utils.UnpackMethod(ABI, MethodApproveUpdateSideChain, params, ctx.Payload); err != nil {
+	params := &ChainIDParam{}
+	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	if native.IsMainChain(params.Chainid) {
-		return nil, fmt.Errorf("ApproveUpdateSideChain, relay chain `update approve` is forbidden")
-	}
-
-	//check witness
-	err := contract.ValidateOwner(s, params.Address)
-	if err != nil {
-		return nil, fmt.Errorf("ApproveUpdateSideChain, checkWitness error: %v", err)
-	}
-	sideChain, err := getUpdateSideChain(s, params.Chainid)
+	sideChain, err := getUpdateSideChain(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, getUpdateSideChain error: %v", err)
 	}
@@ -268,13 +244,13 @@ func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	}
 
 	//check consensus signs
-	ok, err := node_manager.CheckConsensusSigns(s, MethodApproveUpdateSideChain, utils.GetUint64Bytes(params.Chainid),
-		params.Address)
+	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveUpdateSideChain, utils.GetUint64Bytes(params.ChainID),
+		s.ContractRef().TxOrigin(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, CheckConsensusSigns error: %v", err)
 	}
 	if !ok {
-		return utils.PackOutputs(ABI, MethodApproveUpdateSideChain, true)
+		return utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, true)
 	}
 
 	err = PutSideChain(s, sideChain)
@@ -282,218 +258,75 @@ func ApproveUpdateSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, putSideChain error: %v", err)
 	}
 
-	chainidByte := utils.GetUint64Bytes(params.Chainid)
+	chainidByte := utils.GetUint64Bytes(params.ChainID)
 	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(UPDATE_SIDE_CHAIN_REQUEST), chainidByte))
 
-	err = s.AddNotify(ABI, []string{EventApproveUpdateSideChain}, params.Chainid)
+	err = s.AddNotify(ABI, []string{EventApproveUpdateSideChain}, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveUpdateSideChain, AddNotify error: %v", err)
 	}
 
-	return utils.PackOutputs(ABI, MethodApproveUpdateSideChain, true)
+	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveUpdateSideChain, true)
 }
 
 func QuitSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &ChainidParam{}
-	if err := utils.UnpackMethod(ABI, MethodQuitSideChain, params, ctx.Payload); err != nil {
+	params := &ChainIDParam{}
+	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodQuitSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	if native.IsMainChain(params.Chainid) {
-		return nil, fmt.Errorf("QuitSideChain, relay chain `quit` is forbidden")
-	}
-
-	//check witness
-	err := contract.ValidateOwner(s, params.Address)
-	if err != nil {
-		return nil, fmt.Errorf("QuitSideChain, checkWitness error: %v", err)
-	}
-
-	sideChain, err := GetSideChain(s, params.Chainid)
+	sideChain, err := GetSideChainObject(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("QuitSideChain, getSideChain error: %v", err)
 	}
 	if sideChain == nil {
 		return nil, fmt.Errorf("QuitSideChain, side chain is not registered")
 	}
-	if sideChain.Address != params.Address {
+	if sideChain.Owner != s.ContractRef().TxOrigin() {
 		return nil, fmt.Errorf("QuitSideChain, side chain owner is wrong")
 	}
-	err = putQuitSideChain(s, params.Chainid)
+	err = putQuitSideChain(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("QuitSideChain, putUpdateSideChain error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{EventQuitSideChain}, params.Chainid)
+	err = s.AddNotify(ABI, []string{EventQuitSideChain}, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("QuitSideChain, AddNotify error: %v", err)
 	}
-	return utils.PackOutputs(ABI, MethodQuitSideChain, true)
+	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodQuitSideChain)
 }
 
 func ApproveQuitSideChain(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	params := &ChainidParam{}
-	if err := utils.UnpackMethod(ABI, MethodApproveQuitSideChain, params, ctx.Payload); err != nil {
+	params := &ChainIDParam{}
+	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodApproveQuitSideChain, params, ctx.Payload); err != nil {
 		return nil, err
 	}
 
-	if native.IsMainChain(params.Chainid) {
-		return nil, fmt.Errorf("ApproveQuitSideChain, relay chain `quit approve` is forbidden")
-	}
-
-	//check witness
-	err := contract.ValidateOwner(s, params.Address)
-	if err != nil {
-		return nil, fmt.Errorf("ApproveQuitSideChain, checkWitness error: %v", err)
-	}
-
-	err = getQuitSideChain(s, params.Chainid)
+	err := getQuitSideChain(s, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveQuitSideChain, getQuitSideChain error: %v", err)
 	}
 
 	//check consensus signs
-	ok, err := node_manager.CheckConsensusSigns(s, MethodQuitSideChain, utils.GetUint64Bytes(params.Chainid),
-		params.Address)
+	ok, err := node_manager.CheckConsensusSigns(s, side_chain_manager_abi.MethodApproveQuitSideChain, utils.GetUint64Bytes(params.ChainID),
+		s.ContractRef().TxOrigin(), node_manager.Signer)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveQuitSideChain, CheckConsensusSigns error: %v", err)
 	}
 	if !ok {
-		return utils.PackOutputs(ABI, MethodApproveQuitSideChain, true)
+		return utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveQuitSideChain, true)
 	}
 
-	chainidByte := utils.GetUint64Bytes(params.Chainid)
-	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(MethodQuitSideChain), chainidByte))
+	chainidByte := utils.GetUint64Bytes(params.ChainID)
+	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(side_chain_manager_abi.MethodApproveQuitSideChain), chainidByte))
 	s.GetCacheDB().Delete(utils.ConcatKey(utils.SideChainManagerContractAddress, []byte(SIDE_CHAIN), chainidByte))
 
-	err = s.AddNotify(ABI, []string{EventApproveQuitSideChain}, params.Chainid)
+	err = s.AddNotify(ABI, []string{EventApproveQuitSideChain}, params.ChainID)
 	if err != nil {
 		return nil, fmt.Errorf("ApproveQuitSideChain, AddNotify error: %v", err)
 	}
-	return utils.PackOutputs(ABI, MethodApproveQuitSideChain, true)
-}
-
-func RegisterRedeem(native *native.NativeContract) ([]byte, error) {
-	ctx := native.ContractRef().CurrentContext()
-	params := &RegisterRedeemParam{}
-	if err := utils.UnpackMethod(ABI, MethodRegisterRedeem, params, ctx.Payload); err != nil {
-		return nil, err
-	}
-
-	ty, addrs, m, err := txscript.ExtractPkScriptAddrs(params.Redeem, netParam)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterRedeem, failed to extract addrs: %v", err)
-	}
-	if ty != txscript.MultiSigTy {
-		return nil, fmt.Errorf("RegisterRedeem, wrong type of redeem: %s", ty.String())
-	}
-	rk := btcutil.Hash160(params.Redeem)
-
-	contract, err := GetContractBind(native, params.RedeemChainID, params.ContractChainID, rk)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterRedeem, failed to get contract and version: %v", err)
-	}
-	if contract != nil && contract.Ver+1 != params.CVersion {
-		return nil, fmt.Errorf("RegisterRedeem, previous version is %d and your version should "+
-			"be %d not %d", contract.Ver, contract.Ver+1, params.CVersion)
-	}
-	verified, err := verifyRedeemRegister(params, addrs)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterRedeem, failed to verify: %v", err)
-	}
-	key := append(append(append(rk, utils.GetUint64Bytes(params.RedeemChainID)...),
-		params.ContractAddress...), utils.GetUint64Bytes(params.ContractChainID)...)
-	bindSignInfo, err := getBindSignInfo(native, key)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterRedeem, getBindSignInfo error: %v", err)
-	}
-	for k, v := range verified {
-		bindSignInfo.BindSignInfo[k] = v
-	}
-	err = putBindSignInfo(native, key, bindSignInfo)
-	if err != nil {
-		return nil, fmt.Errorf("RegisterRedeem, failed to putBindSignInfo: %v", err)
-	}
-
-	if len(bindSignInfo.BindSignInfo) >= m {
-		err = putContractBind(native, params.RedeemChainID, params.ContractChainID, rk, params.ContractAddress, params.CVersion)
-		if err != nil {
-			return nil, fmt.Errorf("RegisterRedeem, putContractBind error: %v", err)
-		}
-		if err = putBtcRedeemScript(native, hex.EncodeToString(rk), params.Redeem, params.RedeemChainID); err != nil {
-			return nil, fmt.Errorf("RegisterRedeem, failed to save redeemscript %v with key %v, error: %v", hex.EncodeToString(params.Redeem), rk, err)
-		}
-		err = native.AddNotify(ABI, []string{EventRegisterRedeem}, hex.EncodeToString(rk), hex.EncodeToString(params.ContractAddress))
-		if err != nil {
-			return nil, fmt.Errorf("RegisterRedeem, AddNotify error: %v", err)
-		}
-	}
-
-	return utils.PackOutputs(ABI, MethodRegisterRedeem, true)
-}
-
-func SetBtcTxParam(native *native.NativeContract) ([]byte, error) {
-	ctx := native.ContractRef().CurrentContext()
-	params := &BtcTxParam{}
-	if err := utils.UnpackMethod(ABI, MethodRegisterRedeem, params, ctx.Payload); err != nil {
-		return nil, err
-	}
-
-	if params.Detial.FeeRate == 0 {
-		return nil, fmt.Errorf("SetBtcTxParam, fee rate can't be zero")
-	}
-	if params.Detial.MinChange < 2000 {
-		return nil, fmt.Errorf("SetBtcTxParam, min-change can't less than 2000")
-	}
-	cls, addrs, m, err := txscript.ExtractPkScriptAddrs(params.Redeem, netParam)
-	if err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, extract addrs from redeem %v", err)
-	}
-	if cls != txscript.MultiSigTy {
-		return nil, fmt.Errorf("SetBtcTxParam, redeem script is not multisig script: %s", cls.String())
-	}
-	rk := btcutil.Hash160(params.Redeem)
-	prev, err := GetBtcTxParam(native, rk, params.RedeemChainId)
-	if err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, get previous param error: %v", err)
-	}
-	if prev != nil && params.Detial.PVersion != prev.PVersion+1 {
-		return nil, fmt.Errorf("SetBtcTxParam, previous version is %d and your version should "+
-			"be %d not %d", prev.PVersion, prev.PVersion+1, params.Detial.PVersion)
-	}
-
-	blob, err := rlp.EncodeToBytes(params.Detial)
-	if err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, EncodeToBytes error: %v", err)
-	}
-	key := append(append(rk, utils.GetUint64Bytes(params.RedeemChainId)...), blob...)
-	info, err := getBindSignInfo(native, key)
-	if err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, getBindSignInfo error: %v", err)
-	}
-	if len(info.BindSignInfo) >= m {
-		return nil, fmt.Errorf("SetBtcTxParam, the signatures are already enough")
-	}
-	verified, err := verifyBtcTxParam(params, addrs)
-	if err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, failed to verify: %v", err)
-	}
-	for k, v := range verified {
-		info.BindSignInfo[k] = v
-	}
-	if err = putBindSignInfo(native, key, info); err != nil {
-		return nil, fmt.Errorf("SetBtcTxParam, failed to put bindSignInfo: %v", err)
-	}
-	if len(info.BindSignInfo) >= m {
-		if err = putBtcTxParam(native, rk, params.RedeemChainId, params.Detial); err != nil {
-			return nil, fmt.Errorf("SetBtcTxParam, failed to put btcTxParam: %v", err)
-		}
-		native.AddNotify(
-			ABI, []string{MethodRegisterRedeem}, hex.EncodeToString(rk), params.RedeemChainId,
-			params.Detial.FeeRate, params.Detial.MinChange)
-	}
-
-	return utils.PackOutputs(ABI, MethodRegisterRedeem, true)
+	return utils.PackOutputs(ABI, side_chain_manager_abi.MethodApproveQuitSideChain, true)
 }

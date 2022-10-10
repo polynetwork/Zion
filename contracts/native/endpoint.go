@@ -33,6 +33,7 @@ type ContractRef struct {
 
 	stateDB     *state.StateDB
 	blockHeight *big.Int
+	blockTime   *big.Int
 	origin      common.Address
 	txHash      common.Hash
 	caller      common.Address
@@ -122,6 +123,10 @@ func (s *ContractRef) StateDB() *state.StateDB {
 
 func (s *ContractRef) BlockHeight() *big.Int {
 	return s.blockHeight
+}
+
+func (s *ContractRef) BlockTime() *big.Int {
+	return s.blockTime
 }
 
 func (s *ContractRef) TxHash() common.Hash {

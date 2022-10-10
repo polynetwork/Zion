@@ -254,7 +254,8 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 		}(gas, time.Now())
 	}
 
-	if native.IsNativeContract(addr) {
+	isNativeTx := native.IsNativeContract(addr)
+	if isNativeTx {
 		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas)
 	} else {
 		if isPrecompile {
@@ -282,7 +283,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 	// when we're in homestead this also counts for code storage gas errors.
 	if err != nil {
 		evm.StateDB.RevertToSnapshot(snapshot)
-		if err != ErrExecutionReverted {
+		if !isNativeTx && err != ErrExecutionReverted {
 			gas = 0
 		}
 		// TODO: consider clearing up unused snapshots:

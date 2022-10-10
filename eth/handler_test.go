@@ -48,7 +48,7 @@ var (
 type testTxPool struct {
 	pool map[common.Hash]*types.Transaction // Hash map of collected transactions
 
-	txFeed event.Feed   // Notification feed to allow waiting for inclusion
+	txFeed event.Feed   // Notification feed to allow halt for inclusion
 	lock   sync.RWMutex // Protects the transaction pool
 }
 
@@ -152,7 +152,7 @@ func newTestHandlerWithBlocks(blocks int) *testHandler {
 		Network:    1,
 		Sync:       downloader.FastSync,
 		BloomCache: 1,
-	})
+	}, nil, nil)
 	handler.Start(1000)
 
 	return &testHandler{

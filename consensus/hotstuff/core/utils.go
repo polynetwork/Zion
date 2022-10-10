@@ -29,6 +29,22 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
+func (c *core) hasValidPendingRequest() bool {
+	if c.current.PendingRequest() == nil {
+		return false
+	}
+	exist := c.current.PendingRequest()
+	switch height := exist.Proposal.Number(); height.Cmp(c.current.Height()) {
+	case 0:
+		return true
+	case 1:
+		c.logger.Trace("check request height", "expect", c.current.Height(), "got", height)
+		return false
+	default:
+		return false
+	}
+}
+
 func (c *core) checkMsgFromProposer(src hotstuff.Validator) error {
 	if !c.valSet.IsProposer(src.Address()) {
 		return errNotFromProposer
@@ -118,7 +134,7 @@ func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
 // verifyCrossEpochQC verify quorum certificate with current validator set or
 // last epoch's val set if current height equals to epoch start height
 func (c *core) verifyCrossEpochQC(qc *hotstuff.QuorumCert) error {
-	valset := c.backend.Validators(qc.HeightU64())
+	valset := c.backend.Validators(qc.Hash, false)
 	if err := c.signer.VerifyQC(qc, valset); err != nil {
 		return err
 	}
@@ -226,11 +242,11 @@ func (c *core) broadcast(msg *hotstuff.Message) {
 	}
 }
 
-func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return c.signer.CheckSignature(c.valSet, data, sig)
-}
-
 func (c *core) preExecuteBlock(proposal hotstuff.Proposal) error {
+	if c.IsProposer() {
+		return nil
+	}
+
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		return errInvalidProposal
@@ -241,6 +257,10 @@ func (c *core) preExecuteBlock(proposal hotstuff.Proposal) error {
 func (c *core) newLogger() log.Logger {
 	logger := c.logger.New("state", c.currentState(), "view", c.currentView())
 	return logger
+}
+
+func (c *core) Q() int {
+	return c.valSet.Q()
 }
 
 func proposal2QC(proposal hotstuff.Proposal, round *big.Int) *hotstuff.QuorumCert {

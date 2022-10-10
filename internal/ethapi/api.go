@@ -600,7 +600,7 @@ func (s *PublicBlockChainAPI) GetProof(ctx context.Context, address common.Addre
 			if storageError != nil {
 				return nil, storageError
 			}
-			storageProof[i] = StorageResult{key, (*hexutil.Big)(state.GetState(address, common.HexToHash(key)).Big()), toHexSlice(proof)}
+			storageProof[i] = StorageResult{key, (*hexutil.Big)(common.BytesToHash(state.GetState(address, common.HexToHash(key))).Big()), toHexSlice(proof)}
 		} else {
 			storageProof[i] = StorageResult{key, &hexutil.Big{}, []string{}}
 		}
@@ -830,11 +830,11 @@ func (args *CallArgs) ToMessage(globalGasCap uint64) types.Message {
 // if statDiff is set, all diff will be applied first and then execute the call
 // message.
 type OverrideAccount struct {
-	Nonce     *hexutil.Uint64              `json:"nonce"`
-	Code      *hexutil.Bytes               `json:"code"`
-	Balance   **hexutil.Big                `json:"balance"`
-	State     *map[common.Hash]common.Hash `json:"state"`
-	StateDiff *map[common.Hash]common.Hash `json:"stateDiff"`
+	Nonce     *hexutil.Uint64         `json:"nonce"`
+	Code      *hexutil.Bytes          `json:"code"`
+	Balance   **hexutil.Big           `json:"balance"`
+	State     *map[common.Hash][]byte `json:"state"`
+	StateDiff *map[common.Hash][]byte `json:"stateDiff"`
 }
 
 // StateOverride is the collection of overridden accounts.
@@ -1087,10 +1087,7 @@ func DoEstimateGas(ctx context.Context, b Backend, args CallArgs, blockNrOrHash 
 // EstimateGas returns an estimate of the amount of gas needed to execute the
 // given transaction against the current pending block.
 func (s *PublicBlockChainAPI) EstimateGas(ctx context.Context, args CallArgs, blockNrOrHash *rpc.BlockNumberOrHash) (hexutil.Uint64, error) {
-	bNrOrHash := rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
-	if blockNrOrHash != nil {
-		bNrOrHash = *blockNrOrHash
-	}
+	bNrOrHash := rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
 	return DoEstimateGas(ctx, s.b, args, bNrOrHash, s.b.RPCGasCap())
 }
 
@@ -1685,8 +1682,8 @@ func (args *SendTxArgs) setDefaults(ctx context.Context, b Backend) error {
 			Data:       input,
 			AccessList: args.AccessList,
 		}
-		pendingBlockNr := rpc.BlockNumberOrHashWithNumber(rpc.PendingBlockNumber)
-		estimated, err := DoEstimateGas(ctx, b, callArgs, pendingBlockNr, b.RPCGasCap())
+		latestBlockNr := rpc.BlockNumberOrHashWithNumber(rpc.LatestBlockNumber)
+		estimated, err := DoEstimateGas(ctx, b, callArgs, latestBlockNr, b.RPCGasCap())
 		if err != nil {
 			return err
 		}

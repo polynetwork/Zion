@@ -18,8 +18,6 @@ package eth
 
 import (
 	"errors"
-	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/crypto"
 	"math"
 	"math/big"
 	"sync"
@@ -27,9 +25,11 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/eth/downloader"
 	"github.com/ethereum/go-ethereum/eth/fetcher"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
@@ -87,6 +87,7 @@ type handlerConfig struct {
 	EventMux   *event.TypeMux            // Legacy event mux, deprecate for `feed`
 	Checkpoint *params.TrustedCheckpoint // Hard coded checkpoint for sync challenges
 	Whitelist  map[uint64]common.Hash    // Hard coded whitelist for sync challenged
+	Miner      common.Address            // Miner address for lookup broadcast nodes
 }
 
 type handler struct {
@@ -109,7 +110,8 @@ type handler struct {
 	stateBloom   *trie.SyncBloom
 	blockFetcher *fetcher.BlockFetcher
 	txFetcher    *fetcher.TxFetcher
-	peers        *peerSet
+
+	peers *peerSet
 
 	eventMux      *event.TypeMux
 	txsCh         chan core.NewTxsEvent
@@ -126,12 +128,14 @@ type handler struct {
 	wg        sync.WaitGroup
 	peerWG    sync.WaitGroup
 
+	nodeFetcher *nodeFetcher
+
 	// hotstuff
 	engine consensus.Engine
 }
 
 // newHandler returns a handler for all Ethereum chain management protocol.
-func newHandler(config *handlerConfig, engine consensus.Engine) (*handler, error) {
+func newHandler(config *handlerConfig, engine consensus.Engine, manager staticNodeServer) (*handler, error) {
 	// Create the protocol manager with the base fields
 	if config.EventMux == nil {
 		config.EventMux = new(event.TypeMux) // Nicety initialization for tests
@@ -150,10 +154,7 @@ func newHandler(config *handlerConfig, engine consensus.Engine) (*handler, error
 		engine:     engine,
 	}
 
-	// only for hotstuff
-	if handler, ok := h.engine.(consensus.Handler); ok {
-		handler.SetBroadcaster(h)
-	}
+	h.nodeFetcher = newNodeBroadcaster(config.Miner, manager, h)
 
 	if config.Sync == downloader.FullSync {
 		// The database seems empty as the current block is the genesis. Yet the fast
@@ -403,6 +404,12 @@ func (h *handler) removePeer(id string) {
 func (h *handler) Start(maxPeers int) {
 	h.maxPeers = maxPeers
 
+	// only for hotstuff
+	if handler, ok := h.engine.(consensus.Handler); ok {
+		handler.SetBroadcaster(h)
+	}
+	h.nodeFetcher.Start()
+
 	// broadcast transactions
 	h.wg.Add(1)
 	h.txsCh = make(chan core.NewTxsEvent, txChanSize)
@@ -435,6 +442,9 @@ func (h *handler) Stop() {
 	// will exit when they try to register.
 	h.peers.close()
 	h.peerWG.Wait()
+
+	// Quit broadcast nodes
+	h.nodeFetcher.Stop()
 
 	log.Info("Ethereum protocol stopped")
 }

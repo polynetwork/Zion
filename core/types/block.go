@@ -101,7 +101,7 @@ func (h *Header) Hash() common.Hash {
 	// If the mix digest is equivalent to the predefined Hotstuff digest, use Hotstuff specific hash calculation.
 	if h.MixDigest == HotstuffDigest {
 		// Seal is reserved in extra-data. To prove block is signed by the proposer.
-		if hotstuffHeader := HotstuffFilteredHeader(h, false); hotstuffHeader != nil {
+		if hotstuffHeader := HotstuffFilteredHeader(h); hotstuffHeader != nil {
 			return rlpHash(hotstuffHeader)
 		}
 	}
@@ -320,6 +320,8 @@ func (b *Block) Size() common.StorageSize {
 	b.size.Store(common.StorageSize(c))
 	return common.StorageSize(c)
 }
+
+func (b *Block) SetRoot(root common.Hash) { b.header.Root = root }
 
 // SanityCheck can be used to prevent that unbounded fields are
 // stuffed with junk data to add processing overhead

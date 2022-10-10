@@ -14,18 +14,18 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with The poly network .  If not, see <http://www.gnu.org/licenses/>.
  */
+
 package okex
 
 import (
 	"bytes"
 	"fmt"
-
 	"github.com/cosmos/cosmos-sdk/store/rootmulti"
 	ethcommon "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
-	"github.com/ethereum/go-ethereum/contracts/native/header_sync/okex"
+	common2 "github.com/ethereum/go-ethereum/contracts/native/info_sync"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	ethcrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/tendermint/tendermint/crypto/merkle"
@@ -52,38 +52,15 @@ func (this *OKHandler) MakeDepositProposal(service *native.NativeContract) (*sco
 	if err := utils.UnpackMethod(scom.ABI, scom.MethodImportOuterTransfer, params, ctx.Payload); err != nil {
 		return nil, err
 	}
-	info, err := okex.GetEpochSwitchInfo(service, params.SourceChainID)
-	if err != nil {
-		return nil, fmt.Errorf("okex MakeDepositProposal, failed to get epoch switching height: %v", err)
-	}
-	if info.Height > int64(params.Height) {
-		return nil, fmt.Errorf("okex MakeDepositProposal, the height %d of header is lower than epoch "+
-			"switching height %d", params.Height, info.Height)
-	}
 
-	if len(params.HeaderOrCrossChainMsg) == 0 {
-		return nil, fmt.Errorf("you must commit the header used to verify transaction's proof and get none")
+	value, err := common2.GetRootInfo(service, params.SourceChainID, params.Height)
+	if err != nil {
+		return nil, fmt.Errorf("Cosmos MakeDepositProposal, GetCrossChainInfo error:%s", err)
 	}
-	cdc := okex.NewCDC()
-	var myHeader okex.CosmosHeader
-	if err := cdc.UnmarshalBinaryBare(params.HeaderOrCrossChainMsg, &myHeader); err != nil {
-		return nil, fmt.Errorf("okex MakeDepositProposal, unmarshal okex header failed: %v", err)
-	}
-	if myHeader.Header.Height != int64(params.Height) {
-		return nil, fmt.Errorf("okex MakeDepositProposal, "+
-			"height of your header is %d not equal to %d in parameter", myHeader.Header.Height, params.Height)
-	}
-	if err = okex.VerifyCosmosHeader(&myHeader, info); err != nil {
-		return nil, fmt.Errorf("okex MakeDepositProposal, failed to verify okex header: %v", err)
-	}
-	if !bytes.Equal(myHeader.Header.ValidatorsHash, myHeader.Header.NextValidatorsHash) &&
-		myHeader.Header.Height > info.Height {
-		okex.PutEpochSwitchInfo(service, params.SourceChainID, &okex.CosmosEpochSwitchInfo{
-			Height:             myHeader.Header.Height,
-			BlockHash:          myHeader.Header.Hash(),
-			NextValidatorsHash: myHeader.Header.NextValidatorsHash,
-			ChainID:            myHeader.Header.ChainID,
-		})
+	cdc := NewCDC()
+	var header CosmosHeader
+	if err := cdc.UnmarshalBinaryBare(value, &header); err != nil {
+		return nil, fmt.Errorf("Cosmos MakeDepositProposal, unmarshal cosmos header failed: %v", err)
 	}
 
 	var proofValue CosmosProofValue
@@ -95,7 +72,7 @@ func (this *OKHandler) MakeDepositProposal(service *native.NativeContract) (*sco
 	if err != nil {
 		return nil, fmt.Errorf("okex MakeDepositProposal, unmarshal proof err: %v", err)
 	}
-	sideChain, err := side_chain_manager.GetSideChain(service, params.SourceChainID)
+	sideChain, err := side_chain_manager.GetSideChainObject(service, params.SourceChainID)
 	if err != nil {
 		return nil, fmt.Errorf("okex MakeDepositProposal, side_chain_manager.GetSideChain error: %v", err)
 	}
@@ -116,7 +93,7 @@ func (this *OKHandler) MakeDepositProposal(service *native.NativeContract) (*sco
 	}
 
 	prt := rootmulti.DefaultProofRuntime()
-	err = prt.VerifyValue(&proof, myHeader.Header.AppHash, proofValue.Kp, ethcrypto.Keccak256(proofValue.Value))
+	err = prt.VerifyValue(&proof, header.Header.AppHash, proofValue.Kp, ethcrypto.Keccak256(proofValue.Value))
 	if err != nil {
 		return nil, fmt.Errorf("Cosmos MakeDepositProposal, proof error: %s", err)
 	}

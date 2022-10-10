@@ -232,19 +232,16 @@ func testStickyProposer(t *testing.T) {
 }
 
 func TestFAndQ(t *testing.T) {
-	vs := newDefaultSet([]common.Address{
-		common.HexToAddress("0x1"),
-		common.HexToAddress("0x2"),
-		common.HexToAddress("0x3"),
-		common.HexToAddress("0x4"),
-		common.HexToAddress("0x5"),
-		common.HexToAddress("0x6"),
-		common.HexToAddress("0x7"),
-	}, hotstuff.RoundRobin)
+	n := 13
 
-	faultySize := vs.F()
-	quorumSize := vs.Q()
-	assert.Equal(t, 2, faultySize)
-	assert.Equal(t, 5, quorumSize)
-	t.Logf("faulty size %d, quorum size %d", faultySize, quorumSize)
+	for i := 1; i<=n; i++ {
+		list := make([]common.Address, 0)
+		for j := 0; j < i; j ++ {
+			list = append(list, common.HexToAddress(fmt.Sprintf("0x%d", j + 1)))
+		}
+		vs := newDefaultSet(list, hotstuff.RoundRobin)
+		faultySize := vs.F()
+		quorumSize := vs.Q()
+		t.Logf("total size %d, faulty size %d, quorum size %d", i, faultySize, quorumSize)
+	}
 }

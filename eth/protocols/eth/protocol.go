@@ -25,6 +25,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/forkid"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/p2p/enode"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -41,12 +42,13 @@ const ProtocolName = "eth"
 
 // ProtocolVersions are the supported versions of the `eth` protocol (first
 // is primary).
-// var ProtocolVersions = []uint{ETH66, ETH65, HOTSTUFF}
-var ProtocolVersions = []uint{HOTSTUFF}
+var ProtocolVersions = []uint{ETH66, ETH65, HOTSTUFF}
+
+// var ProtocolVersions = []uint{HOTSTUFF}
 
 // protocolLengths are the number of implemented message corresponding to
 // different protocol versions.
-var protocolLengths = map[uint]uint64{ETH66: 17, ETH65: 17, HOTSTUFF: 18}
+var protocolLengths = map[uint]uint64{ETH66: 17, ETH65: 17, HOTSTUFF: 35}
 
 // maxMessageSize is the maximum cap on the size of a protocol message.
 const maxMessageSize = 10 * 1024 * 1024
@@ -70,6 +72,10 @@ const (
 	NewPooledTransactionHashesMsg = 0x08
 	GetPooledTransactionsMsg      = 0x09
 	PooledTransactionsMsg         = 0x0a
+
+	// Protocol messages overloaded in hotstuff
+	GetStaticNodesMsg = 0x21
+	StaticNodesMsg    = 0x22
 )
 
 var (
@@ -323,6 +329,70 @@ type PooledTransactionsRLPPacket66 struct {
 	PooledTransactionsRLPPacket
 }
 
+type GetStaticNodesPacket struct {
+	RequestId uint64
+	Local     *enode.Node
+}
+
+func (p *GetStaticNodesPacket) EncodeRLP(w io.Writer) error {
+	enc, err := p.Local.MarshalText()
+	if err != nil {
+		return err
+	}
+	return rlp.Encode(w, []interface{}{p.RequestId, enc})
+}
+
+func (p *GetStaticNodesPacket) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		RequestId uint64
+		Local     []byte
+	}
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+
+	node := new(enode.Node)
+	if err := node.UnmarshalText(data.Local); err != nil {
+		return err
+	}
+	p.RequestId, p.Local = data.RequestId, node
+	return nil
+}
+
+type StaticNodesPacket struct {
+	List []*enode.Node
+}
+
+func (p *StaticNodesPacket) EncodeRLP(w io.Writer) error {
+	remotes := make([][]byte, 0)
+	for _, v := range p.List {
+		enc, err := v.MarshalText()
+		if err != nil {
+			return err
+		}
+		remotes = append(remotes, enc)
+	}
+	return rlp.Encode(w, []interface{}{remotes})
+}
+
+func (p *StaticNodesPacket) DecodeRLP(s *rlp.Stream) error {
+	var data struct{
+		List [][]byte
+	}
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+	p.List = make([]*enode.Node, 0)
+	for _, v := range data.List {
+		node := new(enode.Node)
+		if err := node.UnmarshalText(v); err != nil {
+			return err
+		}
+		p.List = append(p.List, node)
+	}
+	return nil
+}
+
 func (*StatusPacket) Name() string { return "Status" }
 func (*StatusPacket) Kind() byte   { return StatusMsg }
 
@@ -367,3 +437,9 @@ func (*GetPooledTransactionsPacket) Kind() byte   { return GetPooledTransactions
 
 func (*PooledTransactionsPacket) Name() string { return "PooledTransactions" }
 func (*PooledTransactionsPacket) Kind() byte   { return PooledTransactionsMsg }
+
+func (*GetStaticNodesPacket) Name() string { return "GetStaticNodes" }
+func (*GetStaticNodesPacket) Kind() byte   { return GetStaticNodesMsg }
+
+func (*StaticNodesPacket) Name() string { return "StaticNodes" }
+func (*StaticNodesPacket) Kind() byte   { return StaticNodesMsg }

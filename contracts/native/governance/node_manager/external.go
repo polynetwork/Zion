@@ -19,69 +19,100 @@
 package node_manager
 
 import (
-	"fmt"
-	"sort"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/params"
+)
+
+var (
+	// genesis config
+	GenesisMaxCommissionChange, _        = new(big.Int).SetString("500", 10) // 5%
+	GenesisMinInitialStake               = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	GenesisMinProposalStake              = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
+	GenesisBlockPerEpoch                 = new(big.Int).SetUint64(400000)
+	GenesisConsensusValidatorNum  uint64 = 4
+	GenesisVoterValidatorNum      uint64 = 4
+
+	// const
+	MaxDescLength    int = 2000
+	MaxValidatorNum  int = 300
+	MaxUnlockingNum  int = 100
+	MaxStakeRate     Dec = NewDecFromBigInt(new(big.Int).SetUint64(6)) // user stake can not more than 5 times of self stake
+	MinBlockPerEpoch     = new(big.Int).SetUint64(10000)
 )
 
 func init() {
 	// store data in genesis block
-	core.RegGenesis = func(db *state.StateDB, data core.GenesisAlloc) error {
-		peers := &Peers{List: make([]*PeerInfo, 0)}
-		for addr, v := range data {
-			pubkey, err := crypto.DecompressPubkey(v.PublicKey)
-			if err != nil {
-				return fmt.Errorf("store genesis peers, decompress pubkey failed, err: %v", err)
-			}
-			if got := crypto.PubkeyToAddress(*pubkey); got != addr {
-				return fmt.Errorf("store genesis peers, expect address %s got %s", addr.Hex(), got.Hex())
-			}
-			peer := &PeerInfo{Address: addr, PubKey: hexutil.Encode(v.PublicKey)}
-			peers.List = append(peers.List, peer)
+	core.RegGenesis = func(db *state.StateDB, genesis *core.Genesis) error {
+		data := genesis.Governance
+		peers := make([]common.Address, 0, len(data))
+		signers := make([]common.Address, 0, len(data))
+		for _, v := range data {
+			peers = append(peers, v.Validator)
+			signers = append(signers, v.Signer)
 		}
-		sort.Sort(peers)
-		if _, err := storeGenesisEpoch(db, peers); err != nil {
+		if _, err := StoreCommunityInfo(db, genesis.CommunityRate, genesis.CommunityAddress); err != nil {
 			return err
-		} else {
-			return nil
 		}
+		if _, err := StoreGenesisEpoch(db, peers, signers); err != nil {
+			return err
+		}
+		if err := StoreGenesisGlobalConfig(db); err != nil {
+			return err
+		}
+
+		return nil
 	}
 }
 
-func storeGenesisEpoch(s *state.StateDB, peers *Peers) (*EpochInfo, error) {
+func StoreCommunityInfo(s *state.StateDB, communityRate *big.Int, communityAddress common.Address) (*CommunityInfo, error) {
+	cache := (*state.CacheDB)(s)
+	communityInfo := &CommunityInfo{
+		CommunityRate:    communityRate,
+		CommunityAddress: communityAddress,
+	}
+	if err := setGenesisCommunityInfo(cache, communityInfo); err != nil {
+		return nil, err
+	}
+	return communityInfo, nil
+}
+
+func StoreGenesisEpoch(s *state.StateDB, peers []common.Address, signers []common.Address) (*EpochInfo, error) {
 	cache := (*state.CacheDB)(s)
 	epoch := &EpochInfo{
 		ID:          StartEpochID,
-		Peers:       peers,
-		StartHeight: 0,
+		Validators:  peers,
+		Signers:     signers,
+		Voters:      signers,
+		Proposers:   signers,
+		StartHeight: new(big.Int),
+		EndHeight:   GenesisBlockPerEpoch,
 	}
 
 	// store current epoch and epoch info
-	if err := setEpoch(cache, epoch); err != nil {
+	if err := setGenesisEpochInfo(cache, epoch); err != nil {
 		return nil, err
 	}
-
-	// store current hash
-	curKey := curEpochKey()
-	cache.Put(curKey, epoch.Hash().Bytes())
-
-	// store genesis epoch id to list
-	value, err := rlp.EncodeToBytes(&HashList{List: []common.Hash{epoch.Hash()}})
-	if err != nil {
-		return nil, err
-	}
-	proposalKey := proposalsKey(epoch.ID)
-	cache.Put(proposalKey, value)
-
-	// store genesis epoch proof
-	key := epochProofKey(EpochProofHash(epoch.ID))
-	cache.Put(key, epoch.Hash().Bytes())
-
 	return epoch, nil
+}
+
+func StoreGenesisGlobalConfig(s *state.StateDB) error {
+	cache := (*state.CacheDB)(s)
+	globalConfig := &GlobalConfig{
+		MaxCommissionChange:   GenesisMaxCommissionChange,
+		MinInitialStake:       GenesisMinInitialStake,
+		MinProposalStake:      GenesisMinProposalStake,
+		BlockPerEpoch:         GenesisBlockPerEpoch,
+		ConsensusValidatorNum: GenesisConsensusValidatorNum,
+		VoterValidatorNum:     GenesisVoterValidatorNum,
+	}
+
+	// store current epoch and epoch info
+	if err := setGenesisGlobalConfig(cache, globalConfig); err != nil {
+		return err
+	}
+	return nil
 }
