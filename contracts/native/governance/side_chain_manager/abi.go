@@ -51,7 +51,6 @@ type RegisterSideChainParam struct {
 	ChainID      uint64
 	Router       uint64
 	Name         string
-	BlocksToWait uint64
 	CCMCAddress  []byte
 	ExtraInfo    []byte
 }

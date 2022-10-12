@@ -5,9 +5,9 @@ pragma solidity >=0.7.0 <0.9.0;
  */
 
 interface ISideChainManager {
-    event RegisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait);
+    event RegisterSideChain(uint64 ChainId, uint64 Router, string Name);
     event ApproveRegisterSideChain(uint64 ChainId);
-    event UpdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait);
+    event UpdateSideChain(uint64 ChainId, uint64 Router, string Name);
     event ApproveUpdateSideChain(uint64 ChainId);
     event QuitSideChain(uint64 ChainId);
     event ApproveQuitSideChain(uint64 ChainId);
@@ -31,7 +31,7 @@ interface ISideChainManager {
 
     function getSideChain(uint64 chainID) external view returns(SideChain memory sidechain);
     
-    function registerSideChain(uint64 chainID, uint64 router, string calldata name, uint64 blocksToWait, bytes calldata CCMCAddress, bytes calldata extraInfo) external;
+    function registerSideChain(uint64 chainID, uint64 router, string calldata name, bytes calldata CCMCAddress, bytes calldata extraInfo) external;
     
     function approveRegisterSideChain(uint64 chainID) external returns (bool success);
     

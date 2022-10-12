@@ -161,9 +161,6 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	if dstChain == nil {
 		return nil, fmt.Errorf("ImportExTransfer, side chain %d is not registered", dstChainID)
 	}
-	if dstChain.Router == utils.BTC_ROUTER {
-		return nil, fmt.Errorf("btc is not supported")
-	}
 
 	//NOTE, you need to store the tx in this
 	if err := scom.MakeTransaction(s, txParam, srcChainID); err != nil {

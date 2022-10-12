@@ -79,7 +79,7 @@ var (
 )
 
 // ISideChainManagerABI is the input ABI used to generate the binding from.
-const ISideChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveQuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveRegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveUpdateSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"QuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ContractAddress\",\"type\":\"string\"}],\"name\":\"RegisterRedeem\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlocksToWait\",\"type\":\"uint64\"}],\"name\":\"RegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlocksToWait\",\"type\":\"uint64\"}],\"name\":\"UpdateSideChain\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveQuitSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveRegisterSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveUpdateSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"getSideChain\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"blocksToWait\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"internalType\":\"structISideChainManager.SideChain\",\"name\":\"sidechain\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"quitSideChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"redeemChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"contractChainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"redeem\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"CVersion\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"contractAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes[]\",\"name\":\"signs\",\"type\":\"bytes[]\"}],\"name\":\"registerRedeem\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"blocksToWait\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"name\":\"registerSideChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"redeem\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"redeemChainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"sigs\",\"type\":\"bytes[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"PVersion\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"feeRate\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"minChange\",\"type\":\"uint64\"}],\"internalType\":\"structISideChainManager.BtcTxParamDetail\",\"name\":\"detail\",\"type\":\"tuple\"}],\"name\":\"setBtcTxParam\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"blocksToWait\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"name\":\"updateSideChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ISideChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveQuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveRegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveUpdateSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"QuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"rk\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"ContractAddress\",\"type\":\"string\"}],\"name\":\"RegisterRedeem\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"name\":\"RegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"name\":\"UpdateSideChain\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveQuitSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveRegisterSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveUpdateSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"getSideChain\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"blocksToWait\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"internalType\":\"structISideChainManager.SideChain\",\"name\":\"sidechain\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"quitSideChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"redeemChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"contractChainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"redeem\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"CVersion\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"contractAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes[]\",\"name\":\"signs\",\"type\":\"bytes[]\"}],\"name\":\"registerRedeem\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"name\":\"registerSideChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"redeem\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"redeemChainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes[]\",\"name\":\"sigs\",\"type\":\"bytes[]\"},{\"components\":[{\"internalType\":\"uint64\",\"name\":\"PVersion\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"feeRate\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"minChange\",\"type\":\"uint64\"}],\"internalType\":\"structISideChainManager.BtcTxParamDetail\",\"name\":\"detail\",\"type\":\"tuple\"}],\"name\":\"setBtcTxParam\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"uint64\",\"name\":\"blocksToWait\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"name\":\"updateSideChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ISideChainManagerFuncSigs maps the 4-byte function signature to its string representation.
 var ISideChainManagerFuncSigs = map[string]string{
@@ -89,7 +89,7 @@ var ISideChainManagerFuncSigs = map[string]string{
 	"84838fb8": "getSideChain(uint64)",
 	"78b94ab1": "quitSideChain(uint64)",
 	"33e1d41a": "registerRedeem(uint64,uint64,bytes,uint64,bytes,bytes[])",
-	"c9e1011f": "registerSideChain(uint64,uint64,string,uint64,bytes,bytes)",
+	"3a24101f": "registerSideChain(uint64,uint64,string,bytes,bytes)",
 	"ee9891e3": "setBtcTxParam(bytes,uint64,bytes[],(uint64,uint64,uint64))",
 	"c3360d8a": "updateSideChain(uint64,uint64,string,uint64,bytes,bytes)",
 }
@@ -372,25 +372,25 @@ func (_ISideChainManager *ISideChainManagerTransactorSession) RegisterRedeem(red
 	return _ISideChainManager.Contract.RegisterRedeem(&_ISideChainManager.TransactOpts, redeemChainID, contractChainID, redeem, CVersion, contractAddress, signs)
 }
 
-// RegisterSideChain is a paid mutator transaction binding the contract method 0xc9e1011f.
+// RegisterSideChain is a paid mutator transaction binding the contract method 0x3a24101f.
 //
-// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, uint64 blocksToWait, bytes CCMCAddress, bytes extraInfo) returns()
-func (_ISideChainManager *ISideChainManagerTransactor) RegisterSideChain(opts *bind.TransactOpts, chainID uint64, router uint64, name string, blocksToWait uint64, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
-	return _ISideChainManager.contract.Transact(opts, "registerSideChain", chainID, router, name, blocksToWait, CCMCAddress, extraInfo)
+// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns()
+func (_ISideChainManager *ISideChainManagerTransactor) RegisterSideChain(opts *bind.TransactOpts, chainID uint64, router uint64, name string, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
+	return _ISideChainManager.contract.Transact(opts, "registerSideChain", chainID, router, name, CCMCAddress, extraInfo)
 }
 
-// RegisterSideChain is a paid mutator transaction binding the contract method 0xc9e1011f.
+// RegisterSideChain is a paid mutator transaction binding the contract method 0x3a24101f.
 //
-// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, uint64 blocksToWait, bytes CCMCAddress, bytes extraInfo) returns()
-func (_ISideChainManager *ISideChainManagerSession) RegisterSideChain(chainID uint64, router uint64, name string, blocksToWait uint64, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
-	return _ISideChainManager.Contract.RegisterSideChain(&_ISideChainManager.TransactOpts, chainID, router, name, blocksToWait, CCMCAddress, extraInfo)
+// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns()
+func (_ISideChainManager *ISideChainManagerSession) RegisterSideChain(chainID uint64, router uint64, name string, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
+	return _ISideChainManager.Contract.RegisterSideChain(&_ISideChainManager.TransactOpts, chainID, router, name, CCMCAddress, extraInfo)
 }
 
-// RegisterSideChain is a paid mutator transaction binding the contract method 0xc9e1011f.
+// RegisterSideChain is a paid mutator transaction binding the contract method 0x3a24101f.
 //
-// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, uint64 blocksToWait, bytes CCMCAddress, bytes extraInfo) returns()
-func (_ISideChainManager *ISideChainManagerTransactorSession) RegisterSideChain(chainID uint64, router uint64, name string, blocksToWait uint64, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
-	return _ISideChainManager.Contract.RegisterSideChain(&_ISideChainManager.TransactOpts, chainID, router, name, blocksToWait, CCMCAddress, extraInfo)
+// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns()
+func (_ISideChainManager *ISideChainManagerTransactorSession) RegisterSideChain(chainID uint64, router uint64, name string, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
+	return _ISideChainManager.Contract.RegisterSideChain(&_ISideChainManager.TransactOpts, chainID, router, name, CCMCAddress, extraInfo)
 }
 
 // SetBtcTxParam is a paid mutator transaction binding the contract method 0xee9891e3.
@@ -1175,16 +1175,15 @@ func (it *ISideChainManagerRegisterSideChainIterator) Close() error {
 
 // ISideChainManagerRegisterSideChain represents a RegisterSideChain event raised by the ISideChainManager contract.
 type ISideChainManagerRegisterSideChain struct {
-	ChainId      uint64
-	Router       uint64
-	Name         string
-	BlocksToWait uint64
-	Raw          types.Log // Blockchain specific contextual infos
+	ChainId uint64
+	Router  uint64
+	Name    string
+	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterRegisterSideChain is a free log retrieval operation binding the contract event 0x1b49c4087add528b12062c4f5d37bf5064aaf7c27c532bcefcf2da15711c6c03.
+// FilterRegisterSideChain is a free log retrieval operation binding the contract event 0x7688735bc7c43b9ea9af0a45be0fc37526cf866360acaf0c29c44185f8eee791.
 //
-// Solidity: event RegisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event RegisterSideChain(uint64 ChainId, uint64 Router, string Name)
 func (_ISideChainManager *ISideChainManagerFilterer) FilterRegisterSideChain(opts *bind.FilterOpts) (*ISideChainManagerRegisterSideChainIterator, error) {
 
 	logs, sub, err := _ISideChainManager.contract.FilterLogs(opts, "RegisterSideChain")
@@ -1194,9 +1193,9 @@ func (_ISideChainManager *ISideChainManagerFilterer) FilterRegisterSideChain(opt
 	return &ISideChainManagerRegisterSideChainIterator{contract: _ISideChainManager.contract, event: "RegisterSideChain", logs: logs, sub: sub}, nil
 }
 
-// WatchRegisterSideChain is a free log subscription operation binding the contract event 0x1b49c4087add528b12062c4f5d37bf5064aaf7c27c532bcefcf2da15711c6c03.
+// WatchRegisterSideChain is a free log subscription operation binding the contract event 0x7688735bc7c43b9ea9af0a45be0fc37526cf866360acaf0c29c44185f8eee791.
 //
-// Solidity: event RegisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event RegisterSideChain(uint64 ChainId, uint64 Router, string Name)
 func (_ISideChainManager *ISideChainManagerFilterer) WatchRegisterSideChain(opts *bind.WatchOpts, sink chan<- *ISideChainManagerRegisterSideChain) (event.Subscription, error) {
 
 	logs, sub, err := _ISideChainManager.contract.WatchLogs(opts, "RegisterSideChain")
@@ -1231,9 +1230,9 @@ func (_ISideChainManager *ISideChainManagerFilterer) WatchRegisterSideChain(opts
 	}), nil
 }
 
-// ParseRegisterSideChain is a log parse operation binding the contract event 0x1b49c4087add528b12062c4f5d37bf5064aaf7c27c532bcefcf2da15711c6c03.
+// ParseRegisterSideChain is a log parse operation binding the contract event 0x7688735bc7c43b9ea9af0a45be0fc37526cf866360acaf0c29c44185f8eee791.
 //
-// Solidity: event RegisterSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event RegisterSideChain(uint64 ChainId, uint64 Router, string Name)
 func (_ISideChainManager *ISideChainManagerFilterer) ParseRegisterSideChain(log types.Log) (*ISideChainManagerRegisterSideChain, error) {
 	event := new(ISideChainManagerRegisterSideChain)
 	if err := _ISideChainManager.contract.UnpackLog(event, "RegisterSideChain", log); err != nil {
@@ -1312,16 +1311,15 @@ func (it *ISideChainManagerUpdateSideChainIterator) Close() error {
 
 // ISideChainManagerUpdateSideChain represents a UpdateSideChain event raised by the ISideChainManager contract.
 type ISideChainManagerUpdateSideChain struct {
-	ChainId      uint64
-	Router       uint64
-	Name         string
-	BlocksToWait uint64
-	Raw          types.Log // Blockchain specific contextual infos
+	ChainId uint64
+	Router  uint64
+	Name    string
+	Raw     types.Log // Blockchain specific contextual infos
 }
 
-// FilterUpdateSideChain is a free log retrieval operation binding the contract event 0x981b86666714a4f8a4dd230210def9527151a0544687a16f91074338a11b0a5e.
+// FilterUpdateSideChain is a free log retrieval operation binding the contract event 0xe5e51843a978f17f0cb363b30b9592c76e998342e674c98164d970f8c7fe1201.
 //
-// Solidity: event UpdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event UpdateSideChain(uint64 ChainId, uint64 Router, string Name)
 func (_ISideChainManager *ISideChainManagerFilterer) FilterUpdateSideChain(opts *bind.FilterOpts) (*ISideChainManagerUpdateSideChainIterator, error) {
 
 	logs, sub, err := _ISideChainManager.contract.FilterLogs(opts, "UpdateSideChain")
@@ -1331,9 +1329,9 @@ func (_ISideChainManager *ISideChainManagerFilterer) FilterUpdateSideChain(opts 
 	return &ISideChainManagerUpdateSideChainIterator{contract: _ISideChainManager.contract, event: "UpdateSideChain", logs: logs, sub: sub}, nil
 }
 
-// WatchUpdateSideChain is a free log subscription operation binding the contract event 0x981b86666714a4f8a4dd230210def9527151a0544687a16f91074338a11b0a5e.
+// WatchUpdateSideChain is a free log subscription operation binding the contract event 0xe5e51843a978f17f0cb363b30b9592c76e998342e674c98164d970f8c7fe1201.
 //
-// Solidity: event UpdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event UpdateSideChain(uint64 ChainId, uint64 Router, string Name)
 func (_ISideChainManager *ISideChainManagerFilterer) WatchUpdateSideChain(opts *bind.WatchOpts, sink chan<- *ISideChainManagerUpdateSideChain) (event.Subscription, error) {
 
 	logs, sub, err := _ISideChainManager.contract.WatchLogs(opts, "UpdateSideChain")
@@ -1368,9 +1366,9 @@ func (_ISideChainManager *ISideChainManagerFilterer) WatchUpdateSideChain(opts *
 	}), nil
 }
 
-// ParseUpdateSideChain is a log parse operation binding the contract event 0x981b86666714a4f8a4dd230210def9527151a0544687a16f91074338a11b0a5e.
+// ParseUpdateSideChain is a log parse operation binding the contract event 0xe5e51843a978f17f0cb363b30b9592c76e998342e674c98164d970f8c7fe1201.
 //
-// Solidity: event UpdateSideChain(uint64 ChainId, uint64 Router, string Name, uint64 BlocksToWait)
+// Solidity: event UpdateSideChain(uint64 ChainId, uint64 Router, string Name)
 func (_ISideChainManager *ISideChainManagerFilterer) ParseUpdateSideChain(log types.Log) (*ISideChainManagerUpdateSideChain, error) {
 	event := new(ISideChainManagerUpdateSideChain)
 	if err := _ISideChainManager.contract.UnpackLog(event, "UpdateSideChain", log); err != nil {
@@ -1379,3 +1377,4 @@ func (_ISideChainManager *ISideChainManagerFilterer) ParseUpdateSideChain(log ty
 	event.Raw = log
 	return event, nil
 }
+

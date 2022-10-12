@@ -31,13 +31,12 @@ type SideChain struct {
 	ChainID      uint64
 	Router       uint64
 	Name         string
-	BlocksToWait uint64
 	CCMCAddress  []byte
 	ExtraInfo    []byte
 }
 
 func (m *SideChain) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Owner, m.ChainID, m.Router, m.Name, m.BlocksToWait, m.CCMCAddress, m.ExtraInfo})
+	return rlp.Encode(w, []interface{}{m.Owner, m.ChainID, m.Router, m.Name, m.CCMCAddress, m.ExtraInfo})
 }
 
 func (m *SideChain) DecodeRLP(s *rlp.Stream) error {
@@ -46,7 +45,6 @@ func (m *SideChain) DecodeRLP(s *rlp.Stream) error {
 		ChainId      uint64
 		Router       uint64
 		Name         string
-		BlocksToWait uint64
 		CCMCAddress  []byte
 		ExtraInfo    []byte
 	}
@@ -55,8 +53,8 @@ func (m *SideChain) DecodeRLP(s *rlp.Stream) error {
 		return err
 	}
 
-	m.Owner, m.ChainID, m.Router, m.Name, m.BlocksToWait, m.CCMCAddress, m.ExtraInfo =
-		data.Address, data.ChainId, data.Router, data.Name, data.BlocksToWait, data.CCMCAddress, data.ExtraInfo
+	m.Owner, m.ChainID, m.Router, m.Name, m.CCMCAddress, m.ExtraInfo =
+		data.Address, data.ChainId, data.Router, data.Name, data.CCMCAddress, data.ExtraInfo
 	return nil
 }
 
