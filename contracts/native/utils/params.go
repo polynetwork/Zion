@@ -19,15 +19,6 @@ package utils
 
 import "github.com/ethereum/go-ethereum/common"
 
-type BtcNetType int
-
-const (
-	TyTestnet3 BtcNetType = iota
-	TyRegtest
-	TySimnet
-	TyMainnet
-)
-
 var (
 	BYTE_FALSE = []byte{0}
 	BYTE_TRUE  = []byte{1}
@@ -48,15 +39,9 @@ var (
 	SignatureManagerContractAddress  = common.HexToAddress("0x0000000000000000000000000000000000001007")
 	ProposalManagerContractAddress   = common.HexToAddress("0x0000000000000000000000000000000000001008")
 
-	NO_PROOF_ROUTER    = uint64(0)
-	BTC_ROUTER         = uint64(1)
-	ONT_ROUTER         = uint64(3)
-	NEO_ROUTER         = uint64(4)
-	COSMOS_ROUTER      = uint64(5)
-	ZILLIQA_ROUTER     = uint64(9)
-	NEO3_LEGACY_ROUTER = uint64(11)
-	OKEX_ROUTER        = uint64(12)
-	NEO3_ROUTER        = uint64(14)
-
-	ETH_COMMON_ROUTER = uint64(15)
+	NO_PROOF_ROUTER   = uint64(1)
+	ETH_COMMON_ROUTER = uint64(2)
+	COSMOS_ROUTER     = uint64(3)
+	ZILLIQA_ROUTER    = uint64(4)
+	OKEX_ROUTER       = uint64(5)
 )

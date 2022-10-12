@@ -125,7 +125,6 @@ func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		ChainID:      params.ChainID,
 		Router:       params.Router,
 		Name:         params.Name,
-		BlocksToWait: params.BlocksToWait,
 		CCMCAddress:  params.CCMCAddress,
 		ExtraInfo:    params.ExtraInfo,
 	}
@@ -134,7 +133,7 @@ func RegisterSideChain(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("RegisterSideChain, putRegisterSideChain error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{EventRegisterSideChain}, params.ChainID, params.Router, params.Name, params.BlocksToWait)
+	err = s.AddNotify(ABI, []string{EventRegisterSideChain}, params.ChainID, params.Router, params.Name)
 	if err != nil {
 		return nil, fmt.Errorf("RegisterSideChain, AddNotify error: %v", err)
 	}
@@ -212,7 +211,6 @@ func UpdateSideChain(s *native.NativeContract) ([]byte, error) {
 		ChainID:      params.ChainID,
 		Router:       params.Router,
 		Name:         params.Name,
-		BlocksToWait: params.BlocksToWait,
 		CCMCAddress:  params.CCMCAddress,
 		ExtraInfo:    params.ExtraInfo,
 	}
@@ -220,7 +218,7 @@ func UpdateSideChain(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UpdateSideChain, putUpdateSideChain error: %v", err)
 	}
-	err = s.AddNotify(ABI, []string{EventUpdateSideChain}, params.ChainID, params.Router, params.Name, params.BlocksToWait)
+	err = s.AddNotify(ABI, []string{EventUpdateSideChain}, params.ChainID, params.Router, params.Name)
 	if err != nil {
 		return nil, fmt.Errorf("UpdateSideChain, AddNotify error: %v", err)
 	}
