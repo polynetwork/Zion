@@ -18,7 +18,6 @@ interface ISideChainManager {
         uint64 chainID;
         uint64 router;
         string name;
-        uint64 blocksToWait;
         bytes CCMCAddress;
         bytes extraInfo;
     }
@@ -35,7 +34,7 @@ interface ISideChainManager {
     
     function approveRegisterSideChain(uint64 chainID) external returns (bool success);
     
-    function updateSideChain(uint64 chainID, uint64 router, string calldata name, uint64 blocksToWait, bytes calldata CCMCAddress, bytes calldata extraInfo) external;
+    function updateSideChain(uint64 chainID, uint64 router, string calldata name, bytes calldata CCMCAddress, bytes calldata extraInfo) external;
     
     function approveUpdateSideChain(uint64 chainID) external returns (bool success);
     
