@@ -63,7 +63,7 @@ func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
 // DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
 func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	var extra struct {
-		Height        uint64
+		StartHeight   uint64
 		EndHeight     uint64
 		Validators    []common.Address
 		Seal          []byte
@@ -73,7 +73,7 @@ func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&extra); err != nil {
 		return err
 	}
-	ist.StartHeight, ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.Height, extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
+	ist.StartHeight, ist.EndHeight, ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.StartHeight, extra.EndHeight, extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
 	return nil
 }
 
