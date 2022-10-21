@@ -195,10 +195,3 @@ type PoW interface {
 
 // StaticNodesEvent notify the eth.backend to handle `changeEpoch`
 type StaticNodesEvent struct{ Validators []common.Address }
-
-// RequestEvent communicate with miner.worker
-type RequestEvent struct {
-	Parent     *types.Block
-	ResponseCh chan *types.Block
-	Halt       *int32
-}
