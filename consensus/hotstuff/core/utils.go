@@ -111,21 +111,6 @@ func (c *core) checkProposalView(proposal hotstuff.Proposal, view *View) error {
 	}
 }
 
-// delete after test
-//func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
-//	isLocked, proposal := c.current.LastLockedProposal()
-//	if !isLocked {
-//		return nil
-//	}
-//	if proposal == nil {
-//		return fmt.Errorf("current locked proposal is nil")
-//	}
-//	if proposal.Hash() != msg.Hash() {
-//		return fmt.Errorf("expect %s, got %s", proposal.Hash().Hex(), msg.Hash().Hex())
-//	}
-//	return nil
-//}
-
 // verifyCrossEpochQC verify quorum certificate with current validator set or
 // last epoch's val set if current height equals to epoch start height
 func (c *core) verifyCrossEpochQC(qc *QuorumCert) error {
@@ -216,6 +201,11 @@ func (c *core) getMessageSeals(n int) [][]byte {
 
 func (c *core) broadcast(msg *Message) {
 	logger := c.logger.New("state", c.currentState())
+
+	// forbid normal nodes send message to leader
+	if index, _ := c.valSet.GetByAddress(c.Address()); index < 0 {
+		return
+	}
 
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {

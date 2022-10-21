@@ -56,11 +56,11 @@ const (
 
 	// minRecommitInterval is the minimal time interval to recreate the mining block with
 	// any newly arrived transactions.
-	minRecommitInterval = 6 * time.Second
+	minRecommitInterval = 20 * time.Second
 
 	// maxRecommitInterval is the maximum time interval to recreate the mining block with
 	// any newly arrived transactions.
-	maxRecommitInterval = 15 * time.Second
+	maxRecommitInterval = 30 * time.Second
 
 	// intervalAdjustRatio is the impact a single interval adjustment has on sealing work
 	// resubmitting interval.
@@ -360,6 +360,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			// If mining is running resubmit a new work cycle periodically to pull in
 			// higher priced transactions. Disable this overhead for pending blocks.
 			if w.IsRunning() && (w.chainConfig.HotStuff != nil && w.chainConfig.HotStuff.Protocol != "") {
+				log.Debug("Miner resubmit work", "timestamp", timestamp, "from", minRecommit)
 				commit(commitInterruptResubmit)
 			}
 

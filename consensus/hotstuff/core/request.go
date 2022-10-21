@@ -87,14 +87,9 @@ func (c *core) storeRequestMsg(request *Request) {
 	c.pendingRequests.Push(request, -request.Proposal.Number().Int64())
 }
 
-// todo(fuk): pop too old blocks
 func (c *core) processPendingRequests() {
 	c.pendingRequestsMu.Lock()
 	defer c.pendingRequestsMu.Unlock()
-
-	if c.pendingRequests.Empty() {
-		return
-	}
 
 	for !(c.pendingRequests.Empty()) {
 		m, prio := c.pendingRequests.Pop()

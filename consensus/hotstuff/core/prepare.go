@@ -135,7 +135,7 @@ func (c *core) handlePrepare(data *Message, src hotstuff.Validator) error {
 	if !c.IsProposer() && c.currentState() < StateHighQC {
 		c.current.SetHighQC(msg.HighQC)
 		c.current.SetProposal(msg.Proposal)
-		c.current.SetState(StateHighQC)
+		c.setCurrentState(StateHighQC)
 		logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "highQC", msg.HighQC.Hash)
 
 		c.sendPrepareVote()

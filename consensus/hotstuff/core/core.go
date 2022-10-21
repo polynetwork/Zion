@@ -161,7 +161,7 @@ func (c *core) updateRoundState(newView *View, changeView bool, lastProposal hot
 
 func (c *core) setCurrentState(s State) {
 	c.current.SetState(s)
-	if s == StateHighQC && c.current.PendingRequest() == nil {
+	if s == StateAcceptRequest || s == StateHighQC {
 		c.processPendingRequests()
 	}
 	c.processBacklog()

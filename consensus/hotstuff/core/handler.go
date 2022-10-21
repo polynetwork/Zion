@@ -153,9 +153,9 @@ func (c *core) handleMsg(payload []byte) error {
 		return err
 	}
 
-	// Only accept Message if the address is valid
-	_, src := c.valSet.GetByAddress(msg.Address)
-	if src == nil {
+	// Only accept message if the src is consensus participant
+	index, src := c.valSet.GetByAddress(msg.Address)
+	if index < 0 || src == nil {
 		logger.Error("Invalid address in Message", "msg", msg)
 		return errInvalidSigner
 	}
