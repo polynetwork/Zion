@@ -20,87 +20,103 @@ package core
 
 import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func (c *core) sendRequest() {
+func (c *core) handleRequest(request *Request) error {
 	logger := c.newLogger()
-
-	if c.hasValidPendingRequest() ||
-		c.current.IsProposalLocked() && c.current.Proposal() != nil {
-		c.sendPrepare()
-		return
-	}
-
-	proposal, _ := c.backend.LastProposal()
-	if proposal == nil {
-		logger.Trace("sendRequest", "err", "last proposal is nil")
-		return
-	}
-	parent, ok := proposal.(*types.Block)
-	if !ok {
-		logger.Trace("sendRequest", "err", "convert proposal to block failed")
-		return
-	}
-
-	c.backend.AskMiningProposalWithParent(parent)
-}
-
-func (c *core) handleRequest(req *hotstuff.Request) error {
-	logger := c.newLogger()
-
-	if req == nil || req.Proposal == nil {
-		logger.Trace("Invalid request")
-		return nil
-	}
-	if req.Proposal.Number().Cmp(c.current.Height()) != 0 {
-		logger.Trace("Invalid request", "expect height", c.current.Height(), "got", req.Proposal.Number())
-		return nil
-	}
-	if c.currentState() != StateHighQC {
-		logger.Trace("Failed to process request", "err", "state invalid")
-		return nil
-	}
-	if c.current.highQC == nil {
-		logger.Trace("Failed to process request", "err",  "current highQC is nil")
-		return nil
-	}
-
-	if !c.hasValidPendingRequest() {
-		c.current.SetPendingRequest(req)
-	} else {
-		logger.Trace("handleRequest", "err", "already has valid pending request")
-		return errRequestAlreadyExist
-	}
-
-	c.sendPrepare()
-	logger.Trace("handleRequest", "height", req.Proposal.Number(), "proposal", req.Proposal.Hash())
-	return nil
-}
-
-func (c *core) createNewProposal() error {
-	if c.current.IsProposalLocked() {
-		if c.current.Proposal() == nil {
-			return errLockProposalNotExist
+	if err := c.checkRequestMsg(request); err != nil {
+		if err == errInvalidMessage {
+			logger.Warn("invalid request")
+		} else if err == errFutureMessage {
+			c.storeRequestMsg(request)
 		} else {
-			return nil
+			logger.Warn("unexpected request", "err", err, "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
+		}
+		return err
+	}
+	logger.Trace("handleRequest", "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
+
+	switch c.currentState() {
+	case StateAcceptRequest:
+		// store request and prepare to use it after highQC
+		c.storeRequestMsg(request)
+
+	case StateHighQC:
+		// consensus step is blocked for proposal is not ready
+		if c.current.PendingRequest() == nil {
+			c.current.SetPendingRequest(request)
+			c.sendPrepare()
+		}
+
+	default:
+		// store request for `changeView` if node is not the proposer at current round.
+		if c.current.PendingRequest() == nil {
+			c.current.SetPendingRequest(request)
 		}
 	}
 
-	if cur := c.current.Proposal(); cur != nil && cur.Number().Cmp(c.current.Height()) == 0 {
+	return nil
+}
+
+// check request state
+// return errInvalidMessage if the message is invalid
+// return errFutureMessage if the sequence of proposal is larger than current sequence
+// return errOldMessage if the sequence of proposal is smaller than current sequence
+func (c *core) checkRequestMsg(request *Request) error {
+	if request == nil || request.Proposal == nil {
+		return errInvalidMessage
+	}
+
+	if c := c.current.Height().Cmp(request.Proposal.Number()); c > 0 {
+		return errOldMessage
+	} else if c < 0 {
+		return errFutureMessage
+	} else {
 		return nil
 	}
+}
 
-	req := c.current.PendingRequest()
-	if req == nil || req.Proposal == nil {
-		return errNoRequest
+func (c *core) storeRequestMsg(request *Request) {
+	logger := c.newLogger()
+
+	logger.Trace("Store future request", "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
+
+	c.pendingRequestsMu.Lock()
+	defer c.pendingRequestsMu.Unlock()
+
+	c.pendingRequests.Push(request, -request.Proposal.Number().Int64())
+}
+
+// todo(fuk): pop too old blocks
+func (c *core) processPendingRequests() {
+	c.pendingRequestsMu.Lock()
+	defer c.pendingRequestsMu.Unlock()
+
+	if c.pendingRequests.Empty() {
+		return
 	}
 
-	pending := req.Proposal
-	if pending == nil || pending.Number().Cmp(c.current.Height()) != 0 {
-		return errInvalidProposal
+	for !(c.pendingRequests.Empty()) {
+		m, prio := c.pendingRequests.Pop()
+		r, ok := m.(*Request)
+		if !ok {
+			c.logger.Warn("Malformed request, skip", "msg", m)
+			continue
+		}
+		// Push back if it's a future message
+		if err := c.checkRequestMsg(r); err != nil {
+			if err == errFutureMessage {
+				c.logger.Trace("Stop processing request", "number", r.Proposal.Number(), "hash", r.Proposal.Hash())
+				c.pendingRequests.Push(m, prio)
+				break
+			}
+			c.logger.Trace("Skip the pending request", "number", r.Proposal.Number(), "hash", r.Proposal.Hash(), "err", err)
+			continue
+		} else {
+			c.logger.Trace("Post pending request", "number", r.Proposal.Number(), "hash", r.Proposal.Hash())
+			go c.sendEvent(hotstuff.RequestEvent{
+				Proposal: r.Proposal,
+			})
+		}
 	}
-
-	c.current.SetProposal(pending)
-	return nil
 }

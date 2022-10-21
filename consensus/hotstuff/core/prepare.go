@@ -32,25 +32,34 @@ func (c *core) sendPrepare() {
 	if !c.IsProposer() {
 		return
 	}
+	if c.currentState() != StateHighQC {
+		return
+	}
+	if c.current.PendingRequest() == nil || c.current.PendingRequest().Proposal == nil {
+		return
+	}
 
-	// filter dump proposal
-	if proposal := c.current.Proposal(); proposal != nil &&
-		proposal.Number().Uint64() == c.currentView().Height.Uint64() &&
-		proposal.Coinbase() == c.Address() {
-
-		logger.Trace("Failed to send prepare", "err", "proposal already been sent")
+	request := c.current.PendingRequest()
+	expectHeight := c.current.HeightU64()
+	if got := request.Proposal.NumberU64(); expectHeight != got {
+		logger.Trace("Failed to send prepare", "height expect", expectHeight, "got", got)
+		return
+	}
+	expectAddr := request.Proposal.Coinbase()
+	if got := c.Address(); expectAddr != c.Address() {
+		logger.Trace("Failed to send prepare", "coinbase expect", expectAddr, "got", got)
+		return
+	}
+	expectParentHash := c.current.HighQC().Hash()
+	if got := request.Proposal.ParentHash(); expectParentHash != got {
+		logger.Trace("Failed to send prepare", "expect parent hash", expectParentHash, "got", got)
 		return
 	}
 
 	msgTyp := MsgTypePrepare
-	if err := c.createNewProposal(); err != nil {
-		logger.Trace("Failed to create proposal", "view", c.currentView(), "err", err)
-		return
-	}
-
 	prepare := &MsgPrepare{
 		View:     c.currentView(),
-		Proposal: c.current.Proposal(),
+		Proposal: request.Proposal,
 		HighQC:   c.current.HighQC(),
 	}
 	payload, err := Encode(prepare)
@@ -64,11 +73,11 @@ func (c *core) sendPrepare() {
 	time.Sleep(delay)
 	logger.Trace("delay to broadcast proposal", "time", delay.Milliseconds())
 
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	c.broadcast(&Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendPrepare", "prepare view", prepare.View, "proposal", prepare.Proposal.Hash())
 }
 
-func (c *core) handlePrepare(data *hotstuff.Message, src hotstuff.Validator) error {
+func (c *core) handlePrepare(data *Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
@@ -87,6 +96,10 @@ func (c *core) handlePrepare(data *hotstuff.Message, src hotstuff.Validator) err
 		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
+	if err := c.checkProposalView(msg.Proposal, msg.View); err != nil {
+		logger.Trace("Failed to check proposal and msg view", "msg", msgTyp, "err", err)
+		return err
+	}
 
 	if _, err := c.backend.VerifyUnsealedProposal(msg.Proposal); err != nil {
 		logger.Trace("Failed to verify unsealed proposal", "msg", msgTyp, "err", err)
@@ -100,10 +113,11 @@ func (c *core) handlePrepare(data *hotstuff.Message, src hotstuff.Validator) err
 		logger.Trace("Failed to check safeNode", "msg", msgTyp, "err", err)
 		return errSafeNode
 	}
-	if err := c.checkLockedProposal(msg.Proposal); err != nil {
-		logger.Trace("Failed to check locked proposal", "msg", msgTyp, "err", err)
-		return err
-	}
+	// todo: delete after test
+	//if err := c.checkLockedProposal(msg.Proposal); err != nil {
+	//	logger.Trace("Failed to check locked proposal", "msg", msgTyp, "err", err)
+	//	return err
+	//}
 	if err := c.preExecuteBlock(msg.Proposal); err != nil {
 		logger.Trace("Failed to pre-execute block", "msg", msgTyp, "err", err)
 		return err
@@ -111,9 +125,13 @@ func (c *core) handlePrepare(data *hotstuff.Message, src hotstuff.Validator) err
 
 	logger.Trace("handlePrepare", "msg", msgTyp, "src", src.Address(), "hash", msg.Proposal.Hash())
 
+	// leader accept proposal
 	if c.IsProposer() && c.currentState() < StatePrepared {
+		c.current.SetProposal(msg.Proposal)
 		c.sendPrepareVote()
 	}
+
+	// repo accept proposal and high qc
 	if !c.IsProposer() && c.currentState() < StateHighQC {
 		c.current.SetHighQC(msg.HighQC)
 		c.current.SetProposal(msg.Proposal)
@@ -140,11 +158,11 @@ func (c *core) sendPrepareVote() {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	c.broadcast(&Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendPrepareVote", "vote view", vote.View, "vote", vote.Digest)
 }
 
-func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
+func (c *core) extend(proposal hotstuff.Proposal, highQC *QuorumCert) error {
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		return fmt.Errorf("invalid proposal: hash %s", proposal.Hash())
@@ -152,14 +170,14 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) e
 	if err := c.verifyCrossEpochQC(highQC); err != nil {
 		return err
 	}
-	if highQC.Hash != block.ParentHash() {
+	if highQC.Hash() != block.ParentHash() {
 		return fmt.Errorf("block %v (parent %v) not extend hiqhQC %v", block.Hash(), block.ParentHash(), highQC.Hash)
 	}
 	return nil
 }
 
 // proposal extend lockedQC `OR` hiqhQC.view > lockedQC.view
-func (c *core) safeNode(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert) error {
+func (c *core) safeNode(proposal hotstuff.Proposal, highQC *QuorumCert) error {
 	logger := c.newLogger()
 
 	if proposal.Number().Uint64() == 1 {
@@ -176,7 +194,7 @@ func (c *core) safeNode(proposal hotstuff.Proposal, highQC *hotstuff.QuorumCert)
 	} else {
 		logger.Trace("safeNodeChecking", "extend err", err)
 	}
-	if highQC.View.Cmp(c.current.PreCommittedQC().View) > 0 {
+	if highQC.view.Cmp(c.current.PreCommittedQC().view) > 0 {
 		liveness = true
 	}
 	if safety || liveness {

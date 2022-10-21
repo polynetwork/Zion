@@ -19,8 +19,11 @@
 package core
 
 import (
+	"bytes"
+	"errors"
 	"fmt"
 	"io"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -76,6 +79,7 @@ func (m MsgType) Value() uint64 {
 type State uint64
 
 const (
+	StateUnknown       State = 0
 	StateAcceptRequest State = 1
 	StateHighQC        State = 2
 	StatePrepared      State = 3
@@ -84,7 +88,9 @@ const (
 )
 
 func (s State) String() string {
-	if s == StateAcceptRequest {
+	if s == StateUnknown {
+		return "StateUnknown"
+	} else if s == StateAcceptRequest {
 		return "StateAcceptRequest"
 	} else if s == StateHighQC {
 		return "StateHighQC"
@@ -93,9 +99,9 @@ func (s State) String() string {
 	} else if s == StatePreCommitted {
 		return "StatePreCommitted"
 	} else if s == StateCommitted {
-		return "Committed"
+		return "StateCommitted"
 	} else {
-		return "Unknown"
+		return "Invalid"
 	}
 }
 
@@ -113,26 +119,44 @@ func (s State) Cmp(y State) int {
 	return 0
 }
 
+// view includes a round number and a block height number.
+// Height is the block height number we'd like to commit.
+//
+// If the given block is not accepted by validators, a round change will occur
+// and the validators start a new round with round+1.
+//
+type View struct {
+	Round  *big.Int
+	Height *big.Int
+}
+
+// Cmp compares v and y and returns:
+//   -1 if v <  y
+//    0 if v == y
+//   +1 if v >  y
+func (v *View) Cmp(y *View) int {
+	if hdiff := v.Height.Cmp(y.Height); hdiff != 0 {
+		return hdiff
+	}
+	if rdiff := v.Round.Cmp(y.Round); rdiff != 0 {
+		return rdiff
+	}
+	return 0
+}
+
+func (v *View) Sub(y *View) (int64, int64) {
+	h := new(big.Int).Sub(v.Height, y.Height).Int64()
+	r := new(big.Int).Sub(v.Round, y.Round).Int64()
+	return h, r
+}
+
+func (v *View) String() string {
+	return fmt.Sprintf("{Round: %d, Height: %d}", v.Round.Uint64(), v.Height.Uint64())
+}
+
 type MsgNewView struct {
-	View      *hotstuff.View
-	PrepareQC *hotstuff.QuorumCert
-}
-
-func (m *MsgNewView) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.View, m.PrepareQC})
-}
-
-func (m *MsgNewView) DecodeRLP(s *rlp.Stream) error {
-	var proposal struct {
-		View      *hotstuff.View
-		PrepareQC *hotstuff.QuorumCert
-	}
-
-	if err := s.Decode(&proposal); err != nil {
-		return err
-	}
-	m.View, m.PrepareQC = proposal.View, proposal.PrepareQC
-	return nil
+	View      *View
+	PrepareQC *QuorumCert
 }
 
 func (m *MsgNewView) String() string {
@@ -140,9 +164,9 @@ func (m *MsgNewView) String() string {
 }
 
 type MsgPrepare struct {
-	View     *hotstuff.View
+	View     *View
 	Proposal hotstuff.Proposal
-	HighQC   *hotstuff.QuorumCert
+	HighQC   *QuorumCert
 }
 
 func (m *MsgPrepare) EncodeRLP(w io.Writer) error {
@@ -155,9 +179,9 @@ func (m *MsgPrepare) EncodeRLP(w io.Writer) error {
 
 func (m *MsgPrepare) DecodeRLP(s *rlp.Stream) error {
 	var proposal struct {
-		View     *hotstuff.View
+		View     *View
 		Proposal *types.Block
-		HighQC   *hotstuff.QuorumCert
+		HighQC   *QuorumCert
 	}
 
 	if err := s.Decode(&proposal); err != nil {
@@ -172,9 +196,9 @@ func (m *MsgPrepare) String() string {
 }
 
 type MsgPreCommit struct {
-	View      *hotstuff.View
+	View      *View
 	Proposal  hotstuff.Proposal
-	PrepareQC *hotstuff.QuorumCert
+	PrepareQC *QuorumCert
 }
 
 func (m *MsgPreCommit) EncodeRLP(w io.Writer) error {
@@ -187,9 +211,9 @@ func (m *MsgPreCommit) EncodeRLP(w io.Writer) error {
 
 func (m *MsgPreCommit) DecodeRLP(s *rlp.Stream) error {
 	var proposal struct {
-		View      *hotstuff.View
+		View      *View
 		Proposal  *types.Block
-		PrepareQC *hotstuff.QuorumCert
+		PrepareQC *QuorumCert
 	}
 
 	if err := s.Decode(&proposal); err != nil {
@@ -204,37 +228,189 @@ func (m *MsgPreCommit) String() string {
 }
 
 type Vote struct {
-	View   *hotstuff.View
+	View   *View
 	Digest common.Hash // Digest of s.Announce.Proposal.Hash()
 }
 
+func (b *Vote) String() string {
+	return fmt.Sprintf("{view: %v, Digest: %v}", b.View, b.Digest.String())
+}
+
+type QuorumCert struct {
+	view     *View
+	hash     common.Hash // block header sig hash
+	proposer common.Address
+	extra    []byte
+}
+
+func (qc *QuorumCert) Height() *big.Int {
+	if qc.view == nil {
+		return common.Big0
+	}
+	return qc.view.Height
+}
+
+func (qc *QuorumCert) HeightU64() uint64 {
+	return qc.Height().Uint64()
+}
+
+func (qc *QuorumCert) Round() *big.Int {
+	if qc.view == nil {
+		return common.Big0
+	}
+	return qc.view.Round
+}
+
+func (qc *QuorumCert) RoundU64() uint64 {
+	return qc.Round().Uint64()
+}
+
+func (qc *QuorumCert) Hash() common.Hash {
+	return qc.hash
+}
+
+func (qc *QuorumCert) Proposer() common.Address {
+	return qc.proposer
+}
+
+func (qc *QuorumCert) Extra() []byte {
+	return qc.extra
+}
+
+func (qc *QuorumCert) String() string {
+	return fmt.Sprintf("{QuorumCert view: %v, Hash: %v, Proposer: %v}", qc.view, qc.hash.String(), qc.proposer.Hex())
+}
+
+func (qc *QuorumCert) Copy() *QuorumCert {
+	enc, err := rlp.EncodeToBytes(qc)
+	if err != nil {
+		return nil
+	}
+	newQC := new(QuorumCert)
+	if err := rlp.DecodeBytes(enc, &newQC); err != nil {
+		return nil
+	}
+	return newQC
+}
+
 // EncodeRLP serializes b into the Ethereum RLP format.
-func (b *Vote) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{b.View, b.Digest})
+func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{qc.view, qc.hash, qc.proposer, qc.extra})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (b *Vote) DecodeRLP(s *rlp.Stream) error {
-	var subject struct {
-		View   *hotstuff.View
-		Digest common.Hash
+func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
+	var cert struct {
+		View     *View
+		Hash     common.Hash
+		Proposer common.Address
+		Extra    []byte
 	}
 
-	if err := s.Decode(&subject); err != nil {
+	if err := s.Decode(&cert); err != nil {
 		return err
 	}
-	b.View, b.Digest = subject.View, subject.Digest
+	qc.view, qc.hash, qc.proposer, qc.extra = cert.View, cert.Hash, cert.Proposer, cert.Extra
 	return nil
 }
 
-func (b *Vote) String() string {
-	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest.String())
+type Message struct {
+	Code          MsgType
+	View          *View
+	Msg           []byte
+	Address       common.Address
+	Signature     []byte
+	CommittedSeal []byte
+}
+
+// ==============================================
+//
+// define the functions that needs to be provided for rlp Encoder/Decoder.
+
+// EncodeRLP serializes m into the Ethereum RLP format.
+func (m *Message) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (m *Message) DecodeRLP(s *rlp.Stream) error {
+	var msg struct {
+		Code          uint64
+		View          *View
+		Msg           []byte
+		Address       common.Address
+		Signature     []byte
+		CommittedSeal []byte
+	}
+
+	if err := s.Decode(&msg); err != nil {
+		return err
+	}
+
+	m.Code, m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal = MsgType(msg.Code), msg.View, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
+	return nil
+}
+
+// ==============================================
+//
+// define the functions that needs to be provided for core.
+
+func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
+	// Decode Message
+	err := rlp.DecodeBytes(b, &m)
+	if err != nil {
+		return err
+	}
+
+	// Validate Message (on a Message without Signature)
+	if validateFn != nil {
+		var payload []byte
+		payload, err = m.PayloadNoSig()
+		if err != nil {
+			return err
+		}
+
+		signerAdd, err := validateFn(payload, m.Signature)
+		if err != nil {
+			return err
+		}
+		if !bytes.Equal(signerAdd.Bytes(), m.Address.Bytes()) {
+			return errors.New("Message not signed by the sender")
+		}
+	}
+	return nil
+}
+
+func (m *Message) Payload() ([]byte, error) {
+	return rlp.EncodeToBytes(m)
+}
+
+func (m *Message) PayloadNoSig() ([]byte, error) {
+	return rlp.EncodeToBytes(&Message{
+		Code:      m.Code,
+		View:      m.View,
+		Msg:       m.Msg,
+		Address:   m.Address,
+		Signature: []byte{},
+	})
+}
+
+func (m *Message) Decode(val interface{}) error {
+	return rlp.DecodeBytes(m.Msg, val)
+}
+
+func (m *Message) String() string {
+	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
 }
 
 type timeoutEvent struct{}
 type backlogEvent struct {
 	src hotstuff.Validator
-	msg *hotstuff.Message
+	msg *Message
+}
+
+type Request struct {
+	Proposal hotstuff.Proposal
 }
 
 func Encode(val interface{}) ([]byte, error) {

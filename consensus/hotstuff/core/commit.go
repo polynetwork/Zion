@@ -22,7 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) handlePreCommitVote(data *hotstuff.Message, src hotstuff.Validator) error {
+func (c *core) handlePreCommitVote(data *Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
@@ -75,22 +75,22 @@ func (c *core) sendCommit() {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendCommit", "msg view", sub.View, "proposal", sub.Hash)
+	c.broadcast(&Message{Code: msgTyp, Msg: payload})
+	logger.Trace("sendCommit", "msg view", sub.view, "proposal", sub.Hash)
 }
 
-func (c *core) handleCommit(data *hotstuff.Message, src hotstuff.Validator) error {
+func (c *core) handleCommit(data *Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
-		msg    *hotstuff.QuorumCert
+		msg    *QuorumCert
 		msgTyp = MsgTypeCommit
 	)
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
 		return errFailedDecodeCommit
 	}
-	if err := c.checkView(MsgTypeCommit, msg.View); err != nil {
+	if err := c.checkView(MsgTypeCommit, msg.view); err != nil {
 		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
@@ -107,7 +107,7 @@ func (c *core) handleCommit(data *hotstuff.Message, src hotstuff.Validator) erro
 		return err
 	}
 
-	logger.Trace("handleCommit", "msg", msgTyp, "address", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
+	logger.Trace("handleCommit", "msg", msgTyp, "address", src.Address(), "msg view", msg.view, "proposal", msg.Hash)
 
 	if c.IsProposer() && c.currentState() < StateCommitted {
 		c.sendCommitVote()
@@ -120,7 +120,7 @@ func (c *core) handleCommit(data *hotstuff.Message, src hotstuff.Validator) erro
 	return nil
 }
 
-func (c *core) lockQCAndProposal(qc *hotstuff.QuorumCert) {
+func (c *core) lockQCAndProposal(qc *QuorumCert) {
 	c.current.SetPreCommittedQC(qc)
 	c.current.SetState(StatePreCommitted)
 	c.current.LockProposal()
@@ -140,6 +140,6 @@ func (c *core) sendCommitVote() {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	c.broadcast(&Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendCommitVote", "vote view", vote.View, "vote", vote.Digest)
 }

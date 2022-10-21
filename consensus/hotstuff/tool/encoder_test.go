@@ -28,6 +28,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/tool -run TestGenesisExtra
 func TestGenesisExtra(t *testing.T) {
 	validators := []common.Address{
 		common.HexToAddress("0x258af48e28e4a6846e931ddff8e1cdf8579821e5"),

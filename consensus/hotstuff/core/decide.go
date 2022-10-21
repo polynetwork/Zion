@@ -24,7 +24,7 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
-func (c *core) handleCommitVote(data *hotstuff.Message, src hotstuff.Validator) error {
+func (c *core) handleCommitVote(data *Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
@@ -43,7 +43,7 @@ func (c *core) handleCommitVote(data *hotstuff.Message, src hotstuff.Validator) 
 		logger.Trace("Failed to check vote", "msg", msgTyp, "err", err)
 		return err
 	}
-	if vote.Digest != c.current.PreCommittedQC().Hash {
+	if vote.Digest != c.current.PreCommittedQC().Hash() {
 		logger.Trace("Failed to check hash", "msg", msgTyp, "expect vote", c.current.PreCommittedQC().Hash, "got", vote.Digest)
 		return errInvalidDigest
 	}
@@ -80,22 +80,22 @@ func (c *core) sendDecide() {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendDecide", "msg view", sub.View, "proposal", sub.Hash)
+	c.broadcast(&Message{Code: msgTyp, Msg: payload})
+	logger.Trace("sendDecide", "msg view", sub.view, "proposal", sub.Hash)
 }
 
-func (c *core) handleDecide(data *hotstuff.Message, src hotstuff.Validator) error {
+func (c *core) handleDecide(data *Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
-		msg    *hotstuff.QuorumCert
+		msg    *QuorumCert
 		msgTyp = MsgTypeDecide
 	)
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
 		return errFailedDecodeCommit
 	}
-	if err := c.checkView(msgTyp, msg.View); err != nil {
+	if err := c.checkView(msgTyp, msg.view); err != nil {
 		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
@@ -112,7 +112,7 @@ func (c *core) handleDecide(data *hotstuff.Message, src hotstuff.Validator) erro
 		return err
 	}
 
-	logger.Trace("handleDecide", "msg", msgTyp, "address", src.Address(), "msg view", msg.View, "proposal", msg.Hash)
+	logger.Trace("handleDecide", "msg", msgTyp, "address", src.Address(), "msg view", msg.view, "proposal", msg.Hash)
 
 	if c.IsProposer() && c.currentState() == StateCommitted {
 		if err := c.backend.Commit(c.current.Proposal()); err != nil {
@@ -140,9 +140,9 @@ func (c *core) handleDecide(data *hotstuff.Message, src hotstuff.Validator) erro
 // we just kept it here for backup.
 func (c *core) handleFinalCommitted(header *types.Header) error {
 	logger := c.newLogger()
-	if height := header.Number.Uint64(); height >= c.currentView().Height.Uint64() {
-		c.startNewRound(common.Big0)
+	if height := header.Number.Uint64(); height >= c.current.HeightU64() {
 		logger.Trace("handleFinalCommitted", "height", height)
+		c.startNewRound(common.Big0)
 	}
 	return nil
 }

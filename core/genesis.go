@@ -455,6 +455,19 @@ func DefaultGenesisBlock() *Genesis {
 	}
 }
 
+func TestGenesisBlock() *Genesis {
+	return &Genesis{
+		Config:           params.MainnetChainConfig,
+		Nonce:            66,
+		ExtraData:        hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
+		GasLimit:         5000,
+		Difficulty:       big.NewInt(17179869184),
+		Alloc:            decodePrealloc(mainnetAllocData),
+		CommunityRate:    big.NewInt(2000),
+		CommunityAddress: common.HexToAddress("0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D"),
+	}
+}
+
 // DefaultRopstenGenesisBlock returns the Ropsten network genesis block.
 func DefaultRopstenGenesisBlock() *Genesis {
 	return &Genesis{

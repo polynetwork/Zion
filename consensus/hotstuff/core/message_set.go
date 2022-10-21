@@ -16,7 +16,7 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package message_set
+package core
 
 import (
 	"fmt"
@@ -31,28 +31,28 @@ import (
 // Construct a new message set to accumulate messages for given height/view number.
 func NewMessageSet(valSet hotstuff.ValidatorSet) *MessageSet {
 	return &MessageSet{
-		view: &hotstuff.View{
+		view: &View{
 			Round:  new(big.Int),
 			Height: new(big.Int),
 		},
 		mtx:  new(sync.Mutex),
-		msgs: make(map[common.Address]*hotstuff.Message),
+		msgs: make(map[common.Address]*Message),
 		vs:   valSet,
 	}
 }
 
 type MessageSet struct {
-	view *hotstuff.View
+	view *View
 	vs   hotstuff.ValidatorSet
 	mtx  *sync.Mutex
-	msgs map[common.Address]*hotstuff.Message
+	msgs map[common.Address]*Message
 }
 
-func (s *MessageSet) View() *hotstuff.View {
+func (s *MessageSet) View() *View {
 	return s.view
 }
 
-func (s *MessageSet) Add(msg *hotstuff.Message) error {
+func (s *MessageSet) Add(msg *Message) error {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -64,7 +64,7 @@ func (s *MessageSet) Add(msg *hotstuff.Message) error {
 	return nil
 }
 
-func (s *MessageSet) Values() (result []*hotstuff.Message) {
+func (s *MessageSet) Values() (result []*Message) {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -81,7 +81,7 @@ func (s *MessageSet) Size() int {
 	return len(s.msgs)
 }
 
-func (s *MessageSet) Get(addr common.Address) *hotstuff.Message {
+func (s *MessageSet) Get(addr common.Address) *Message {
 	s.mtx.Lock()
 	defer s.mtx.Unlock()
 
@@ -100,7 +100,7 @@ func (s *MessageSet) String() string {
 }
 
 // verify if the message comes from one of the validators
-func (s *MessageSet) verify(msg *hotstuff.Message) error {
+func (s *MessageSet) verify(msg *Message) error {
 	if _, v := s.vs.GetByAddress(msg.Address); v == nil {
 		return fmt.Errorf("unauthorized address")
 	}

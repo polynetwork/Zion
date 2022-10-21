@@ -22,7 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) handlePrepareVote(data *hotstuff.Message, src hotstuff.Validator) error {
+func (c *core) handlePrepareVote(data *Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
@@ -91,11 +91,11 @@ func (c *core) sendPreCommit() {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	c.broadcast(&Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendPreCommit", "msg view", msg.View, "proposal", msg.Proposal.Hash())
 }
 
-func (c *core) handlePreCommit(data *hotstuff.Message, src hotstuff.Validator) error {
+func (c *core) handlePreCommit(data *Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
@@ -110,12 +110,16 @@ func (c *core) handlePreCommit(data *hotstuff.Message, src hotstuff.Validator) e
 		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
 		return err
 	}
+	if err := c.checkProposalView(msg.Proposal, msg.View); err != nil {
+		logger.Trace("Failed to check proposal and msg view", "msg", msgTyp, "err", err)
+		return err
+	}
 	if err := c.checkMsgFromProposer(src); err != nil {
 		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
 		return err
 	}
-	if msg.Proposal.Hash() != msg.PrepareQC.Hash {
-		logger.Trace("Failed to check msg", "msg", msgTyp, "expect prepareQC hash", msg.Proposal.Hash().Hex(), "got", msg.PrepareQC.Hash.Hex())
+	if msg.Proposal.Hash() != msg.PrepareQC.Hash() {
+		logger.Trace("Failed to check msg", "msg", msgTyp, "expect prepareQC hash", msg.Proposal.Hash().Hex(), "got", msg.PrepareQC.hash.Hex())
 		return errInvalidProposal
 	}
 	if _, err := c.backend.Verify(msg.Proposal); err != nil {
@@ -142,7 +146,7 @@ func (c *core) handlePreCommit(data *hotstuff.Message, src hotstuff.Validator) e
 	return nil
 }
 
-func (c *core) acceptPrepare(prepareQC *hotstuff.QuorumCert, proposal hotstuff.Proposal) {
+func (c *core) acceptPrepare(prepareQC *QuorumCert, proposal hotstuff.Proposal) {
 	c.current.SetPrepareQC(prepareQC)
 	c.current.SetProposal(proposal)
 	c.current.SetState(StatePrepared)
@@ -162,6 +166,6 @@ func (c *core) sendPreCommitVote() {
 		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{Code: msgTyp, Msg: payload})
+	c.broadcast(&Message{Code: msgTyp, Msg: payload})
 	logger.Trace("sendPreCommitVote", "vote view", vote.View, "vote", vote.Digest)
 }

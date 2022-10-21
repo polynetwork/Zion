@@ -249,7 +249,7 @@ func (s *SignerImpl) VerifyHeader(header *types.Header, valSet hotstuff.Validato
 	return extra, nil
 }
 
-func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.ValidatorSet) error {
+func (s *SignerImpl) VerifyQC(qc hotstuff.QC, valSet hotstuff.ValidatorSet) error {
 	if qc == nil {
 		return errInvalidQC
 	}
@@ -257,20 +257,20 @@ func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.Validator
 		return errInvalidValset
 	}
 
-	if qc.View.Height.Uint64() == 0 {
+	if qc.HeightU64() == 0 {
 		return nil
 	}
-	extra, err := types.ExtractHotstuffExtraPayload(qc.Extra)
+	extra, err := types.ExtractHotstuffExtraPayload(qc.Extra())
 	if err != nil {
 		return err
 	}
 
 	// check proposer signature
-	addr, err := getSignatureAddress(qc.Hash.Bytes(), extra.Seal)
+	addr, err := getSignatureAddress(qc.Hash().Bytes(), extra.Seal)
 	if err != nil {
 		return err
 	}
-	if addr != qc.Proposer {
+	if addr != qc.Proposer() {
 		return errInvalidSigner
 	}
 	if idx, _ := valSet.GetByAddress(addr); idx < 0 {
@@ -278,7 +278,7 @@ func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.Validator
 	}
 
 	// check committed seals
-	committers, err := s.GetSignersFromCommittedSeals(qc.Hash, extra.CommittedSeal)
+	committers, err := s.GetSignersFromCommittedSeals(qc.Hash(), extra.CommittedSeal)
 	if err != nil {
 		return err
 	}
@@ -288,30 +288,30 @@ func (s *SignerImpl) VerifyQC(qc *hotstuff.QuorumCert, valSet hotstuff.Validator
 	return nil
 }
 
-func (s *SignerImpl) CheckQCParticipant(qc *hotstuff.QuorumCert, signer common.Address) error {
+func (s *SignerImpl) CheckQCParticipant(qc hotstuff.QC, signer common.Address) error {
 	if qc == nil {
 		return errInvalidQC
 	}
 
-	if qc.View.Height.Uint64() == 0 {
+	if qc.HeightU64() == 0 {
 		return nil
 	}
-	extra, err := types.ExtractHotstuffExtraPayload(qc.Extra)
+	extra, err := types.ExtractHotstuffExtraPayload(qc.Extra())
 	if err != nil {
 		return err
 	}
 
 	// check proposer signature
-	proposer, err := getSignatureAddress(qc.Hash.Bytes(), extra.Seal)
+	proposer, err := getSignatureAddress(qc.Hash().Bytes(), extra.Seal)
 	if err != nil {
 		return err
 	}
-	if signer == qc.Proposer && signer == proposer {
+	if signer == qc.Proposer() && signer == proposer {
 		return nil
 	}
 
 	// check committed seals
-	committers, err := s.GetSignersFromCommittedSeals(qc.Hash, extra.CommittedSeal)
+	committers, err := s.GetSignersFromCommittedSeals(qc.Hash(), extra.CommittedSeal)
 	if err != nil {
 		return err
 	}

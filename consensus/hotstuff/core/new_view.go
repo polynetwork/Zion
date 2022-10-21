@@ -22,7 +22,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) sendNewView(view *hotstuff.View) {
+func (c *core) sendNewView(view *View) {
 	logger := c.newLogger()
 
 	curView := c.currentView()
@@ -41,7 +41,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 		logger.Trace("Failed to encode", "msg", MsgTypeNewView, "err", err)
 		return
 	}
-	c.broadcast(&hotstuff.Message{
+	c.broadcast(&Message{
 		Code: MsgTypeNewView,
 		Msg:  payload,
 	})
@@ -49,7 +49,7 @@ func (c *core) sendNewView(view *hotstuff.View) {
 	logger.Trace("sendNewView", "prepareQC", prepareQC.Hash)
 }
 
-func (c *core) handleNewView(data *hotstuff.Message, src hotstuff.Validator) error {
+func (c *core) handleNewView(data *Message, src hotstuff.Validator) error {
 	logger := c.newLogger()
 
 	var (
@@ -75,6 +75,7 @@ func (c *core) handleNewView(data *hotstuff.Message, src hotstuff.Validator) err
 		return err
 	}
 
+	// `checkView` ensure that +2/3 validators on the same view
 	if err := c.current.AddNewViews(data); err != nil {
 		logger.Trace("Failed to add new view", "msg", msgTyp, "err", err)
 		return errAddNewViews
@@ -83,25 +84,31 @@ func (c *core) handleNewView(data *hotstuff.Message, src hotstuff.Validator) err
 	logger.Trace("handleNewView", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash)
 
 	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < StateHighQC {
-		highQC := c.getHighQC()
-		c.current.SetHighQC(highQC)
-		c.current.SetState(StateHighQC)
+		if highQC, err := c.getHighQC(); err != nil || highQC == nil {
+			logger.Trace("Failed to get highQC", "msg", msgTyp)
+			return errGetHighQC
+		} else {
+			c.current.SetHighQC(highQC)
+			c.setCurrentState(StateHighQC)
 
-		logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash, "msgSize", size)
-		c.sendRequest()
+			logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash, "msgSize", size)
+			c.sendPrepare()
+		}
 	}
 
 	return nil
 }
 
-func (c *core) getHighQC() *hotstuff.QuorumCert {
-	var maxView *hotstuff.QuorumCert
+func (c *core) getHighQC() (*QuorumCert, error) {
+	var maxView *QuorumCert
 	for _, data := range c.current.NewViews() {
 		var msg *MsgNewView
-		data.Decode(&msg)
-		if maxView == nil || maxView.View.Cmp(msg.PrepareQC.View) < 0 {
+		if err := data.Decode(&msg); err != nil {
+			return nil, err
+		}
+		if maxView == nil || maxView.view.Cmp(msg.PrepareQC.view) < 0 {
 			maxView = msg.PrepareQC
 		}
 	}
-	return maxView
+	return maxView, nil
 }

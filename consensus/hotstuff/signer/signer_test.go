@@ -34,6 +34,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/signer -run TestSign
 func TestSign(t *testing.T) {
 	s := newTestSigner()
 	data := []byte("Here is a string....")
@@ -48,6 +49,7 @@ func TestSign(t *testing.T) {
 	assert.Equal(t, signer, getAddress(), "address mismatch: have %v, want %s", signer.Hex(), getAddress().Hex())
 }
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/signer -run TestCheckValidatorSignature
 func TestCheckValidatorSignature(t *testing.T) {
 	vset, keys := newTestValidatorSet(5)
 
@@ -85,12 +87,15 @@ func TestCheckValidatorSignature(t *testing.T) {
 	assert.Equal(t, emptyAddr, common.Address{}, "address mismatch: have %v, want %v", addr, emptyAddr)
 }
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/signer -run TestFillExtraAfterCommit
 func TestFillExtraAfterCommit(t *testing.T) {
-	istRawData := hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f90197c0b841964b5c6cd21696b9ce7dbc3d7d38b07ac50b341eb18f37c7fbf6d5a91e77c0e0138f471f77b5d1046d963f32ab9a7a2c9e28cc7bda97919421d3dc0b78f6267401f9014fb841d1c3f7987e8b114c7a8a13c0daae880a601f2d66d905f75a3964e9ebb8f353726108715e7639dd75ef6881a54c8d711ac75a876be1515d8805d8e99fdc83934701b84136fbe9504ae80b1dd591a2bbf8d8410bb66da71c19fab5d619cd68ce2f7d1ab66eae46da15c971177e8c0a856b8072775ad536f05522b7a9e056d8ed4cf5402200b841964b5c6cd21696b9ce7dbc3d7d38b07ac50b341eb18f37c7fbf6d5a91e77c0e0138f471f77b5d1046d963f32ab9a7a2c9e28cc7bda97919421d3dc0b78f6267401b8416c07659d165179a3b96d31bed33f3331e11188c12ffdafbcd8f7583b3aaa5ee25dce4ca928cef9d2a348f25d3a53715ea91b1f8d5dc0ed6956a2d7df6756f02f00b84196e6c7c76c28e72daa88ed2d379f220350bde45a2a946a9993692ccd9f7065f7618938d9f18f12e32041e0e5f393947609a278acda17e256b232a3e3270f60fe0180")
+	istRawData := hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89d801ef85494258af48e28e4a6846e931ddff8e1cdf8579821e5946a708455c8777630aac9d1e7702d13f7a865b27c948c09d936a1b408d6e0afaa537ba4e06c4504a0ae94ad3bf5ed640cc72f37bd21d64a65c3c756e9c88cb8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c080")
 	extra, _ := types.ExtractHotstuffExtraPayload(istRawData)
 
 	expectedCommittedSeal := append([]byte{1, 2, 3}, bytes.Repeat([]byte{0x00}, types.HotstuffExtraSeal-3)...)
 	expectedIstExtra := &types.HotstuffExtra{
+		StartHeight:   0,
+		EndHeight:     30,
 		Validators:    extra.Validators,
 		Seal:          extra.Seal,
 		CommittedSeal: [][]byte{expectedCommittedSeal},

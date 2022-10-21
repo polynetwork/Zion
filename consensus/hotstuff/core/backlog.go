@@ -26,7 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) storeBacklog(msg *hotstuff.Message, src hotstuff.Validator) {
+func (c *core) storeBacklog(msg *Message, src hotstuff.Validator) {
 	logger := c.newLogger()
 
 	if src.Address() == c.Address() {
@@ -63,7 +63,7 @@ func (c *core) processBacklog() {
 		isFuture := false
 		for !(queue.Empty() || isFuture) {
 			data, priority := queue.Pop()
-			msg, ok := data.(*hotstuff.Message)
+			msg, ok := data.(*Message)
 			if !ok {
 				logger.Trace("Skip the backlog, invalid Message")
 				continue
@@ -96,7 +96,7 @@ func newBackLog() *backlog {
 	}
 }
 
-func (b *backlog) Push(msg *hotstuff.Message) {
+func (b *backlog) Push(msg *Message) {
 	if msg == nil || msg.Address == EmptyAddress {
 		return
 	}
@@ -111,7 +111,7 @@ func (b *backlog) Push(msg *hotstuff.Message) {
 	b.queue[addr].Push(msg, priority)
 }
 
-func (b *backlog) Pop(addr common.Address) (data *hotstuff.Message, priority int64) {
+func (b *backlog) Pop(addr common.Address) (data *Message, priority int64) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
@@ -119,13 +119,13 @@ func (b *backlog) Pop(addr common.Address) (data *hotstuff.Message, priority int
 		return
 	} else {
 		item, p := b.queue[addr].Pop()
-		data = item.(*hotstuff.Message)
+		data = item.(*Message)
 		priority = p
 		return
 	}
 }
 
-var messagePriorityTable = map[hotstuff.MsgType]int64{
+var messagePriorityTable = map[MsgType]int64{
 	MsgTypeNewView:       1,
 	MsgTypePrepare:       2,
 	MsgTypePrepareVote:   3,
@@ -136,7 +136,7 @@ var messagePriorityTable = map[hotstuff.MsgType]int64{
 	MsgTypeDecide:        8,
 }
 
-func (b *backlog) toPriority(msgCode hotstuff.MsgType, view *hotstuff.View) int64 {
+func (b *backlog) toPriority(msgCode MsgType, view *View) int64 {
 	priority := -(view.Height.Int64()*100 + view.Round.Int64()*10 + int64(messagePriorityTable[msgCode]))
 	return priority
 }
