@@ -178,9 +178,6 @@ type Handler interface {
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster)
 
-	// SubscribeRequest event subscribe for mining proposal with parent block
-	SubscribeRequest(ch chan<- types.Block) event.Subscription
-
 	// SubscribeNodes event subscribe for listening static nodes in eth handler
 	SubscribeNodes(ch chan<- StaticNodesEvent) event.Subscription
 }

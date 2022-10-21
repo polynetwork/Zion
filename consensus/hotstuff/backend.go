@@ -71,9 +71,6 @@ type Backend interface {
 	// ValidateBlock execute block which contained in prepare message, and validate block state
 	ValidateBlock(block *types.Block) error
 
-	// RequestProposal ask for mining proposal with parent block as parameters.
-	RequestProposal(parent *types.Block)
-
 	CheckPoint(height uint64)
 
 	Close() error

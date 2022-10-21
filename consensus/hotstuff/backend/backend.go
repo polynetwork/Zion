@@ -70,15 +70,10 @@ type backend struct {
 	consenMu          sync.Mutex   // Ensure a round can only start after the last one has finished
 	coreMu            sync.RWMutex
 
-	// event subscription for ChainHeadEvent event
-	broadcaster consensus.Broadcaster
-	// event subscription for request new block from miner/worker.
-	reqFeed event.Feed
-	// event subscription for static nodes listen
-	nodesFeed event.Feed
-
-	eventMux *event.TypeMux
-	point    int32 // check point mutex
+	broadcaster consensus.Broadcaster // event subscription for ChainHeadEvent event
+	nodesFeed   event.Feed            // event subscription for static nodes listen
+	eventMux    *event.TypeMux
+	point       int32 // check point mutex
 }
 
 func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) consensus.HotStuff {
@@ -357,10 +352,6 @@ func (s *backend) HasBadProposal(hash common.Hash) bool {
 		return false
 	}
 	return s.hasBadBlock(s.db, hash)
-}
-
-func (s *backend) RequestProposal(parent *types.Block) {
-	s.reqFeed.Send(*parent)
 }
 
 func (s *backend) SendValidatorsChange(list []common.Address) {
