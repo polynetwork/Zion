@@ -24,10 +24,11 @@ import (
 
 func (c *core) sendNewView(view *View) {
 	logger := c.newLogger()
+	msgTyp := MsgTypeNewView
 
 	curView := c.currentView()
 	if curView.Cmp(view) > 0 {
-		logger.Trace("Cannot send out the round change", "current round", curView.Round, "target round", view.Round)
+		logger.Trace("Cannot send out the round change", "msg", msgTyp, "current round", curView.Round, "target round", view.Round)
 		return
 	}
 
@@ -38,7 +39,7 @@ func (c *core) sendNewView(view *View) {
 	}
 	payload, err := Encode(newViewMsg)
 	if err != nil {
-		logger.Trace("Failed to encode", "msg", MsgTypeNewView, "err", err)
+		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
 	c.broadcast(&Message{
@@ -46,7 +47,7 @@ func (c *core) sendNewView(view *View) {
 		Msg:  payload,
 	})
 
-	logger.Trace("sendNewView", "prepareQC", prepareQC.Hash)
+	logger.Trace("sendNewView", "msg", msgTyp, "prepareQC", prepareQC.Hash())
 }
 
 func (c *core) handleNewView(data *Message, src hotstuff.Validator) error {
@@ -58,30 +59,30 @@ func (c *core) handleNewView(data *Message, src hotstuff.Validator) error {
 	)
 
 	if err := data.Decode(&msg); err != nil {
-		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to decode", "msg", msgTyp, "src", src.Address(), "err", err)
 		return errFailedDecodeNewView
 	}
 	if err := c.checkView(msgTyp, msg.View); err != nil {
-		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check view", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 	if err := c.checkMsgToProposer(); err != nil {
-		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 
 	if err := c.verifyCrossEpochQC(msg.PrepareQC); err != nil {
-		logger.Trace("Failed to verify highQC", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to verify highQC", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 
 	// `checkView` ensure that +2/3 validators on the same view
 	if err := c.current.AddNewViews(data); err != nil {
-		logger.Trace("Failed to add new view", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to add new view", "msg", msgTyp, "src", src.Address(), "err", err)
 		return errAddNewViews
 	}
 
-	logger.Trace("handleNewView", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash)
+	logger.Trace("handleNewView", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash())
 
 	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < StateHighQC {
 		if highQC, err := c.getHighQC(); err != nil || highQC == nil {
@@ -91,7 +92,7 @@ func (c *core) handleNewView(data *Message, src hotstuff.Validator) error {
 			c.current.SetHighQC(highQC)
 			c.setCurrentState(StateHighQC)
 
-			logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash, "msgSize", size)
+			logger.Trace("acceptHighQC", "msg", msgTyp, "prepareQC", msg.PrepareQC.Hash(), "msgSize", size)
 			c.sendPrepare()
 		}
 	}

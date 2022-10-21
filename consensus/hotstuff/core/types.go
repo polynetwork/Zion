@@ -192,7 +192,7 @@ func (m *MsgPrepare) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (m *MsgPrepare) String() string {
-	return fmt.Sprintf("{NewProposal Height: %d Round: %d Hash: %s}", m.View.Height, m.View.Round, m.Proposal.Hash())
+	return fmt.Sprintf("{NewProposal View: %v Hash: %s}", m.View, m.Proposal.Hash())
 }
 
 type MsgPreCommit struct {
@@ -224,7 +224,7 @@ func (m *MsgPreCommit) DecodeRLP(s *rlp.Stream) error {
 }
 
 func (m *MsgPreCommit) String() string {
-	return fmt.Sprintf("{MsgPreCommit Height: %d Round: %d Hash: %s}", m.View.Height, m.View.Round, m.Proposal.Hash())
+	return fmt.Sprintf("{MsgPreCommit View: %v Hash: %s}", m.View, m.Proposal.Hash())
 }
 
 type Vote struct {
@@ -233,7 +233,7 @@ type Vote struct {
 }
 
 func (b *Vote) String() string {
-	return fmt.Sprintf("{view: %v, Digest: %v}", b.View, b.Digest.String())
+	return fmt.Sprintf("{View: %v, Digest: %v}", b.View, b.Digest)
 }
 
 type QuorumCert struct {
@@ -278,7 +278,7 @@ func (qc *QuorumCert) Extra() []byte {
 }
 
 func (qc *QuorumCert) String() string {
-	return fmt.Sprintf("{QuorumCert view: %v, Hash: %v, Proposer: %v}", qc.view, qc.hash.String(), qc.proposer.Hex())
+	return fmt.Sprintf("{QuorumCert View: %v, Hash: %v, Proposer: %v}", qc.view, qc.hash, qc.proposer)
 }
 
 func (qc *QuorumCert) Copy() *QuorumCert {
@@ -400,7 +400,7 @@ func (m *Message) Decode(val interface{}) error {
 }
 
 func (m *Message) String() string {
-	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
+	return fmt.Sprintf("{MsgType: %v, Address: %v}", m.Code, m.Address)
 }
 
 type timeoutEvent struct{}

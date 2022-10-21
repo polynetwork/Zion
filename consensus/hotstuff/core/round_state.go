@@ -155,30 +155,6 @@ func (s *roundState) LockProposal() {
 	}
 }
 
-//func (s *roundState) UnLockProposal() {
-//	s.mu.Lock()
-//	defer s.mu.Unlock()
-//
-//	if s.proposal != nil && s.proposalLocked {
-//		s.proposalLocked = false
-//		s.proposal = nil
-//	}
-//}
-
-//func (s *roundState) IsProposalLocked() bool {
-//	s.mu.RLock()
-//	defer s.mu.RUnlock()
-//
-//	return s.proposalLocked
-//}
-
-//func (s *roundState) LastLockedProposal() (bool, hotstuff.Proposal) {
-//	s.mu.RLock()
-//	defer s.mu.RUnlock()
-//
-//	return s.proposalLocked, s.proposal
-//}
-
 func (s *roundState) SetPendingRequest(req *Request) {
 	s.mu.Lock()
 	defer s.mu.Unlock()

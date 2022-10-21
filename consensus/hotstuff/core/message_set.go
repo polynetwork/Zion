@@ -35,7 +35,7 @@ func NewMessageSet(valSet hotstuff.ValidatorSet) *MessageSet {
 			Round:  new(big.Int),
 			Height: new(big.Int),
 		},
-		mtx:  new(sync.Mutex),
+		mu:   new(sync.RWMutex),
 		msgs: make(map[common.Address]*Message),
 		vs:   valSet,
 	}
@@ -44,20 +44,23 @@ func NewMessageSet(valSet hotstuff.ValidatorSet) *MessageSet {
 type MessageSet struct {
 	view *View
 	vs   hotstuff.ValidatorSet
-	mtx  *sync.Mutex
+	mu   *sync.RWMutex
 	msgs map[common.Address]*Message
 }
 
 func (s *MessageSet) View() *View {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.view
 }
 
 func (s *MessageSet) Add(msg *Message) error {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-	if err := s.verify(msg); err != nil {
-		return err
+	if index, v := s.vs.GetByAddress(msg.Address); index < 0 || v == nil {
+		return fmt.Errorf("unauthorized address")
 	}
 
 	s.msgs[msg.Address] = msg
@@ -65,8 +68,8 @@ func (s *MessageSet) Add(msg *Message) error {
 }
 
 func (s *MessageSet) Values() (result []*Message) {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	for _, v := range s.msgs {
 		result = append(result, v)
@@ -75,35 +78,26 @@ func (s *MessageSet) Values() (result []*Message) {
 }
 
 func (s *MessageSet) Size() int {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return len(s.msgs)
 }
 
 func (s *MessageSet) Get(addr common.Address) *Message {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	return s.msgs[addr]
 }
 
 func (s *MessageSet) String() string {
-	s.mtx.Lock()
-	defer s.mtx.Unlock()
+	s.mu.RLock()
+	defer s.mu.RUnlock()
 
 	addresses := make([]string, 0, len(s.msgs))
 	for _, v := range s.msgs {
 		addresses = append(addresses, v.Address.Hex())
 	}
 	return fmt.Sprintf("[%v]", strings.Join(addresses, ", "))
-}
-
-// verify if the message comes from one of the validators
-func (s *MessageSet) verify(msg *Message) error {
-	if _, v := s.vs.GetByAddress(msg.Address); v == nil {
-		return fmt.Errorf("unauthorized address")
-	}
-
-	return nil
 }

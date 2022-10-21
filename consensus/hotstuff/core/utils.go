@@ -57,10 +57,10 @@ func (c *core) checkPrepareQC(qc *QuorumCert) error {
 		return fmt.Errorf("view unsame, expect %v, got %v", localQC.view, qc.view)
 	}
 	if localQC.proposer != qc.proposer {
-		return fmt.Errorf("proposer unsame, expect %v, got %v", localQC.Proposer, qc.Proposer)
+		return fmt.Errorf("proposer unsame, expect %v, got %v", localQC.Proposer(), qc.Proposer())
 	}
 	if localQC.hash != qc.hash {
-		return fmt.Errorf("expect %v, got %v", localQC.Hash, qc.Hash)
+		return fmt.Errorf("expect %v, got %v", localQC.Hash(), qc.Hash())
 	}
 	return nil
 }

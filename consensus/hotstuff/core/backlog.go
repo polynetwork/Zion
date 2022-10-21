@@ -38,8 +38,7 @@ func (c *core) storeBacklog(msg *Message, src hotstuff.Validator) {
 		return
 	}
 
-	logger.Trace("Store backlog")
-	logger.Debug("Retrieving backlog queue", "for", src.Address(), "backlogs_size", len(c.backlogs.queue))
+	logger.Trace("Retrieving backlog queue", "for", src.Address(), "backlogs_size", c.backlogs.Size(src.Address()))
 
 	c.backlogs.Push(msg)
 }
@@ -85,13 +84,13 @@ func (c *core) processBacklog() {
 }
 
 type backlog struct {
-	mu    *sync.Mutex
+	mu    *sync.RWMutex
 	queue map[common.Address]*prque.Prque
 }
 
 func newBackLog() *backlog {
 	return &backlog{
-		mu:    new(sync.Mutex),
+		mu:    new(sync.RWMutex),
 		queue: make(map[common.Address]*prque.Prque),
 	}
 }
@@ -122,6 +121,17 @@ func (b *backlog) Pop(addr common.Address) (data *Message, priority int64) {
 		data = item.(*Message)
 		priority = p
 		return
+	}
+}
+
+func (b *backlog) Size(addr common.Address) int {
+	b.mu.RLock()
+	defer b.mu.RUnlock()
+
+	if que, ok := b.queue[addr]; !ok {
+		return 0
+	} else {
+		return que.Size()
 	}
 }
 

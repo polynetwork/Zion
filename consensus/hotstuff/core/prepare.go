@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -39,24 +41,24 @@ func (c *core) sendPrepare() {
 		return
 	}
 
+	msgTyp := MsgTypePrepare
 	request := c.current.PendingRequest()
 	expectHeight := c.current.HeightU64()
 	if got := request.Proposal.NumberU64(); expectHeight != got {
-		logger.Trace("Failed to send prepare", "height expect", expectHeight, "got", got)
+		logger.Trace("Failed to send prepare", "msg", msgTyp, "height expect", expectHeight, "got", got)
 		return
 	}
 	expectAddr := request.Proposal.Coinbase()
 	if got := c.Address(); expectAddr != c.Address() {
-		logger.Trace("Failed to send prepare", "coinbase expect", expectAddr, "got", got)
+		logger.Trace("Failed to send prepare", "msg", msgTyp, "coinbase expect", expectAddr, "got", got)
 		return
 	}
 	expectParentHash := c.current.HighQC().Hash()
-	if got := request.Proposal.ParentHash(); expectParentHash != got {
-		logger.Trace("Failed to send prepare", "expect parent hash", expectParentHash, "got", got)
+	if got := request.Proposal.ParentHash(); got == common.EmptyHash || expectParentHash != got {
+		logger.Trace("Failed to send prepare", "msg", msgTyp, "expect parent hash", expectParentHash, "got", got)
 		return
 	}
 
-	msgTyp := MsgTypePrepare
 	prepare := &MsgPrepare{
 		View:     c.currentView(),
 		Proposal: request.Proposal,
@@ -71,10 +73,10 @@ func (c *core) sendPrepare() {
 	// consensus spent time always less than a block period, waiting for `delay` time to catch up the system time.
 	delay := time.Unix(int64(prepare.Proposal.Time()), 0).Sub(time.Now())
 	time.Sleep(delay)
-	logger.Trace("delay to broadcast proposal", "time", delay.Milliseconds())
+	logger.Trace("delay to broadcast proposal", "msg", msgTyp, "time", delay.Milliseconds())
 
 	c.broadcast(&Message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendPrepare", "prepare view", prepare.View, "proposal", prepare.Proposal.Hash())
+	logger.Trace("sendPrepare", "msg", msgTyp, "proposal", prepare.Proposal.Hash())
 }
 
 func (c *core) handlePrepare(data *Message, src hotstuff.Validator) error {
@@ -85,41 +87,36 @@ func (c *core) handlePrepare(data *Message, src hotstuff.Validator) error {
 		msgTyp = MsgTypePrepare
 	)
 	if err := data.Decode(&msg); err != nil {
-		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
+		logger.Trace("Failed to decode", "msg", msgTyp, "src", src.Address(), "err", err)
 		return errFailedDecodePrepare
 	}
 	if err := c.checkView(msgTyp, msg.View); err != nil {
-		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check view", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 	if err := c.checkMsgFromProposer(src); err != nil {
-		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 	if err := c.checkProposalView(msg.Proposal, msg.View); err != nil {
-		logger.Trace("Failed to check proposal and msg view", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check proposal and msg view", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 
 	if _, err := c.backend.VerifyUnsealedProposal(msg.Proposal); err != nil {
-		logger.Trace("Failed to verify unsealed proposal", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to verify unsealed proposal", "msg", msgTyp, "src", src.Address(), "err", err)
 		return errVerifyUnsealedProposal
 	}
 	if err := c.extend(msg.Proposal, msg.HighQC); err != nil {
-		logger.Trace("Failed to check extend", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check extend", "msg", msgTyp, "src", src.Address(), "err", err)
 		return errExtend
 	}
 	if err := c.safeNode(msg.Proposal, msg.HighQC); err != nil {
-		logger.Trace("Failed to check safeNode", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check safeNode", "msg", msgTyp, "src", src.Address(), "err", err)
 		return errSafeNode
 	}
-	// todo: delete after test
-	//if err := c.checkLockedProposal(msg.Proposal); err != nil {
-	//	logger.Trace("Failed to check locked proposal", "msg", msgTyp, "err", err)
-	//	return err
-	//}
 	if err := c.preExecuteBlock(msg.Proposal); err != nil {
-		logger.Trace("Failed to pre-execute block", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to pre-execute block", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 
@@ -136,7 +133,7 @@ func (c *core) handlePrepare(data *Message, src hotstuff.Validator) error {
 		c.current.SetHighQC(msg.HighQC)
 		c.current.SetProposal(msg.Proposal)
 		c.setCurrentState(StateHighQC)
-		logger.Trace("acceptHighQC", "msg", msgTyp, "src", src.Address(), "highQC", msg.HighQC.Hash)
+		logger.Trace("acceptHighQC", "msg", msgTyp, "highQC", msg.HighQC.Hash())
 
 		c.sendPrepareVote()
 	}
@@ -159,7 +156,7 @@ func (c *core) sendPrepareVote() {
 		return
 	}
 	c.broadcast(&Message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendPrepareVote", "vote view", vote.View, "vote", vote.Digest)
+	logger.Trace("sendPrepareVote", "msg", msgTyp, "hash", vote.Digest)
 }
 
 func (c *core) extend(proposal hotstuff.Proposal, highQC *QuorumCert) error {
@@ -171,7 +168,7 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *QuorumCert) error {
 		return err
 	}
 	if highQC.Hash() != block.ParentHash() {
-		return fmt.Errorf("block %v (parent %v) not extend hiqhQC %v", block.Hash(), block.ParentHash(), highQC.Hash)
+		return fmt.Errorf("block %v (parent %v) not extend hiqhQC %v", block.Hash(), block.ParentHash(), highQC.Hash())
 	}
 	return nil
 }

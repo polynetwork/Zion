@@ -56,7 +56,6 @@ func (c *core) IsProposer() bool {
 	return c.valSet.IsProposer(c.backend.Address())
 }
 
-// todo(fuk): check with backend.handler
 func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 	if c.current == nil {
 		return false

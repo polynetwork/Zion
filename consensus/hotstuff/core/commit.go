@@ -30,36 +30,36 @@ func (c *core) handlePreCommitVote(data *Message, src hotstuff.Validator) error 
 		msgTyp = MsgTypePreCommitVote
 	)
 	if err := data.Decode(&vote); err != nil {
-		logger.Trace("Failed to decode", "type", msgTyp, "err", err)
+		logger.Trace("Failed to decode", "type", msgTyp, "src", src.Address(), "err", err)
 		return errFailedDecodePreCommitVote
 	}
 	if err := c.checkView(msgTyp, vote.View); err != nil {
-		logger.Trace("Failed to check view", "type", msgTyp, "err", err)
+		logger.Trace("Failed to check view", "type", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 	if err := c.checkVote(vote); err != nil {
-		logger.Trace("Failed to check vote", "type", msgTyp, "err", err)
+		logger.Trace("Failed to check vote", "type", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 	if err := c.checkProposal(vote.Digest); err != nil {
-		logger.Trace("Failed to check hash", "type", msgTyp, "expect vote", c.current.Proposal().Hash(), vote.Digest)
+		logger.Trace("Failed to check hash", "type", msgTyp, "src", src.Address(), "expect vote", vote.Digest)
 		return errInvalidDigest
 	}
 	if err := c.checkMsgToProposer(); err != nil {
-		logger.Trace("Failed to check proposal", "type", msgTyp, "err", err)
+		logger.Trace("Failed to check proposal", "type", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 
 	if err := c.current.AddPreCommitVote(data); err != nil {
-		logger.Trace("Failed to add vote", "type", msgTyp, "err", err)
+		logger.Trace("Failed to add vote", "type", msgTyp, "src", src.Address(), "err", err)
 		return errAddPreCommitVote
 	}
 
-	logger.Trace("handlePreCommitVote", "src", src.Address(), "hash", vote.Digest)
+	logger.Trace("handlePreCommitVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)
 
 	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StatePreCommitted {
 		c.lockQCAndProposal(c.current.PrepareQC())
-		logger.Trace("acceptPreCommitted", "msg", msgTyp, "src", src.Address(), "hash", c.current.PreCommittedQC().Hash, "msgSize", size)
+		logger.Trace("acceptPreCommitted", "msg", msgTyp, "msgSize", size)
 		c.sendCommit()
 	}
 	return nil
@@ -76,7 +76,7 @@ func (c *core) sendCommit() {
 		return
 	}
 	c.broadcast(&Message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendCommit", "msg view", sub.view, "proposal", sub.Hash)
+	logger.Trace("sendCommit", "msg", msgTyp, "proposal", sub.hash)
 }
 
 func (c *core) handleCommit(data *Message, src hotstuff.Validator) error {
@@ -87,34 +87,34 @@ func (c *core) handleCommit(data *Message, src hotstuff.Validator) error {
 		msgTyp = MsgTypeCommit
 	)
 	if err := data.Decode(&msg); err != nil {
-		logger.Trace("Failed to decode", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to decode", "msg", msgTyp, "src", src.Address(), "err", err)
 		return errFailedDecodeCommit
 	}
 	if err := c.checkView(MsgTypeCommit, msg.view); err != nil {
-		logger.Trace("Failed to check view", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check view", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 	if err := c.checkMsgFromProposer(src); err != nil {
-		logger.Trace("Failed to check proposer", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check proposer", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 	if err := c.checkPrepareQC(msg); err != nil {
-		logger.Trace("Failed to check prepareQC", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check prepareQC", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 	if err := c.signer.VerifyQC(msg, c.valSet); err != nil {
-		logger.Trace("Failed to check verify qc", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to check verify qc", "msg", msgTyp, "src", src.Address(), "err", err)
 		return err
 	}
 
-	logger.Trace("handleCommit", "msg", msgTyp, "address", src.Address(), "msg view", msg.view, "proposal", msg.Hash)
+	logger.Trace("handleCommit", "msg", msgTyp, "src", src.Address(), "proposal", msg.hash)
 
 	if c.IsProposer() && c.currentState() < StateCommitted {
 		c.sendCommitVote()
 	}
 	if !c.IsProposer() && c.currentState() < StatePreCommitted {
 		c.lockQCAndProposal(msg)
-		logger.Trace("acceptPreCommitted", "msg", msgTyp, "lockQC", c.current.PreCommittedQC().Hash)
+		logger.Trace("acceptPreCommitted", "msg", msgTyp, "lockQC", msg.hash)
 		c.sendCommitVote()
 	}
 	return nil
@@ -141,5 +141,5 @@ func (c *core) sendCommitVote() {
 		return
 	}
 	c.broadcast(&Message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendCommitVote", "vote view", vote.View, "vote", vote.Digest)
+	logger.Trace("sendCommitVote", "msg", msgTyp, "hash", vote.Digest)
 }
