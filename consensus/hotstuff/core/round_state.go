@@ -20,13 +20,13 @@ package core
 
 import (
 	"math/big"
+	"sync"
 
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/message_set"
 )
 
-func (c *core) currentView() *hotstuff.View {
-	return &hotstuff.View{
+func (c *core) currentView() *View {
+	return &View{
 		Height: new(big.Int).Set(c.current.Height()),
 		Round:  new(big.Int).Set(c.current.Round()),
 	}
@@ -34,11 +34,6 @@ func (c *core) currentView() *hotstuff.View {
 
 func (c *core) currentState() State {
 	return c.current.State()
-}
-
-func (c *core) setCurrentState(s State) {
-	c.current.SetState(s)
-	c.processBacklog()
 }
 
 func (c *core) currentProposer() hotstuff.Validator {
@@ -52,33 +47,36 @@ type roundState struct {
 	height *big.Int
 	state  State
 
-	pendingRequest *hotstuff.Request // leader's pending request
-	proposal       hotstuff.Proposal // Address's prepare proposal
+	pendingRequest *Request
+	proposal       hotstuff.Proposal // validator's prepare proposal
 	proposalLocked bool
 
 	// o(4n)
-	newViews       *message_set.MessageSet
-	prepareVotes   *message_set.MessageSet
-	preCommitVotes *message_set.MessageSet
-	commitVotes    *message_set.MessageSet
+	newViews       *MessageSet // data set for newView message
+	prepareVotes   *MessageSet // data set for prepareVote message
+	preCommitVotes *MessageSet // data set for preCommitVote message
+	commitVotes    *MessageSet // data set for commitVote message
 
-	highQC      *hotstuff.QuorumCert // leader highQC
-	prepareQC   *hotstuff.QuorumCert // prepareQC for repo and leader
-	lockedQC    *hotstuff.QuorumCert // lockedQC for repo and pre-committedQC for leader
-	committedQC *hotstuff.QuorumCert // committedQC for repo and leader
+	highQC      *QuorumCert // leader highQC
+	prepareQC   *QuorumCert // prepareQC for repo and leader
+	lockedQC    *QuorumCert // lockedQC for repo and pre-committedQC for leader
+	committedQC *QuorumCert // committedQC for repo and leader
+
+	mu *sync.RWMutex // mutex for fields except message set.
 }
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
-func newRoundState(view *hotstuff.View, validatorSet hotstuff.ValidatorSet, prepareQC *hotstuff.QuorumCert) *roundState {
+func newRoundState(view *View, validatorSet hotstuff.ValidatorSet, prepareQC *QuorumCert) *roundState {
 	rs := &roundState{
 		vs:             validatorSet,
 		round:          view.Round,
 		height:         view.Height,
 		state:          StateAcceptRequest,
-		newViews:       message_set.NewMessageSet(validatorSet),
-		prepareVotes:   message_set.NewMessageSet(validatorSet),
-		preCommitVotes: message_set.NewMessageSet(validatorSet),
-		commitVotes:    message_set.NewMessageSet(validatorSet),
+		newViews:       NewMessageSet(validatorSet),
+		prepareVotes:   NewMessageSet(validatorSet),
+		preCommitVotes: NewMessageSet(validatorSet),
+		commitVotes:    NewMessageSet(validatorSet),
+		mu:             new(sync.RWMutex),
 	}
 	if prepareQC != nil {
 		rs.prepareQC = prepareQC.Copy()
@@ -89,76 +87,98 @@ func newRoundState(view *hotstuff.View, validatorSet hotstuff.ValidatorSet, prep
 }
 
 func (s *roundState) Height() *big.Int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.height
 }
 
 func (s *roundState) HeightU64() uint64 {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.height.Uint64()
 }
 
 func (s *roundState) Round() *big.Int {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.round
 }
 
-func (s *roundState) View() *hotstuff.View {
-	return &hotstuff.View{
+func (s *roundState) View() *View {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return &View{
 		Round:  s.round,
 		Height: s.height,
 	}
 }
 
 func (s *roundState) SetState(state State) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.state = state
 }
 
 func (s *roundState) State() State {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.state
 }
 
 func (s *roundState) SetProposal(proposal hotstuff.Proposal) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	s.proposal = proposal
+	s.proposalLocked = false
 }
 
 func (s *roundState) Proposal() hotstuff.Proposal {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.proposal
 }
 
 func (s *roundState) LockProposal() {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
 	if s.proposal != nil && !s.proposalLocked {
 		s.proposalLocked = true
 	}
 }
 
-func (s *roundState) UnLockProposal() {
-	if s.proposal != nil && s.proposalLocked {
-		s.proposalLocked = false
-		s.proposal = nil
-	}
-}
+func (s *roundState) SetPendingRequest(req *Request) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
 
-func (s *roundState) IsProposalLocked() bool {
-	return s.proposalLocked
-}
-
-func (s *roundState) LastLockedProposal() (bool, hotstuff.Proposal) {
-	return s.proposalLocked, s.proposal
-}
-
-func (s *roundState) SetPendingRequest(req *hotstuff.Request) {
 	s.pendingRequest = req
 }
 
-func (s *roundState) PendingRequest() *hotstuff.Request {
+func (s *roundState) PendingRequest() *Request {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	return s.pendingRequest
 }
 
 func (s *roundState) Vote() *Vote {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
 	if s.proposal == nil || s.proposal.Hash() == EmptyHash {
 		return nil
 	}
 
 	return &Vote{
-		View: &hotstuff.View{
+		View: &View{
 			Round:  new(big.Int).Set(s.round),
 			Height: new(big.Int).Set(s.height),
 		},
@@ -166,8 +186,64 @@ func (s *roundState) Vote() *Vote {
 	}
 }
 
-// AddNewViews all valid Message, and invalid Message would be ignore
-func (s *roundState) AddNewViews(msg *hotstuff.Message) error {
+func (s *roundState) SetHighQC(qc *QuorumCert) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.highQC = qc
+}
+
+func (s *roundState) HighQC() *QuorumCert {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.highQC
+}
+
+func (s *roundState) SetPrepareQC(qc *QuorumCert) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.prepareQC = qc
+}
+
+func (s *roundState) PrepareQC() *QuorumCert {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.prepareQC
+}
+
+func (s *roundState) SetPreCommittedQC(qc *QuorumCert) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.lockedQC = qc
+}
+
+func (s *roundState) PreCommittedQC() *QuorumCert {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.lockedQC
+}
+
+func (s *roundState) SetCommittedQC(qc *QuorumCert) {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+
+	s.committedQC = qc
+}
+
+func (s *roundState) CommittedQC() *QuorumCert {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+
+	return s.committedQC
+}
+
+// message set has it's own mutex, do not lock or unlock with roundState mutex.
+func (s *roundState) AddNewViews(msg *Message) error {
 	return s.newViews.Add(msg)
 }
 
@@ -175,15 +251,15 @@ func (s *roundState) NewViewSize() int {
 	return s.newViews.Size()
 }
 
-func (s *roundState) NewViews() []*hotstuff.Message {
+func (s *roundState) NewViews() []*Message {
 	return s.newViews.Values()
 }
 
-func (s *roundState) AddPrepareVote(msg *hotstuff.Message) error {
+func (s *roundState) AddPrepareVote(msg *Message) error {
 	return s.prepareVotes.Add(msg)
 }
 
-func (s *roundState) PrepareVotes() []*hotstuff.Message {
+func (s *roundState) PrepareVotes() []*Message {
 	return s.prepareVotes.Values()
 }
 
@@ -191,7 +267,7 @@ func (s *roundState) PrepareVoteSize() int {
 	return s.prepareVotes.Size()
 }
 
-func (s *roundState) AddPreCommitVote(msg *hotstuff.Message) error {
+func (s *roundState) AddPreCommitVote(msg *Message) error {
 	return s.preCommitVotes.Add(msg)
 }
 
@@ -199,42 +275,10 @@ func (s *roundState) PreCommitVoteSize() int {
 	return s.preCommitVotes.Size()
 }
 
-func (s *roundState) AddCommitVote(msg *hotstuff.Message) error {
+func (s *roundState) AddCommitVote(msg *Message) error {
 	return s.commitVotes.Add(msg)
 }
 
 func (s *roundState) CommitVoteSize() int {
 	return s.commitVotes.Size()
-}
-
-func (s *roundState) SetHighQC(qc *hotstuff.QuorumCert) {
-	s.highQC = qc
-}
-
-func (s *roundState) HighQC() *hotstuff.QuorumCert {
-	return s.highQC
-}
-
-func (s *roundState) SetPrepareQC(qc *hotstuff.QuorumCert) {
-	s.prepareQC = qc
-}
-
-func (s *roundState) PrepareQC() *hotstuff.QuorumCert {
-	return s.prepareQC
-}
-
-func (s *roundState) SetPreCommittedQC(qc *hotstuff.QuorumCert) {
-	s.lockedQC = qc
-}
-
-func (s *roundState) PreCommittedQC() *hotstuff.QuorumCert {
-	return s.lockedQC
-}
-
-func (s *roundState) SetCommittedQC(qc *hotstuff.QuorumCert) {
-	s.committedQC = qc
-}
-
-func (s *roundState) CommittedQC() *hotstuff.QuorumCert {
-	return s.committedQC
 }

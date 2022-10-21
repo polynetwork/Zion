@@ -23,7 +23,7 @@ import (
 	"time"
 )
 
-// we use timeout in every view to ensure consensus liveness.  and the hotstuff view timeout
+// we use timeout in every view to ensure consensus liveness.  and the view timeout
 // calculating format as follow:
 // *	t = requestTimeout + 2^round
 // the round started from 0.

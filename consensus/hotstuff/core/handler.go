@@ -20,44 +20,30 @@ package core
 
 import (
 	"math/big"
-	"sync"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-var once sync.Once
-
 // Start implements core.Engine.Start
-func (c *core) Start(chain consensus.ChainReader) error {
-	once.Do(func() {
-		hotstuff.RegisterMsgTypeConvertHandler(func(data interface{}) hotstuff.MsgType {
-			code := data.(uint64)
-			return MsgType(code)
-		})
-	})
-
+func (c *core) Start(chain consensus.ChainReader) {
 	c.isRunning = true
 	c.backlogs = newBackLog()
 	c.current = nil
 
-	// Start a new round from last sequence + 1
-	c.startNewRound(common.Big0)
-
-	// Tests will handle events itself, so we have to make subscribeEvents()
-	// be able to call in test.
 	c.subscribeEvents()
 	go c.handleEvents()
-	return nil
+
+	// Start a new round from last sequence + 1
+	c.startNewRound(common.Big0)
 }
 
 // Stop implements core.Engine.Stop
-func (c *core) Stop() error {
+func (c *core) Stop() {
 	c.stopTimer()
 	c.unsubscribeEvents()
 	c.isRunning = false
-	return nil
 }
 
 // Address implement core.Engine.Address
@@ -70,7 +56,6 @@ func (c *core) IsProposer() bool {
 	return c.valSet.IsProposer(c.backend.Address())
 }
 
-// IsCurrentProposal implement core.Engine.IsCurrentProposal
 func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 	if c.current == nil {
 		return false
@@ -91,8 +76,8 @@ func (c *core) subscribeEvents() {
 	c.events = c.backend.EventMux().Subscribe(
 		// external events
 		hotstuff.RequestEvent{},
-		hotstuff.MessageEvent{},
 		// internal events
+		hotstuff.MessageEvent{},
 		backlogEvent{},
 	)
 	c.timeoutSub = c.backend.EventMux().Subscribe(
@@ -111,7 +96,7 @@ func (c *core) unsubscribeEvents() {
 }
 
 func (c *core) handleEvents() {
-	logger := c.logger.New("handleEvents", "state", c.currentState())
+	logger := c.logger.New("handleEvents")
 
 	for {
 		select {
@@ -123,7 +108,7 @@ func (c *core) handleEvents() {
 			// A real Event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case hotstuff.RequestEvent:
-				c.handleRequest(&hotstuff.Request{Proposal: ev.Proposal})
+				c.handleRequest(&Request{Proposal: ev.Proposal})
 
 			case hotstuff.MessageEvent:
 				c.handleMsg(ev.Payload)
@@ -161,15 +146,15 @@ func (c *core) handleMsg(payload []byte) error {
 	logger := c.logger.New()
 
 	// Decode Message and check its signature
-	msg := new(hotstuff.Message)
+	msg := new(Message)
 	if err := msg.FromPayload(payload, c.validateFn); err != nil {
 		logger.Error("Failed to decode Message from payload", "err", err)
 		return err
 	}
 
-	// Only accept Message if the address is valid
-	_, src := c.valSet.GetByAddress(msg.Address)
-	if src == nil {
+	// Only accept message if the src is consensus participant
+	index, src := c.valSet.GetByAddress(msg.Address)
+	if index < 0 || src == nil {
 		logger.Error("Invalid address in Message", "msg", msg)
 		return errInvalidSigner
 	}
@@ -181,7 +166,12 @@ func (c *core) handleMsg(payload []byte) error {
 	return nil
 }
 
-func (c *core) handleCheckedMsg(msg *hotstuff.Message, src hotstuff.Validator) (err error) {
+func (c *core) handleCheckedMsg(msg *Message, src hotstuff.Validator) (err error) {
+	if c.current == nil {
+		c.logger.Error("engine state not prepared...")
+		return
+	}
+
 	switch msg.Code {
 	case MsgTypeNewView:
 		err = c.handleNewView(msg, src)

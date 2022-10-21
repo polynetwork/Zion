@@ -29,22 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-func (c *core) hasValidPendingRequest() bool {
-	if c.current.PendingRequest() == nil {
-		return false
-	}
-	exist := c.current.PendingRequest()
-	switch height := exist.Proposal.Number(); height.Cmp(c.current.Height()) {
-	case 0:
-		return true
-	case 1:
-		c.logger.Trace("check request height", "expect", c.current.Height(), "got", height)
-		return false
-	default:
-		return false
-	}
-}
-
 func (c *core) checkMsgFromProposer(src hotstuff.Validator) error {
 	if !c.valSet.IsProposer(src.Address()) {
 		return errNotFromProposer
@@ -59,7 +43,7 @@ func (c *core) checkMsgToProposer() error {
 	return nil
 }
 
-func (c *core) checkPrepareQC(qc *hotstuff.QuorumCert) error {
+func (c *core) checkPrepareQC(qc *QuorumCert) error {
 	if qc == nil {
 		return fmt.Errorf("external prepare qc is nil")
 	}
@@ -69,19 +53,19 @@ func (c *core) checkPrepareQC(qc *hotstuff.QuorumCert) error {
 		return fmt.Errorf("current prepare qc is nil")
 	}
 
-	if localQC.View.Cmp(qc.View) != 0 {
-		return fmt.Errorf("view unsame, expect %v, got %v", localQC.View, qc.View)
+	if localQC.view.Cmp(qc.view) != 0 {
+		return fmt.Errorf("view unsame, expect %v, got %v", localQC.view, qc.view)
 	}
-	if localQC.Proposer != qc.Proposer {
-		return fmt.Errorf("proposer unsame, expect %v, got %v", localQC.Proposer, qc.Proposer)
+	if localQC.proposer != qc.proposer {
+		return fmt.Errorf("proposer unsame, expect %v, got %v", localQC.Proposer(), qc.Proposer())
 	}
-	if localQC.Hash != qc.Hash {
-		return fmt.Errorf("expect %v, got %v", localQC.Hash, qc.Hash)
+	if localQC.hash != qc.hash {
+		return fmt.Errorf("expect %v, got %v", localQC.Hash(), qc.Hash())
 	}
 	return nil
 }
 
-func (c *core) checkPreCommittedQC(qc *hotstuff.QuorumCert) error {
+func (c *core) checkPreCommittedQC(qc *QuorumCert) error {
 	if qc == nil {
 		return fmt.Errorf("external pre-committed qc is nil")
 	}
@@ -117,24 +101,20 @@ func (c *core) checkProposal(hash common.Hash) error {
 	return nil
 }
 
-func (c *core) checkLockedProposal(msg hotstuff.Proposal) error {
-	isLocked, proposal := c.current.LastLockedProposal()
-	if !isLocked {
+func (c *core) checkProposalView(proposal hotstuff.Proposal, view *View) error {
+	if proposal == nil || view == nil || view.Height == nil {
+		return fmt.Errorf("proposal or view is invalid")
+	} else if proposal.NumberU64() != view.Height.Uint64() {
+		return fmt.Errorf("proposal height %v != view %v", proposal.NumberU64(), view.Height)
+	} else {
 		return nil
 	}
-	if proposal == nil {
-		return fmt.Errorf("current locked proposal is nil")
-	}
-	if proposal.Hash() != msg.Hash() {
-		return fmt.Errorf("expect %s, got %s", proposal.Hash().Hex(), msg.Hash().Hex())
-	}
-	return nil
 }
 
 // verifyCrossEpochQC verify quorum certificate with current validator set or
 // last epoch's val set if current height equals to epoch start height
-func (c *core) verifyCrossEpochQC(qc *hotstuff.QuorumCert) error {
-	valset := c.backend.Validators(qc.Hash, false)
+func (c *core) verifyCrossEpochQC(qc *QuorumCert) error {
+	valset := c.backend.Validators(qc.hash, false)
 	if err := c.signer.VerifyQC(qc, valset); err != nil {
 		return err
 	}
@@ -152,12 +132,11 @@ func (c *core) verifyCrossEpochQC(qc *hotstuff.QuorumCert) error {
 // if the view is equal the current view, compare the Message type and round state, with the right
 // round state sequence, Message ahead of certain state is `old Message`, and Message behind certain
 // state is `future Message`. Message type and round state table as follow:
-func (c *core) checkView(msgCode hotstuff.MsgType, view *hotstuff.View) error {
+func (c *core) checkView(msgCode MsgType, view *View) error { //todo
 	if view == nil || view.Height == nil || view.Round == nil {
 		return errInvalidMessage
 	}
 
-	// validators not in the same view
 	if hdiff, rdiff := view.Sub(c.currentView()); hdiff < 0 {
 		return errOldMessage
 	} else if hdiff > 1 {
@@ -173,7 +152,7 @@ func (c *core) checkView(msgCode hotstuff.MsgType, view *hotstuff.View) error {
 	}
 }
 
-func (c *core) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
+func (c *core) finalizeMessage(msg *Message) ([]byte, error) {
 	var err error
 
 	// Add sender address
@@ -195,9 +174,10 @@ func (c *core) finalizeMessage(msg *hotstuff.Message) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	msg.Signature, err = c.signer.Sign(data)
-	if err != nil {
+	if sig, err := c.signer.Sign(data); err != nil {
 		return nil, err
+	} else {
+		msg.Signature = sig
 	}
 
 	// Convert to payload
@@ -219,8 +199,13 @@ func (c *core) getMessageSeals(n int) [][]byte {
 	return seals
 }
 
-func (c *core) broadcast(msg *hotstuff.Message) {
+func (c *core) broadcast(msg *Message) {
 	logger := c.logger.New("state", c.currentState())
+
+	// forbid normal nodes send message to leader
+	if index, _ := c.valSet.GetByAddress(c.Address()); index < 0 {
+		return
+	}
 
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {
@@ -263,16 +248,16 @@ func (c *core) Q() int {
 	return c.valSet.Q()
 }
 
-func proposal2QC(proposal hotstuff.Proposal, round *big.Int) *hotstuff.QuorumCert {
+func proposal2QC(proposal hotstuff.Proposal, round *big.Int) *QuorumCert {
 	block := proposal.(*types.Block)
 	h := block.Header()
-	qc := new(hotstuff.QuorumCert)
-	qc.View = &hotstuff.View{
+	qc := new(QuorumCert)
+	qc.view = &View{
 		Height: block.Number(),
 		Round:  round,
 	}
-	qc.Hash = h.Hash()
-	qc.Proposer = h.Coinbase
-	qc.Extra = h.Extra
+	qc.hash = h.Hash()
+	qc.proposer = h.Coinbase
+	qc.extra = h.Extra
 	return qc
 }

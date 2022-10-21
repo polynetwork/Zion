@@ -16,11 +16,10 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package message_set
+package core
 
 import (
 	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	"math/big"
 	"sort"
 	"strings"
@@ -65,19 +64,19 @@ func TestMessageSetWithNewView(t *testing.T) {
 
 	ms := NewMessageSet(valSet)
 
-	view := &hotstuff.View{
+	view := &View{
 		Round:  new(big.Int),
 		Height: new(big.Int),
 	}
-	pp := &core.MsgNewView{
+	pp := &MsgNewView{
 		View: view,
 	}
-	payload, err := core.Encode(pp)
+	payload, err := Encode(pp)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
-	msg := &hotstuff.Message{
-		Code:    core.MsgTypeNewView,
+	msg := &Message{
+		Code:    MsgTypeNewView,
 		Msg:     payload,
 		Address: valSet.GetProposer().Address(),
 	}
@@ -100,23 +99,23 @@ func TestMessageSetVote(t *testing.T) {
 
 	ms := NewMessageSet(valSet)
 
-	view := &hotstuff.View{
+	view := &View{
 		Round:  new(big.Int),
 		Height: new(big.Int),
 	}
 
-	sub := &core.Vote{
+	sub := &Vote{
 		View:   view,
 		Digest: common.HexToHash("1234567890"),
 	}
 
-	payload, err := core.Encode(sub)
+	payload, err := Encode(sub)
 	if err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 
-	msg := &hotstuff.Message{
-		Code:    core.MsgTypePrepareVote,
+	msg := &Message{
+		Code:    MsgTypePrepareVote,
 		Msg:     payload,
 		Address: valSet.GetProposer().Address(),
 	}

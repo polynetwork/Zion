@@ -136,15 +136,6 @@ func (valSet *defaultSet) CalcProposer(lastProposer common.Address, round uint64
 	valSet.proposer = valSet.selector(valSet, lastProposer, round)
 }
 
-func (valSet *defaultSet) CalcProposerByIndex(index uint64) {
-	if index > 1 {
-		index = (index - 1) % uint64(len(valSet.validators))
-	} else {
-		index = 0
-	}
-	valSet.proposer = valSet.validators[index]
-}
-
 func (valSet *defaultSet) String() string {
 	str := "["
 	for _, v := range valSet.validators {

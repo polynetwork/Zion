@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -192,6 +193,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 		go s.EventMux().Post(hotstuff.RequestEvent{
 			Proposal: block,
 		})
+
 		for {
 			select {
 			case result := <-s.commitCh:
@@ -202,7 +204,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 					return
 				}
 			case <-stop:
-				s.logger.Trace("Stop seal, check miner status!")
+				s.logger.Trace("Stop seal block", "check miner status!", block.NumberU64())
 				results <- nil
 				return
 			}
@@ -226,7 +228,7 @@ func (s *backend) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64,
 
 func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 	return []rpc.API{{
-		Namespace: "istanbul",
+		Namespace: "hotstuff",
 		Version:   "1.0",
 		Service:   &API{chain: chain, hotstuff: s},
 		Public:    true,
@@ -234,7 +236,7 @@ func (s *backend) APIs(chain consensus.ChainHeaderReader) []rpc.API {
 }
 
 // Start implements consensus.Istanbul.Start
-func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(hash common.Hash) bool) error {
+func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(db ethdb.Reader, hash common.Hash) bool) error {
 	s.coreMu.Lock()
 	defer s.coreMu.Unlock()
 
@@ -261,10 +263,8 @@ func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(hash commo
 	// waiting for p2p connected
 	s.SendValidatorsChange(s.vals.AddressList())
 
-	if err := s.core.Start(chain); err != nil {
-		return err
-	}
-
+	// MUST start in single goroutine because that the core.startNewRound need to request proposal in async mode.
+	s.core.Start(chain)
 	s.coreStarted = true
 	return nil
 }
@@ -276,9 +276,8 @@ func (s *backend) Stop() error {
 	if !s.coreStarted {
 		return nil
 	}
-	if err := s.core.Stop(); err != nil {
-		return err
-	}
+
+	s.core.Stop()
 	s.coreStarted = false
 	return nil
 }

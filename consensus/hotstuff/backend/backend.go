@@ -51,7 +51,7 @@ type backend struct {
 	chain          consensus.ChainReader
 	currentBlock   func() *types.Block
 	getBlockByHash func(hash common.Hash) *types.Block
-	hasBadBlock    func(hash common.Hash) bool
+	hasBadBlock    func(db ethdb.Reader, hash common.Hash) bool
 	logger         log.Logger
 
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
@@ -70,17 +70,10 @@ type backend struct {
 	consenMu          sync.Mutex   // Ensure a round can only start after the last one has finished
 	coreMu            sync.RWMutex
 
-	// event subscription for ChainHeadEvent event
-	broadcaster consensus.Broadcaster
-	// event subscription for request new block from miner/worker.
-	reqFeed event.Feed
-	// event subscription for static nodes listen
-	nodesFeed event.Feed
-
-	eventMux *event.TypeMux
-	point    int32 // check point mutex
-
-	proposals map[common.Address]bool // Current list of proposals we are pushing
+	broadcaster consensus.Broadcaster // event subscription for ChainHeadEvent event
+	nodesFeed   event.Feed            // event subscription for static nodes listen
+	eventMux    *event.TypeMux
+	point       int32 // check point mutex
 }
 
 func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) consensus.HotStuff {
@@ -100,7 +93,6 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		recentMessages: recentMessages,
 		knownMessages:  knownMessages,
 		recents:        recents,
-		proposals:      make(map[common.Address]bool),
 	}
 
 	backend.core = core.New(backend, config, signer)
@@ -290,7 +282,6 @@ func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 
 func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
 	// Check if the proposal is a valid block
-	block := &types.Block{}
 	block, ok := proposal.(*types.Block)
 	if !ok {
 		s.logger.Error("Invalid proposal, %v", proposal)
@@ -360,11 +351,7 @@ func (s *backend) HasBadProposal(hash common.Hash) bool {
 	if s.hasBadBlock == nil {
 		return false
 	}
-	return s.hasBadBlock(hash)
-}
-
-func (s *backend) AskMiningProposalWithParent(parent *types.Block) {
-	s.reqFeed.Send(*parent)
+	return s.hasBadBlock(s.db, hash)
 }
 
 func (s *backend) SendValidatorsChange(list []common.Address) {

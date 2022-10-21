@@ -27,7 +27,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -38,7 +37,6 @@ var (
 func TestValidatorSet(t *testing.T) {
 	testNewValidatorSet(t)
 	testNormalValSet(t)
-	testCalcProposerByIndex(t)
 	testEmptyValSet(t)
 	testStickyProposer(t)
 	testAddAndRemoveValidator(t)
@@ -72,25 +70,6 @@ func testNewValidatorSet(t *testing.T) {
 		if strings.Compare(val.String(), nextVal.String()) >= 0 {
 			t.Errorf("validator set is not sorted in ascending order")
 		}
-	}
-}
-
-func testCalcProposerByIndex(t *testing.T) {
-	const ValCnt = 100
-
-	var addrs []common.Address
-	for i := 0; i < ValCnt; i++ {
-		key, _ := crypto.GenerateKey()
-		addr := crypto.PubkeyToAddress(key.PublicKey)
-		addrs = append(addrs, addr)
-	}
-	valset := newDefaultSet(addrs, hotstuff.RoundRobin)
-	expected := valset.validators
-
-	// Check validators sorting: should be in ascending order
-	for i := 0; i < ValCnt-1; i++ {
-		valset.CalcProposerByIndex(uint64(i))
-		assert.Equal(t, expected[i], valset.GetProposer())
 	}
 }
 
@@ -234,10 +213,10 @@ func testStickyProposer(t *testing.T) {
 func TestFAndQ(t *testing.T) {
 	n := 13
 
-	for i := 1; i<=n; i++ {
+	for i := 1; i <= n; i++ {
 		list := make([]common.Address, 0)
-		for j := 0; j < i; j ++ {
-			list = append(list, common.HexToAddress(fmt.Sprintf("0x%d", j + 1)))
+		for j := 0; j < i; j++ {
+			list = append(list, common.HexToAddress(fmt.Sprintf("0x%d", j+1)))
 		}
 		vs := newDefaultSet(list, hotstuff.RoundRobin)
 		faultySize := vs.F()

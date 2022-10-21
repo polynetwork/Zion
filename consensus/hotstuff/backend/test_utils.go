@@ -23,7 +23,6 @@ import (
 	"crypto/ecdsa"
 	"io/ioutil"
 	"math/big"
-	"sort"
 	"strings"
 	"testing"
 	"time"
@@ -41,7 +40,6 @@ import (
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
-	"github.com/stretchr/testify/assert"
 )
 
 var (
@@ -58,7 +56,7 @@ func getGenesisAndKeys(n int) (*core.Genesis, []*ecdsa.PrivateKey, hotstuff.Vali
 	}
 
 	// generate genesis block
-	genesis := core.DefaultGenesisBlock()
+	genesis := core.TestGenesisBlock()
 	genesis.Config = params.TestChainConfig
 	// force enable Istanbul engine
 	genesis.Config.HotStuff = &params.HotStuffConfig{}
@@ -92,45 +90,6 @@ func appendValidators(genesis *core.Genesis, addrs []common.Address) {
 	genesis.ExtraData = append(genesis.ExtraData, istPayload...)
 }
 
-func makeHeader(parent *types.Block, config *hotstuff.Config) *types.Header {
-	header := &types.Header{
-		ParentHash: parent.Hash(),
-		Number:     parent.Number().Add(parent.Number(), common.Big1),
-		GasLimit:   core.CalcGasLimit(parent, parent.GasLimit(), parent.GasLimit()),
-		GasUsed:    0,
-		Extra:      parent.Extra(),
-		Time:       parent.Time() + config.BlockPeriod,
-
-		Difficulty: defaultDifficulty,
-	}
-	return header
-}
-
-func makeBlock(t *testing.T, chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
-	block := makeBlockWithoutSeal(chain, engine, parent)
-	header := block.Header()
-
-	assert.NoError(t, engine.signer.SealBeforeCommit(header))
-	expectBlock := block.WithSeal(header)
-
-	resultCh := make(chan *types.Block, 10)
-	go func() {
-		if err := engine.Seal(chain, expectBlock, resultCh, make(chan struct{})); err != nil {
-			t.Errorf("seal block failed, err: %s", err)
-		}
-	}()
-
-	return <-resultCh
-}
-
-func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
-	header := makeHeader(parent, engine.config)
-	engine.Prepare(chain, header)
-	state, _ := chain.StateAt(parent.Root())
-	block, _, _ := engine.FinalizeAndAssemble(chain, header, state, nil, nil, nil)
-	return block
-}
-
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
@@ -142,11 +101,6 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
 	b, _ := New(config, nodeKeys[0], memDB).(*backend)
-	//b.snaps = &snapshots{
-	//	list: []*snapshot{
-	//		{ID: 1, Start: 0, ValSet: valset},
-	//	},
-	//}
 	genesis.MustCommit(memDB)
 
 	txLookUpLimit := uint64(100)
@@ -163,39 +117,6 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	b.Start(blockchain, nil)
 
 	return blockchain, b
-}
-
-/**
- * SimpleBackend
- * Private key: bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1
- * Public key: 04a2bfb0f7da9e1b9c0c64e14f87e8fb82eb0144e97c25fe3a977a921041a50976984d18257d2495e7bfd3d4b280220217f429287d25ecdf2b0d7c0f7aae9aa624
- * Address: 0x70524d664ffe731100208a0154e556f9bb679ae6
- */
-func getAddress() common.Address {
-	return common.HexToAddress("0x70524d664ffe731100208a0154e556f9bb679ae6")
-}
-
-func getInvalidAddress() common.Address {
-	return common.HexToAddress("0x9535b2e7faaba5288511d89341d94a38063a349b")
-}
-
-func generatePrivateKey() (*ecdsa.PrivateKey, error) {
-	key := "bb047e5940b6d83354d9432db7c449ac8fca2248008aaa7271369880f9f11cc1"
-	return crypto.HexToECDSA(key)
-}
-
-func newTestValidatorSet(n int) (hotstuff.ValidatorSet, []*ecdsa.PrivateKey) {
-	// generate validators
-	keys := make(Keys, n)
-	addrs := make([]common.Address, n)
-	for i := 0; i < n; i++ {
-		privateKey, _ := crypto.GenerateKey()
-		keys[i] = privateKey
-		addrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
-	}
-	vset := validator.NewSet(addrs, hotstuff.RoundRobin)
-	sort.Sort(keys) //Keys need to be sorted by its public key address
-	return vset, keys
 }
 
 type Keys []*ecdsa.PrivateKey
@@ -258,20 +179,6 @@ func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Blo
 
 var emptySigner = &snr.SignerImpl{}
 
-func (s *backend) UpdateBlock(block *types.Block) (*types.Block, error) {
-	header := block.Header()
-	if err := s.signer.SealBeforeCommit(header); err != nil {
-		return nil, err
-	}
-	newBlock := block.WithSeal(header)
-	return newBlock, nil
-}
-
 func makeValSet(validators []common.Address) hotstuff.ValidatorSet {
 	return validator.NewSet(validators, hotstuff.RoundRobin)
-}
-
-func newTestSigner() hotstuff.Signer {
-	key, _ := generatePrivateKey()
-	return snr.NewSigner(key)
 }

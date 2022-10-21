@@ -21,13 +21,7 @@ package core
 import "errors"
 
 var (
-	// ErrUnauthorizedAddress is returned when given address cannot be found in
-	// current validator set.
-	ErrUnauthorizedAddress = errors.New("unauthorized address")
-	// errInconsistentVote is returned when received subject is different from
-	// current subject.
-	errInconsistentVote = errors.New("inconsistent vote")
-	errInvalidDigest    = errors.New("invalid digest")
+	errInvalidDigest = errors.New("invalid digest")
 	// errNotFromProposer is returned when received Message is supposed to be from proposer.
 	errNotFromProposer = errors.New("Message does not come from proposer")
 	errNotToProposer   = errors.New("Message does not send to proposer")
@@ -51,12 +45,7 @@ var (
 	// errFailedDecodeCommit is returned when the COMMIT Message is malformed.
 	errFailedDecodeCommit     = errors.New("failed to decode COMMIT")
 	errFailedDecodeCommitVote = errors.New("failed to decode COMMIT_VOTE")
-	// errInvalidSigner is returned when the Message is signed by a validator different than Message sender
 	errInvalidSigner          = errors.New("Message not signed by the sender")
-	errState                  = errors.New("error state")
-	errNoRequest              = errors.New("no valid request")
-	errRequestAlreadyExist    = errors.New("request already exist")
-	errLockProposalNotExist   = errors.New("lock proposal is nil")
 	errInvalidProposal        = errors.New("invalid proposal")
 	errVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
 	errExtend                 = errors.New("proposal extend relationship error")
@@ -64,5 +53,5 @@ var (
 	errAddNewViews            = errors.New("add new view error")
 	errAddPrepareVote         = errors.New("add prepare vote error")
 	errAddPreCommitVote       = errors.New("add pre commit vote error")
-	errBadEpochValidators     = errors.New("last epoch validator set is empty")
+	errGetHighQC              = errors.New("assemble highQC failed")
 )

@@ -51,10 +51,10 @@ type Signer interface {
 	VerifyHeader(header *types.Header, valSet ValidatorSet, seal bool) (*types.HotstuffExtra, error)
 
 	// VerifyQC verify quorum cert
-	VerifyQC(qc *QuorumCert, valSet ValidatorSet) error
+	VerifyQC(qc QC, valSet ValidatorSet) error
 
 	// CheckQCParticipant return nil if `signer` is qc proposer or committer
-	CheckQCParticipant(qc *QuorumCert, signer common.Address) error
+	CheckQCParticipant(qc QC, signer common.Address) error
 
 	// CheckSignature extract address from signature and check if the address exist in validator set
 	CheckSignature(valSet ValidatorSet, data []byte, signature []byte) (common.Address, error)

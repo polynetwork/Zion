@@ -20,9 +20,11 @@ package core
 
 import (
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
@@ -44,6 +46,9 @@ type core struct {
 
 	roundChangeTimer *time.Timer
 
+	pendingRequests   *prque.Prque
+	pendingRequestsMu *sync.Mutex
+
 	validateFn func([]byte, []byte) (common.Address, error)
 	isRunning  bool
 }
@@ -51,9 +56,11 @@ type core struct {
 // New creates an HotStuff consensus core
 func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer) hotstuff.CoreEngine {
 	c := &core{
-		config:  config,
-		logger:  log.New("address", backend.Address()),
-		backend: backend,
+		config:            config,
+		logger:            log.New("address", backend.Address()),
+		pendingRequests:   prque.New(nil),
+		pendingRequestsMu: new(sync.Mutex),
+		backend:           backend,
 	}
 	c.validateFn = c.checkValidatorSignature
 	c.signer = signer
@@ -88,15 +95,14 @@ func (c *core) startNewRound(round *big.Int) {
 	// * last proposal is equal to current state height -1, and the round lower than current state round, it should not happen.
 	// * last proposal is equal to current state height -1, and the round greater or equal to current state round, it denote change view.
 	if c.current == nil {
-		logger.Trace("Start to the initial round")
+		logger.Trace("Start for the initial round")
 	} else if lastProposal.NumberU64() >= c.current.HeightU64() {
 		logger.Trace("Catch up latest proposal", "number", lastProposal.NumberU64(), "hash", lastProposal.Hash())
 	} else if lastProposal.NumberU64() < c.current.HeightU64()-1 {
 		logger.Warn("New height should be larger than current height", "new_height", lastProposal.NumberU64)
 		return
 	} else if round.Sign() == 0 {
-		// todo(fuk): delete this log after test
-		logger.Trace("Latest proposal not chained", "chained", lastProposal.NumberU64(), "current", c.current.HeightU64())
+		logger.Debug("Latest proposal not chained", "chained", lastProposal.NumberU64(), "current", c.current.HeightU64())
 		return
 	} else if round.Cmp(c.current.Round()) < 0 {
 		logger.Warn("New round should not be smaller than current round", "height", lastProposal.NumberU64(), "new_round", round, "old_round", c.current.Round())
@@ -105,48 +111,60 @@ func (c *core) startNewRound(round *big.Int) {
 		changeView = true
 	}
 
-	newView := &hotstuff.View{
+	newView := &View{
 		Height: new(big.Int).Add(lastProposal.Number(), common.Big1),
 		Round:  new(big.Int),
 	}
 	if changeView {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
-	} else {
-		c.backend.CheckPoint(newView.Height.Uint64())
+	} else if c.checkPoint(newView) {
+		logger.Trace("Stop engine after check point.")
+		return
 	}
 
-	var (
-		lastProposalLocked bool
-		lastLockedProposal hotstuff.Proposal
-		lastPendingRequest *hotstuff.Request
-	)
-	if c.current != nil {
-		lastProposalLocked, lastLockedProposal = c.current.LastLockedProposal()
-		lastPendingRequest = c.current.PendingRequest()
-	}
-
-	// calculate new proposal and init round state
 	c.valSet = c.backend.Validators(common.EmptyHash, true)
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
-	prepareQC := proposal2QC(lastProposal, common.Big0)
-	c.current = newRoundState(newView, c.valSet, prepareQC)
-	if changeView && lastProposalLocked && lastLockedProposal != nil {
-		c.current.SetProposal(lastLockedProposal)
-		c.current.LockProposal()
-	}
-	if changeView && lastPendingRequest != nil {
-		c.current.SetPendingRequest(lastPendingRequest)
-	}
+	c.updateRoundState(newView, changeView, lastProposal, c.valSet)
 
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
-	// process pending request
+	// set init state and process backlogs
 	c.setCurrentState(StateAcceptRequest)
-	c.sendNewView(newView)
-
 	// stop last timer and regenerate new timer
 	c.newRoundChangeTimer()
+	c.sendNewView(newView)
+}
+
+// check point and return true if the engine is stopped
+func (c *core) checkPoint(view *View) bool {
+	c.backend.CheckPoint(view.Height.Uint64())
+	if !c.isRunning {
+		return true
+	}
+	return false
+}
+
+func (c *core) updateRoundState(newView *View, changeView bool, lastProposal hotstuff.Proposal, valset hotstuff.ValidatorSet) {
+	prepareQC := proposal2QC(lastProposal, common.Big0)
+
+	if !changeView {
+		c.current = newRoundState(newView, c.valSet, prepareQC)
+		return
+	}
+
+	// reuse pending request if round changed
+	lastPendingRequest := c.current.PendingRequest()
+	c.current = newRoundState(newView, c.valSet, prepareQC)
+	c.current.SetPendingRequest(lastPendingRequest)
+}
+
+func (c *core) setCurrentState(s State) {
+	c.current.SetState(s)
+	if s == StateAcceptRequest || s == StateHighQC {
+		c.processPendingRequests()
+	}
+	c.processBacklog()
 }
 
 func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {

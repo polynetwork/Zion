@@ -71,18 +71,15 @@ type Backend interface {
 	// ValidateBlock execute block which contained in prepare message, and validate block state
 	ValidateBlock(block *types.Block) error
 
-	// AskMiningProposalWithParent ask for mining proposal with parent block as parameters.
-	AskMiningProposalWithParent(parent *types.Block)
-
 	CheckPoint(height uint64)
 
 	Close() error
 }
 
 type CoreEngine interface {
-	Start(chain consensus.ChainReader) error
+	Start(chain consensus.ChainReader)
 
-	Stop() error
+	Stop()
 
 	// IsProposer return true if self address equal leader/proposer address in current round/height
 	IsProposer() bool

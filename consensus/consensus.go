@@ -23,6 +23,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/ethereum/go-ethereum/params"
@@ -153,19 +154,16 @@ type Peer interface {
 type HotStuff interface {
 	Engine
 
-	// Authorize(signer common.Address, signFn func(accounts.Account, string, []byte) ([]byte, error))
 	// Start starts the engine
-	Start(chain ChainReader, hasBadBlock func(hash common.Hash) bool) error
+	Start(chain ChainReader, hasBadBlock func(db ethdb.Reader, hash common.Hash) bool) error
 
 	// Stop stops the engine
 	Stop() error
 
-	// CheckPoint retrieve the flags of whether epoch change and next validator set.
-	//CheckPoint(state *state.StateDB, header *types.Header, fillHeader bool) (restart bool, err error)
-
+	// FillHeader fulfill the header with extra which contains epoch change info
 	FillHeader(state *state.StateDB, header *types.Header) error
 
-	// IsSystemCall whether the method id is the governance tx method
+	// IsSystemCall return method id and true if the tx is an system transaction
 	IsSystemTransaction(tx *types.Transaction, header *types.Header) (string, bool)
 }
 
@@ -180,9 +178,6 @@ type Handler interface {
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster)
 
-	// SubscribeRequest event subscribe for mining proposal with parent block
-	SubscribeRequest(ch chan<- types.Block) event.Subscription
-
 	// SubscribeNodes event subscribe for listening static nodes in eth handler
 	SubscribeNodes(ch chan<- StaticNodesEvent) event.Subscription
 }
@@ -195,19 +190,5 @@ type PoW interface {
 	Hashrate() float64
 }
 
+// StaticNodesEvent notify the eth.backend to handle `changeEpoch`
 type StaticNodesEvent struct{ Validators []common.Address }
-
-type EpochChainConfig struct {
-	StartHeight uint64
-	EndHeight   uint64
-	Validators  []common.Address
-}
-
-type CheckPointStatus uint8
-
-const (
-	CheckPointStateUnknown CheckPointStatus = iota
-	CheckPointStatePrepare                  // before epoch change start
-	CheckPointStateChange                   // set new validators in header extra
-	CheckPointStateStarted                  // restart worker and engine
-)

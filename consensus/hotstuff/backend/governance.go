@@ -53,7 +53,7 @@ func (s *backend) FillHeader(state *state.StateDB, header *types.Header) error {
 	if start == height {
 		valset := NewDefaultValSet(epoch.MemberList())
 		types.HotstuffHeaderFillWithValidators(header, valset.AddressList(), header.Number.Uint64(), end)
-		log.Info("CheckPoint fill header", "start", start, "end", end, "current", height, "state", s.chain.CurrentHeader().Number, "next validators", valset.String())
+		log.Info("CheckPoint fill header", "start", start, "end", end, "current", height, "next validators", valset.String())
 	} else {
 		types.HotstuffHeaderFillWithValidators(header, nil, start, end)
 	}

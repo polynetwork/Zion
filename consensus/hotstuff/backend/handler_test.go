@@ -30,6 +30,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestHotstuffMessage
 func TestHotstuffMessage(t *testing.T) {
 	_, backend := singleNodeChain()
 
@@ -66,6 +67,7 @@ func TestHotstuffMessage(t *testing.T) {
 	assert.True(t, ok, "the cache of messages cannot be found")
 }
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestHandleNewBlockMessage_whenTypical
 func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
 	_, backend := singleNodeChain()
 	arbitraryAddress := common.HexToAddress("arbitrary")
@@ -74,12 +76,14 @@ func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
 
 	handled, err := backend.HandleMsg(arbitraryAddress, arbitraryP2PMessage)
 	assert.NoError(t, err, "expected message being handled successfully but got", err)
-	assert.True(t, handled, "expected message not being handled")
+	t.Log("handled", handled)
+	assert.False(t, handled, "expected message not being handled")
 
 	_, err = ioutil.ReadAll(arbitraryP2PMessage.Payload)
 	assert.NoError(t, err, "expected p2p message payload is restored")
 }
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestHandleNewBlockMessage_whenNotAProposedBlock
 func TestHandleNewBlockMessage_whenNotAProposedBlock(t *testing.T) {
 	_, backend := singleNodeChain()
 	arbitraryAddress := common.HexToAddress("arbitrary")
@@ -99,6 +103,7 @@ func TestHandleNewBlockMessage_whenNotAProposedBlock(t *testing.T) {
 	assert.NoError(t, err, "expected p2p message payload is restored")
 }
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestHandleNewBlockMessage_whenFailToDecode
 func TestHandleNewBlockMessage_whenFailToDecode(t *testing.T) {
 	_, backend := singleNodeChain()
 	arbitraryAddress := common.HexToAddress("arbitrary")

@@ -19,13 +19,11 @@
 package hotstuff
 
 import (
-	"bytes"
-	"errors"
-	"fmt"
 	"io"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 	"golang.org/x/crypto/sha3"
 )
@@ -47,241 +45,19 @@ type Proposal interface {
 
 	Time() uint64
 
+	Copy() *types.Block
+
 	EncodeRLP(w io.Writer) error
 
 	DecodeRLP(s *rlp.Stream) error
 }
 
-type Request struct {
-	Proposal Proposal
-}
-
-// View includes a round number and a block height number.
-// Height is the block height number we'd like to commit.
-//
-// If the given block is not accepted by validators, a round change will occur
-// and the validators start a new round with round+1.
-//
-type View struct {
-	Round  *big.Int
-	Height *big.Int
-}
-
-var EmptyView = &View{
-	Round:  big.NewInt(0),
-	Height: big.NewInt(0),
-}
-
-// EncodeRLP serializes b into the Ethereum RLP format.
-func (v *View) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{v.Round, v.Height})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (v *View) DecodeRLP(s *rlp.Stream) error {
-	var view struct {
-		Round  *big.Int
-		Height *big.Int
-	}
-
-	if err := s.Decode(&view); err != nil {
-		return err
-	}
-	v.Round, v.Height = view.Round, view.Height
-	return nil
-}
-
-func (v *View) String() string {
-	return fmt.Sprintf("{Round: %d, Height: %d}", v.Round.Uint64(), v.Height.Uint64())
-}
-
-// Cmp compares v and y and returns:
-//   -1 if v <  y
-//    0 if v == y
-//   +1 if v >  y
-func (v *View) Cmp(y *View) int {
-	if v.Height.Cmp(y.Height) != 0 {
-		return v.Height.Cmp(y.Height)
-	}
-	if v.Round.Cmp(y.Round) != 0 {
-		return v.Round.Cmp(y.Round)
-	}
-	return 0
-}
-
-func (v *View) Sub(y *View) (int64, int64) {
-	h := new(big.Int).Sub(v.Height, y.Height).Int64()
-	r := new(big.Int).Sub(v.Round, y.Round).Int64()
-	return h, r
-}
-
-type QuorumCert struct {
-	View     *View
-	Hash     common.Hash // block header sig hash
-	Proposer common.Address
-	Extra    []byte
-}
-
-// EncodeRLP serializes b into the Ethereum RLP format.
-func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{qc.View, qc.Hash, qc.Proposer, qc.Extra})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
-	var cert struct {
-		View     *View
-		Hash     common.Hash
-		Proposer common.Address
-		Extra    []byte
-	}
-
-	if err := s.Decode(&cert); err != nil {
-		return err
-	}
-	qc.View, qc.Hash, qc.Proposer, qc.Extra = cert.View, cert.Hash, cert.Proposer, cert.Extra
-	return nil
-}
-
-func (qc *QuorumCert) String() string {
-	return fmt.Sprintf("{QuorumCert View: %v, Hash: %v, Proposer: %v}", qc.View, qc.Hash.String(), qc.Proposer.Hex())
-}
-
-func (qc *QuorumCert) Copy() *QuorumCert {
-	enc, err := rlp.EncodeToBytes(qc)
-	if err != nil {
-		return nil
-	}
-	newQC := new(QuorumCert)
-	if err := rlp.DecodeBytes(enc, &newQC); err != nil {
-		return nil
-	}
-	return newQC
-}
-
-func (qc *QuorumCert) Height() *big.Int {
-	if qc.View == nil {
-		return common.Big0
-	}
-	return qc.View.Height
-}
-
-func (qc *QuorumCert) HeightU64() uint64 {
-	return qc.Height().Uint64()
-}
-
-func (qc *QuorumCert) Round() *big.Int {
-	if qc.View == nil {
-		return common.Big0
-	}
-	return qc.View.Round
-}
-
-func (qc *QuorumCert) RoundU64() uint64 {
-	return qc.Round().Uint64()
-}
-
-type MsgType interface {
-	String() string
-	Value() uint64
-}
-
-type MsgTypeConvert func(data interface{}) MsgType
-
-var MsgTypeConvertHandler MsgTypeConvert
-
-func RegisterMsgTypeConvertHandler(handler MsgTypeConvert) {
-	MsgTypeConvertHandler = handler
-}
-
-type Message struct {
-	Code          MsgType
-	View          *View
-	Msg           []byte
-	Address       common.Address
-	Signature     []byte
-	CommittedSeal []byte
-}
-
-// ==============================================
-//
-// define the functions that needs to be provided for rlp Encoder/Decoder.
-
-// EncodeRLP serializes m into the Ethereum RLP format.
-func (m *Message) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Code.Value(), m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (m *Message) DecodeRLP(s *rlp.Stream) error {
-	var msg struct {
-		Code          uint64
-		View          *View
-		Msg           []byte
-		Address       common.Address
-		Signature     []byte
-		CommittedSeal []byte
-	}
-
-	if err := s.Decode(&msg); err != nil {
-		return err
-	}
-
-	code := MsgTypeConvertHandler(msg.Code)
-	m.Code, m.View, m.Msg, m.Address, m.Signature, m.CommittedSeal = code, msg.View, msg.Msg, msg.Address, msg.Signature, msg.CommittedSeal
-	return nil
-}
-
-// ==============================================
-//
-// define the functions that needs to be provided for core.
-
-func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.Address, error)) error {
-	// Decode Message
-	err := rlp.DecodeBytes(b, &m)
-	if err != nil {
-		return err
-	}
-
-	// Validate Message (on a Message without Signature)
-	if validateFn != nil {
-		var payload []byte
-		payload, err = m.PayloadNoSig()
-		if err != nil {
-			return err
-		}
-
-		signerAdd, err := validateFn(payload, m.Signature)
-		if err != nil {
-			return err
-		}
-		if !bytes.Equal(signerAdd.Bytes(), m.Address.Bytes()) {
-			return errors.New("Message not signed by the sender")
-		}
-	}
-	return nil
-}
-
-func (m *Message) Payload() ([]byte, error) {
-	return rlp.EncodeToBytes(m)
-}
-
-func (m *Message) PayloadNoSig() ([]byte, error) {
-	return rlp.EncodeToBytes(&Message{
-		Code:      m.Code,
-		View:      m.View,
-		Msg:       m.Msg,
-		Address:   m.Address,
-		Signature: []byte{},
-	})
-}
-
-func (m *Message) Decode(val interface{}) error {
-	return rlp.DecodeBytes(m.Msg, val)
-}
-
-func (m *Message) String() string {
-	return fmt.Sprintf("{MsgType: %s, Address: %s}", m.Code.String(), m.Address.Hex())
+type QC interface {
+	Height() *big.Int
+	HeightU64() uint64
+	Hash() common.Hash
+	Proposer() common.Address
+	Extra() []byte
 }
 
 func RLPHash(v interface{}) (h common.Hash) {
