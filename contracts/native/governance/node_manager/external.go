@@ -30,9 +30,9 @@ import (
 var (
 	// genesis config
 	GenesisMaxCommissionChange, _        = new(big.Int).SetString("500", 10) // 5%
-	GenesisMinInitialStake               = new(big.Int).Mul(big.NewInt(100), params.ZNT1)
-	GenesisMinProposalStake              = new(big.Int).Mul(big.NewInt(10), params.ZNT1)
-	GenesisBlockPerEpoch                 = new(big.Int).SetUint64(30)
+	GenesisMinInitialStake               = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
+	GenesisMinProposalStake              = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
+	GenesisBlockPerEpoch                 = new(big.Int).SetUint64(400000)
 	GenesisConsensusValidatorNum  uint64 = 4
 	GenesisVoterValidatorNum      uint64 = 4
 
@@ -45,27 +45,29 @@ var (
 )
 
 func init() {
-	// store data in genesis block
-	core.RegGenesis = func(db *state.StateDB, genesis *core.Genesis) error {
-		data := genesis.Governance
-		peers := make([]common.Address, 0, len(data))
-		signers := make([]common.Address, 0, len(data))
-		for _, v := range data {
-			peers = append(peers, v.Validator)
-			signers = append(signers, v.Signer)
-		}
-		if _, err := StoreCommunityInfo(db, genesis.CommunityRate, genesis.CommunityAddress); err != nil {
-			return err
-		}
-		if _, err := StoreGenesisEpoch(db, peers, signers); err != nil {
-			return err
-		}
-		if err := StoreGenesisGlobalConfig(db); err != nil {
-			return err
-		}
+	core.RegGenesis = SetupGenesis
+}
 
-		return nil
+// store data in genesis block
+func SetupGenesis(db *state.StateDB, genesis *core.Genesis) error {
+	data := genesis.Governance
+	peers := make([]common.Address, 0, len(data))
+	signers := make([]common.Address, 0, len(data))
+	for _, v := range data {
+		peers = append(peers, v.Validator)
+		signers = append(signers, v.Signer)
 	}
+	if _, err := StoreCommunityInfo(db, genesis.CommunityRate, genesis.CommunityAddress); err != nil {
+		return err
+	}
+	if _, err := StoreGenesisEpoch(db, peers, signers); err != nil {
+		return err
+	}
+	if err := StoreGenesisGlobalConfig(db); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func StoreCommunityInfo(s *state.StateDB, communityRate *big.Int, communityAddress common.Address) (*CommunityInfo, error) {
