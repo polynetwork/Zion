@@ -1,10 +1,31 @@
+/*
+ * Copyright (C) 2021 The Zion Authors
+ * This file is part of The Zion library.
+ *
+ * The Zion is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU Lesser General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * The Zion is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU Lesser General Public License for more details.
+ *
+ * You should have received a copy of the GNU Lesser General Public License
+ * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
 package backend
 
 import (
 	"math/big"
+	"os"
 	"reflect"
 	"testing"
 	"time"
+
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -18,6 +39,7 @@ import (
 
 func TestMain(m *testing.M) {
 	boot.InitNativeContracts()
+	os.Exit(m.Run())
 }
 
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestGenesisBlock
@@ -68,14 +90,14 @@ func TestSealStopChannel(t *testing.T) {
 	resultCh := make(chan *types.Block, 10)
 	go func() {
 		if err := engine.Seal(chain, block, resultCh, stop); err != nil {
-			t.Errorf("error mismatch: have %v, want nil", err)
+			t.Errorf("error mismatch: have error %v, want nil", err)
 		}
 	}()
 	go eventLoop()
 
 	finalBlock := <-resultCh
 	if finalBlock != nil {
-		t.Errorf("block mismatch: have %v, want nil", finalBlock)
+		t.Errorf("block mismatch: have final block %v, want nil", finalBlock)
 	}
 }
 
@@ -85,7 +107,8 @@ func TestSealCommittedOtherHash(t *testing.T) {
 	chain, engine := singleNodeChain()
 	defer engine.Stop()
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	otherBlock := makeBlockWithoutSeal(chain, engine, block)
+	otherBlock := makeBlockWithoutSeal(chain, engine, chain.Genesis())
+	otherBlock.Header().GasUsed = 10
 
 	eventSub := engine.EventMux().Subscribe(hotstuff.RequestEvent{})
 	blockOutputChannel := make(chan *types.Block)
@@ -128,6 +151,12 @@ func updateTestBlock(block *types.Block, addr common.Address) *types.Block {
 	return block.WithSeal(header)
 }
 
+func updateTestBlockWithoutExtra(block *types.Block, addr common.Address) *types.Block {
+	header := block.Header()
+	header.Extra = []byte{}
+	return block.WithSeal(header)
+}
+
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestSealCommitted
 // TestSealCommitted block hash WONT change after seal.
 func TestSealCommitted(t *testing.T) {
@@ -159,20 +188,20 @@ func TestVerifyHeader(t *testing.T) {
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	header := engine.chain.GetHeader(block.ParentHash(), block.NumberU64()-1)
 	block = updateTestBlock(block, engine.Address())
-	if err := engine.VerifyHeader(chain, block.Header(), false); err != errEmptyCommittedSeals {
-		t.Errorf("error mismatch: have %v, want %v", err, errEmptyCommittedSeals)
+	if err := engine.VerifyHeader(chain, block.Header(), false); err != signer.ErrInvalidSignature {
+		t.Errorf("error mismatch: have %v, want %v", err, "invalid signature length")
 	}
 
 	// short extra data
 	header = block.Header()
 	header.Extra = []byte{}
-	if err := engine.VerifyHeader(chain, header, false); err != errInvalidExtraDataFormat {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidExtraDataFormat)
+	if err := engine.VerifyHeader(chain, header, false); err != types.ErrInvalidHotstuffHeaderExtra {
+		t.Errorf("error mismatch: have %v, want %v", err, types.ErrInvalidHotstuffHeaderExtra)
 	}
 	// incorrect extra format
 	header.Extra = []byte("0000000000000000000000000000000012300000000000000000000000000000000000000000000000000000000000000000")
-	if err := engine.VerifyHeader(chain, header, false); err != errInvalidExtraDataFormat {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidExtraDataFormat)
+	if err := engine.VerifyHeader(chain, header, false); err != types.ErrInvalidHotstuffHeaderExtra {
+		t.Errorf("error mismatch: have %v, want %v", err, types.ErrInvalidHotstuffHeaderExtra)
 	}
 
 	// non zero MixDigest
@@ -211,99 +240,8 @@ func TestVerifyHeader(t *testing.T) {
 	// future block
 	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	header = block.Header()
-	header.Time = uint64(time.Now().Unix() + 10)
-	if err := engine.VerifyHeader(chain, header, false); err != consensus.ErrFutureBlock {
-		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrFutureBlock)
-	}
-}
-
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestVerifyHeaders
-func TestVerifyHeaders(t *testing.T) {
-	chain, engine := singleNodeChain()
-	defer engine.Stop()
-	genesis := chain.Genesis()
-
-	// success case
-	headers := []*types.Header{}
-	blocks := []*types.Block{}
-	size := 100
-
-	for i := 0; i < size; i++ {
-		var b *types.Block
-		if i == 0 {
-			b = makeBlockWithoutSeal(chain, engine, genesis)
-			b = updateTestBlock(b, engine.Address())
-		} else {
-			b = makeBlockWithoutSeal(chain, engine, blocks[i-1])
-			b = updateTestBlock(b, engine.Address())
-		}
-		blocks = append(blocks, b)
-		headers = append(headers, blocks[i].Header())
-	}
-
-	_, results := engine.VerifyHeaders(chain, headers, nil)
-	const timeoutDura = 2 * time.Second
-	timeout := time.NewTimer(timeoutDura)
-	index := 0
-OUT1:
-	for {
-		select {
-		case err := <-results:
-			if err != nil {
-				if err != errEmptyCommittedSeals && err != errInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
-					t.Errorf("error mismatch: have %v, want istanbulcommon.ErrEmptyCommittedSeals|istanbulcommon.ErrInvalidCommittedSeals|ErrUnknownAncestor", err)
-					break OUT1
-				}
-			}
-			index++
-			if index == size {
-				break OUT1
-			}
-		case <-timeout.C:
-			break OUT1
-		}
-	}
-	_, results = engine.VerifyHeaders(chain, headers, nil)
-	timeout = time.NewTimer(timeoutDura)
-OUT2:
-	for {
-		select {
-		case err := <-results:
-			if err != nil {
-				if err != errEmptyCommittedSeals && err != errInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
-					t.Errorf("error mismatch: have %v, want istanbulcommon.ErrEmptyCommittedSeals|istanbulcommon.ErrInvalidCommittedSeals|ErrUnknownAncestor", err)
-					break OUT2
-				}
-			}
-		case <-timeout.C:
-			break OUT2
-		}
-	}
-	// error header cases
-	headers[2].Number = big.NewInt(100)
-	_, results = engine.VerifyHeaders(chain, headers, nil)
-	timeout = time.NewTimer(timeoutDura)
-	index = 0
-	errors := 0
-	expectedErrors := 0
-OUT3:
-	for {
-		select {
-		case err := <-results:
-			if err != nil {
-				if err != errEmptyCommittedSeals && err != errInvalidCommittedSeals && err != consensus.ErrUnknownAncestor {
-					errors++
-				}
-			}
-			index++
-			if index == size {
-				if errors != expectedErrors {
-					t.Errorf("error mismatch: have %v, want %v", errors, expectedErrors)
-				}
-				break OUT3
-			}
-		case <-timeout.C:
-			break OUT3
-		}
+	header.Time = uint64(time.Now().Unix() + 1)
+	if err := engine.VerifyHeader(chain, header, false); err != errInvalidTimestamp {
+		t.Errorf("error mismatch: have %v, want %v", err, errInvalidTimestamp)
 	}
 }

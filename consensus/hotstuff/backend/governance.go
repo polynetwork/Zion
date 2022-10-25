@@ -64,20 +64,20 @@ func (s *backend) FillHeader(state *state.StateDB, header *types.Header) error {
 // 1.whether the block height is the right number to set new validators in block header while mining.
 // 2.whether the block height is the right number to change epoch.
 // return the flags and save epoch in lru cache.
-func (s *backend) CheckPoint(height uint64) {
+func (s *backend) CheckPoint(height uint64) bool {
 	if height <= 1 {
-		return
+		return false
 	}
 
 	state, err := s.chain.State()
 	if err != nil {
 		log.Warn("CheckPoint", "get state failed", err)
-		return
+		return false
 	}
 	epoch, err := s.getGovernanceInfo(state)
 	if err != nil {
 		log.Warn("CheckPoint", "get current epoch info, height", height, "err", err)
-		return
+		return false
 	}
 
 	// lock status to ensure that the action of restart engine wont recall CheckPoint twice.
@@ -86,12 +86,14 @@ func (s *backend) CheckPoint(height uint64) {
 	if s.point == 0 && height == start+1 {
 		log.Trace("CheckPoint lock status", "height", height, "epoch start", start)
 		atomic.StoreInt32(&s.point, 1)
-		s.restart()
+		return true
 	}
 	if s.point == 1 && height > start+1 {
 		log.Trace("CheckPoint unlock status", "height", height, "epoch start", start)
 		atomic.StoreInt32(&s.point, 0)
+		return false
 	}
+	return false
 }
 
 // Validators get validators from backend by `consensus core`, param of `mining` is false denote need last epoch validators.

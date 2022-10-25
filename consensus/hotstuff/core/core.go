@@ -138,7 +138,9 @@ func (c *core) startNewRound(round *big.Int) {
 
 // check point and return true if the engine is stopped
 func (c *core) checkPoint(view *View) bool {
-	c.backend.CheckPoint(view.Height.Uint64())
+	if c.backend.CheckPoint(view.Height.Uint64()) {
+		c.backend.ReStart()
+	}
 	if !c.isRunning {
 		return true
 	}

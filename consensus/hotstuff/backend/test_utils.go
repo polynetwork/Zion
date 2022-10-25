@@ -88,6 +88,7 @@ func makeHeader(parent *types.Block) *types.Header {
 		GasUsed:    0,
 		Time:       parent.Time() + hotstuff.DefaultBasicConfig.BlockPeriod,
 		Difficulty: defaultDifficulty,
+		Extra:      []byte{},
 	}
 	return header
 }
@@ -103,9 +104,20 @@ func makeBlock(chain *core.BlockChain, engine *backend, parent *types.Block) *ty
 
 func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
 	header := makeHeader(parent)
-	engine.Prepare(chain, header)
-	state, _ := chain.StateAt(parent.Root())
-	block, _, _ := engine.FinalizeAndAssemble(chain, header, state, nil, nil, nil)
+	if err := engine.Prepare(chain, header); err != nil {
+		panic(err)
+	}
+	state, err := chain.StateAt(parent.Root())
+	if err != nil {
+		panic(err)
+	}
+	if err := engine.FillHeader(state, header); err != nil {
+		panic(err)
+	}
+	block, _, err := engine.FinalizeAndAssemble(chain, header, state, nil, nil, nil)
+	if err != nil {
+		panic(err)
+	}
 	return block
 }
 

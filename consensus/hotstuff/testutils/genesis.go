@@ -20,12 +20,12 @@ package testutils
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/tool"
-	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -69,6 +69,14 @@ func Genesis(validators []common.Address) (*core.Genesis, error) {
 			Balance: params.GenesisSupply,
 		},
 	}
+	g.Governance = []core.GovernanceAccount{}
+	for i, v := range validators {
+		signer := common.HexToAddress(fmt.Sprintf("0x1a%d", i))
+		g.Governance = append(g.Governance, core.GovernanceAccount{
+			Validator: v,
+			Signer:    signer,
+		})
+	}
 	g.Difficulty = big.NewInt(1)
 	g.CommunityRate = big.NewInt(2000)
 	g.CommunityAddress = common.HexToAddress("0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D")
@@ -82,6 +90,5 @@ func Genesis(validators []common.Address) (*core.Genesis, error) {
 	}
 	g.ExtraData = rawExtra
 	g.GasLimit = 30000000
-	core.RegGenesis = node_manager.SetupGenesis
 	return g, nil
 }

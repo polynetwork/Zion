@@ -81,7 +81,7 @@ func TestCheckValidatorSignature(t *testing.T) {
 	// CheckValidatorSignature should return ErrUnauthorizedAddress
 	signer := NewSigner(key)
 	addr, err := signer.CheckSignature(vset, data, sig)
-	assert.Equal(t, err, errUnauthorizedAddress, "error mismatch: have %v, want %v", err, errUnauthorizedAddress)
+	assert.Equal(t, err, ErrUnauthorizedAddress, "error mismatch: have %v, want %v", err, ErrUnauthorizedAddress)
 
 	emptyAddr := common.Address{}
 	assert.Equal(t, emptyAddr, common.Address{}, "address mismatch: have %v, want %v", addr, emptyAddr)
@@ -115,7 +115,7 @@ func TestFillExtraAfterCommit(t *testing.T) {
 
 	// invalid seal
 	unexpectedCommittedSeal := append(expectedCommittedSeal, make([]byte, 1)...)
-	assert.Equal(t, errInvalidCommittedSeals, emptySigner.SealAfterCommit(h, [][]byte{unexpectedCommittedSeal}))
+	assert.Equal(t, ErrInvalidCommittedSeals, emptySigner.SealAfterCommit(h, [][]byte{unexpectedCommittedSeal}))
 }
 
 var emptySigner = &SignerImpl{}

@@ -21,39 +21,39 @@ package signer
 import "errors"
 
 var (
-	errInvalidSignature = errors.New("invalid signature")
+	ErrInvalidSignature = errors.New("invalid signature")
 
-	// errUnauthorized is returned if a header is signed by a non authorized entity.
-	errUnauthorized = errors.New("unauthorized")
+	// ErrUnauthorized is returned if a header is signed by a non authorized entity.
+	ErrUnauthorized = errors.New("unauthorized")
 
-	// errInvalidExtraDataFormat is returned when the extra data format is incorrect
-	errInvalidExtraDataFormat = errors.New("invalid extra data format")
+	// ErrInvalidExtraDataFormat is returned when the extra data format is incorrect
+	ErrInvalidExtraDataFormat = errors.New("invalid extra data format")
 
-	// errInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
-	errInvalidCommittedSeals = errors.New("invalid committed seals")
+	// ErrInvalidCommittedSeals is returned if the committed seal is not signed by any of parent validators.
+	ErrInvalidCommittedSeals = errors.New("invalid committed seals")
 
-	// errEmptyCommittedSeals is returned if the field of committed seals is zero.
-	errEmptyCommittedSeals = errors.New("zero committed seals")
+	// ErrEmptyCommittedSeals is returned if the field of committed seals is zero.
+	ErrEmptyCommittedSeals = errors.New("zero committed seals")
 
-	// errUnauthorizedAddress is returned when given address cannot be found in
+	// ErrUnauthorizedAddress is returned when given address cannot be found in
 	// current validator set.
-	errUnauthorizedAddress = errors.New("unauthorized address")
+	ErrUnauthorizedAddress = errors.New("unauthorized address")
 
-	// errInvalidSigner is returned if the msg is unsigned
-	errInvalidSigner = errors.New("message not signed by the sender")
+	// ErrInvalidSigner is returned if the msg is unsigned
+	ErrInvalidSigner = errors.New("message not signed by the sender")
 
-	// errInvalidRawData is returned if the raw input is nil
-	errInvalidRawData = errors.New("raw input is invalid")
+	// ErrInvalidRawData is returned if the raw input is nil
+	ErrInvalidRawData = errors.New("raw input is invalid")
 
-	// errInvalidRawHash is returned if the raw hash is nil
-	errInvalidRawHash = errors.New("raw hash is invalid")
+	// ErrInvalidRawHash is returned if the raw hash is nil
+	ErrInvalidRawHash = errors.New("raw hash is invalid")
 
-	// errInvalidHeader is returned if the raw header is nil
-	errInvalidHeader = errors.New("raw header is invalid")
+	// ErrInvalidHeader is returned if the raw header is nil
+	ErrInvalidHeader = errors.New("raw header is invalid")
 
-	// errInvalidValset is returned if the validator set is nil
-	errInvalidValset = errors.New("valset is nil")
+	// ErrInvalidValset is returned if the validator set is nil
+	ErrInvalidValset = errors.New("valset is nil")
 
-	// errInvalidQC is returned if the quorum cert is nil
-	errInvalidQC = errors.New("qc is nil")
+	// ErrInvalidQC is returned if the quorum cert is nil
+	ErrInvalidQC = errors.New("qc is nil")
 )

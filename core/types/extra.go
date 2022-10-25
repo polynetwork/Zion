@@ -36,7 +36,7 @@ var (
 	HotstuffExtraSeal   = 65 // Fixed number of extra-data bytes reserved for validator seal
 
 	// ErrInvalidHotstuffHeaderExtra is returned if the length of extra-data is less than 32 bytes
-	ErrInvalidHotstuffHeaderExtra = errors.New("invalid istanbul header extra-data")
+	ErrInvalidHotstuffHeaderExtra = errors.New("invalid extra data format")
 )
 
 type HotstuffExtra struct {
@@ -104,7 +104,7 @@ func ExtractHotstuffExtraPayload(extra []byte) (*HotstuffExtra, error) {
 	var hotstuffExtra *HotstuffExtra
 	err := rlp.DecodeBytes(extra[HotstuffExtraVanity:], &hotstuffExtra)
 	if err != nil {
-		return nil, err
+		return nil, ErrInvalidHotstuffHeaderExtra
 	}
 	return hotstuffExtra, nil
 }
