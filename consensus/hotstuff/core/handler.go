@@ -29,7 +29,6 @@ import (
 // Start implements core.Engine.Start
 func (c *core) Start(chain consensus.ChainReader) {
 	c.isRunning = true
-	c.backlogs = newBackLog()
 	c.current = nil
 
 	c.subscribeEvents()

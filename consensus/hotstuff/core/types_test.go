@@ -167,7 +167,7 @@ package core
 //	}
 //
 //	// 2.2 Test nil validate func
-//	decodedMsg = new(hotstuff.Message)
+//	decodedMsg = new(Message)
 //	err = decodedMsg.FromPayload(msgPayload, nil)
 //	if err != nil {
 //		t.Error(err)
