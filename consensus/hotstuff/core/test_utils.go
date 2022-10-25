@@ -20,7 +20,9 @@ package core
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
+	"math/rand"
 	"strings"
 	"testing"
 	"time"
@@ -374,4 +376,9 @@ func singerTestCore(t *testing.T, n int, height, round int64) (*core, hotstuff.V
 	}
 
 	return c, vals
+}
+
+func singerAddress() common.Address {
+	num := rand.Int()
+	return common.HexToAddress(fmt.Sprintf("0x%d", num))
 }

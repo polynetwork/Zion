@@ -20,7 +20,6 @@ package core
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -389,7 +388,7 @@ func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 			return err
 		}
 		if !bytes.Equal(signerAdd.Bytes(), m.Address.Bytes()) {
-			return errors.New("Message not signed by the sender")
+			return errInvalidSigner
 		}
 	}
 	return nil
