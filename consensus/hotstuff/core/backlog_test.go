@@ -25,28 +25,13 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/event"
-	"github.com/ethereum/go-ethereum/log"
 )
 
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestStoreBacklog
 func TestStoreBacklog(t *testing.T) {
-	vals, keys := newTestValidatorSet(2)
-	signer := signer.NewSigner(keys[0])
+	c, vals := singerTestCore(t, 2, 0, 1)
 	sender := vals.GetByIndex(1)
-
-	c := &core{
-		logger: log.New("backend", "test", "id", 0),
-		valSet: vals,
-		current: newRoundState(&View{
-			Round:  big.NewInt(1),
-			Height: big.NewInt(0),
-		}, vals, nil),
-		signer:   signer,
-		backlogs: newBackLog(),
-	}
 
 	// push new view msg
 	view := &View{
@@ -112,24 +97,9 @@ func TestStoreBacklog(t *testing.T) {
 
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestProcessFutureBacklog
 func TestProcessFutureBacklog(t *testing.T) {
-	backend := &testSystemBackend{
-		events: new(event.TypeMux),
-	}
-	vals, pks := newTestValidatorSet(2)
-	signer := signer.NewSigner(pks[0])
+	c, vals := singerTestCore(t, 2, 0, 1)
+	c.backend = &testSystemBackend{events: new(event.TypeMux)}
 	sender := vals.GetByIndex(1)
-
-	c := &core{
-		logger:   log.New("backend", "test", "id", 0),
-		valSet:   vals,
-		signer:   signer,
-		backlogs: newBackLog(),
-		backend:  backend,
-		current: newRoundState(&View{
-			Height: big.NewInt(1),
-			Round:  big.NewInt(0),
-		}, vals, nil),
-	}
 	c.subscribeEvents()
 	defer c.unsubscribeEvents()
 
@@ -210,28 +180,13 @@ func TestProcessBacklog(t *testing.T) {
 }
 
 func testProcessBacklog(t *testing.T, msg *Message) {
-	vals, keys := newTestValidatorSet(2)
-	signer := signer.NewSigner(keys[0])
-	sender := vals.GetByIndex(1)
-
-	msg.Address = sender.Address()
-	backend := &testSystemBackend{
-		events: new(event.TypeMux),
-		peers:  vals,
-	}
-	c := &core{
-		logger:   log.New("backend", "test", "id", 0),
-		backlogs: newBackLog(),
-		valSet:   vals,
-		signer:   signer,
-		backend:  backend,
-		current: newRoundState(&View{
-			Height: big.NewInt(1),
-			Round:  big.NewInt(0),
-		}, vals, nil),
-	}
+	c, vals := singerTestCore(t, 2, 1, 0)
+	c.backend = &testSystemBackend{events: new(event.TypeMux)}
 	c.subscribeEvents()
 	defer c.unsubscribeEvents()
+
+	sender := vals.GetByIndex(1)
+	msg.Address = sender.Address()
 
 	c.storeBacklog(msg, sender)
 	c.processBacklog()

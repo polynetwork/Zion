@@ -17,67 +17,59 @@
  */
 
 package core
-//
-//import (
-//	"math/big"
-//	"testing"
-//	"time"
-//
-//	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-//	"github.com/ethereum/go-ethereum/event"
-//	"github.com/ethereum/go-ethereum/log"
-//	"github.com/stretchr/testify/assert"
-//)
-//
-//func TestCheckRequestMsg(t *testing.T) {
-//	c := &core{
-//		current: newRoundState(&view{
-//			Height: big.NewInt(1),
-//			Round:  big.NewInt(0),
-//		}, newTestValidatorSet(4), nil),
-//	}
-//
-//	// invalid request
-//	err := c.requests.checkRequest(nil, nil)
-//	if err != errInvalidMessage {
-//		t.Errorf("error mismatch: have %v, want %v", err, errInvalidMessage)
-//	}
-//	r := &hotstuff.Request{
-//		Proposal: nil,
-//	}
-//	err = c.requests.checkRequest(nil, r)
-//	if err != errInvalidMessage {
-//		t.Errorf("error mismatch: have %v, want %v", err, errInvalidMessage)
-//	}
-//
-//	// old request
-//	r = &hotstuff.Request{
-//		Proposal: makeBlock(0),
-//	}
-//	err = c.requests.checkRequest(c.currentView(), r)
-//	if err != errOldMessage {
-//		t.Errorf("error mismatch: have %v, want %v", err, errOldMessage)
-//	}
-//
-//	// future request
-//	r = &hotstuff.Request{
-//		Proposal: makeBlock(2),
-//	}
-//	err = c.requests.checkRequest(c.currentView(), r)
-//	if err != errFutureMessage {
-//		t.Errorf("error mismatch: have %v, want %v", err, errFutureMessage)
-//	}
-//
-//	// current request
-//	r = &hotstuff.Request{
-//		Proposal: makeBlock(1),
-//	}
-//	err = c.requests.checkRequest(c.currentView(), r)
-//	if err != nil {
-//		t.Errorf("error mismatch: have %v, want nil", err)
-//	}
-//}
-//
+
+import (
+	"sync"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common/prque"
+)
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestCheckRequestMsg
+func TestCheckRequestMsg(t *testing.T) {
+	c, _ := singerTestCore(t, 1, 1, 0)
+	c.pendingRequests = prque.New(nil)
+	c.pendingRequestsMu = new(sync.Mutex)
+
+	// invalid request
+	err := c.checkRequestMsg(nil)
+	if err != errInvalidMessage {
+		t.Errorf("error mismatch: have %v, want %v", err, errInvalidMessage)
+	}
+	r := &Request{Proposal: nil}
+	err = c.checkRequestMsg(r)
+	if err != errInvalidMessage {
+		t.Errorf("error mismatch: have %v, want %v", err, errInvalidMessage)
+	}
+
+	// old request
+	r = &Request{
+		Proposal: makeBlock(0),
+	}
+	err = c.checkRequestMsg(r)
+	if err != errOldMessage {
+		t.Errorf("error mismatch: have %v, want %v", err, errOldMessage)
+	}
+
+	// future request
+	r = &Request{
+		Proposal: makeBlock(2),
+	}
+	err = c.checkRequestMsg(r)
+	if err != errFutureMessage {
+		t.Errorf("error mismatch: have %v, want %v", err, errFutureMessage)
+	}
+
+	// current request
+	r = &Request{
+		Proposal: makeBlock(1),
+	}
+	err = c.checkRequestMsg(r)
+	if err != nil {
+		t.Errorf("error mismatch: have %v, want nil", err)
+	}
+}
+
 //func TestStoreRequestMsg(t *testing.T) {
 //	backend := &mockBackend{
 //		events: new(event.TypeMux),

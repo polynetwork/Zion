@@ -22,16 +22,19 @@ import (
 	"crypto/ecdsa"
 	"math/big"
 	"strings"
+	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
+	"github.com/ethereum/go-ethereum/log"
 	elog "github.com/ethereum/go-ethereum/log"
 )
 
@@ -350,4 +353,25 @@ func (ts *testSigner) VerifyCommittedSeal(valSet hotstuff.ValidatorSet, hash com
 
 func getPublicKeyAddress(privateKey *ecdsa.PrivateKey) common.Address {
 	return crypto.PubkeyToAddress(privateKey.PublicKey)
+}
+
+func singerTestCore(t *testing.T, n int, height, round int64) (*core, hotstuff.ValidatorSet) {
+	if n < 1 {
+		t.Error("invalid participants")
+	}
+
+	vals, keys := newTestValidatorSet(n)
+
+	c := &core{
+		logger: log.New("backend", "test", "id", 0),
+		valSet: vals,
+		current: newRoundState(&View{
+			Height: big.NewInt(height),
+			Round:  big.NewInt(round),
+		}, vals, nil),
+		signer:   signer.NewSigner(keys[0]),
+		backlogs: newBackLog(),
+	}
+
+	return c, vals
 }
