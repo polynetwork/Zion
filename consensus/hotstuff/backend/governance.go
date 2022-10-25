@@ -103,6 +103,9 @@ func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSe
 	}
 
 	header := s.chain.GetHeaderByHash(hash)
+	if header == nil {
+		return nil
+	}
 	_, vals, err := s.getValidatorsByHeader(header, nil, s.chain)
 	if err != nil {
 		return nil
@@ -187,24 +190,28 @@ func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain cons
 
 	// if the block height equals to the `extra.height`, this block is an epoch start.
 	// the the validators for this header is stored in last epoch start header.
-	isEpoch := extra.StartHeight == header.Number.Uint64()
+	isEpoch := extra.StartHeight == header.Number.Uint64() && len(extra.Validators) > 0
 	if isEpoch {
 		if parent == nil {
 			parent = chain.GetHeaderByHash(header.ParentHash)
+		} else if parent.Hash() != header.ParentHash || parent.Number.Uint64()+1 != header.Number.Uint64() {
+			return false, nil, consensus.ErrUnknownAncestor
 		}
 		if extra, err = types.ExtractHotstuffExtra(parent); err != nil {
 			return isEpoch, nil, err
 		}
 	}
 
-	epoch := s.getRecentHeader(extra.StartHeight, chain)
-	if epoch == nil {
+	epochHeader := s.getRecentHeader(extra.StartHeight, chain)
+	if epochHeader == nil {
 		return isEpoch, nil, fmt.Errorf("header %d neither on chain nor in lru cache", extra.StartHeight)
 	}
-	if extra, err = types.ExtractHotstuffExtra(epoch); err != nil {
+	if extra, err = types.ExtractHotstuffExtra(epochHeader); err != nil {
 		return isEpoch, nil, err
 	}
-
+	if extra.Validators == nil || len(extra.Validators) == 0 {
+		return isEpoch, nil, fmt.Errorf("invalid epoch start header")
+	}
 	return isEpoch, NewDefaultValSet(extra.Validators), nil
 }
 

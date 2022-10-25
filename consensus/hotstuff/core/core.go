@@ -136,7 +136,7 @@ func (c *core) startNewRound(round *big.Int) {
 	c.sendNewView(newView)
 }
 
-// check point and return true if the engine is stopped
+// check point and return true if the engine is stopped, return false if the validators not changed
 func (c *core) checkPoint(view *View) bool {
 	if c.backend.CheckPoint(view.Height.Uint64()) {
 		c.backend.ReStart()

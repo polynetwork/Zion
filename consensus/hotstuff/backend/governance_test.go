@@ -34,24 +34,12 @@ func TestFillHeader(t *testing.T) {
 	parent := chain.CurrentBlock()
 	header := makeHeader(parent)
 
-	//header.Number = node_manager.GenesisBlockPerEpoch
 	if err := engine.FillHeader(statedb, header); err != nil {
 		t.Error(err)
 	}
-
 	if extra, err := types.ExtractHotstuffExtra(header); err != nil {
 		t.Error(err)
 	} else {
 		t.Logf("start height %v, end height %v", extra.StartHeight, extra.EndHeight)
 	}
-}
-
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestCheckPoint
-func TestCheckPoint(t *testing.T) {
-
-}
-
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestValidators
-func TestValidators(t *testing.T) {
-
 }
