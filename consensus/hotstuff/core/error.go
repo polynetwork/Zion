@@ -33,7 +33,8 @@ var (
 	// than current view.
 	errOldMessage = errors.New("old Message")
 	// errInvalidMessage is returned when the Message is malformed.
-	errInvalidMessage = errors.New("invalid Message")
+	errInvalidMessage      = errors.New("invalid Message")
+	errFailedDecodeMessage = errors.New("message payload invalid")
 	// errFailedDecodeNewView is returned when the NEWVIEW Message is malformed.
 	errFailedDecodeNewView = errors.New("failed to decode NEWVIEW")
 	// errFailedDecodePrepare is returned when the PREPARE Message is malformed.

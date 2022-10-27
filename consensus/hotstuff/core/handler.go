@@ -148,7 +148,7 @@ func (c *core) handleMsg(payload []byte) error {
 	msg := new(Message)
 	if err := msg.FromPayload(payload, c.validateFn); err != nil {
 		logger.Error("Failed to decode Message from payload", "err", err)
-		return err
+		return errFailedDecodeMessage
 	}
 
 	// Only accept message if the src is consensus participant

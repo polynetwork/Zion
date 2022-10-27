@@ -17,80 +17,63 @@
  */
 
 package core
-//
-//import (
-//	"testing"
-//
-//	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-//	"github.com/stretchr/testify/assert"
-//)
-//
-//// notice: we need only 3 test case:
-//// 1. `newView` send quorumCert, e.g: sendPreCommit, sendCommit
-//// 2. `prepare` send msgNewProposal
-//// 3. `prepareVote` send vote, e.g: sendPrepareVote, sendPreCommitVote, sendCommitVote
-//func TestHandleMsg(t *testing.T) {
-//	N := uint64(4)
-//	F := uint64(1)
-//	H := uint64(5)
-//	R := uint64(0)
-//
-//	sys := NewTestSystemWithBackend(N, F, H, R)
-//
-//	closer := sys.Run(true)
-//	defer closer()
-//
-//	v0 := sys.backends[0]
-//	r0 := v0.core()
-//	_, val := v0.Validators().GetByAddress(v0.Address())
-//
-//	// decode new view
-//	{
-//		block := makeBlock(1)
-//		payload, _ := Encode(&MsgNewView{
-//			view:      makeView(H, R),
-//			PrepareQC: newTestQC(r0, H-1, R),
-//		})
-//		// with a matched payload. msg prepare vote should match with *hotstuff.MsgPrepareVote in normal case.
-//		msg := &hotstuff.Message{
-//			Code:    MsgTypeNewView,
-//			Msg:     payload,
-//			Address: v0.Address(),
-//		}
-//		r0.current.SetProposal(block)
-//		assert.NoError(t, r0.handleCheckedMsg(msg, val))
-//	}
-//
-//	// decode prepare failed
-//	{
-//		payload, _ := Encode(&MsgPrepare{
-//			view:     makeView(H, R),
-//			Proposal: makeBlock(int64(H - 1)),
-//			HighQC:   newTestQC(r0, H, R),
-//		})
-//		msg := &hotstuff.Message{
-//			Code:    MsgTypePrepare,
-//			Msg:     payload,
-//			Address: v0.Address(),
-//		}
-//		enc, err := r0.finalizeMessage(msg)
-//		assert.NoError(t, err)
-//		assert.Equal(t, errExtend, r0.handleMsg(enc))
-//	}
-//
-//	// decode prepareVote failed
-//	{
-//		block := makeBlock(int64(H))
-//		payload, _ := Encode(&Vote{
-//			view:   makeView(H, R),
-//			Digest: block.Hash(),
-//		})
-//		// with a matched payload. msg prepare vote should match with *hotstuff.MsgPrepareVote in normal case.
-//		msg := &hotstuff.Message{
-//			Code:    MsgTypePrepareVote,
-//			Msg:     payload,
-//			Address: v0.Address(),
-//		}
-//		assert.Equal(t, errInconsistentVote, r0.handleCheckedMsg(msg, val))
-//	}
-//}
+
+import (
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+)
+
+// notice: we need only 3 test case:
+// 1. `newView` send quorumCert, e.g: sendPreCommit, sendCommit
+// 2. `prepare` send msgNewProposal
+// 3. `prepareVote` send vote, e.g: sendPrepareVote, sendPreCommitVote, sendCommitVote
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandleMsg
+func TestHandleMsg(t *testing.T) {
+	N := 4
+	F := 1
+	H := int64(5)
+	R := int64(0)
+
+	view := makeView(H, R)
+	sys := NewTestSystemWithBackend(N, F)
+
+	//closer := sys.Run(true)
+	//defer closer()
+
+	v0 := sys.backends[0]
+	r0 := v0.engine
+	vset := v0.Validators(common.EmptyHash, true)
+	sender := vset.GetByIndex(1)
+
+	// invalid message payload
+	{
+		payload := []byte{'1', 'a', 'b'}
+		assert.Error(t, errFailedDecodeMessage, r0.handleMsg(payload))
+	}
+
+	// invalid sender
+	{
+		msg := &Message{
+			Code:    MsgTypeNewView,
+			View:    view,
+			Msg:     []byte{'1'},
+			Address: common.HexToAddress("0x12"),
+		}
+		payload, err := Encode(msg)
+		assert.NoError(t, err)
+		assert.Error(t, errInvalidSigner, r0.handleMsg(payload))
+	}
+
+	// invalid msg type
+	{
+		msg := &Message{
+			Code:    100,
+			View:    view,
+			Msg:     []byte{'1'},
+			Address: sender.Address(),
+		}
+		assert.Error(t, errInvalidMessage, r0.handleCheckedMsg(msg, sender))
+	}
+}

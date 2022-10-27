@@ -96,7 +96,7 @@ func newTestProposal() hotstuff.Proposal {
 var testLogger = elog.New()
 
 type testSystemBackend struct {
-	id  uint64
+	id  int
 	sys *testSystem
 
 	engine *core
@@ -209,7 +209,7 @@ type testSystem struct {
 	quit          chan struct{}
 }
 
-func newTestSystem(n uint64) *testSystem {
+func newTestSystem(n int) *testSystem {
 	testLogger.SetHandler(elog.StdoutHandler)
 	return &testSystem{
 		backends:      make([]*testSystemBackend, n),
@@ -227,28 +227,26 @@ func generateValidators(n int) []common.Address {
 	return vals
 }
 
-// FIXME: int64 is needed for N and F
-func NewTestSystemWithBackend(n, f uint64) *testSystem {
+func NewTestSystemWithBackend(n, f int) *testSystem {
 	testLogger.SetHandler(elog.StdoutHandler)
 
-	addrs := generateValidators(int(n))
+	vset, keys := newTestValidatorSet(n)
 	sys := newTestSystem(n)
 	config := hotstuff.DefaultBasicConfig
 
-	for i := uint64(0); i < n; i++ {
-		vset := validator.NewSet(addrs, hotstuff.RoundRobin)
+	for i := 0; i < n; i++ {
 		backend := sys.NewBackend(i)
 		backend.peers = vset
-		backend.address = vset.GetByIndex(i).Address()
+		backend.address = vset.GetByIndex(uint64(i)).Address()
 
-		core := New(backend, config, nil)
+		core := New(backend, config, signer.NewSigner(keys[i]))
 		core.current = newRoundState(&View{
 			Round:  big.NewInt(0),
 			Height: big.NewInt(1),
 		}, vset, nil)
 		core.valSet = vset
 		core.logger = testLogger
-		core.validateFn = core.checkValidatorSignature
+		core.validateFn = nil
 
 		backend.engine = core
 	}
@@ -297,7 +295,7 @@ func (t *testSystem) stop(core bool) {
 	}
 }
 
-func (t *testSystem) NewBackend(id uint64) *testSystemBackend {
+func (t *testSystem) NewBackend(id int) *testSystemBackend {
 	// assume always success
 	ethDB := rawdb.NewMemoryDatabase()
 	backend := &testSystemBackend{
@@ -381,4 +379,23 @@ func singerTestCore(t *testing.T, n int, height, round int64) (*core, hotstuff.V
 func singerAddress() common.Address {
 	num := rand.Int()
 	return common.HexToAddress(fmt.Sprintf("0x%d", num))
+}
+
+func makeView(h, r int64) *View {
+	return &View{
+		Height: big.NewInt(h),
+		Round:  big.NewInt(r),
+	}
+}
+
+func newTestQC(c *core, h, r int64) *QuorumCert {
+	view := makeView(h, r)
+	block := makeBlock(h)
+	N := c.valSet.Size()
+	coinbase := c.valSet.GetByIndex(uint64(h % int64(N)))
+	return &QuorumCert{
+		view:     view,
+		hash:     block.Hash(),
+		proposer: coinbase.Address(),
+	}
 }
