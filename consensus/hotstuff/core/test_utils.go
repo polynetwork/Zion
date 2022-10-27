@@ -71,10 +71,10 @@ func newTestValidatorSet(n int) (hotstuff.ValidatorSet, []*ecdsa.PrivateKey) {
 	return vset, keys
 }
 
-func makeBlock(number int64) *types.Block {
+func makeBlock(number int) *types.Block {
 	header := &types.Header{
 		Difficulty: big.NewInt(0),
-		Number:     big.NewInt(number),
+		Number:     big.NewInt(int64(number)),
 		GasLimit:   0,
 		GasUsed:    0,
 		Time:       0,
@@ -227,7 +227,7 @@ func generateValidators(n int) []common.Address {
 	return vals
 }
 
-func NewTestSystemWithBackend(n, f int) *testSystem {
+func NewTestSystemWithBackend(n, h, r int) *testSystem {
 	testLogger.SetHandler(elog.StdoutHandler)
 
 	vset, keys := newTestValidatorSet(n)
@@ -240,10 +240,7 @@ func NewTestSystemWithBackend(n, f int) *testSystem {
 		backend.address = vset.GetByIndex(uint64(i)).Address()
 
 		core := New(backend, config, signer.NewSigner(keys[i]))
-		core.current = newRoundState(&View{
-			Round:  big.NewInt(0),
-			Height: big.NewInt(1),
-		}, vset, nil)
+		core.current = newRoundState(makeView(h, r), vset, nil)
 		core.valSet = vset
 		core.logger = testLogger
 		core.validateFn = nil
@@ -309,6 +306,25 @@ func (t *testSystem) NewBackend(id int) *testSystemBackend {
 	return backend
 }
 
+func (s *testSystem) getLeader() *core {
+	for _, v := range s.backends {
+		if v.engine.IsProposer() {
+			return v.engine
+		}
+	}
+	return nil
+}
+
+func (s *testSystem) getRepos() []*core {
+	list := make([]*core, 0)
+	for _, v := range s.backends {
+		if !v.engine.IsProposer() {
+			list = append(list, v.engine)
+		}
+	}
+	return list
+}
+
 // ==============================================
 //
 // mock signer
@@ -321,9 +337,9 @@ type testSigner struct {
 }
 
 func (ts *testSigner) Address() common.Address                         { return ts.address }
-func (ts *testSigner) Sign(data []byte) ([]byte, error)                { return nil, nil }
+func (ts *testSigner) Sign(data []byte) ([]byte, error)                { return common.EmptyHash.Bytes(), nil }
 func (ts *testSigner) SigHash(header *types.Header) (hash common.Hash) { return common.EmptyHash }
-func (ts *testSigner) SignHash(hash common.Hash) ([]byte, error)       { return nil, nil }
+func (ts *testSigner) SignHash(hash common.Hash) ([]byte, error)       { return common.EmptyHash.Bytes(), nil }
 func (ts *testSigner) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
 	return tx, nil
 }
@@ -381,21 +397,51 @@ func singerAddress() common.Address {
 	return common.HexToAddress(fmt.Sprintf("0x%d", num))
 }
 
-func makeView(h, r int64) *View {
+func makeView(h, r int) *View {
 	return &View{
-		Height: big.NewInt(h),
-		Round:  big.NewInt(r),
+		Height: big.NewInt(int64(h)),
+		Round:  big.NewInt(int64(r)),
 	}
 }
 
-func newTestQC(c *core, h, r int64) *QuorumCert {
+func newTestQCWithoutExtra(c *core, h, r int) *QuorumCert {
 	view := makeView(h, r)
 	block := makeBlock(h)
 	N := c.valSet.Size()
-	coinbase := c.valSet.GetByIndex(uint64(h % int64(N)))
+	coinbase := c.valSet.GetByIndex(uint64(h % N))
 	return &QuorumCert{
 		view:     view,
 		hash:     block.Hash(),
 		proposer: coinbase.Address(),
+	}
+}
+
+func newTestQCWithExtra(t *testing.T, s *testSystem, h, r int) *QuorumCert {
+	view := makeView(h, r)
+	block := makeBlock(h)
+	hash := block.Hash()
+	vset := s.backends[0].engine.valSet
+	N := vset.Size()
+	coinbase := vset.GetByIndex(uint64(h % N))
+
+	leader := s.getLeader()
+	seal, _ := leader.signer.SignHash(hash)
+	committedSeal := make([][]byte, N-1)
+	for i, v := range s.getRepos() {
+		sig, err := v.signer.SignHash(hash)
+		if err != nil {
+			t.Errorf("sign block hash failed, err: %v", err)
+		}
+		committedSeal[i] = sig
+	}
+	extra, err := types.GenerateExtraWithSignature(0, 1000000000, vset.AddressList(), seal, committedSeal)
+	if err != nil {
+		t.Errorf("generate extra with signatures failed, err: %v", err)
+	}
+	return &QuorumCert{
+		view:     view,
+		hash:     hash,
+		proposer: coinbase.Address(),
+		extra:    extra,
 	}
 }

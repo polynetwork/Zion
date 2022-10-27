@@ -40,7 +40,7 @@ package core
 //		r := coreView.Round.Uint64()
 //
 //		view := makeView(h, r)
-//		highQC := newTestQC(c, h-1, r)
+//		highQC := newTestQCWithoutExtra(c, h-1, r)
 //		proposal := makeBlockWithParentHash(int64(h), highQC.Hash)
 //		return &MsgPrepare{
 //			view:     view,

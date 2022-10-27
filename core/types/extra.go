@@ -161,3 +161,32 @@ func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address, epo
 	header.Extra = append(buf.Bytes(), payload...)
 	return nil
 }
+
+func GenerateExtraWithSignature(epochStartHeight, epochEndHeight uint64, vals []common.Address, seal []byte, committedSeal [][]byte) ([]byte, error) {
+	var (
+		buf   bytes.Buffer
+		extra []byte
+	)
+
+	extra = append(extra, bytes.Repeat([]byte{0x00}, HotstuffExtraVanity-len(extra))...)
+	buf.Write(extra[:HotstuffExtraVanity])
+
+	if vals == nil {
+		vals = []common.Address{}
+	}
+	ist := &HotstuffExtra{
+		StartHeight:   epochStartHeight,
+		EndHeight:     epochEndHeight,
+		Validators:    vals,
+		Seal:          seal,
+		CommittedSeal: committedSeal,
+		Salt:          []byte{},
+	}
+
+	payload, err := rlp.EncodeToBytes(&ist)
+	if err != nil {
+		return nil, err
+	}
+	extra = append(buf.Bytes(), payload...)
+	return extra, nil
+}

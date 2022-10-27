@@ -31,13 +31,10 @@ import (
 // 3. `prepareVote` send vote, e.g: sendPrepareVote, sendPreCommitVote, sendCommitVote
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandleMsg
 func TestHandleMsg(t *testing.T) {
-	N := 4
-	F := 1
-	H := int64(5)
-	R := int64(0)
+	N, H, R := 4, 5, 0
 
 	view := makeView(H, R)
-	sys := NewTestSystemWithBackend(N, F)
+	sys := NewTestSystemWithBackend(N, H, R)
 
 	//closer := sys.Run(true)
 	//defer closer()
@@ -50,7 +47,7 @@ func TestHandleMsg(t *testing.T) {
 	// invalid message payload
 	{
 		payload := []byte{'1', 'a', 'b'}
-		assert.Error(t, errFailedDecodeMessage, r0.handleMsg(payload))
+		assert.Equal(t, errFailedDecodeMessage, r0.handleMsg(payload))
 	}
 
 	// invalid sender
@@ -63,7 +60,7 @@ func TestHandleMsg(t *testing.T) {
 		}
 		payload, err := Encode(msg)
 		assert.NoError(t, err)
-		assert.Error(t, errInvalidSigner, r0.handleMsg(payload))
+		assert.Equal(t, errInvalidSigner, r0.handleMsg(payload))
 	}
 
 	// invalid msg type
@@ -74,6 +71,6 @@ func TestHandleMsg(t *testing.T) {
 			Msg:     []byte{'1'},
 			Address: sender.Address(),
 		}
-		assert.Error(t, errInvalidMessage, r0.handleCheckedMsg(msg, sender))
+		assert.Equal(t, errInvalidMessage, r0.handleCheckedMsg(msg, sender))
 	}
 }
