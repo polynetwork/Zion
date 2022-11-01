@@ -20,8 +20,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -48,34 +46,34 @@ type HotstuffExtra struct {
 	Salt          []byte           // omit empty
 }
 
-// EncodeRLP serializes ist into the Ethereum RLP format.
-func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{
-		ist.StartHeight,
-		ist.EndHeight,
-		ist.Validators,
-		ist.Seal,
-		ist.CommittedSeal,
-		ist.Salt,
-	})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
-func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
-	var extra struct {
-		StartHeight   uint64
-		EndHeight     uint64
-		Validators    []common.Address
-		Seal          []byte
-		CommittedSeal [][]byte
-		Salt          []byte
-	}
-	if err := s.Decode(&extra); err != nil {
-		return err
-	}
-	ist.StartHeight, ist.EndHeight, ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.StartHeight, extra.EndHeight, extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
-	return nil
-}
+//// EncodeRLP serializes ist into the Ethereum RLP format.
+//func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
+//	return rlp.Encode(w, []interface{}{
+//		ist.StartHeight,
+//		ist.EndHeight,
+//		ist.Validators,
+//		ist.Seal,
+//		ist.CommittedSeal,
+//		ist.Salt,
+//	})
+//}
+//
+//// DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
+//func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
+//	var extra struct {
+//		StartHeight   uint64
+//		EndHeight     uint64
+//		Validators    []common.Address
+//		Seal          []byte
+//		CommittedSeal [][]byte
+//		Salt          []byte
+//	}
+//	if err := s.Decode(&extra); err != nil {
+//		return err
+//	}
+//	ist.StartHeight, ist.EndHeight, ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.StartHeight, extra.EndHeight, extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
+//	return nil
+//}
 
 // Dump only used for debug or test
 func (ist *HotstuffExtra) Dump() string {
