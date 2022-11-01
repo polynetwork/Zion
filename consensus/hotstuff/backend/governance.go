@@ -64,20 +64,20 @@ func (s *backend) FillHeader(state *state.StateDB, header *types.Header) error {
 // 1.whether the block height is the right number to set new validators in block header while mining.
 // 2.whether the block height is the right number to change epoch.
 // return the flags and save epoch in lru cache.
-func (s *backend) CheckPoint(height uint64) {
+func (s *backend) CheckPoint(height uint64) bool {
 	if height <= 1 {
-		return
+		return false
 	}
 
 	state, err := s.chain.State()
 	if err != nil {
 		log.Warn("CheckPoint", "get state failed", err)
-		return
+		return false
 	}
 	epoch, err := s.getGovernanceInfo(state)
 	if err != nil {
 		log.Warn("CheckPoint", "get current epoch info, height", height, "err", err)
-		return
+		return false
 	}
 
 	// lock status to ensure that the action of restart engine wont recall CheckPoint twice.
@@ -86,12 +86,14 @@ func (s *backend) CheckPoint(height uint64) {
 	if s.point == 0 && height == start+1 {
 		log.Trace("CheckPoint lock status", "height", height, "epoch start", start)
 		atomic.StoreInt32(&s.point, 1)
-		s.restart()
+		return true
 	}
 	if s.point == 1 && height > start+1 {
 		log.Trace("CheckPoint unlock status", "height", height, "epoch start", start)
 		atomic.StoreInt32(&s.point, 0)
+		return false
 	}
+	return false
 }
 
 // Validators get validators from backend by `consensus core`, param of `mining` is false denote need last epoch validators.
@@ -101,6 +103,9 @@ func (s *backend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSe
 	}
 
 	header := s.chain.GetHeaderByHash(hash)
+	if header == nil {
+		return nil
+	}
 	_, vals, err := s.getValidatorsByHeader(header, nil, s.chain)
 	if err != nil {
 		return nil
@@ -185,24 +190,28 @@ func (s *backend) getValidatorsByHeader(header, parent *types.Header, chain cons
 
 	// if the block height equals to the `extra.height`, this block is an epoch start.
 	// the the validators for this header is stored in last epoch start header.
-	isEpoch := extra.StartHeight == header.Number.Uint64()
+	isEpoch := extra.StartHeight == header.Number.Uint64() && len(extra.Validators) > 0
 	if isEpoch {
 		if parent == nil {
 			parent = chain.GetHeaderByHash(header.ParentHash)
+		} else if parent.Hash() != header.ParentHash || parent.Number.Uint64()+1 != header.Number.Uint64() {
+			return false, nil, consensus.ErrUnknownAncestor
 		}
 		if extra, err = types.ExtractHotstuffExtra(parent); err != nil {
 			return isEpoch, nil, err
 		}
 	}
 
-	epoch := s.getRecentHeader(extra.StartHeight, chain)
-	if epoch == nil {
+	epochHeader := s.getRecentHeader(extra.StartHeight, chain)
+	if epochHeader == nil {
 		return isEpoch, nil, fmt.Errorf("header %d neither on chain nor in lru cache", extra.StartHeight)
 	}
-	if extra, err = types.ExtractHotstuffExtra(epoch); err != nil {
+	if extra, err = types.ExtractHotstuffExtra(epochHeader); err != nil {
 		return isEpoch, nil, err
 	}
-
+	if extra.Validators == nil || len(extra.Validators) == 0 {
+		return isEpoch, nil, fmt.Errorf("invalid epoch start header")
+	}
 	return isEpoch, NewDefaultValSet(extra.Validators), nil
 }
 

@@ -54,16 +54,17 @@ type core struct {
 }
 
 // New creates an HotStuff consensus core
-func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer) hotstuff.CoreEngine {
+func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer) *core {
 	c := &core{
 		config:            config,
 		logger:            log.New("address", backend.Address()),
+		backend:           backend,
+		signer:            signer,
+		backlogs:          newBackLog(),
 		pendingRequests:   prque.New(nil),
 		pendingRequestsMu: new(sync.Mutex),
-		backend:           backend,
 	}
 	c.validateFn = c.checkValidatorSignature
-	c.signer = signer
 
 	return c
 }
@@ -136,9 +137,11 @@ func (c *core) startNewRound(round *big.Int) {
 	c.sendNewView(newView)
 }
 
-// check point and return true if the engine is stopped
+// check point and return true if the engine is stopped, return false if the validators not changed
 func (c *core) checkPoint(view *View) bool {
-	c.backend.CheckPoint(view.Height.Uint64())
+	if c.backend.CheckPoint(view.Height.Uint64()) {
+		c.backend.ReStart()
+	}
 	if !c.isRunning {
 		return true
 	}

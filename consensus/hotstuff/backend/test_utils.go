@@ -29,8 +29,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
+	tu "github.com/ethereum/go-ethereum/consensus/hotstuff/testutils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -38,7 +37,6 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	elog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
-	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -46,61 +44,17 @@ var (
 	testLogger = elog.New()
 )
 
-func getGenesisAndKeys(n int) (*core.Genesis, []*ecdsa.PrivateKey, hotstuff.ValidatorSet) {
-	// Setup validators
-	var nodeKeys = make([]*ecdsa.PrivateKey, n)
-	var addrs = make([]common.Address, n)
-	for i := 0; i < n; i++ {
-		nodeKeys[i], _ = crypto.GenerateKey()
-		addrs[i] = crypto.PubkeyToAddress(nodeKeys[i].PublicKey)
-	}
-
-	// generate genesis block
-	genesis := core.TestGenesisBlock()
-	genesis.Config = params.TestChainConfig
-	// force enable Istanbul engine
-	genesis.Config.HotStuff = &params.HotStuffConfig{}
-	genesis.Config.Ethash = nil
-	genesis.Difficulty = defaultDifficulty
-	genesis.Nonce = emptyNonce.Uint64()
-	genesis.Mixhash = types.HotstuffDigest
-
-	appendValidators(genesis, addrs)
-	valset := makeValSet(addrs)
-	return genesis, nodeKeys, valset
-}
-
-func appendValidators(genesis *core.Genesis, addrs []common.Address) {
-
-	if len(genesis.ExtraData) < types.HotstuffExtraVanity {
-		genesis.ExtraData = append(genesis.ExtraData, bytes.Repeat([]byte{0x00}, types.HotstuffExtraVanity)...)
-	}
-	genesis.ExtraData = genesis.ExtraData[:types.HotstuffExtraVanity]
-
-	ist := &types.HotstuffExtra{
-		Validators:    addrs,
-		Seal:          []byte{},
-		CommittedSeal: [][]byte{},
-	}
-
-	istPayload, err := rlp.EncodeToBytes(&ist)
-	if err != nil {
-		panic("failed to encode istanbul extra")
-	}
-	genesis.ExtraData = append(genesis.ExtraData, istPayload...)
-}
-
 // in this test, we can set n to 1, and it means we can process Istanbul and commit a
 // block by one node. Otherwise, if n is larger than 1, we have to generate
 // other fake events to process Istanbul.
 func singleNodeChain() (*core.BlockChain, *backend) {
 	testLogger.SetHandler(elog.StdoutHandler)
 
-	genesis, nodeKeys, _ := getGenesisAndKeys(1)
+	genesis, nodeKeys, _ := tu.GenesisAndKeys(1)
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
-	b, _ := New(config, nodeKeys[0], memDB).(*backend)
+	backend := New(config, nodeKeys[0], memDB)
 	genesis.MustCommit(memDB)
 
 	txLookUpLimit := uint64(100)
@@ -109,14 +63,62 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 		TrieDirtyLimit: 256,
 		TrieTimeLimit:  5 * time.Minute,
 	}
-	blockchain, err := core.NewBlockChain(memDB, cacheConfig, genesis.Config, b, vm.Config{}, nil, &txLookUpLimit)
+	blockchain, err := core.NewBlockChain(memDB, cacheConfig, genesis.Config, backend, vm.Config{}, nil, &txLookUpLimit)
 	if err != nil {
 		panic(err)
 	}
 
-	b.Start(blockchain, nil)
+	if err := backend.Start(blockchain, nil); err != nil {
+		panic(err)
+	}
 
-	return blockchain, b
+	return blockchain, backend
+}
+
+func makeHeader(parent *types.Block) *types.Header {
+	const (
+		GasFloor, GasCeil = uint64(300000000), uint64(300000000)
+	)
+
+	blockNumber := parent.Number().Add(parent.Number(), common.Big1)
+	header := &types.Header{
+		ParentHash: parent.Hash(),
+		Number:     blockNumber,
+		GasLimit:   core.CalcGasLimit(parent, GasFloor, GasCeil),
+		GasUsed:    0,
+		Time:       parent.Time() + hotstuff.DefaultBasicConfig.BlockPeriod,
+		Difficulty: defaultDifficulty,
+		Extra:      []byte{},
+	}
+	return header
+}
+
+func makeBlock(chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
+	block := makeBlockWithoutSeal(chain, engine, parent)
+	stopCh := make(chan struct{})
+	resultCh := make(chan *types.Block, 10)
+	go engine.Seal(chain, block, resultCh, stopCh)
+	blk := <-resultCh
+	return blk
+}
+
+func makeBlockWithoutSeal(chain *core.BlockChain, engine *backend, parent *types.Block) *types.Block {
+	header := makeHeader(parent)
+	if err := engine.Prepare(chain, header); err != nil {
+		panic(err)
+	}
+	state, err := chain.StateAt(parent.Root())
+	if err != nil {
+		panic(err)
+	}
+	if err := engine.FillHeader(state, header); err != nil {
+		panic(err)
+	}
+	block, _, err := engine.FinalizeAndAssemble(chain, header, state, nil, nil, nil)
+	if err != nil {
+		panic(err)
+	}
+	return block
 }
 
 type Keys []*ecdsa.PrivateKey
@@ -175,10 +177,4 @@ func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Blo
 	}
 	arbitraryP2PMessage := p2p.Msg{Code: NewBlockMsg, Size: uint32(size), Payload: bytes.NewReader(payload)}
 	return arbitraryBlock, arbitraryP2PMessage
-}
-
-var emptySigner = &snr.SignerImpl{}
-
-func makeValSet(validators []common.Address) hotstuff.ValidatorSet {
-	return validator.NewSet(validators, hotstuff.RoundRobin)
 }

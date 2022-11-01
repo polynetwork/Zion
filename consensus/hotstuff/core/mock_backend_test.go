@@ -300,15 +300,7 @@ package core
 //	return nil
 //}
 //
-//func (s *testSystem) getRepos() []*core {
-//	list := make([]*core, 0)
-//	for _, v := range s.backends {
-//		if !v.engine.IsProposer() {
-//			list = append(list, v.core())
-//		}
-//	}
-//	return list
-//}
+
 //
 //func newTestSystem(n uint64) *testSystem {
 //	testLogger.SetHandler(elog.StdoutHandler)
@@ -436,3 +428,60 @@ package core
 //func getPublicKeyAddress(privateKey *ecdsa.PrivateKey) common.Address {
 //	return crypto.PubkeyToAddress(privateKey.PublicKey)
 //}
+
+
+//
+//import (
+//	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+//	"testing"
+//
+//	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
+//	"github.com/stretchr/testify/assert"
+//)
+//
+//func newTestQCWithoutExtra(c *core, h, r uint64) *QuorumCert {
+//	view := makeView(h, r)
+//	block := makeBlock(int64(h))
+//	N := c.valSet.Size()
+//	coinbase := c.valSet.GetByIndex(h % uint64(N))
+//	return &QuorumCert{
+//		View:     view,
+//		Hash:     block.Hash(),
+//		Proposer: coinbase.Address(),
+//	}
+//}
+//
+//func newProposalAndQC(c *core, h, r uint64) (hotstuff.Proposal, *QuorumCert) {
+//	view := makeView(h, r)
+//	block := makeBlock(int64(h))
+//	N := c.valSet.Size()
+//	coinbase := c.valSet.GetByIndex(h % uint64(N))
+//	header := block.Header()
+//	header.Coinbase = coinbase.Address()
+//	return block, &QuorumCert{
+//		View:     view,
+//		Hash:     block.Hash(),
+//		Proposer: coinbase.Address(),
+//		Extra:    []byte{},
+//	}
+//}
+//
+//func newTestNewViewMsg(c *core, index int, h, r uint64, prepareQC *QuorumCert) *hotstuff.Message {
+//	curView := makeView(h, r)
+//	val := c.valSet.GetByIndex(uint64(index))
+//	newViewMsg := &MsgNewView{
+//		View:      curView,
+//		PrepareQC: prepareQC,
+//	}
+//	payload, err := Encode(newViewMsg)
+//	if err != nil {
+//		panic(err)
+//	}
+//	msg := &hotstuff.Message{
+//		Code:    MsgTypeNewView,
+//		Msg:     payload,
+//		Address: val.Address(),
+//	}
+//	return msg
+//}
+//

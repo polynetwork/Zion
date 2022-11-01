@@ -20,7 +20,6 @@ package core
 
 import (
 	"bytes"
-	"errors"
 	"fmt"
 	"io"
 	"math/big"
@@ -243,6 +242,15 @@ type QuorumCert struct {
 	extra    []byte
 }
 
+func NewQC(view *View, hash common.Hash, proposer common.Address, extra []byte) *QuorumCert {
+	return &QuorumCert{
+		view:     view,
+		hash:     hash,
+		proposer: proposer,
+		extra:    extra,
+	}
+}
+
 func (qc *QuorumCert) Height() *big.Int {
 	if qc.view == nil {
 		return common.Big0
@@ -362,6 +370,11 @@ func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 		return err
 	}
 
+	// check that msg fields should NOT be nil or empty
+	if m.View == nil || m.Address == common.EmptyAddress || m.Msg == nil {
+		return errInvalidMessage
+	}
+
 	// Validate Message (on a Message without Signature)
 	if validateFn != nil {
 		var payload []byte
@@ -375,7 +388,7 @@ func (m *Message) FromPayload(b []byte, validateFn func([]byte, []byte) (common.
 			return err
 		}
 		if !bytes.Equal(signerAdd.Bytes(), m.Address.Bytes()) {
-			return errors.New("Message not signed by the sender")
+			return errInvalidSigner
 		}
 	}
 	return nil

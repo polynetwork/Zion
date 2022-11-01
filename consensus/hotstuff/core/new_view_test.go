@@ -17,143 +17,124 @@
  */
 
 package core
-//
-//import (
-//	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-//	"testing"
-//
-//	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
-//	"github.com/stretchr/testify/assert"
-//)
-//
-//func newTestQC(c *core, h, r uint64) *QuorumCert {
-//	view := makeView(h, r)
-//	block := makeBlock(int64(h))
-//	N := c.valSet.Size()
-//	coinbase := c.valSet.GetByIndex(h % uint64(N))
-//	return &QuorumCert{
-//		View:     view,
-//		Hash:     block.Hash(),
-//		Proposer: coinbase.Address(),
-//	}
-//}
-//
-//func newProposalAndQC(c *core, h, r uint64) (hotstuff.Proposal, *QuorumCert) {
-//	view := makeView(h, r)
-//	block := makeBlock(int64(h))
-//	N := c.valSet.Size()
-//	coinbase := c.valSet.GetByIndex(h % uint64(N))
-//	header := block.Header()
-//	header.Coinbase = coinbase.Address()
-//	return block, &QuorumCert{
-//		View:     view,
-//		Hash:     block.Hash(),
-//		Proposer: coinbase.Address(),
-//		Extra:    []byte{},
-//	}
-//}
-//
-//func newTestNewViewMsg(c *core, index int, h, r uint64, prepareQC *QuorumCert) *hotstuff.Message {
-//	curView := makeView(h, r)
-//	val := c.valSet.GetByIndex(uint64(index))
-//	newViewMsg := &MsgNewView{
-//		View:      curView,
-//		PrepareQC: prepareQC,
-//	}
-//	payload, err := Encode(newViewMsg)
-//	if err != nil {
-//		panic(err)
-//	}
-//	msg := &hotstuff.Message{
-//		Code:    MsgTypeNewView,
-//		Msg:     payload,
-//		Address: val.Address(),
-//	}
-//	return msg
-//}
-//
-//func TestMaxView(t *testing.T) {
-//	N := uint64(4)
-//	F := uint64(1)
-//	H := uint64(1)
-//	R := uint64(0)
-//
-//	sys := NewTestSystemWithBackend(N, F, H, R)
-//	c := sys.backends[0].core()
-//
-//	addQC := func(index int, h, r uint64) {
-//		prepareQC := newTestQC(c, h-1, r)
-//		msg := newTestNewViewMsg(c, index, h, r, prepareQC)
-//		assert.NoError(t, c.current.AddNewViews(msg))
-//	}
-//
-//	maxHeight := uint64(10)
-//	addQC(0, H, R)
-//	addQC(1, H, R)
-//	addQC(2, H, R)
-//	addQC(3, maxHeight, 0)
-//
-//	highQC := c.getHighQC()
-//	assert.Equal(t, maxHeight-1, highQC.View.Height.Uint64())
-//}
-//
-//func TestHandleNewView(t *testing.T) {
-//	N := uint64(4)
-//	F := uint64(1)
-//	H := uint64(1)
-//	R := uint64(0)
-//
-//	sys := NewTestSystemWithBackend(N, F, H, R)
-//	msgList := make([]*hotstuff.Message, N)
-//	for index, node := range sys.backends {
-//		c := node.core()
-//		prepareQC := newTestQC(c, H-1, R)
-//		c.current.SetPrepareQC(prepareQC)
-//		msg := newTestNewViewMsg(c, index, H, R, prepareQC)
-//		msgList[index] = msg
-//	}
-//
-//	leader := sys.getLeader()
-//	for _, msg := range msgList {
-//		val := validator.New(msg.Address)
-//		assert.NoError(t, leader.handleNewView(msg, val))
-//	}
-//
-//	highQC := leader.getHighQC()
-//	t.Log(highQC.View.Height.Uint64())
-//}
-//
-//func TestHandleNewViewFailed(t *testing.T) {
-//	N := uint64(4)
-//	F := uint64(1)
-//	H := uint64(5)
-//	R := uint64(2)
-//
-//	sys := NewTestSystemWithBackend(N, F, H, R)
-//	leader := sys.getLeader()
-//	repo := sys.getRepos()[0]
-//	val := validator.New(repo.Address())
-//
-//	testcases := []struct {
-//		H, R      uint64
-//		ExpectErr error
-//	}{
-//		{
-//			H:         H - 1,
-//			R:         R,
-//			ExpectErr: errOldMessage,
-//		},
-//		{
-//			H:         H + 1,
-//			R:         R,
-//			ExpectErr: errFutureMessage,
-//		},
-//	}
-//
-//	assert.Equal(t, errFailedDecodeNewView, leader.handleNewView(&hotstuff.Message{Msg: []byte("123456")}, val))
-//	for _, v := range testcases {
-//		qc := newTestQC(repo, v.H, v.R)
-//		msg := newTestNewViewMsg(repo, 0, v.H, v.R, qc)
-//		assert.Equal(t, v.ExpectErr, leader.handleNewView(msg, val))
-//	}
-//}
+
+import (
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
+	"github.com/stretchr/testify/assert"
+)
+
+func newTestNewViewMsg(sender common.Address, h, r int, prepareQC *QuorumCert) *Message {
+	view := makeView(h, r)
+	newViewMsg := &MsgNewView{
+		View:      view,
+		PrepareQC: prepareQC,
+	}
+	payload, err := Encode(newViewMsg)
+	if err != nil {
+		panic(err)
+	}
+	msg := &Message{
+		View:    view,
+		Code:    MsgTypeNewView,
+		Msg:     payload,
+		Address: sender,
+	}
+	return msg
+}
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestMaxView
+func TestMaxView(t *testing.T) {
+	N, H, R := 4, 1, 0
+
+	sys := NewTestSystemWithBackend(N, H, R)
+	c := sys.backends[0].engine
+
+	addQC := func(index int, h, r int) {
+		prepareQC := newTestQCWithoutExtra(c, h-1, r)
+		sender := c.valSet.GetByIndex(uint64(index))
+		msg := newTestNewViewMsg(sender.Address(), h, r, prepareQC)
+		assert.NoError(t, c.current.AddNewViews(msg))
+	}
+
+	maxHeight := 10
+	addQC(0, H, R)
+	addQC(1, H, R)
+	addQC(2, H, R)
+	addQC(3, maxHeight, 0)
+
+	highQC, err := c.getHighQC()
+	assert.NoError(t, err)
+	assert.Equal(t, maxHeight-1, int(highQC.HeightU64()))
+}
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandleNewView
+func TestHandleNewView(t *testing.T) {
+	N, H, R := 4, 1, 0
+
+	sys := NewTestSystemWithBackend(N, H, R)
+	msgList := make([]*Message, N)
+	for index, node := range sys.backends {
+		c := node.engine
+		prepareQC := newTestQCWithoutExtra(c, H-1, R)
+		c.current.SetPrepareQC(prepareQC)
+		sender := c.valSet.GetByIndex(uint64(index))
+		msg := newTestNewViewMsg(sender.Address(), H, R, prepareQC)
+		assert.NoError(t, c.current.AddNewViews(msg))
+		msgList[index] = msg
+	}
+
+	leader := sys.getLeader()
+	for _, msg := range msgList {
+		val := validator.New(msg.Address)
+		assert.NoError(t, leader.handleNewView(msg, val))
+	}
+
+	highQC, err := leader.getHighQC()
+	assert.NoError(t, err)
+	t.Log(highQC.HeightU64())
+}
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandleNewViewFailed
+func TestHandleNewViewFailed(t *testing.T) {
+	N, H, R := 4, 5, 2
+
+	sys := NewTestSystemWithBackend(N, H, R)
+	leader := sys.getLeader()
+	repo := sys.getRepos()[0]
+	val := validator.New(repo.Address())
+
+	// decode failed
+	err := leader.handleNewView(&Message{Msg: []byte("123456")}, val)
+	assert.Equal(t, errFailedDecodeNewView, err)
+
+	// too old message
+	qc := newTestQCWithExtra(t, sys, H-2)
+	msg := newTestNewViewMsg(repo.Address(), H-1, 0, qc)
+	err = leader.handleNewView(msg, val)
+	assert.Equal(t, errOldMessage, err)
+
+	qc = newTestQCWithExtra(t, sys, H-1)
+	msg = newTestNewViewMsg(repo.Address(), H, R-1, qc)
+	err = leader.handleNewView(msg, val)
+	assert.Equal(t, errOldMessage, err)
+
+	// future message
+	qc = newTestQCWithExtra(t, sys, H-1)
+	msg = newTestNewViewMsg(repo.Address(), H, R+1, qc)
+	err = leader.handleNewView(msg, val)
+	assert.Equal(t, errFutureMessage, err)
+
+	qc = newTestQCWithExtra(t, sys, H)
+	msg = newTestNewViewMsg(repo.Address(), H+1, 0, qc)
+	err = leader.handleNewView(msg, val)
+	assert.Equal(t, errFutureMessage, err)
+
+	// error leader
+	qc = newTestQCWithExtra(t, sys, H-1)
+	msg = newTestNewViewMsg(repo.Address(), H, R, qc)
+	err = repo.handleNewView(msg, val)
+	assert.Equal(t, errNotToProposer, err)
+}

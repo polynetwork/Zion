@@ -96,9 +96,11 @@ func newBackLog() *backlog {
 }
 
 func (b *backlog) Push(msg *Message) {
-	if msg == nil || msg.Address == EmptyAddress {
+	if msg == nil || msg.Address == EmptyAddress ||
+		msg.View == nil || msg.Code > MsgTypeDecide {
 		return
 	}
+
 	b.mu.Lock()
 	defer b.mu.Unlock()
 

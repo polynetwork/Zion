@@ -76,7 +76,7 @@ type backend struct {
 	point       int32 // check point mutex
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) consensus.HotStuff {
+func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) *backend {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)

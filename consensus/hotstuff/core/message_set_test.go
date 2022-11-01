@@ -19,46 +19,13 @@
 package core
 
 import (
-	"crypto/ecdsa"
 	"math/big"
-	"sort"
-	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
-	"github.com/ethereum/go-ethereum/crypto"
 )
 
-type Keys []*ecdsa.PrivateKey
-
-func (slice Keys) Len() int {
-	return len(slice)
-}
-
-func (slice Keys) Less(i, j int) bool {
-	return strings.Compare(crypto.PubkeyToAddress(slice[i].PublicKey).String(), crypto.PubkeyToAddress(slice[j].PublicKey).String()) < 0
-}
-
-func (slice Keys) Swap(i, j int) {
-	slice[i], slice[j] = slice[j], slice[i]
-}
-
-func newTestValidatorSet(n int) (hotstuff.ValidatorSet, []*ecdsa.PrivateKey) {
-	// generate validators
-	keys := make(Keys, n)
-	addrs := make([]common.Address, n)
-	for i := 0; i < n; i++ {
-		privateKey, _ := crypto.GenerateKey()
-		keys[i] = privateKey
-		addrs[i] = crypto.PubkeyToAddress(privateKey.PublicKey)
-	}
-	vset := validator.NewSet(addrs, hotstuff.RoundRobin)
-	sort.Sort(keys) //Keys need to be sorted by its public key address
-	return vset, keys
-}
-
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestMessageSetWithNewView
 func TestMessageSetWithNewView(t *testing.T) {
 	valSet, _ := newTestValidatorSet(4)
 
@@ -94,6 +61,7 @@ func TestMessageSetWithNewView(t *testing.T) {
 	}
 }
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestMessageSetVote
 func TestMessageSetVote(t *testing.T) {
 	valSet, _ := newTestValidatorSet(4)
 

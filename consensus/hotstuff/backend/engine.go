@@ -286,7 +286,7 @@ func (s *backend) Close() error {
 	return nil
 }
 
-func (s *backend) restart() {
+func (s *backend) ReStart() {
 	next, err := s.newEpochValidators()
 	if err != nil {
 		panic(fmt.Errorf("Restart consensus engine failed, err: %v ", err))
@@ -349,7 +349,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if header.Time > parent.Time+s.config.BlockPeriod && header.Time > uint64(now().Unix()) {
+	if (header.Time < parent.Time+s.config.BlockPeriod) || (header.Time > uint64(now().Unix())) {
 		return errInvalidTimestamp
 	}
 
