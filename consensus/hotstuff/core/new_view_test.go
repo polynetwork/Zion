@@ -111,29 +111,29 @@ func TestHandleNewViewFailed(t *testing.T) {
 	assert.Equal(t, errFailedDecodeNewView, err)
 
 	// too old message
-	qc := newTestQCWithExtra(t, sys, H-2, 0)
+	qc := newTestQCWithExtra(t, sys, H-2)
 	msg := newTestNewViewMsg(repo.Address(), H-1, 0, qc)
 	err = leader.handleNewView(msg, val)
 	assert.Equal(t, errOldMessage, err)
 
-	qc = newTestQCWithExtra(t, sys, H-1, 0)
+	qc = newTestQCWithExtra(t, sys, H-1)
 	msg = newTestNewViewMsg(repo.Address(), H, R-1, qc)
 	err = leader.handleNewView(msg, val)
 	assert.Equal(t, errOldMessage, err)
 
 	// future message
-	qc = newTestQCWithExtra(t, sys, H-1, 0)
+	qc = newTestQCWithExtra(t, sys, H-1)
 	msg = newTestNewViewMsg(repo.Address(), H, R+1, qc)
 	err = leader.handleNewView(msg, val)
 	assert.Equal(t, errFutureMessage, err)
 
-	qc = newTestQCWithExtra(t, sys, H, 0)
+	qc = newTestQCWithExtra(t, sys, H)
 	msg = newTestNewViewMsg(repo.Address(), H+1, 0, qc)
 	err = leader.handleNewView(msg, val)
 	assert.Equal(t, errFutureMessage, err)
 
 	// error leader
-	qc = newTestQCWithExtra(t, sys, H-1, 0)
+	qc = newTestQCWithExtra(t, sys, H-1)
 	msg = newTestNewViewMsg(repo.Address(), H, R, qc)
 	err = repo.handleNewView(msg, val)
 	assert.Equal(t, errNotToProposer, err)

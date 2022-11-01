@@ -87,6 +87,21 @@ func newTestProposal() hotstuff.Proposal {
 	return makeBlock(1)
 }
 
+func makeBlockWithParentHash(number int, parentHash common.Hash) *types.Block {
+	header := &types.Header{
+		Difficulty: big.NewInt(0),
+		Number:     big.NewInt(int64(number)),
+		GasLimit:   0,
+		GasUsed:    0,
+		Time:       0,
+	}
+	if parentHash != EmptyHash {
+		header.ParentHash = parentHash
+	}
+	block := &types.Block{}
+	return block.WithSeal(header)
+}
+
 // ==============================================
 //
 // define the mock backend
@@ -129,6 +144,7 @@ func (ts *testSystemBackend) EventMux() *event.TypeMux {
 }
 
 func (ts *testSystemBackend) Broadcast(valSet hotstuff.ValidatorSet, message []byte) error {
+	//return nil
 	testLogger.Info("enqueuing a message...", "address", ts.Address())
 	ts.sentMsgs = append(ts.sentMsgs, message)
 	ts.sys.queuedMessage <- hotstuff.MessageEvent{
@@ -139,11 +155,13 @@ func (ts *testSystemBackend) Broadcast(valSet hotstuff.ValidatorSet, message []b
 }
 
 func (ts *testSystemBackend) Gossip(valSet hotstuff.ValidatorSet, message []byte) error {
+	return nil
 	testLogger.Warn("not sign any data")
 	return nil
 }
 
 func (ts *testSystemBackend) Unicast(valSet hotstuff.ValidatorSet, message []byte) error {
+	return nil
 	testLogger.Info("enqueuing a message...", "address", ts.Address())
 	ts.sentMsgs = append(ts.sentMsgs, message)
 	ts.sys.queuedMessage <- hotstuff.MessageEvent{
@@ -416,8 +434,8 @@ func newTestQCWithoutExtra(c *core, h, r int) *QuorumCert {
 	}
 }
 
-func newTestQCWithExtra(t *testing.T, s *testSystem, h, r int) *QuorumCert {
-	view := makeView(h, r)
+func newTestQCWithExtra(t *testing.T, s *testSystem, h int) *QuorumCert {
+	view := makeView(h, 0)
 	block := makeBlock(h)
 	hash := block.Hash()
 	vset := s.backends[0].engine.valSet

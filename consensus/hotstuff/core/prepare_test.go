@@ -17,99 +17,139 @@
  */
 
 package core
+
+import (
+	"math/big"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+)
+
+func newTestPrepareMsg(t *testing.T, s *testSystem, sender common.Address, h, r int) (*MsgPrepare, *Message) {
+	view := makeView(h, r)
+	highQC := newTestQCWithExtra(t, s, h-1)
+	proposal := makeBlockWithParentHash(h, highQC.hash)
+	prepare := &MsgPrepare{
+		View:     view,
+		Proposal: proposal,
+		HighQC:   highQC,
+	}
+	payload, err := Encode(prepare)
+	if err != nil {
+		t.Error(err)
+	}
+
+	msg := &Message{
+		Code:    MsgTypePrepare,
+		View:    view,
+		Msg:     payload,
+		Address: sender,
+	}
+	return prepare, msg
+}
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandlePrepare
+func TestHandlePrepare(t *testing.T) {
+	N, H, R := 4, 5, 1
+
+	sys := NewTestSystemWithBackend(N, H, R)
+	leader := sys.getLeader()
+	val := leader.valSet.GetProposer()
+	prepare, msg := newTestPrepareMsg(t, sys, leader.Address(), H, R)
+	for _, backend := range sys.backends {
+		core := backend.engine
+		core.current.SetPreCommittedQC(prepare.HighQC)
+		err := core.handlePrepare(msg, val)
+		assert.NoError(t, err)
+	}
+}
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestPrepareFailed
+func TestPrepareFailed(t *testing.T) {
+	N, H, R := 4, 5, 1
+
+	sys := NewTestSystemWithBackend(N, H, R)
+	leader := sys.getLeader()
+	val := leader.valSet.GetProposer()
+	prepare, msg := newTestPrepareMsg(t, sys, leader.Address(), H, R)
+
+	// too old message
+	{
+		for _, backend := range sys.backends {
+			core := backend.engine
+			core.current.height = big.NewInt(int64(H + 1))
+			core.current.SetPreCommittedQC(prepare.HighQC)
+			err := core.handlePrepare(msg, val)
+			assert.Equal(t, errOldMessage, err)
+		}
+
+		for _, backend := range sys.backends {
+			core := backend.engine
+			core.current.height = big.NewInt(int64(H))
+			core.current.round = big.NewInt(int64(R + 1))
+			core.current.SetPreCommittedQC(prepare.HighQC)
+			err := core.handlePrepare(msg, val)
+			assert.Equal(t, errOldMessage, err)
+		}
+	}
+
+	// future message
+	{
+		for _, backend := range sys.backends {
+			core := backend.engine
+			core.current.height = big.NewInt(int64(H - 1))
+			core.current.SetPreCommittedQC(prepare.HighQC)
+			err := core.handlePrepare(msg, val)
+			assert.Equal(t, errFutureMessage, err)
+		}
+
+		for _, backend := range sys.backends {
+			core := backend.engine
+			core.current.height = big.NewInt(int64(H))
+			core.current.round = big.NewInt(int64(R - 1))
+			core.current.SetPreCommittedQC(prepare.HighQC)
+			err := core.handlePrepare(msg, val)
+			assert.Equal(t, errFutureMessage, err)
+		}
+	}
+}
+
+//type testcase struct {
+//	Sys       *testSystem
+//	Msg       *Message
+//	Leader    hotstuff.Validator
+//	ExpectErr error
+//}
 //
-//import (
-//	"math/big"
-//	"testing"
-//
-//	"github.com/ethereum/go-ethereum/common"
-//	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-//	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
-//	"github.com/stretchr/testify/assert"
-//)
-//
-//func TestHandlePrepare(t *testing.T) {
-//	N := uint64(4)
-//	F := uint64(1)
-//	H := uint64(5)
-//	R := uint64(1)
-//
-//	newPrepareMsg := func(c *core) *MsgPrepare {
-//		coreView := c.currentView()
-//		h := coreView.Height.Uint64()
-//		r := coreView.Round.Uint64()
-//
-//		view := makeView(h, r)
-//		highQC := newTestQCWithoutExtra(c, h-1, r)
-//		proposal := makeBlockWithParentHash(int64(h), highQC.Hash)
-//		return &MsgPrepare{
-//			view:     view,
-//			Proposal: proposal,
-//			HighQC:   highQC,
+//}
+//	// errMsgOld
+//	func() *testcase {
+//		sys := NewTestSystemWithBackend(N, H, R)
+//		var data *MsgPrepare
+//		for _, backend := range sys.backends {
+//			core := backend.engine
+//			data = newPrepareMsg(core)
+//			core.current.height = new(big.Int).SetUint64(uint64(H + 1))
 //		}
-//	}
-//	newP2PMsg := func(msg *MsgPrepare) *hotstuff.Message {
-//		payload, _ := Encode(msg)
-//		return &hotstuff.Message{
-//			Code: MsgTypePrepare,
-//			Msg:  payload,
+//		msg := newP2PMsg(data)
+//		leader := validator.New(sys.getLeader().Address())
+//		return &testcase{
+//			Sys:       sys,
+//			Msg:       msg,
+//			Leader:    leader,
+//			ExpectErr: errOldMessage,
 //		}
-//	}
+//	}(),
 //
-//	type testcase struct {
-//		Sys       *testSystem
-//		Msg       *hotstuff.Message
-//		Leader    hotstuff.Validator
-//		ExpectErr error
-//	}
-//	testcases := []*testcase{
-//		// normal case
+//	// errFutureMsg
 //		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			leader := sys.getLeader()
-//			val := validator.New(leader.Address())
+//			sys := NewTestSystemWithBackend(N, H, R)
 //			var data *MsgPrepare
 //			for _, backend := range sys.backends {
-//				core := backend.core()
+//				core := backend.engine
 //				data = newPrepareMsg(core)
-//				core.current.SetPreCommittedQC(data.HighQC)
-//			}
-//			msg := newP2PMsg(data)
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    val,
-//				ExpectErr: nil,
-//			}
-//		}(),
-//
-//		// errMsgOld
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			var data *MsgPrepare
-//			for _, backend := range sys.backends {
-//				core := backend.core()
-//				data = newPrepareMsg(core)
-//				core.current.height = new(big.Int).SetUint64(H + 1)
-//			}
-//			msg := newP2PMsg(data)
-//			leader := validator.New(sys.getLeader().Address())
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    leader,
-//				ExpectErr: errOldMessage,
-//			}
-//		}(),
-//
-//		// errFutureMsg
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			var data *MsgPrepare
-//			for _, backend := range sys.backends {
-//				core := backend.core()
-//				data = newPrepareMsg(core)
-//				core.current.round = new(big.Int).SetUint64(R - 1)
+//				core.current.round = new(big.Int).SetUint64(uint64(R - 1))
 //			}
 //			msg := newP2PMsg(data)
 //			leader := validator.New(sys.getLeader().Address())
@@ -121,12 +161,12 @@ package core
 //			}
 //		}(),
 //
-//		// errNotFromProposer
+//	// errNotFromProposer
 //		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
+//			sys := NewTestSystemWithBackend(N, H, R)
 //			var data *MsgPrepare
 //			for _, backend := range sys.backends {
-//				core := backend.core()
+//				core := backend.engine
 //				data = newPrepareMsg(core)
 //			}
 //			msg := newP2PMsg(data)
@@ -139,19 +179,19 @@ package core
 //			}
 //		}(),
 //
-//		// errExtend
+//	// errExtend
 //		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
+//			sys := NewTestSystemWithBackend(N, H, R)
 //			leader := sys.getLeader()
 //			val := validator.New(leader.Address())
 //			var data *MsgPrepare
 //			for _, backend := range sys.backends {
-//				core := backend.core()
+//				core := backend.engine
 //				data = newPrepareMsg(core)
 //				core.current.SetPreCommittedQC(data.HighQC)
 //			}
 //			// msg.proposal.parentHash not equal to the field of `lockedQC.Hash`
-//			data.HighQC.Hash = common.HexToHash("0x124")
+//			data.HighQC.hash = common.HexToHash("0x124")
 //			msg := newP2PMsg(data)
 //			return &testcase{
 //				Sys:       sys,
@@ -161,14 +201,14 @@ package core
 //			}
 //		}(),
 //
-//		// errSafeNode
+//	// errSafeNode
 //		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
+//			sys := NewTestSystemWithBackend(N, H, R)
 //			leader := sys.getLeader()
 //			val := validator.New(leader.Address())
 //			var data *MsgPrepare
 //			for _, backend := range sys.backends {
-//				core := backend.core()
+//				core := backend.engine
 //				data = newPrepareMsg(core)
 //				// safety is false, and liveness false:
 //				// msg.proposal is not extend lockedQC
@@ -184,12 +224,4 @@ package core
 //				ExpectErr: errSafeNode,
 //			}
 //		}(),
-//	}
-//
-//	for _, c := range testcases {
-//		for _, backend := range c.Sys.backends {
-//			core := backend.core()
-//			assert.Equal(t, c.ExpectErr, core.handlePrepare(c.Msg, c.Leader))
-//		}
-//	}
 //}
