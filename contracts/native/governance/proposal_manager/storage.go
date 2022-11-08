@@ -132,7 +132,7 @@ func removeExpiredFromProposalList(s *native.NativeContract) error {
 			j++
 		} else {
 			// transfer token to community pool
-			err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, proposal.Stake)
+			err = contract.NativeTransfer(s.StateDB(), this, communityInfo.CommunityAddress, proposal.Stake)
 			if err != nil {
 				return fmt.Errorf("removeExpiredFromProposalList, utils.NativeTransfer error: %v", err)
 			}
@@ -207,7 +207,7 @@ func removeExpiredFromConfigProposalList(s *native.NativeContract) error {
 			j++
 		} else {
 			// transfer token to community pool
-			err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, proposal.Stake)
+			err = contract.NativeTransfer(s.StateDB(), this, communityInfo.CommunityAddress, proposal.Stake)
 			if err != nil {
 				return fmt.Errorf("removeExpiredFromConfigProposalList, utils.NativeTransfer error: %v", err)
 			}
@@ -282,7 +282,7 @@ func removeExpiredFromCommunityProposalList(s *native.NativeContract) error {
 			j++
 		} else {
 			// transfer token to community pool
-			err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, proposal.Stake)
+			err = contract.NativeTransfer(s.StateDB(), this, communityInfo.CommunityAddress, proposal.Stake)
 			if err != nil {
 				return fmt.Errorf("removeExpiredFromCommunityProposalList, utils.NativeTransfer error: %v", err)
 			}

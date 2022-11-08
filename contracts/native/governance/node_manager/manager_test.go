@@ -21,6 +21,7 @@ package node_manager
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	"math/big"
 	"testing"
 
@@ -154,13 +155,17 @@ func TestStake(t *testing.T) {
 		param.ConsensusAddress = consensusAddr
 		param.SignerAddress = consensusAddr
 		param.ProposalAddress = caller
-		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
 		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
 		input, err := param.Encode()
 		assert.Nil(t, err)
+		vaule := new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+		contractRef.SetValue(vaule)
+		contractRef.SetTo(utils.NodeManagerContractAddress)
+		err = contract.NativeTransfer(contractRef.StateDB(), caller, this, vaule)
+		assert.Nil(t, err)
 		_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
 		assert.Nil(t, err)
 	}
@@ -183,10 +188,14 @@ func TestStake(t *testing.T) {
 	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 	param1 := new(StakeParam)
 	param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
-	param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
 	input, err := param1.Encode()
 	assert.Nil(t, err)
+	vaule := new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
 	contractRef := native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	contractRef.SetValue(vaule)
+	contractRef.SetTo(utils.NodeManagerContractAddress)
+	err = contract.NativeTransfer(contractRef.StateDB(), stakeAddress, this, vaule)
+	assert.Nil(t, err)
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	// check
@@ -444,13 +453,17 @@ func TestChangeEpoch(t *testing.T) {
 		param.ConsensusAddress = consensusAddr
 		param.SignerAddress = consensusAddr
 		param.ProposalAddress = caller
-		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
 		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
 		input, err := param.Encode()
 		assert.Nil(t, err)
+		value := new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+		contractRef.SetValue(value)
+		contractRef.SetTo(utils.NodeManagerContractAddress)
+		err = contract.NativeTransfer(contractRef.StateDB(), caller, this, value)
+		assert.Nil(t, err)
 		_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
 		assert.Nil(t, err)
 	}
@@ -475,10 +488,14 @@ func TestChangeEpoch(t *testing.T) {
 	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 	param1 := new(StakeParam)
 	param1.ConsensusAddress = validatorsKey[4].ConsensusAddr
-	param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
 	input, err = param1.Encode()
 	assert.Nil(t, err)
+	value := new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
 	contractRef = native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	contractRef.SetValue(value)
+	contractRef.SetTo(utils.NodeManagerContractAddress)
+	err = contract.NativeTransfer(contractRef.StateDB(), stakeAddress, this, value)
+	assert.Nil(t, err)
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
@@ -520,13 +537,17 @@ func TestDistribute(t *testing.T) {
 		param.ConsensusAddress = consensusAddr
 		param.SignerAddress = consensusAddr
 		param.ProposalAddress = caller
-		param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
 		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
 		input, err := param.Encode()
 		assert.Nil(t, err)
+		value := new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+		contractRef.SetValue(value)
+		contractRef.SetTo(utils.NodeManagerContractAddress)
+		err = contract.NativeTransfer(contractRef.StateDB(), caller, this, value)
+		assert.Nil(t, err)
 		_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
 		assert.Nil(t, err)
 	}
@@ -539,10 +560,14 @@ func TestDistribute(t *testing.T) {
 	sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 	param1 := new(StakeParam)
 	param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
-	param1.Amount = new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
 	input, err := param1.Encode()
 	assert.Nil(t, err)
+	value := new(big.Int).Mul(big.NewInt(10000), params.ZNT1)
 	contractRef := native.NewContractRef(sdb, stakeAddress, stakeAddress, blockNumber, common.Hash{}, extra, nil)
+	contractRef.SetValue(value)
+	contractRef.SetTo(utils.NodeManagerContractAddress)
+	err = contract.NativeTransfer(contractRef.StateDB(), stakeAddress, this, value)
+	assert.Nil(t, err)
 	_, _, err = contractRef.NativeCall(stakeAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 	pkStake2, _ := crypto.GenerateKey()
@@ -551,10 +576,14 @@ func TestDistribute(t *testing.T) {
 	sdb.SetBalance(stakeAddress2, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 	param2 := new(StakeParam)
 	param2.ConsensusAddress = validatorsKey[0].ConsensusAddr
-	param2.Amount = new(big.Int).Mul(big.NewInt(20000), params.ZNT1)
 	input, err = param2.Encode()
 	assert.Nil(t, err)
+	value = new(big.Int).Mul(big.NewInt(20000), params.ZNT1)
 	contractRef = native.NewContractRef(sdb, stakeAddress2, stakeAddress2, blockNumber, common.Hash{}, extra, nil)
+	contractRef.SetValue(value)
+	contractRef.SetTo(utils.NodeManagerContractAddress)
+	err = contract.NativeTransfer(contractRef.StateDB(), stakeAddress2, this, value)
+	assert.Nil(t, err)
 	_, _, err = contractRef.NativeCall(stakeAddress2, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
@@ -956,13 +985,15 @@ func TestPerformance(t *testing.T) {
 		param.ConsensusAddress = consensusAddr
 		param.SignerAddress = consensusAddr
 		param.ProposalAddress = caller
-		param.InitStake = new(big.Int).Mul(big.NewInt(1000000), params.ZNT1)
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
 		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
 		input, err := param.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "CreateValidator", input, caller, caller, blockNumber, extra, sdb)
+		value := new(big.Int).Mul(big.NewInt(1000000), params.ZNT1)
+		err = contract.NativeTransfer(sdb, caller, this, value)
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "CreateValidator", input, value, caller, caller, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 	}
 
@@ -977,17 +1008,19 @@ func TestPerformance(t *testing.T) {
 		sdb.SetBalance(stakeAddress, new(big.Int).Mul(big.NewInt(1000000), params.ZNT1))
 		param1 := new(StakeParam)
 		param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
-		param1.Amount = new(big.Int).Mul(big.NewInt(200), params.ZNT1)
 		input, err := param1.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "Stake", input, stakeAddress, stakeAddress, blockNumber, extra, sdb)
+		value := new(big.Int).Mul(big.NewInt(200), params.ZNT1)
+		err = contract.NativeTransfer(sdb, stakeAddress, this, value)
+		assert.Nil(t, err)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "Stake", input, value, stakeAddress, stakeAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 	}
 
 	// change epoch
 	input, err := utils.PackMethod(ABI, MethodChangeEpoch)
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "ChangeEpoch", input, utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "ChangeEpoch", input, new(big.Int), utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
 	assert.Nil(t, err)
 
 	// call endblock
@@ -995,7 +1028,7 @@ func TestPerformance(t *testing.T) {
 	param := new(EndBlockParam)
 	input, err = param.Encode()
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "EndBlock", input, utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "EndBlock", input, new(big.Int), utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
 	assert.Nil(t, err)
 
 	// withdraw stake rewards and commission
@@ -1003,13 +1036,13 @@ func TestPerformance(t *testing.T) {
 	param1.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param1.Encode()
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawStakeRewards", input, stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawStakeRewards", input, new(big.Int), stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
 	assert.Nil(t, err)
 	param2 := new(WithdrawCommissionParam)
 	param2.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param2.Encode()
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawCommission", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawCommission", input, new(big.Int), validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
 	assert.Nil(t, err)
 
 	loop = 100
@@ -1020,7 +1053,7 @@ func TestPerformance(t *testing.T) {
 		param3.Amount = new(big.Int).Mul(big.NewInt(1), params.ZNT1)
 		input, err = param3.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UnStake", input, stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UnStake", input, new(big.Int), stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
 		assert.Nil(t, err)
 	}
 
@@ -1031,13 +1064,13 @@ func TestPerformance(t *testing.T) {
 		}
 		input, err = p1.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetEpochInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetEpochInfo", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p2 := &GetAllValidatorsParam{}
 		input, err = p2.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetAllValidators", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetAllValidators", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p3 := &GetValidatorParam{
@@ -1045,7 +1078,7 @@ func TestPerformance(t *testing.T) {
 		}
 		input, err = p3.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidator", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidator", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p4 := &GetStakeInfoParam{
@@ -1054,7 +1087,7 @@ func TestPerformance(t *testing.T) {
 		}
 		input, err = p4.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetStakeInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetStakeInfo", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p5 := &GetUnlockingInfoParam{
@@ -1062,7 +1095,7 @@ func TestPerformance(t *testing.T) {
 		}
 		input, err = p5.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetUnlockingInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetUnlockingInfo", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p6 := &GetStakeStartingInfoParam{
@@ -1071,7 +1104,7 @@ func TestPerformance(t *testing.T) {
 		}
 		input, err = p6.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetStakeStartingInfo", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetStakeStartingInfo", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p7 := &GetAccumulatedCommissionParam{
@@ -1079,7 +1112,7 @@ func TestPerformance(t *testing.T) {
 		}
 		input, err = p7.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetAccumulatedCommission", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetAccumulatedCommission", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p8 := &GetValidatorSnapshotRewardsParam{
@@ -1088,7 +1121,7 @@ func TestPerformance(t *testing.T) {
 		}
 		input, err = p8.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorSnapshotRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorSnapshotRewards", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p9 := &GetValidatorAccumulatedRewardsParam{
@@ -1096,7 +1129,7 @@ func TestPerformance(t *testing.T) {
 		}
 		input, err = p9.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorAccumulatedRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorAccumulatedRewards", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p10 := &GetValidatorOutstandingRewardsParam{
@@ -1104,26 +1137,26 @@ func TestPerformance(t *testing.T) {
 		}
 		input, err = p10.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorOutstandingRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetValidatorOutstandingRewards", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p11 := &GetTotalPoolParam{}
 		input, err = p11.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetTotalPool", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetTotalPool", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 
 		p12 := &GetOutstandingRewardsParam{}
 		input, err = p12.Encode()
 		assert.Nil(t, err)
-		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetOutstandingRewards", input, common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
+		_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "GetOutstandingRewards", input, new(big.Int), common.EmptyAddress, common.EmptyAddress, blockNumber, extra, sdb)
 		assert.Nil(t, err)
 	}
 
 	// withdraw
 	input, err = utils.PackMethod(ABI, MethodWithdraw)
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "Withdraw", input, stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "Withdraw", input, new(big.Int), stakeAddressList[0], stakeAddressList[0], blockNumber, extra, sdb)
 	assert.NotNil(t, err)
 
 	// cancel validator && withdraw validator
@@ -1131,14 +1164,14 @@ func TestPerformance(t *testing.T) {
 	param4.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param4.Encode()
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "CancelValidator", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "CancelValidator", input, new(big.Int), validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
 	assert.Nil(t, err)
 
 	blockNumber = 799999
 	// change epoch
 	input, err = utils.PackMethod(ABI, MethodChangeEpoch)
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "ChangeEpoch", input, utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "ChangeEpoch", input, new(big.Int), utils.SystemTxSender, utils.SystemTxSender, blockNumber, extra, sdb)
 	assert.Nil(t, err)
 
 	blockNumber = 900000
@@ -1147,7 +1180,7 @@ func TestPerformance(t *testing.T) {
 	param5.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	input, err = param5.Encode()
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawValidator", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "WithdrawValidator", input, new(big.Int), validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
 	assert.Nil(t, err)
 
 	// update validator
@@ -1156,14 +1189,14 @@ func TestPerformance(t *testing.T) {
 	param6.Desc = "test2"
 	input, err = param6.Encode()
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UpdateValidator", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UpdateValidator", input, new(big.Int), validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
 	assert.Nil(t, err)
 	param7 := new(UpdateCommissionParam)
 	param7.ConsensusAddress = validatorsKey[0].ConsensusAddr
 	param7.Commission = new(big.Int).SetUint64(2500)
 	input, err = param7.Encode()
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UpdateCommission", input, validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.NodeManagerContractAddress, "UpdateCommission", input, new(big.Int), validatorsKey[0].StakeAddress, validatorsKey[0].StakeAddress, blockNumber, extra, sdb)
 	assert.Nil(t, err)
 }
 
@@ -1185,42 +1218,32 @@ func TestCreateValidatorParam(t *testing.T) {
 		{
 			name: "invalid consensus address",
 			params: &CreateValidatorParam{ConsensusAddress: common.Address{}, SignerAddress: addr, ProposalAddress: addr,
-				Commission: new(big.Int).SetUint64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
+				Commission: new(big.Int).SetUint64(3000), Desc: "test"},
 		},
 		{
 			name: "invalid signer address",
 			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: common.Address{}, ProposalAddress: addr,
-				Commission: new(big.Int).SetUint64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
+				Commission: new(big.Int).SetUint64(3000), Desc: "test"},
 		},
 		{
 			name: "invalid proposal address",
 			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: common.Address{},
-				Commission: new(big.Int).SetUint64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
+				Commission: new(big.Int).SetUint64(3000), Desc: "test"},
 		},
 		{
 			name: "negative commission",
 			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
-				Commission: new(big.Int).SetInt64(-3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
+				Commission: new(big.Int).SetInt64(-3000), Desc: "test"},
 		},
 		{
 			name: "large commission",
 			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
-				Commission: new(big.Int).SetInt64(30000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "test"},
-		},
-		{
-			name: "negative init stake",
-			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
-				Commission: new(big.Int).SetInt64(3000), InitStake: new(big.Int).Mul(big.NewInt(-100000), params.ZNT1), Desc: "test"},
-		},
-		{
-			name: "small init stake",
-			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
-				Commission: new(big.Int).SetInt64(3000), InitStake: new(big.Int).Mul(big.NewInt(1000), params.ZNT1), Desc: "test"},
+				Commission: new(big.Int).SetInt64(30000), Desc: "test"},
 		},
 		{
 			name: "large desc",
 			params: &CreateValidatorParam{ConsensusAddress: addr, SignerAddress: addr, ProposalAddress: addr,
-				Commission: new(big.Int).SetInt64(3000), InitStake: new(big.Int).Mul(big.NewInt(100000), params.ZNT1), Desc: "Welcome to the Poly Network cross chain technology center!\n\nBlock technology has now undergone over 10 years of gradual development. Even though many public chain systems have emerged, most of the existing blockchain architecture systems focus on experimenting with the scalability and performance of a single blockchain, while for a single blockchain, due to the constraints that come into picture due to the architecture system and development direction, it is difficult to meet all the needs. Therefore, we expect that the future blockchain ecology must be a pattern in which multiple blockchains coexist. Different chains with different characteristics can become part of the blockchain infrastructure, but the chains are still limited to themselves, each forming its own island of value. Chains that are different in nature lack quick interoperability and convenient means of value circulation. In order to build a better next-generation internet infrastructure, we have launched a new cross-chain technology, the Poly Network.\n\nCross-chain technology is a new technical method to allow inter-chain interactions via cross-chain interoperability protocols that are based on the existing single-blockchain architecture design. The cross-chain interoperability protocol was first proposed by Vitalik Buterin in September 2016. He divided the cross-chain interoperability protocol into three modes: Notary schemes, side chains/relays, and hash locking. The notary mechanism refers to the interaction through a trusted third party as part of the process of cross-chain interaction, which is mainly implemented through mechanisms such as \"single sign, multi-sign notary mechanism\"; the side chain/relay mode is a protocol that is currently being used, for example: Cosmos and Polkadot and other popular cross-chain projects all use this protocol. It refers to a technical methodology that can rely on a trusted third party for cross-chain transaction verification and can conduct cross-chain transaction verification on its own; Hash time lock is the underlying technology of the earliest lightning network. The protocol consists of time lock and hash lock. Time lock refers to the agreement between the two parties that the transaction must be submitted within a certain time to be valid. Hash lock refers to a hash value H, where if the original image R is provided such that Hash (R) = H, the promise is deemed valid, otherwise it is invalid. If the two parties involved in the transaction could not succeed for any reason, time lock can allow the parties to the transaction to get their assets back to avoid losses due to fraud or transaction failure."},
+				Commission: new(big.Int).SetInt64(3000), Desc: "Welcome to the Poly Network cross chain technology center!\n\nBlock technology has now undergone over 10 years of gradual development. Even though many public chain systems have emerged, most of the existing blockchain architecture systems focus on experimenting with the scalability and performance of a single blockchain, while for a single blockchain, due to the constraints that come into picture due to the architecture system and development direction, it is difficult to meet all the needs. Therefore, we expect that the future blockchain ecology must be a pattern in which multiple blockchains coexist. Different chains with different characteristics can become part of the blockchain infrastructure, but the chains are still limited to themselves, each forming its own island of value. Chains that are different in nature lack quick interoperability and convenient means of value circulation. In order to build a better next-generation internet infrastructure, we have launched a new cross-chain technology, the Poly Network.\n\nCross-chain technology is a new technical method to allow inter-chain interactions via cross-chain interoperability protocols that are based on the existing single-blockchain architecture design. The cross-chain interoperability protocol was first proposed by Vitalik Buterin in September 2016. He divided the cross-chain interoperability protocol into three modes: Notary schemes, side chains/relays, and hash locking. The notary mechanism refers to the interaction through a trusted third party as part of the process of cross-chain interaction, which is mainly implemented through mechanisms such as \"single sign, multi-sign notary mechanism\"; the side chain/relay mode is a protocol that is currently being used, for example: Cosmos and Polkadot and other popular cross-chain projects all use this protocol. It refers to a technical methodology that can rely on a trusted third party for cross-chain transaction verification and can conduct cross-chain transaction verification on its own; Hash time lock is the underlying technology of the earliest lightning network. The protocol consists of time lock and hash lock. Time lock refers to the agreement between the two parties that the transaction must be submitted within a certain time to be valid. Hash lock refers to a hash value H, where if the original image R is provided such that Hash (R) = H, the promise is deemed valid, otherwise it is invalid. If the two parties involved in the transaction could not succeed for any reason, time lock can allow the parties to the transaction to get their assets back to avoid losses due to fraud or transaction failure."},
 		},
 	}
 
@@ -1228,7 +1251,12 @@ func TestCreateValidatorParam(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			input, err := tt.params.Encode()
 			assert.Nil(t, err)
+			value := new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			contractRef.SetValue(value)
+			contractRef.SetTo(utils.NodeManagerContractAddress)
+			err = contract.NativeTransfer(sdb, caller, this, value)
+			assert.Nil(t, err)
 			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
 			fmt.Println("#######", err)
 			assert.NotNil(t, err)
@@ -1254,12 +1282,13 @@ func TestUpdateValidatorParam(t *testing.T) {
 	param.ConsensusAddress = addr
 	param.SignerAddress = addr
 	param.ProposalAddress = addr
-	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	param.Commission = new(big.Int).SetUint64(2000)
 	param.Desc = "test"
 	input, err := param.Encode()
 	assert.Nil(t, err)
 	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	contractRef.SetValue(new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
+	contractRef.SetTo(utils.NodeManagerContractAddress)
 	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
@@ -1301,12 +1330,13 @@ func TestUpdateCommissionParam(t *testing.T) {
 	param.ConsensusAddress = addr
 	param.SignerAddress = addr
 	param.ProposalAddress = addr
-	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	param.Commission = new(big.Int).SetUint64(2000)
 	param.Desc = "test"
 	input, err := param.Encode()
 	assert.Nil(t, err)
 	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	contractRef.SetValue(new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
+	contractRef.SetTo(utils.NodeManagerContractAddress)
 	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
@@ -1352,12 +1382,16 @@ func TestStakeParam(t *testing.T) {
 	param.ConsensusAddress = addr
 	param.SignerAddress = addr
 	param.ProposalAddress = addr
-	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	param.Commission = new(big.Int).SetUint64(2000)
 	param.Desc = "test"
 	input, err := param.Encode()
 	assert.Nil(t, err)
+	value := new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	contractRef.SetValue(value)
+	contractRef.SetTo(utils.NodeManagerContractAddress)
+	err = contract.NativeTransfer(sdb, caller, this, value)
+	assert.Nil(t, err)
 	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
@@ -1367,7 +1401,7 @@ func TestStakeParam(t *testing.T) {
 	}{
 		{
 			name:   "negative amount",
-			params: &StakeParam{ConsensusAddress: addr, Amount: new(big.Int).Mul(big.NewInt(-10), params.ZNT1)},
+			params: &StakeParam{ConsensusAddress: addr},
 		},
 	}
 
@@ -1376,6 +1410,8 @@ func TestStakeParam(t *testing.T) {
 			input, err := tt.params.Encode()
 			assert.Nil(t, err)
 			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+			contractRef.SetValue(new(big.Int).Mul(big.NewInt(-10), params.ZNT1))
+			contractRef.SetTo(utils.NodeManagerContractAddress)
 			_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
 			fmt.Println("#######", err)
 			assert.NotNil(t, err)
@@ -1399,22 +1435,24 @@ func TestUnStakeParam(t *testing.T) {
 	param.ConsensusAddress = addr
 	param.SignerAddress = addr
 	param.ProposalAddress = addr
-	param.InitStake = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	param.Commission = new(big.Int).SetUint64(2000)
 	param.Desc = "test"
 	input, err := param.Encode()
 	assert.Nil(t, err)
 	contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	contractRef.SetValue(new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
+	contractRef.SetTo(utils.NodeManagerContractAddress)
 	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
 	// stake
 	param2 := new(StakeParam)
 	param2.ConsensusAddress = addr
-	param2.Amount = new(big.Int).Mul(big.NewInt(10), params.ZNT1)
 	input, err = param2.Encode()
 	assert.Nil(t, err)
 	contractRef = native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, extra, nil)
+	contractRef.SetValue(new(big.Int).Mul(big.NewInt(10), params.ZNT1))
+	contractRef.SetTo(utils.NodeManagerContractAddress)
 	_, _, err = contractRef.NativeCall(caller, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
 
