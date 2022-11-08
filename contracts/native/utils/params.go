@@ -44,4 +44,5 @@ var (
 	COSMOS_ROUTER     = uint64(3)
 	ZILLIQA_ROUTER    = uint64(4)
 	OKEX_ROUTER       = uint64(5)
+	RIPPLE_HANDLER    = uint64(6)
 )

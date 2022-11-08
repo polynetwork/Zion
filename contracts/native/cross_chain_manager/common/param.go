@@ -18,17 +18,17 @@
 package common
 
 import (
-	"io"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/rlp"
 )
 
 const (
-	REQUEST = "request"
-	DONE_TX = "doneTx"
+	REQUEST        = "request"
+	DONE_TX        = "doneTx"
+	MULTISIGN_INFO = "multisignInfo"
+	RIPPLE_TX_INFO = "rippleTxInfo"
 
 	NOTIFY_MAKE_PROOF_EVENT = "makeProof"
 	REPLENISH_EVENT         = "ReplenishEvent"
@@ -46,29 +46,6 @@ type MakeTxParam struct {
 	ToContractAddress   []byte
 	Method              string
 	Args                []byte
-}
-
-func (m *MakeTxParam) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.TxHash, m.CrossChainID, m.FromContractAddress, m.ToChainID,
-		m.ToContractAddress, m.Method, m.Args})
-}
-func (m *MakeTxParam) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		TxHash              []byte
-		CrossChainID        []byte
-		FromContractAddress []byte
-		ToChainID           uint64
-		ToContractAddress   []byte
-		Method              string
-		Args                []byte
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.TxHash, m.CrossChainID, m.FromContractAddress, m.ToChainID, m.ToContractAddress, m.Method, m.Args =
-		data.TxHash, data.CrossChainID, data.FromContractAddress, data.ToChainID, data.ToContractAddress, data.Method, data.Args
-	return nil
 }
 
 //used for param from evm contract
@@ -153,52 +130,42 @@ type ToMerkleValue struct {
 	MakeTxParam *MakeTxParam
 }
 
-func (m *ToMerkleValue) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.TxHash, m.FromChainID, m.MakeTxParam})
+type RippleTxArgs struct {
+	ToAddress []byte
+	Amount    *big.Int
 }
 
-func (m *ToMerkleValue) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		TxHash      []byte
-		FromChainID uint64
-		MakeTxParam *MakeTxParam
+func DecodeRippleTxArgs(data []byte) (param *RippleTxArgs, err error) {
+	BytesTy, _ := abi.NewType("bytes", "", nil)
+	IntTy, _ := abi.NewType("int", "", nil)
+	// StringTy, _ := abi.NewType("string", "", nil)
+
+	RippleTxArgs := abi.Arguments{
+		{Type: BytesTy, Name: "toAddress"},
+		{Type: IntTy, Name: "amount"},
 	}
 
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	m.TxHash, m.FromChainID, m.MakeTxParam = data.TxHash, data.FromChainID, data.MakeTxParam
-	return nil
-}
-
-type MultiSignParam struct {
-	ChainID   uint64
-	RedeemKey string
-	TxHash    []byte
-	Address   string
-	Signs     [][]byte
-}
-
-type TxArgs struct {
-	ToAssetHash []byte
-	ToAddress   []byte
-	Amount      *big.Int
-}
-
-func (tx *TxArgs) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{tx.ToAssetHash, tx.ToAddress, tx.Amount})
-}
-
-func (tx *TxArgs) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		ToAssetHash []byte
-		ToAddress   []byte
-		Amount      *big.Int
+	args, err := RippleTxArgs.Unpack(data)
+	if err != nil {
+		return
 	}
 
-	if err := s.Decode(&data); err != nil {
-		return err
+	err = RippleTxArgs.Copy(param, args)
+	if err != nil {
+		return nil, err
 	}
-	tx.ToAssetHash, tx.ToAddress, tx.Amount = data.ToAssetHash, data.ToAddress, data.Amount
-	return nil
+	return
+}
+
+func EncodeRippleTxArgs(args *RippleTxArgs) (data []byte, err error) {
+	BytesTy, _ := abi.NewType("bytes", "", nil)
+	IntTy, _ := abi.NewType("int", "", nil)
+
+	RippleTxArgs := abi.Arguments{
+		{Type: BytesTy, Name: "toAddress"},
+		{Type: IntTy, Name: "amount"},
+	}
+
+	data, err = RippleTxArgs.Pack(args.ToAddress, args.Amount)
+	return
 }

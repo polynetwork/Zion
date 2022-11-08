@@ -31,18 +31,18 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-const (
-	CREATE_VALIDATOR_EVENT       = "CreateValidator"
-	UPDATE_VALIDATOR_EVENT       = "UpdateValidator"
-	UPDATE_COMMISSION_EVENT      = "UpdateCommission"
-	STAKE_EVENT                  = "Stake"
-	UNSTAKE_EVENT                = "UnStake"
-	WITHDRAW_EVENT               = "Withdraw"
-	CANCEL_VALIDATOR_EVENT       = "CancelValidator"
-	WITHDRAW_VALIDATOR_EVENT     = "WithdrawValidator"
-	CHANGE_EPOCH_EVENT           = "ChangeEpoch"
-	WITHDRAW_STAKE_REWARDS_EVENT = "WithdrawStakeRewards"
-	WITHDRAW_COMMISSION_EVENT    = "WithdrawCommission"
+var (
+	CREATE_VALIDATOR_EVENT       = EventCreateValidator
+	UPDATE_VALIDATOR_EVENT       = EventUpdateValidator
+	UPDATE_COMMISSION_EVENT      = EventUpdateCommission
+	STAKE_EVENT                  = EventStake
+	UNSTAKE_EVENT                = EventUnStake
+	WITHDRAW_EVENT               = EventWithdraw
+	CANCEL_VALIDATOR_EVENT       = EventCancelValidator
+	WITHDRAW_VALIDATOR_EVENT     = EventWithdrawValidator
+	CHANGE_EPOCH_EVENT           = EventChangeEpoch
+	WITHDRAW_STAKE_REWARDS_EVENT = EventWithdrawStakeRewards
+	WITHDRAW_COMMISSION_EVENT    = EventWithdrawCommission
 )
 
 // the real gas usage of `createValidator`,`changeEpoch`,`endBlock` are 1291500, 5087250 and 343875.

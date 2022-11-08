@@ -20,13 +20,13 @@ package cross_chain_manager
 
 import (
 	"fmt"
-
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth_common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/no_proof"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
+	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/ripple"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
@@ -66,6 +66,10 @@ func RegisterCrossChainManagerContract(s *native.NativeContract) {
 	s.Register(scom.MethodWhiteChain, WhiteChain)
 	s.Register(scom.MethodCheckDone, CheckDone)
 	s.Register(scom.MethodReplenish, Replenish)
+
+	// ripple
+	s.Register(scom.MethodMultiSignRipple, MultiSignRipple)
+	s.Register(scom.MethodReconstructRippleTx, ReconstructRippleTx)
 }
 
 func GetChainHandler(router uint64) (scom.ChainHandler, error) {
@@ -80,6 +84,8 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return cosmos.NewCosmosHandler(), nil
 	case utils.ZILLIQA_ROUTER:
 		return zilliqa.NewHandler(), nil
+	case utils.RIPPLE_HANDLER:
+		return ripple.NewRippleHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
 	}
@@ -168,6 +174,27 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	}
 
 	return utils.PackOutputs(scom.ABI, scom.MethodImportOuterTransfer, true)
+}
+
+func MultiSignRipple(s *native.NativeContract) ([]byte, error) {
+	handler := ripple.NewRippleHandler()
+
+	//1. multi sign
+	err := handler.MultiSign(s)
+	if err != nil {
+		return utils.BYTE_FALSE, err
+	}
+	return utils.BYTE_TRUE, nil
+}
+
+func ReconstructRippleTx(s *native.NativeContract) ([]byte, error) {
+	handler := ripple.NewRippleHandler()
+
+	err := handler.ReconstructTx(s)
+	if err != nil {
+		return utils.BYTE_FALSE, err
+	}
+	return utils.BYTE_TRUE, nil
 }
 
 func BlackChain(s *native.NativeContract) ([]byte, error) {

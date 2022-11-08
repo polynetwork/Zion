@@ -20,14 +20,12 @@ package info_sync
 
 import (
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/contracts/native/go_abi/info_sync_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
-	"io"
 	"strings"
-
-	"github.com/ethereum/go-ethereum/accounts/abi"
-	"github.com/ethereum/go-ethereum/contracts/native/go_abi/info_sync_abi"
 )
 
 var (
@@ -103,24 +101,6 @@ type SyncRootInfoParam struct {
 
 func (m *SyncRootInfoParam) Encode() ([]byte, error) {
 	return utils.PackMethodWithStruct(ABI, MethodSyncRootInfo, m)
-}
-
-func (m *SyncRootInfoParam) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.ChainID, m.RootInfos, m.Signature})
-}
-func (m *SyncRootInfoParam) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		ChainID   uint64
-		RootInfos [][]byte
-		Signature []byte
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-
-	m.ChainID, m.RootInfos, m.Signature = data.ChainID, data.RootInfos, data.Signature
-	return nil
 }
 
 //Digest Digest calculate the hash of param input

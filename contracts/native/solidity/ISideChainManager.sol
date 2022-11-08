@@ -11,7 +11,6 @@ interface ISideChainManager {
     event ApproveUpdateSideChain(uint64 ChainId);
     event QuitSideChain(uint64 ChainId);
     event ApproveQuitSideChain(uint64 ChainId);
-    event RegisterRedeem(string rk, string ContractAddress);
 
     struct SideChain {
         address owner;
@@ -22,27 +21,23 @@ interface ISideChainManager {
         bytes extraInfo;
     }
 
-    struct BtcTxParamDetail {
-	    uint64 PVersion; 
-	    uint64 feeRate;  
-	    uint64 minChange;
-    }
-
     function getSideChain(uint64 chainID) external view returns(SideChain memory sidechain);
     
-    function registerSideChain(uint64 chainID, uint64 router, string calldata name, bytes calldata CCMCAddress, bytes calldata extraInfo) external;
+    function registerSideChain(uint64 chainID, uint64 router, string calldata name, bytes calldata CCMCAddress, bytes calldata extraInfo) external returns (bool success);
     
     function approveRegisterSideChain(uint64 chainID) external returns (bool success);
     
-    function updateSideChain(uint64 chainID, uint64 router, string calldata name, bytes calldata CCMCAddress, bytes calldata extraInfo) external;
+    function updateSideChain(uint64 chainID, uint64 router, string calldata name, bytes calldata CCMCAddress, bytes calldata extraInfo) external returns (bool success);
     
     function approveUpdateSideChain(uint64 chainID) external returns (bool success);
     
-    function quitSideChain(uint64 chainID) external;
+    function quitSideChain(uint64 chainID) external returns (bool success);
     
     function approveQuitSideChain(uint64 chainID) external returns (bool success);
-    
-    function registerRedeem(uint64 redeemChainID, uint64 contractChainID, bytes calldata redeem, uint64 CVersion, bytes calldata contractAddress, bytes[] calldata signs) external returns (bool success);
 
-    function setBtcTxParam(bytes calldata redeem, uint64 redeemChainID, bytes[] calldata sigs, BtcTxParamDetail calldata detail) external returns (bool success);
+    function updateFee(uint64 chainID, uint64 viewNum, int fee) external returns (bool success);
+
+    function registerAsset(uint64 chainID, uint64[] calldata AssetMapKey, bytes[] calldata AssetMapValue, uint64[] calldata LockProxyMapKey, bytes[] calldata LockProxyMapValue) external returns (bool success);
+
+    function getFee(uint64 chainID) external view returns (bytes memory);
 }
