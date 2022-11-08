@@ -33,19 +33,27 @@ var (
 
 	MethodImportOuterTransfer = "importOuterTransfer"
 
+	MethodMultiSignRipple = "multiSignRipple"
+
+	MethodReconstructRippleTx = "reconstructRippleTx"
+
 	MethodReplenish = "replenish"
 
 	MethodCheckDone = "checkDone"
 
 	MethodName = "name"
 
+	EventMultiSign = "MultiSign"
+
 	EventReplenishEvent = "ReplenishEvent"
+
+	EventRippleTx = "RippleTx"
 
 	EventMakeProof = "makeProof"
 )
 
 // ICrossChainManagerABI is the input ABI used to generate the binding from.
-const ICrossChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string[]\",\"name\":\"txHashes\",\"type\":\"string[]\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"ReplenishEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"merkleValueHex\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlockHeight\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"}],\"name\":\"makeProof\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"BlackChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"WhiteChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"crossChainID\",\"type\":\"bytes\"}],\"name\":\"checkDone\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"SourceChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"Height\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"Proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"Extra\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"Signature\",\"type\":\"bytes\"}],\"name\":\"importOuterTransfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"string[]\",\"name\":\"txHashes\",\"type\":\"string[]\"}],\"name\":\"replenish\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ICrossChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"fromChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"payment\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"sequence\",\"type\":\"uint32\"}],\"name\":\"MultiSign\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string[]\",\"name\":\"txHashes\",\"type\":\"string[]\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"ReplenishEvent\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"fromChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"toChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"txHash\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"txJson\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"sequence\",\"type\":\"uint32\"}],\"name\":\"RippleTx\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"string\",\"name\":\"merkleValueHex\",\"type\":\"string\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"BlockHeight\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"key\",\"type\":\"string\"}],\"name\":\"makeProof\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"BlackChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ChainID\",\"type\":\"uint64\"}],\"name\":\"WhiteChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"crossChainID\",\"type\":\"bytes\"}],\"name\":\"checkDone\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"SourceChainID\",\"type\":\"uint64\"},{\"internalType\":\"uint32\",\"name\":\"Height\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"Proof\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"Extra\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"Signature\",\"type\":\"bytes\"}],\"name\":\"importOuterTransfer\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"ToChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"AssetAddress\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"FromChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"internalType\":\"string\",\"name\":\"TxJson\",\"type\":\"string\"}],\"name\":\"multiSignRipple\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"name\",\"outputs\":[{\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"FromChainId\",\"type\":\"uint64\"},{\"internalType\":\"bytes\",\"name\":\"TxHash\",\"type\":\"bytes\"},{\"internalType\":\"uint64\",\"name\":\"ToChainId\",\"type\":\"uint64\"}],\"name\":\"reconstructRippleTx\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"string[]\",\"name\":\"txHashes\",\"type\":\"string[]\"}],\"name\":\"replenish\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ICrossChainManagerFuncSigs maps the 4-byte function signature to its string representation.
 var ICrossChainManagerFuncSigs = map[string]string{
@@ -53,7 +61,9 @@ var ICrossChainManagerFuncSigs = map[string]string{
 	"99d0e87a": "WhiteChain(uint64)",
 	"1245f8d5": "checkDone(uint64,bytes)",
 	"bbc2a76a": "importOuterTransfer(uint64,uint32,bytes,bytes,bytes)",
+	"b7ef3989": "multiSignRipple(uint64,bytes,uint64,bytes,string)",
 	"06fdde03": "name()",
+	"3b178819": "reconstructRippleTx(uint64,bytes,uint64)",
 	"f8bac498": "replenish(uint64,string[])",
 }
 
@@ -324,6 +334,48 @@ func (_ICrossChainManager *ICrossChainManagerTransactorSession) ImportOuterTrans
 	return _ICrossChainManager.Contract.ImportOuterTransfer(&_ICrossChainManager.TransactOpts, SourceChainID, Height, Proof, Extra, Signature)
 }
 
+// MultiSignRipple is a paid mutator transaction binding the contract method 0xb7ef3989.
+//
+// Solidity: function multiSignRipple(uint64 ToChainId, bytes AssetAddress, uint64 FromChainId, bytes TxHash, string TxJson) returns(bool success)
+func (_ICrossChainManager *ICrossChainManagerTransactor) MultiSignRipple(opts *bind.TransactOpts, ToChainId uint64, AssetAddress []byte, FromChainId uint64, TxHash []byte, TxJson string) (*types.Transaction, error) {
+	return _ICrossChainManager.contract.Transact(opts, "multiSignRipple", ToChainId, AssetAddress, FromChainId, TxHash, TxJson)
+}
+
+// MultiSignRipple is a paid mutator transaction binding the contract method 0xb7ef3989.
+//
+// Solidity: function multiSignRipple(uint64 ToChainId, bytes AssetAddress, uint64 FromChainId, bytes TxHash, string TxJson) returns(bool success)
+func (_ICrossChainManager *ICrossChainManagerSession) MultiSignRipple(ToChainId uint64, AssetAddress []byte, FromChainId uint64, TxHash []byte, TxJson string) (*types.Transaction, error) {
+	return _ICrossChainManager.Contract.MultiSignRipple(&_ICrossChainManager.TransactOpts, ToChainId, AssetAddress, FromChainId, TxHash, TxJson)
+}
+
+// MultiSignRipple is a paid mutator transaction binding the contract method 0xb7ef3989.
+//
+// Solidity: function multiSignRipple(uint64 ToChainId, bytes AssetAddress, uint64 FromChainId, bytes TxHash, string TxJson) returns(bool success)
+func (_ICrossChainManager *ICrossChainManagerTransactorSession) MultiSignRipple(ToChainId uint64, AssetAddress []byte, FromChainId uint64, TxHash []byte, TxJson string) (*types.Transaction, error) {
+	return _ICrossChainManager.Contract.MultiSignRipple(&_ICrossChainManager.TransactOpts, ToChainId, AssetAddress, FromChainId, TxHash, TxJson)
+}
+
+// ReconstructRippleTx is a paid mutator transaction binding the contract method 0x3b178819.
+//
+// Solidity: function reconstructRippleTx(uint64 FromChainId, bytes TxHash, uint64 ToChainId) returns(bool success)
+func (_ICrossChainManager *ICrossChainManagerTransactor) ReconstructRippleTx(opts *bind.TransactOpts, FromChainId uint64, TxHash []byte, ToChainId uint64) (*types.Transaction, error) {
+	return _ICrossChainManager.contract.Transact(opts, "reconstructRippleTx", FromChainId, TxHash, ToChainId)
+}
+
+// ReconstructRippleTx is a paid mutator transaction binding the contract method 0x3b178819.
+//
+// Solidity: function reconstructRippleTx(uint64 FromChainId, bytes TxHash, uint64 ToChainId) returns(bool success)
+func (_ICrossChainManager *ICrossChainManagerSession) ReconstructRippleTx(FromChainId uint64, TxHash []byte, ToChainId uint64) (*types.Transaction, error) {
+	return _ICrossChainManager.Contract.ReconstructRippleTx(&_ICrossChainManager.TransactOpts, FromChainId, TxHash, ToChainId)
+}
+
+// ReconstructRippleTx is a paid mutator transaction binding the contract method 0x3b178819.
+//
+// Solidity: function reconstructRippleTx(uint64 FromChainId, bytes TxHash, uint64 ToChainId) returns(bool success)
+func (_ICrossChainManager *ICrossChainManagerTransactorSession) ReconstructRippleTx(FromChainId uint64, TxHash []byte, ToChainId uint64) (*types.Transaction, error) {
+	return _ICrossChainManager.Contract.ReconstructRippleTx(&_ICrossChainManager.TransactOpts, FromChainId, TxHash, ToChainId)
+}
+
 // Replenish is a paid mutator transaction binding the contract method 0xf8bac498.
 //
 // Solidity: function replenish(uint64 chainID, string[] txHashes) returns(bool success)
@@ -343,6 +395,144 @@ func (_ICrossChainManager *ICrossChainManagerSession) Replenish(chainID uint64, 
 // Solidity: function replenish(uint64 chainID, string[] txHashes) returns(bool success)
 func (_ICrossChainManager *ICrossChainManagerTransactorSession) Replenish(chainID uint64, txHashes []string) (*types.Transaction, error) {
 	return _ICrossChainManager.Contract.Replenish(&_ICrossChainManager.TransactOpts, chainID, txHashes)
+}
+
+// ICrossChainManagerMultiSignIterator is returned from FilterMultiSign and is used to iterate over the raw logs and unpacked data for MultiSign events raised by the ICrossChainManager contract.
+type ICrossChainManagerMultiSignIterator struct {
+	Event *ICrossChainManagerMultiSign // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ICrossChainManagerMultiSignIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ICrossChainManagerMultiSign)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ICrossChainManagerMultiSign)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ICrossChainManagerMultiSignIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ICrossChainManagerMultiSignIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ICrossChainManagerMultiSign represents a MultiSign event raised by the ICrossChainManager contract.
+type ICrossChainManagerMultiSign struct {
+	FromChainId uint64
+	ToChainId   uint64
+	TxHash      string
+	Payment     string
+	Sequence    uint32
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterMultiSign is a free log retrieval operation binding the contract event 0x162a93de0c236723115fd6139780a23fb76844208fcc6a7a51d803138cbe11a0.
+//
+// Solidity: event MultiSign(uint64 fromChainId, uint64 toChainId, string txHash, string payment, uint32 sequence)
+func (_ICrossChainManager *ICrossChainManagerFilterer) FilterMultiSign(opts *bind.FilterOpts) (*ICrossChainManagerMultiSignIterator, error) {
+
+	logs, sub, err := _ICrossChainManager.contract.FilterLogs(opts, "MultiSign")
+	if err != nil {
+		return nil, err
+	}
+	return &ICrossChainManagerMultiSignIterator{contract: _ICrossChainManager.contract, event: "MultiSign", logs: logs, sub: sub}, nil
+}
+
+// WatchMultiSign is a free log subscription operation binding the contract event 0x162a93de0c236723115fd6139780a23fb76844208fcc6a7a51d803138cbe11a0.
+//
+// Solidity: event MultiSign(uint64 fromChainId, uint64 toChainId, string txHash, string payment, uint32 sequence)
+func (_ICrossChainManager *ICrossChainManagerFilterer) WatchMultiSign(opts *bind.WatchOpts, sink chan<- *ICrossChainManagerMultiSign) (event.Subscription, error) {
+
+	logs, sub, err := _ICrossChainManager.contract.WatchLogs(opts, "MultiSign")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ICrossChainManagerMultiSign)
+				if err := _ICrossChainManager.contract.UnpackLog(event, "MultiSign", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseMultiSign is a log parse operation binding the contract event 0x162a93de0c236723115fd6139780a23fb76844208fcc6a7a51d803138cbe11a0.
+//
+// Solidity: event MultiSign(uint64 fromChainId, uint64 toChainId, string txHash, string payment, uint32 sequence)
+func (_ICrossChainManager *ICrossChainManagerFilterer) ParseMultiSign(log types.Log) (*ICrossChainManagerMultiSign, error) {
+	event := new(ICrossChainManagerMultiSign)
+	if err := _ICrossChainManager.contract.UnpackLog(event, "MultiSign", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 
 // ICrossChainManagerReplenishEventIterator is returned from FilterReplenishEvent and is used to iterate over the raw logs and unpacked data for ReplenishEvent events raised by the ICrossChainManager contract.
@@ -474,6 +664,144 @@ func (_ICrossChainManager *ICrossChainManagerFilterer) WatchReplenishEvent(opts 
 func (_ICrossChainManager *ICrossChainManagerFilterer) ParseReplenishEvent(log types.Log) (*ICrossChainManagerReplenishEvent, error) {
 	event := new(ICrossChainManagerReplenishEvent)
 	if err := _ICrossChainManager.contract.UnpackLog(event, "ReplenishEvent", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// ICrossChainManagerRippleTxIterator is returned from FilterRippleTx and is used to iterate over the raw logs and unpacked data for RippleTx events raised by the ICrossChainManager contract.
+type ICrossChainManagerRippleTxIterator struct {
+	Event *ICrossChainManagerRippleTx // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *ICrossChainManagerRippleTxIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(ICrossChainManagerRippleTx)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(ICrossChainManagerRippleTx)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *ICrossChainManagerRippleTxIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *ICrossChainManagerRippleTxIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// ICrossChainManagerRippleTx represents a RippleTx event raised by the ICrossChainManager contract.
+type ICrossChainManagerRippleTx struct {
+	FromChainId uint64
+	ToChainId   uint64
+	TxHash      string
+	TxJson      string
+	Sequence    uint32
+	Raw         types.Log // Blockchain specific contextual infos
+}
+
+// FilterRippleTx is a free log retrieval operation binding the contract event 0xdc5a7a51ad95eb87bc70191f6b497dec6619c6669a89b2edfed188b271e948ae.
+//
+// Solidity: event RippleTx(uint64 fromChainId, uint64 toChainId, string txHash, string txJson, uint32 sequence)
+func (_ICrossChainManager *ICrossChainManagerFilterer) FilterRippleTx(opts *bind.FilterOpts) (*ICrossChainManagerRippleTxIterator, error) {
+
+	logs, sub, err := _ICrossChainManager.contract.FilterLogs(opts, "RippleTx")
+	if err != nil {
+		return nil, err
+	}
+	return &ICrossChainManagerRippleTxIterator{contract: _ICrossChainManager.contract, event: "RippleTx", logs: logs, sub: sub}, nil
+}
+
+// WatchRippleTx is a free log subscription operation binding the contract event 0xdc5a7a51ad95eb87bc70191f6b497dec6619c6669a89b2edfed188b271e948ae.
+//
+// Solidity: event RippleTx(uint64 fromChainId, uint64 toChainId, string txHash, string txJson, uint32 sequence)
+func (_ICrossChainManager *ICrossChainManagerFilterer) WatchRippleTx(opts *bind.WatchOpts, sink chan<- *ICrossChainManagerRippleTx) (event.Subscription, error) {
+
+	logs, sub, err := _ICrossChainManager.contract.WatchLogs(opts, "RippleTx")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(ICrossChainManagerRippleTx)
+				if err := _ICrossChainManager.contract.UnpackLog(event, "RippleTx", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseRippleTx is a log parse operation binding the contract event 0xdc5a7a51ad95eb87bc70191f6b497dec6619c6669a89b2edfed188b271e948ae.
+//
+// Solidity: event RippleTx(uint64 fromChainId, uint64 toChainId, string txHash, string txJson, uint32 sequence)
+func (_ICrossChainManager *ICrossChainManagerFilterer) ParseRippleTx(log types.Log) (*ICrossChainManagerRippleTx, error) {
+	event := new(ICrossChainManagerRippleTx)
+	if err := _ICrossChainManager.contract.UnpackLog(event, "RippleTx", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log
@@ -615,3 +943,4 @@ func (_ICrossChainManager *ICrossChainManagerFilterer) ParseMakeProof(log types.
 	event.Raw = log
 	return event, nil
 }
+

@@ -33,6 +33,8 @@ import (
 var (
 	MethodContractName        = cross_chain_manager_abi.MethodName
 	MethodImportOuterTransfer = cross_chain_manager_abi.MethodImportOuterTransfer
+	MethodMultiSignRipple     = cross_chain_manager_abi.MethodMultiSignRipple
+	MethodReconstructRippleTx = cross_chain_manager_abi.MethodReconstructRippleTx
 	MethodCheckDone           = cross_chain_manager_abi.MethodCheckDone
 	MethodBlackChain          = cross_chain_manager_abi.MethodBlackChain
 	MethodWhiteChain          = cross_chain_manager_abi.MethodWhiteChain
@@ -138,6 +140,69 @@ func (this *EntranceParam) String() string {
 	}
 	str += "}"
 	return str
+}
+
+type MultiSignParam struct {
+	ToChainId    uint64
+	AssetAddress []byte
+	FromChainId  uint64
+	TxHash       []byte
+	TxJson       string
+}
+
+func (m *MultiSignParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodMultiSignRipple, m)
+}
+
+func (m *MultiSignParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.ToChainId, m.AssetAddress, m.FromChainId, m.TxHash, m.TxJson})
+}
+
+func (m *MultiSignParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		ToChainId    uint64
+		AssetAddress []byte
+		FromChainId  uint64
+		TxHash       []byte
+		TxJson       string
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+
+	m.ToChainId, m.AssetAddress, m.FromChainId, m.TxHash, m.TxJson = data.ToChainId, data.AssetAddress,
+		data.FromChainId, data.TxHash, data.TxJson
+	return nil
+}
+
+type ReconstructTxParam struct {
+	FromChainId uint64
+	TxHash      []byte
+	ToChainId   uint64
+}
+
+func (m *ReconstructTxParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, MethodReconstructRippleTx, m)
+}
+
+func (m *ReconstructTxParam) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{m.FromChainId, m.TxHash, m.ToChainId})
+}
+
+func (m *ReconstructTxParam) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		FromChainId uint64
+		TxHash      []byte
+		ToChainId   uint64
+	}
+
+	if err := s.Decode(&data); err != nil {
+		return err
+	}
+
+	m.FromChainId, m.TxHash, m.ToChainId = data.FromChainId, data.TxHash, data.ToChainId
+	return nil
 }
 
 type BlackChainParam struct {

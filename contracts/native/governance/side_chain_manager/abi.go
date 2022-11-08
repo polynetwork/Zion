@@ -20,13 +20,13 @@ package side_chain_manager
 
 import (
 	"fmt"
-	"io"
-	"strings"
-
-	"github.com/ethereum/go-ethereum/rlp"
-
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/rlp"
+	"math/big"
+	"strings"
 )
 
 var (
@@ -36,7 +36,6 @@ var (
 	EventApproveUpdateSideChain   = side_chain_manager_abi.EventApproveUpdateSideChain
 	EventQuitSideChain            = side_chain_manager_abi.EventQuitSideChain
 	EventApproveQuitSideChain     = side_chain_manager_abi.EventApproveQuitSideChain
-	EventRegisterRedeem           = side_chain_manager_abi.EventRegisterRedeem
 )
 
 func GetABI() *abi.ABI {
@@ -48,52 +47,55 @@ func GetABI() *abi.ABI {
 }
 
 type RegisterSideChainParam struct {
-	ChainID      uint64
-	Router       uint64
-	Name         string
-	CCMCAddress  []byte
-	ExtraInfo    []byte
+	ChainID     uint64
+	Router      uint64
+	Name        string
+	CCMCAddress []byte
+	ExtraInfo   []byte
+}
+
+func (m *RegisterSideChainParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodRegisterSideChain, m)
 }
 
 type ChainIDParam struct {
 	ChainID uint64
 }
 
-type RegisterRedeemParam struct {
-	RedeemChainID   uint64
-	ContractChainID uint64
-	Redeem          []byte
-	CVersion        uint64
-	ContractAddress []byte
-	Signs           [][]byte
+type UpdateFeeParam struct {
+	ChainID   uint64
+	ViewNum   uint64
+	Fee       *big.Int
+	Signature []byte
 }
 
-type BtcTxParam struct {
-	Redeem        []byte
-	RedeemChainId uint64
-	Sigs          [][]byte
-	Detial        *BtcTxParamDetial
+func (m *UpdateFeeParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodUpdateFee, m)
 }
 
-type BtcTxParamDetial struct {
-	PVersion  uint64
-	FeeRate   uint64
-	MinChange uint64
-}
-
-func (m *BtcTxParamDetial) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.PVersion, m.FeeRate, m.MinChange})
-}
-func (m *BtcTxParamDetial) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		PVersion  uint64
-		FeeRate   uint64
-		MinChange uint64
+//Digest Digest calculate the hash of param input
+func (m *UpdateFeeParam) Digest() ([]byte, error) {
+	input := &UpdateFeeParam{
+		ChainID: m.ChainID,
+		ViewNum: m.ViewNum,
+		Fee:     m.Fee,
 	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
+	msg, err := rlp.EncodeToBytes(input)
+	if err != nil {
+		return nil, fmt.Errorf("UpdateFeeParam, serialize input error: %v", err)
 	}
-	m.PVersion, m.FeeRate, m.MinChange = data.PVersion, data.FeeRate, data.MinChange
-	return nil
+	digest := crypto.Keccak256(msg)
+	return digest, nil
+}
+
+type RegisterAssetParam struct {
+	ChainID           uint64
+	AssetMapKey       []uint64
+	AssetMapValue     [][]byte
+	LockProxyMapKey   []uint64
+	LockProxyMapValue [][]byte
+}
+
+func (m *RegisterAssetParam) Encode() ([]byte, error) {
+	return utils.PackMethodWithStruct(ABI, side_chain_manager_abi.MethodRegisterAsset, m)
 }

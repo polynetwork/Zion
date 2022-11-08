@@ -19,107 +19,127 @@
 package side_chain_manager
 
 import (
-	"fmt"
 	"io"
+	"math/big"
+	"sort"
 
-	ethcomm "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
 type SideChain struct {
-	Owner        ethcomm.Address
-	ChainID      uint64
-	Router       uint64
-	Name         string
-	CCMCAddress  []byte
-	ExtraInfo    []byte
+	Owner       common.Address
+	ChainID     uint64
+	Router      uint64
+	Name        string
+	CCMCAddress []byte
+	ExtraInfo   []byte
 }
 
-func (m *SideChain) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Owner, m.ChainID, m.Router, m.Name, m.CCMCAddress, m.ExtraInfo})
+type Fee struct {
+	View uint64
+	Fee  *big.Int
 }
 
-func (m *SideChain) DecodeRLP(s *rlp.Stream) error {
+type FeeInfo struct {
+	StartTime uint64
+	FeeInfo   map[common.Address]*big.Int
+}
+
+type FeeVote struct {
+	Address common.Address
+	Fee     *big.Int
+}
+
+func (this *FeeInfo) EncodeRLP(w io.Writer) error {
+	feeVote := make([]*FeeVote, 0, len(this.FeeInfo))
+	for k, v := range this.FeeInfo {
+		feeVote = append(feeVote, &FeeVote{k, v})
+	}
+	sort.SliceStable(feeVote, func(i, j int) bool {
+		return feeVote[i].Fee.Cmp(feeVote[j].Fee) == 1
+	})
+	return rlp.Encode(w, []interface{}{this.StartTime, feeVote})
+}
+
+func (this *FeeInfo) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Address      ethcomm.Address
-		ChainId      uint64
-		Router       uint64
-		Name         string
-		CCMCAddress  []byte
-		ExtraInfo    []byte
+		StartTime uint64
+		FeeVote   []*FeeVote
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
+	this.StartTime = data.StartTime
 
-	m.Owner, m.ChainID, m.Router, m.Name, m.CCMCAddress, m.ExtraInfo =
-		data.Address, data.ChainId, data.Router, data.Name, data.CCMCAddress, data.ExtraInfo
+	feeInfo := make(map[common.Address]*big.Int, len(data.FeeVote))
+	for _, v := range data.FeeVote {
+		feeInfo[v.Address] = v.Fee
+	}
+	this.FeeInfo = feeInfo
+
 	return nil
 }
 
-type BindSignInfo struct {
-	BindSignInfo map[string][]byte
+type RippleExtraInfo struct {
+	Operator      common.Address
+	Sequence      uint64
+	Quorum        uint64
+	SignerNum     uint64
+	Pks           [][]byte
+	ReserveAmount *big.Int
 }
 
-func (m *BindSignInfo) EncodeRLP(w io.Writer) error {
-	keys := make([]string, 0)
-	values := make([][]byte, 0)
-
-	if m.BindSignInfo == nil || len(m.BindSignInfo) == 0 {
-		return fmt.Errorf("invalid BindSignInfo")
-	}
-
-	for k, v := range m.BindSignInfo {
-		if v == nil {
-			return fmt.Errorf("BindSignInfo value can be empty slice but not nil")
-		}
-		keys = append(keys, k)
-		values = append(values, v)
-	}
-	return rlp.Encode(w, []interface{}{keys, values})
+type AssetBind struct {
+	AssetMap     map[uint64][]byte
+	LockProxyMap map[uint64][]byte
 }
 
-func (m *BindSignInfo) DecodeRLP(s *rlp.Stream) error {
+type BindInfo struct {
+	ChainId uint64
+	Address []byte
+}
+
+func (this *AssetBind) EncodeRLP(w io.Writer) error {
+	assetList := make([]*BindInfo, 0, len(this.AssetMap))
+	for k, v := range this.AssetMap {
+		assetList = append(assetList, &BindInfo{k, v})
+	}
+	sort.SliceStable(assetList, func(i, j int) bool {
+		return assetList[i].ChainId > assetList[j].ChainId
+	})
+
+	lockProxyList := make([]*BindInfo, 0, len(this.LockProxyMap))
+	for k, v := range this.LockProxyMap {
+		lockProxyList = append(lockProxyList, &BindInfo{k, v})
+	}
+	sort.SliceStable(lockProxyList, func(i, j int) bool {
+		return lockProxyList[i].ChainId > lockProxyList[j].ChainId
+	})
+	return rlp.Encode(w, []interface{}{assetList, lockProxyList})
+}
+
+func (this *AssetBind) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		Keys   []string
-		Values [][]byte
-	}
-
-	if err := s.Decode(&data); err != nil {
-		return err
-	}
-	if data.Keys == nil || data.Values == nil ||
-		len(data.Keys) == 0 || len(data.Keys) != len(data.Values) {
-		return fmt.Errorf("invalid bindSignInfo")
-	}
-
-	m.BindSignInfo = make(map[string][]byte)
-	for i := 0; i < len(data.Keys); i++ {
-		m.BindSignInfo[data.Keys[i]] = data.Values[i]
-	}
-	return nil
-}
-
-type ContractBinded struct {
-	Contract []byte
-	Ver      uint64
-}
-
-func (m *ContractBinded) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{m.Contract, m.Ver})
-}
-
-func (m *ContractBinded) DecodeRLP(s *rlp.Stream) error {
-	var data struct {
-		Contract []byte
-		Ver      uint64
+		AssetList     []*BindInfo
+		LockProxyList []*BindInfo
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
 
-	m.Contract, m.Ver = data.Contract, data.Ver
+	assetMap := make(map[uint64][]byte, len(data.AssetList))
+	for _, v := range data.AssetList {
+		assetMap[v.ChainId] = v.Address
+	}
+	lockProxyMap := make(map[uint64][]byte, len(data.LockProxyList))
+	for _, v := range data.LockProxyList {
+		lockProxyMap[v.ChainId] = v.Address
+	}
+	this.AssetMap = assetMap
+	this.LockProxyMap = lockProxyMap
+
 	return nil
 }
