@@ -56,7 +56,6 @@ func init() {
 
 func testRegisterSideChainManager(t *testing.T) {
 	param := new(RegisterSideChainParam)
-	param.BlocksToWait = 4
 	param.ChainID = 8
 	param.Name = "mychain"
 	param.Router = 3
@@ -143,7 +142,6 @@ func testUpdateSideChain(t *testing.T) {
 	testApproveRegisterSideChain(t)
 
 	param := new(RegisterSideChainParam)
-	param.BlocksToWait = 10
 	param.ChainID = 8
 	param.Name = "own"
 	param.Router = 3

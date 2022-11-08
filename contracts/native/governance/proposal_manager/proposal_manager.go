@@ -75,6 +75,19 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	height := s.ContractRef().BlockHeight()
 	caller := ctx.Caller
+	value := s.ContractRef().Value()
+	toAddress := s.ContractRef().TxTo()
+
+	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
+	if err != nil {
+		return nil, fmt.Errorf("Propose, GetGlobalConfigImpl error: %v", err)
+	}
+	if toAddress != utils.ProposalManagerContractAddress {
+		return nil, fmt.Errorf("Propose, to address %x must be proposal manager contract address %x", toAddress, utils.ProposalManagerContractAddress)
+	}
+	if value.Cmp(globalConfig.MinProposalStake) == -1 {
+		return nil, fmt.Errorf("Propose, value is less than globalConfig.MinProposalStake")
+	}
 
 	params := &ProposeParam{}
 	if err := utils.UnpackMethod(ABI, MethodPropose, params, ctx.Payload); err != nil {
@@ -86,14 +99,9 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// remove expired proposal
-	err := removeExpiredFromProposalList(s)
+	err = removeExpiredFromProposalList(s)
 	if err != nil {
 		return nil, fmt.Errorf("Propose, removeExpiredFromProposalList error: %v", err)
-	}
-
-	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
-	if err != nil {
-		return nil, fmt.Errorf("Propose, GetGlobalConfigImpl error: %v", err)
 	}
 
 	proposalID, err := getProposalID(s)
@@ -113,7 +121,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		Type:      Normal,
 		Content:   params.Content,
 		EndHeight: new(big.Int).Add(height, globalConfig.BlockPerEpoch),
-		Stake:     globalConfig.MinProposalStake,
+		Stake:     value,
 	}
 	proposalList.ProposalList = append(proposalList.ProposalList, proposal.ID)
 	err = setProposalList(s, proposalList)
@@ -125,12 +133,6 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("Propose, setProposal error: %v", err)
 	}
 	setProposalID(s, new(big.Int).Add(proposalID, common.Big1))
-
-	// transfer token
-	err = contract.NativeTransfer(s.StateDB(), caller, this, proposal.Stake)
-	if err != nil {
-		return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
-	}
 
 	err = s.AddNotify(ABI, []string{PROPOSE_EVENT}, proposal.ID.String(), caller.Hex(), proposal.Stake.String(), hex.EncodeToString(params.Content))
 	if err != nil {
@@ -144,6 +146,19 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	height := s.ContractRef().BlockHeight()
 	caller := ctx.Caller
+	value := s.ContractRef().Value()
+	toAddress := s.ContractRef().TxTo()
+
+	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
+	if err != nil {
+		return nil, fmt.Errorf("Propose, GetGlobalConfigImpl error: %v", err)
+	}
+	if toAddress != utils.ProposalManagerContractAddress {
+		return nil, fmt.Errorf("ProposeConfig, to address %x must be proposal manager contract address %x", toAddress, utils.ProposalManagerContractAddress)
+	}
+	if value.Cmp(globalConfig.MinProposalStake) == -1 {
+		return nil, fmt.Errorf("ProposeConfig, value is less than globalConfig.MinProposalStake")
+	}
 
 	params := &ProposeConfigParam{}
 	if err := utils.UnpackMethod(ABI, MethodProposeConfig, params, ctx.Payload); err != nil {
@@ -155,7 +170,7 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 	}
 
 	config := new(node_manager.GlobalConfig)
-	err := rlp.DecodeBytes(params.Content, config)
+	err = rlp.DecodeBytes(params.Content, config)
 	if err != nil {
 		return nil, fmt.Errorf("ProposeConfig, deserialize global config error: %v", err)
 	}
@@ -182,11 +197,6 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ProposeConfig, removeExpiredFromConfigProposalList error: %v", err)
 	}
 
-	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
-	if err != nil {
-		return nil, fmt.Errorf("ProposeConfig, GetGlobalConfigImpl error: %v", err)
-	}
-
 	proposalID, err := getProposalID(s)
 	if err != nil {
 		return nil, fmt.Errorf("ProposeConfig, getProposalID error: %v", err)
@@ -204,7 +214,7 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 		Type:      UpdateGlobalConfig,
 		Content:   params.Content,
 		EndHeight: new(big.Int).Add(height, globalConfig.BlockPerEpoch),
-		Stake:     globalConfig.MinProposalStake,
+		Stake:     value,
 	}
 	configProposalList.ConfigProposalList = append(configProposalList.ConfigProposalList, proposal.ID)
 	err = setConfigProposalList(s, configProposalList)
@@ -216,12 +226,6 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ProposeConfig, setProposal error: %v", err)
 	}
 	setProposalID(s, new(big.Int).Add(proposalID, common.Big1))
-
-	// transfer token
-	err = contract.NativeTransfer(s.StateDB(), caller, this, proposal.Stake)
-	if err != nil {
-		return nil, fmt.Errorf("ProposeConfig, utils.NativeTransfer error: %v", err)
-	}
 
 	err = s.AddNotify(ABI, []string{PROPOSE_CONFIG_EVENT}, proposal.ID.String(), caller.Hex(), proposal.Stake.String(), hex.EncodeToString(params.Content))
 	if err != nil {
@@ -235,6 +239,19 @@ func ProposeCommunity(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	height := s.ContractRef().BlockHeight()
 	caller := ctx.Caller
+	value := s.ContractRef().Value()
+	toAddress := s.ContractRef().TxTo()
+
+	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
+	if err != nil {
+		return nil, fmt.Errorf("Propose, GetGlobalConfigImpl error: %v", err)
+	}
+	if toAddress != utils.ProposalManagerContractAddress {
+		return nil, fmt.Errorf("ProposeCommunity, to address %x must be proposal manager contract address %x", toAddress, utils.ProposalManagerContractAddress)
+	}
+	if value.Cmp(globalConfig.MinProposalStake) == -1 {
+		return nil, fmt.Errorf("ProposeCommunity, value is less than globalConfig.MinProposalStake")
+	}
 
 	params := &ProposeCommunityParam{}
 	if err := utils.UnpackMethod(ABI, MethodProposeCommunity, params, ctx.Payload); err != nil {
@@ -246,7 +263,7 @@ func ProposeCommunity(s *native.NativeContract) ([]byte, error) {
 	}
 
 	info := new(node_manager.CommunityInfo)
-	err := rlp.DecodeBytes(params.Content, info)
+	err = rlp.DecodeBytes(params.Content, info)
 	if err != nil {
 		return nil, fmt.Errorf("ProposeCommunity, deserialize community info error: %v", err)
 	}
@@ -261,11 +278,6 @@ func ProposeCommunity(s *native.NativeContract) ([]byte, error) {
 	err = removeExpiredFromCommunityProposalList(s)
 	if err != nil {
 		return nil, fmt.Errorf("ProposeCommunity, removeExpiredFromCommunityProposalList error: %v", err)
-	}
-
-	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
-	if err != nil {
-		return nil, fmt.Errorf("ProposeCommunity, GetGlobalConfigImpl error: %v", err)
 	}
 
 	proposalID, err := getProposalID(s)
@@ -285,7 +297,7 @@ func ProposeCommunity(s *native.NativeContract) ([]byte, error) {
 		Type:      UpdateCommunityInfo,
 		Content:   params.Content,
 		EndHeight: new(big.Int).Add(height, globalConfig.BlockPerEpoch),
-		Stake:     globalConfig.MinProposalStake,
+		Stake:     value,
 	}
 	communityProposalList.CommunityProposalList = append(communityProposalList.CommunityProposalList, proposal.ID)
 	err = setCommunityProposalList(s, communityProposalList)
@@ -297,12 +309,6 @@ func ProposeCommunity(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ProposeCommunity, setProposal error: %v", err)
 	}
 	setProposalID(s, new(big.Int).Add(proposalID, common.Big1))
-
-	// transfer token
-	err = contract.NativeTransfer(s.StateDB(), caller, this, proposal.Stake)
-	if err != nil {
-		return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
-	}
 
 	err = s.AddNotify(ABI, []string{PROPOSE_COMMUNITY_EVENT}, proposal.ID.String(), caller.Hex(), proposal.Stake.String(), hex.EncodeToString(params.Content))
 	if err != nil {
