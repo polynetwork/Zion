@@ -101,7 +101,7 @@ func withdrawStakeRewards(s *native.NativeContract, validator *Validator, stakeI
 		return Dec{nil}, fmt.Errorf("withdrawStakeRewards, CalculateStakeRewards error: %v", err)
 	}
 
-	err = contract.NativeTransfer(s, this, stakeInfo.StakeAddress, rewards.BigInt())
+	err = contract.NativeTransfer(s.StateDB(), this, stakeInfo.StakeAddress, rewards.BigInt())
 	if err != nil {
 		return Dec{nil}, fmt.Errorf("withdrawStakeRewards, nativeTransfer error: %v", err)
 	}
@@ -238,7 +238,7 @@ func withdrawCommission(s *native.NativeContract, stakeAddress common.Address, c
 		return Dec{nil}, fmt.Errorf("withdrawCommission, setValidatorOutstandingRewards error: %v", err)
 	}
 
-	err = contract.NativeTransfer(s, this, stakeAddress, accumulatedCommission.Amount.BigInt())
+	err = contract.NativeTransfer(s.StateDB(), this, stakeAddress, accumulatedCommission.Amount.BigInt())
 	if err != nil {
 		return Dec{nil}, fmt.Errorf("withdrawCommission, nativeTransfer commission error: %v", err)
 	}

@@ -64,7 +64,7 @@ func AfterValidatorRemoved(s *native.NativeContract, validator *Validator) error
 		return fmt.Errorf("AfterValidatorRemoved, GetCommunityInfoImpl error: %v", err)
 	}
 	// transfer outstanding dust to community pool
-	err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, outstanding.Rewards.BigInt())
+	err = contract.NativeTransfer(s.StateDB(), this, communityInfo.CommunityAddress, outstanding.Rewards.BigInt())
 	if err != nil {
 		return fmt.Errorf("AfterValidatorRemoved, nativeTransfer error: %v", err)
 	}

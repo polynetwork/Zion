@@ -124,6 +124,12 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	height := s.ContractRef().BlockHeight()
 	caller := ctx.Caller
+	initStake := s.ContractRef().Value()
+	toAddress := s.ContractRef().TxTo()
+
+	if toAddress != utils.NodeManagerContractAddress {
+		return nil, fmt.Errorf("CreateValidator, to address must be node manager contract address")
+	}
 
 	params := &CreateValidatorParam{}
 	if err := utils.UnpackMethod(ABI, MethodCreateValidator, params, ctx.Payload); err != nil {
@@ -168,9 +174,9 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// check initial stake
-	if globalConfig.MinInitialStake.Cmp(params.InitStake) == 1 {
+	if globalConfig.MinInitialStake.Cmp(initStake) == 1 {
 		return nil, fmt.Errorf("CreateValidator, initial stake %s is less than min initial stake %s",
-			params.InitStake.String(), globalConfig.MinInitialStake.String())
+			initStake.String(), globalConfig.MinInitialStake.String())
 	}
 
 	// store validator
@@ -183,8 +189,8 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		Status:           Unlock,
 		Jailed:           false,
 		UnlockHeight:     new(big.Int),
-		TotalStake:       NewDecFromBigInt(params.InitStake),
-		SelfStake:        NewDecFromBigInt(params.InitStake),
+		TotalStake:       NewDecFromBigInt(initStake),
+		SelfStake:        NewDecFromBigInt(initStake),
 		Desc:             params.Desc,
 	}
 	err = setValidator(s, validator)
@@ -204,7 +210,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// deposit native token
-	err = deposit(s, caller, NewDecFromBigInt(params.InitStake), validator)
+	err = deposit(s, caller, NewDecFromBigInt(initStake), validator)
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, deposit error: %v", err)
 	}
@@ -321,15 +327,16 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 func Stake(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	caller := ctx.Caller
+	value := s.ContractRef().Value()
 
 	params := &StakeParam{}
 	if err := utils.UnpackMethod(ABI, MethodStake, params, ctx.Payload); err != nil {
 		return nil, fmt.Errorf("Stake, unpack params error: %v", err)
 	}
-	if params.Amount.Sign() <= 0 {
+	if value.Sign() <= 0 {
 		return nil, fmt.Errorf("Stake, amount must be positive")
 	}
-	amount := NewDecFromBigInt(params.Amount)
+	amount := NewDecFromBigInt(value)
 
 	// check to see if the pubkey has been registered
 	validator, found, err := getValidator(s, params.ConsensusAddress)
@@ -374,7 +381,7 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("Stake, setValidator error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{STAKE_EVENT}, params.ConsensusAddress.Hex(), params.Amount.String())
+	err = s.AddNotify(ABI, []string{STAKE_EVENT}, params.ConsensusAddress.Hex(), value.String())
 	if err != nil {
 		return nil, fmt.Errorf("Stake, AddNotify error: %v", err)
 	}
@@ -452,7 +459,7 @@ func Withdraw(s *native.NativeContract) ([]byte, error) {
 		if err != nil {
 			return nil, fmt.Errorf("Withdraw, withdrawTotalPool error: %v", err)
 		}
-		err = contract.NativeTransfer(s, this, caller, amount.BigInt())
+		err = contract.NativeTransfer(s.StateDB(), this, caller, amount.BigInt())
 		if err != nil {
 			return nil, fmt.Errorf("Withdraw, nativeTransfer error: %v", err)
 		}
@@ -1153,4 +1160,9 @@ func GetStakeRewards(s *native.NativeContract) ([]byte, error) {
 	}
 
 	return utils.PackOutputs(ABI, MethodGetStakeRewards, enc)
+}
+
+// GetSpecMethodID for consensus use
+func GetSpecMethodID() map[string]bool {
+	return map[string]bool{"fe6f86f8": true, "083c6323": true}
 }

@@ -56,7 +56,7 @@ func GenerateTestPeers(n int) ([]common.Address, []*ecdsa.PrivateKey) {
 // `blockHeight`, `caller`, `tx sender`, `tx hash`, `supply gas`. these params separated with
 // each other by type, only the `caller` and `tx sender` are both of type of `common.Address`,
 // and the first one is `sender` and the next is `caller`.
-func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *NativeContract) {
+func GenerateTestContext(t *testing.T, value *big.Int, address common.Address, params ...interface{}) (*state.StateDB, *NativeContract) {
 	var (
 		block     = int(0)
 		caller    = common.EmptyAddress
@@ -104,6 +104,8 @@ func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *
 
 	blockHeight := new(big.Int).SetInt64(int64(block))
 	contractRef := NewContractRef(sdb, sender, caller, blockHeight, hash, supplyGas, nil)
+	contractRef.SetValue(value)
+	contractRef.SetTo(address)
 	ctx := NewNativeContract(sdb, contractRef)
 
 	// need to break point at the next step, e.g: nativeCall or some contract function
@@ -113,8 +115,8 @@ func GenerateTestContext(t *testing.T, params ...interface{}) (*state.StateDB, *
 	return sdb, ctx
 }
 
-func TestNativeCall(t *testing.T, contract common.Address, name string, payload []byte, params ...interface{}) ([]byte, error) {
-	_, ctx := GenerateTestContext(t, params...)
+func TestNativeCall(t *testing.T, contract common.Address, name string, payload []byte, value *big.Int, params ...interface{}) ([]byte, error) {
+	_, ctx := GenerateTestContext(t, value, contract, params...)
 	ref := ctx.ContractRef()
 	res, _, err := ref.NativeCall(ref.caller, contract, payload)
 	if DebugSpentOpen {

@@ -48,7 +48,6 @@ type CreateValidatorParam struct {
 	SignerAddress    common.Address
 	ProposalAddress  common.Address
 	Commission       *big.Int
-	InitStake        *big.Int
 	Desc             string
 }
 
@@ -78,7 +77,6 @@ func (m *UpdateCommissionParam) Encode() ([]byte, error) {
 
 type StakeParam struct {
 	ConsensusAddress common.Address
-	Amount           *big.Int
 }
 
 func (m *StakeParam) Encode() ([]byte, error) {

@@ -54,11 +54,7 @@ func deposit(s *native.NativeContract, from common.Address, amount Dec, validato
 		return fmt.Errorf("deposit, setStakeInfo error: %v", err)
 	}
 
-	// transfer native token
-	err = contract.NativeTransfer(s, from, this, amount.BigInt())
-	if err != nil {
-		return fmt.Errorf("deposit, nativeTransfer error: %v", err)
-	}
+	// do not transfer native token, already transfered by value
 
 	// update total token pool
 	err = depositTotalPool(s, amount)
@@ -114,7 +110,7 @@ func unStake(s *native.NativeContract, from common.Address, amount Dec, validato
 			return fmt.Errorf("unStake, withdrawTotalPool error: %v", err)
 		}
 		// transfer native token
-		err = contract.NativeTransfer(s, this, from, amount.BigInt())
+		err = contract.NativeTransfer(s.StateDB(), this, from, amount.BigInt())
 		if err != nil {
 			return fmt.Errorf("unStake, nativeTransfer error: %v", err)
 		}

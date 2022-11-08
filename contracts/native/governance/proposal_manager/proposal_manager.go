@@ -127,7 +127,7 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	setProposalID(s, new(big.Int).Add(proposalID, common.Big1))
 
 	// transfer token
-	err = contract.NativeTransfer(s, caller, this, proposal.Stake)
+	err = contract.NativeTransfer(s.StateDB(), caller, this, proposal.Stake)
 	if err != nil {
 		return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
 	}
@@ -218,7 +218,7 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 	setProposalID(s, new(big.Int).Add(proposalID, common.Big1))
 
 	// transfer token
-	err = contract.NativeTransfer(s, caller, this, proposal.Stake)
+	err = contract.NativeTransfer(s.StateDB(), caller, this, proposal.Stake)
 	if err != nil {
 		return nil, fmt.Errorf("ProposeConfig, utils.NativeTransfer error: %v", err)
 	}
@@ -299,7 +299,7 @@ func ProposeCommunity(s *native.NativeContract) ([]byte, error) {
 	setProposalID(s, new(big.Int).Add(proposalID, common.Big1))
 
 	// transfer token
-	err = contract.NativeTransfer(s, caller, this, proposal.Stake)
+	err = contract.NativeTransfer(s.StateDB(), caller, this, proposal.Stake)
 	if err != nil {
 		return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
 	}
@@ -346,7 +346,7 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 		}
 
 		// transfer token
-		err = contract.NativeTransfer(s, this, proposal.Address, proposal.Stake)
+		err = contract.NativeTransfer(s.StateDB(), this, proposal.Address, proposal.Stake)
 		if err != nil {
 			return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
 		}
@@ -412,7 +412,7 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 					}
 
 					// transfer token to community pool
-					err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, p.Stake)
+					err = contract.NativeTransfer(s.StateDB(), this, communityInfo.CommunityAddress, p.Stake)
 					if err != nil {
 						return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
 					}
@@ -459,7 +459,7 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 					}
 
 					// transfer token to community pool
-					err = contract.NativeTransfer(s, this, communityInfo.CommunityAddress, p.Stake)
+					err = contract.NativeTransfer(s.StateDB(), this, communityInfo.CommunityAddress, p.Stake)
 					if err != nil {
 						return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
 					}
