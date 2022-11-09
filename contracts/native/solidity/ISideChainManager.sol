@@ -23,15 +23,15 @@ interface ISideChainManager {
 
     function getSideChain(uint64 chainID) external view returns(SideChain memory sidechain);
     
-    function registerSideChain(uint64 chainID, uint64 router, string calldata name, bytes calldata CCMCAddress, bytes calldata extraInfo) external returns (bool success);
+    function registerSideChain(uint64 chainID, uint64 router, string calldata name, bytes calldata CCMCAddress, bytes calldata extraInfo) external;
     
     function approveRegisterSideChain(uint64 chainID) external returns (bool success);
     
-    function updateSideChain(uint64 chainID, uint64 router, string calldata name, bytes calldata CCMCAddress, bytes calldata extraInfo) external returns (bool success);
+    function updateSideChain(uint64 chainID, uint64 router, string calldata name, bytes calldata CCMCAddress, bytes calldata extraInfo) external;
     
     function approveUpdateSideChain(uint64 chainID) external returns (bool success);
     
-    function quitSideChain(uint64 chainID) external returns (bool success);
+    function quitSideChain(uint64 chainID) external;
     
     function approveQuitSideChain(uint64 chainID) external returns (bool success);
 
