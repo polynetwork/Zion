@@ -127,6 +127,9 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	initStake := s.ContractRef().Value()
 	toAddress := s.ContractRef().TxTo()
 
+	if ctx.Caller != s.ContractRef().TxOrigin() {
+		return nil, fmt.Errorf("CreateValidator, contract call forbidden")
+	}
 	if toAddress != utils.NodeManagerContractAddress {
 		return nil, fmt.Errorf("CreateValidator, to address must be node manager contract address")
 	}
@@ -328,6 +331,14 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
 	caller := ctx.Caller
 	value := s.ContractRef().Value()
+	toAddress := s.ContractRef().TxTo()
+
+	if ctx.Caller != s.ContractRef().TxOrigin() {
+		return nil, fmt.Errorf("Stake, contract call forbidden")
+	}
+	if toAddress != utils.NodeManagerContractAddress {
+		return nil, fmt.Errorf("Stake, to address must be node manager contract address")
+	}
 
 	params := &StakeParam{}
 	if err := utils.UnpackMethod(ABI, MethodStake, params, ctx.Payload); err != nil {
