@@ -78,6 +78,9 @@ func Propose(s *native.NativeContract) ([]byte, error) {
 	value := s.ContractRef().Value()
 	toAddress := s.ContractRef().TxTo()
 
+	if ctx.Caller != s.ContractRef().TxOrigin() {
+		return nil, fmt.Errorf("Propose, contract call forbidden")
+	}
 	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
 	if err != nil {
 		return nil, fmt.Errorf("Propose, GetGlobalConfigImpl error: %v", err)
@@ -149,6 +152,9 @@ func ProposeConfig(s *native.NativeContract) ([]byte, error) {
 	value := s.ContractRef().Value()
 	toAddress := s.ContractRef().TxTo()
 
+	if ctx.Caller != s.ContractRef().TxOrigin() {
+		return nil, fmt.Errorf("ProposeConfig, contract call forbidden")
+	}
 	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
 	if err != nil {
 		return nil, fmt.Errorf("Propose, GetGlobalConfigImpl error: %v", err)
@@ -242,6 +248,9 @@ func ProposeCommunity(s *native.NativeContract) ([]byte, error) {
 	value := s.ContractRef().Value()
 	toAddress := s.ContractRef().TxTo()
 
+	if ctx.Caller != s.ContractRef().TxOrigin() {
+		return nil, fmt.Errorf("ProposeCommunity, contract call forbidden")
+	}
 	globalConfig, err := node_manager.GetGlobalConfigImpl(s)
 	if err != nil {
 		return nil, fmt.Errorf("Propose, GetGlobalConfigImpl error: %v", err)
