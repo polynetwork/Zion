@@ -256,7 +256,7 @@ func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas 
 
 	isNativeTx := native.IsNativeContract(addr)
 	if isNativeTx {
-		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas)
+		ret, gas, err = evm.nativeCall(caller.Address(), addr, input, gas, value)
 	} else {
 		if isPrecompile {
 			ret, gas, err = RunPrecompiledContract(p, input, gas)
@@ -433,22 +433,17 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 //
 // In addition, the gas of native call temporarily uses a fixed value
 //
-func (evm *EVM) nativeCall(caller, toContract common.Address, input []byte, suppliedGas uint64) (ret []byte, leftOverGas uint64, err error) {
+func (evm *EVM) nativeCall(caller, toContract common.Address, input []byte, suppliedGas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	sdb := evm.StateDB.(*state.StateDB)
 	blockNumber := evm.Context.BlockNumber
 
+	// set tx origin info for native context
 	txHash := evm.TxContext.TxHash
-	msgSender := caller
-	if evm.TxContext.Origin != common.EmptyAddress && len(evm.TxContext.Origin[:]) == common.AddressLength {
-		msgSender = evm.TxContext.Origin
-	}
+	msgSender := evm.TxContext.Origin
+
 	contractRef := native.NewContractRef(sdb, msgSender, caller, blockNumber, txHash, suppliedGas, evm.Callback)
-	if evm.Value != nil {
-		contractRef.SetValue(evm.Value)
-	}
-	if evm.To != common.EmptyAddress {
-		contractRef.SetTo(evm.To)
-	}
+	contractRef.SetValue(value)
+	contractRef.SetTo(toContract)
 
 	ret, leftOverGas, err = contractRef.NativeCall(caller, toContract, input)
 	return
