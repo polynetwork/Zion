@@ -25,7 +25,6 @@ import (
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth_common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/no_proof"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/okex"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/ripple"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -78,8 +77,6 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return no_proof.NewNoProofHandler(), nil
 	case utils.ETH_COMMON_ROUTER:
 		return eth_common.NewHandler(), nil
-	case utils.OKEX_ROUTER:
-		return okex.NewHandler(), nil
 	case utils.COSMOS_ROUTER:
 		return cosmos.NewCosmosHandler(), nil
 	case utils.ZILLIQA_ROUTER:
