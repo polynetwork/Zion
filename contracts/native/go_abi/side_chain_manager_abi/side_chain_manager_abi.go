@@ -71,7 +71,7 @@ var (
 )
 
 // ISideChainManagerABI is the input ABI used to generate the binding from.
-const ISideChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveQuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveRegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveUpdateSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"QuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"name\":\"RegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"name\":\"UpdateSideChain\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveQuitSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveRegisterSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveUpdateSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"getFee\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"getSideChain\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"internalType\":\"structISideChainManager.SideChain\",\"name\":\"sidechain\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"quitSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64[]\",\"name\":\"AssetMapKey\",\"type\":\"uint64[]\"},{\"internalType\":\"bytes[]\",\"name\":\"AssetMapValue\",\"type\":\"bytes[]\"},{\"internalType\":\"uint64[]\",\"name\":\"LockProxyMapKey\",\"type\":\"uint64[]\"},{\"internalType\":\"bytes[]\",\"name\":\"LockProxyMapValue\",\"type\":\"bytes[]\"}],\"name\":\"registerAsset\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"name\":\"registerSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"viewNum\",\"type\":\"uint64\"},{\"internalType\":\"int256\",\"name\":\"fee\",\"type\":\"int256\"}],\"name\":\"updateFee\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"name\":\"updateSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
+const ISideChainManagerABI = "[{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveQuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveRegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"ApproveUpdateSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"}],\"name\":\"QuitSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"name\":\"RegisterSideChain\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"ChainId\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"uint64\",\"name\":\"Router\",\"type\":\"uint64\"},{\"indexed\":false,\"internalType\":\"string\",\"name\":\"Name\",\"type\":\"string\"}],\"name\":\"UpdateSideChain\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveQuitSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveRegisterSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"approveUpdateSideChain\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"getFee\",\"outputs\":[{\"internalType\":\"bytes\",\"name\":\"\",\"type\":\"bytes\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"getSideChain\",\"outputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"owner\",\"type\":\"address\"},{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"internalType\":\"structISideChainManager.SideChain\",\"name\":\"sidechain\",\"type\":\"tuple\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"}],\"name\":\"quitSideChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64[]\",\"name\":\"AssetMapKey\",\"type\":\"uint64[]\"},{\"internalType\":\"bytes[]\",\"name\":\"AssetMapValue\",\"type\":\"bytes[]\"},{\"internalType\":\"uint64[]\",\"name\":\"LockProxyMapKey\",\"type\":\"uint64[]\"},{\"internalType\":\"bytes[]\",\"name\":\"LockProxyMapValue\",\"type\":\"bytes[]\"}],\"name\":\"registerAsset\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"name\":\"registerSideChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"viewNum\",\"type\":\"uint64\"},{\"internalType\":\"int256\",\"name\":\"fee\",\"type\":\"int256\"}],\"name\":\"updateFee\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"success\",\"type\":\"bool\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint64\",\"name\":\"chainID\",\"type\":\"uint64\"},{\"internalType\":\"uint64\",\"name\":\"router\",\"type\":\"uint64\"},{\"internalType\":\"string\",\"name\":\"name\",\"type\":\"string\"},{\"internalType\":\"bytes\",\"name\":\"CCMCAddress\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"extraInfo\",\"type\":\"bytes\"}],\"name\":\"updateSideChain\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]"
 
 // ISideChainManagerFuncSigs maps the 4-byte function signature to its string representation.
 var ISideChainManagerFuncSigs = map[string]string{
@@ -356,21 +356,21 @@ func (_ISideChainManager *ISideChainManagerTransactorSession) ApproveUpdateSideC
 
 // QuitSideChain is a paid mutator transaction binding the contract method 0x78b94ab1.
 //
-// Solidity: function quitSideChain(uint64 chainID) returns(bool success)
+// Solidity: function quitSideChain(uint64 chainID) returns()
 func (_ISideChainManager *ISideChainManagerTransactor) QuitSideChain(opts *bind.TransactOpts, chainID uint64) (*types.Transaction, error) {
 	return _ISideChainManager.contract.Transact(opts, "quitSideChain", chainID)
 }
 
 // QuitSideChain is a paid mutator transaction binding the contract method 0x78b94ab1.
 //
-// Solidity: function quitSideChain(uint64 chainID) returns(bool success)
+// Solidity: function quitSideChain(uint64 chainID) returns()
 func (_ISideChainManager *ISideChainManagerSession) QuitSideChain(chainID uint64) (*types.Transaction, error) {
 	return _ISideChainManager.Contract.QuitSideChain(&_ISideChainManager.TransactOpts, chainID)
 }
 
 // QuitSideChain is a paid mutator transaction binding the contract method 0x78b94ab1.
 //
-// Solidity: function quitSideChain(uint64 chainID) returns(bool success)
+// Solidity: function quitSideChain(uint64 chainID) returns()
 func (_ISideChainManager *ISideChainManagerTransactorSession) QuitSideChain(chainID uint64) (*types.Transaction, error) {
 	return _ISideChainManager.Contract.QuitSideChain(&_ISideChainManager.TransactOpts, chainID)
 }
@@ -398,21 +398,21 @@ func (_ISideChainManager *ISideChainManagerTransactorSession) RegisterAsset(chai
 
 // RegisterSideChain is a paid mutator transaction binding the contract method 0x3a24101f.
 //
-// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns(bool success)
+// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns()
 func (_ISideChainManager *ISideChainManagerTransactor) RegisterSideChain(opts *bind.TransactOpts, chainID uint64, router uint64, name string, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
 	return _ISideChainManager.contract.Transact(opts, "registerSideChain", chainID, router, name, CCMCAddress, extraInfo)
 }
 
 // RegisterSideChain is a paid mutator transaction binding the contract method 0x3a24101f.
 //
-// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns(bool success)
+// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns()
 func (_ISideChainManager *ISideChainManagerSession) RegisterSideChain(chainID uint64, router uint64, name string, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
 	return _ISideChainManager.Contract.RegisterSideChain(&_ISideChainManager.TransactOpts, chainID, router, name, CCMCAddress, extraInfo)
 }
 
 // RegisterSideChain is a paid mutator transaction binding the contract method 0x3a24101f.
 //
-// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns(bool success)
+// Solidity: function registerSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns()
 func (_ISideChainManager *ISideChainManagerTransactorSession) RegisterSideChain(chainID uint64, router uint64, name string, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
 	return _ISideChainManager.Contract.RegisterSideChain(&_ISideChainManager.TransactOpts, chainID, router, name, CCMCAddress, extraInfo)
 }
@@ -440,21 +440,21 @@ func (_ISideChainManager *ISideChainManagerTransactorSession) UpdateFee(chainID 
 
 // UpdateSideChain is a paid mutator transaction binding the contract method 0x956f1463.
 //
-// Solidity: function updateSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns(bool success)
+// Solidity: function updateSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns()
 func (_ISideChainManager *ISideChainManagerTransactor) UpdateSideChain(opts *bind.TransactOpts, chainID uint64, router uint64, name string, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
 	return _ISideChainManager.contract.Transact(opts, "updateSideChain", chainID, router, name, CCMCAddress, extraInfo)
 }
 
 // UpdateSideChain is a paid mutator transaction binding the contract method 0x956f1463.
 //
-// Solidity: function updateSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns(bool success)
+// Solidity: function updateSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns()
 func (_ISideChainManager *ISideChainManagerSession) UpdateSideChain(chainID uint64, router uint64, name string, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
 	return _ISideChainManager.Contract.UpdateSideChain(&_ISideChainManager.TransactOpts, chainID, router, name, CCMCAddress, extraInfo)
 }
 
 // UpdateSideChain is a paid mutator transaction binding the contract method 0x956f1463.
 //
-// Solidity: function updateSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns(bool success)
+// Solidity: function updateSideChain(uint64 chainID, uint64 router, string name, bytes CCMCAddress, bytes extraInfo) returns()
 func (_ISideChainManager *ISideChainManagerTransactorSession) UpdateSideChain(chainID uint64, router uint64, name string, CCMCAddress []byte, extraInfo []byte) (*types.Transaction, error) {
 	return _ISideChainManager.Contract.UpdateSideChain(&_ISideChainManager.TransactOpts, chainID, router, name, CCMCAddress, extraInfo)
 }
