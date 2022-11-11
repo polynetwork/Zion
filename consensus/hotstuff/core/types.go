@@ -240,16 +240,6 @@ func (m *MsgDecide) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-type Vote common.Hash
-
-//func (v *Vote) String() string {
-//	return fmt.Sprintf("{Vote Digest: %v}", v.Digest)
-//}
-//
-//func (v *Vote) Hash() common.Hash {
-//	return v.Digest
-//}
-
 type QuorumCert struct {
 	view          *View
 	code          MsgType
@@ -257,50 +247,6 @@ type QuorumCert struct {
 	proposer      common.Address
 	seal          []byte
 	committedSeal [][]byte
-}
-
-func NewQC(view *View, code MsgType, hash common.Hash, proposer common.Address, seal []byte, committedSeal [][]byte) *QuorumCert {
-	return &QuorumCert{
-		view:          view,
-		code:          code,
-		hash:          hash,
-		proposer:      proposer,
-		seal:          seal,
-		committedSeal: committedSeal,
-	}
-}
-
-func EmptyQC() *QuorumCert {
-	return &QuorumCert{
-		view: &View{
-			Round:  big.NewInt(0),
-			Height: big.NewInt(0),
-		},
-		code:          MsgTypePrepareVote,
-		hash:          common.Hash{},
-		proposer:      common.Address{},
-		seal:          make([]byte, 0),
-		committedSeal: make([][]byte, 0),
-	}
-}
-
-func IsEmptyQC(qc *QuorumCert) bool {
-	if qc == nil || qc.view == nil {
-		return false
-	}
-	if qc.view.Round.Uint64() != 0 || qc.view.Height.Uint64() != 0 {
-		return false
-	}
-	if qc.code != MsgTypePrepareVote {
-		return false
-	}
-	if qc.hash != common.EmptyHash || qc.proposer != common.EmptyAddress {
-		return false
-	}
-	if len(qc.seal) != 0 || len(qc.committedSeal) != 0 {
-		return false
-	}
-	return true
 }
 
 func (qc *QuorumCert) Height() *big.Int {
@@ -327,7 +273,6 @@ func (qc *QuorumCert) RoundU64() uint64 {
 
 // Hash retrieve message hash but not proposal hash
 func (qc *QuorumCert) SealHash() common.Hash {
-	//payload, _ := Encode(&Vote{Digest: qc.hash})
 	msg := NewCleanMessage(qc.view, qc.code, qc.hash.Bytes())
 	msg.PayloadNoSig()
 	return msg.hash

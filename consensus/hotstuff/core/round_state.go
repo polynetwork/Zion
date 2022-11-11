@@ -84,7 +84,7 @@ func newRoundState(view *View, validatorSet hotstuff.ValidatorSet) *roundState {
 	//	rs.lockedQC = prepareQC.Copy()
 	//	rs.committedQC = prepareQC.Copy()
 	//}
-	rs.prepareQC = EmptyQC()
+	//rs.prepareQC = EmptyQC()
 	return rs
 }
 
