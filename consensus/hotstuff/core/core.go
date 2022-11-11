@@ -153,19 +153,15 @@ func (c *core) checkPoint(view *View) bool {
 
 func (c *core) updateRoundState(newView *View, changeView bool, lastProposal hotstuff.Proposal, valset hotstuff.ValidatorSet) error {
 	if !changeView && c.current == nil {
-		// load from db first
+		// todo(fuk): load from db first
 		c.current = newRoundState(newView, c.valSet)
-		prepareQC, err := proposal2QC(lastProposal)
+		prepareQC, err := genesisQC(lastProposal)
 		if err != nil {
 			return err
 		}
 		c.current.prepareQC = prepareQC
 	} else {
 		c.current.update(newView, valset)
-		//// reuse pending request if round changed
-		//lastPendingRequest := c.current.PendingRequest()
-		//c.current = newRoundState(newView, c.valSet, prepareQC)
-		//c.current.SetPendingRequest(lastPendingRequest)
 	}
 	return nil
 }

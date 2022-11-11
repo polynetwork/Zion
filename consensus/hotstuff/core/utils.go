@@ -256,26 +256,35 @@ func (c *core) Q() int {
 	return c.valSet.Q()
 }
 
-func proposal2QC(proposal hotstuff.Proposal) (*QuorumCert, error) {
+func genesisQC(proposal hotstuff.Proposal) (*QuorumCert, error) {
+	if proposal.NumberU64() != 0 {
+		return nil, fmt.Errorf("MUST be genesis block")
+	}
+
 	block := proposal.(*types.Block)
 	h := block.Header()
-	qc := EmptyQC()
+	qc := &QuorumCert{
+		view: &View{
+			Round:  big.NewInt(0),
+			Height: block.Number(),
+		},
+		code:          MsgTypePrepareVote,
+		hash:          block.Hash(),
+		proposer:      common.Address{},
+		seal:          make([]byte, 0),
+		committedSeal: make([][]byte, 0),
+	}
 
 	extra, err := types.ExtractHotstuffExtra(h)
 	if err != nil {
 		return nil, err
 	}
-
-	if h.Hash() == common.EmptyHash || extra.Seal == nil || extra.CommittedSeal == nil {
+	if extra.Seal == nil || extra.CommittedSeal == nil {
 		return nil, errInvalidProposal
 	}
 
-	qc.view.Height = new(big.Int).SetUint64(h.Number.Uint64())
-	qc.view.Round = big.NewInt(0)
-	copy(qc.hash[:], h.Hash().Bytes())
 	copy(qc.seal, extra.Seal)
 	copy(qc.committedSeal, extra.CommittedSeal)
-	fmt.Println("----qc.hash", qc.hash.Hex())
 	return qc, nil
 }
 
