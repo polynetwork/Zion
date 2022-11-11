@@ -27,9 +27,9 @@ func (c *core) handleCommitVote(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		vote   = common.BytesToHash(data.Msg)
+		vote = common.BytesToHash(data.Msg)
 		code = MsgTypeCommitVote
-		src    = data.address
+		src  = data.address
 	)
 	if err := c.checkView(code, data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
@@ -90,9 +90,9 @@ func (c *core) sendDecide() {
 	logger := c.newLogger()
 
 	code := MsgTypeDecide
-	msg := &MsgDecide{
-		Proposal:  c.current.Proposal(),
-		CommitQC: c.current.CommittedQC(),
+	msg := &Subject{
+		Proposal: c.current.Proposal(),
+		QC:       c.current.CommittedQC(),
 	}
 	payload, err := Encode(msg)
 	if err != nil {
@@ -108,15 +108,15 @@ func (c *core) handleDecide(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		msg    *MsgDecide
+		msg  *Subject
 		code = MsgTypeDecide
-		src    = data.address
+		src  = data.address
 	)
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodeCommit
 	}
-	commitQC := msg.CommitQC
+	commitQC := msg.QC
 
 	if err := c.checkView(code, data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)

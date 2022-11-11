@@ -41,23 +41,6 @@ type Signer interface {
 	// VerifyHeader verify proposer signature and committed seals
 	VerifyHeader(header *types.Header, valSet ValidatorSet, seal bool) (*types.HotstuffExtra, error)
 
-	// todo(fuk): VerifyQC verify quorum cert
 	// VerifyQC verify quorum cert in consensus procedure
 	VerifyQC(qc QC, valSet ValidatorSet) error
-
-	// SigHash generate header hash without signature
-	//SigHash(header *types.Header) (hash common.Hash)
-
-	// SealBeforeCommit writes the extra-data field of a block header with given seal.
-	//SealBeforeCommit(h *types.Header) error
-
-	// SealAfterCommit writes the extra-data field of a block header with given committed seals.
-	//SealAfterCommit(h *types.Header, committedSeals [][]byte) error
-
-	// CheckQCParticipant return nil if `signer` is qc proposer or committer
-	//CheckQCParticipant(qc QC, signer common.Address) error
-
-	//VerifyHash(valSet ValidatorSet, hash common.Hash, sig []byte) error
-
-	//VerifyCommittedSeal(valSet ValidatorSet, hash common.Hash, committedSeals [][]byte) error
 }
