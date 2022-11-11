@@ -18,18 +18,17 @@
 
 package core
 
+import "github.com/ethereum/go-ethereum/common"
+
 func (c *core) handlePreCommitVote(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		vote   *Vote
 		code = MsgTypePreCommitVote
 		src    = data.address
+		vote = common.BytesToHash(data.Msg)
 	)
-	if err := data.Decode(&vote); err != nil {
-		logger.Trace("Failed to decode", "type", code, "src", src, "err", err)
-		return errFailedDecodePreCommitVote
-	}
+
 	if err := c.checkView(code, data.View); err != nil {
 		logger.Trace("Failed to check view", "type", code, "src", src, "err", err)
 		return err
@@ -38,8 +37,8 @@ func (c *core) handlePreCommitVote(data *Message) error {
 		logger.Trace("Failed to check vote", "type", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkProposal(vote.Digest); err != nil {
-		logger.Trace("Failed to check hash", "type", code, "src", src, "expect vote", vote.Digest)
+	if err := c.checkProposal(vote); err != nil {
+		logger.Trace("Failed to check hash", "type", code, "src", src, "expect vote", vote)
 		return errInvalidDigest
 	}
 	if err := c.checkMsgToProposer(); err != nil {
@@ -52,10 +51,10 @@ func (c *core) handlePreCommitVote(data *Message) error {
 		return errAddPreCommitVote
 	}
 
-	logger.Trace("handlePreCommitVote", "msg", code, "src", src, "hash", vote.Digest)
+	logger.Trace("handlePreCommitVote", "msg", code, "src", src, "hash", vote)
 
 	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StatePreCommitted {
-		if preCommitQC, err := c.messages2qc(c.proposer(), vote.Digest, c.current.PreCommitVotes()); err != nil {
+		if preCommitQC, err := c.messages2qc(c.proposer(), vote, c.current.PreCommitVotes()); err != nil {
 			logger.Trace("Failed to assemble preCommitQC", "type", code, "err", err)
 			return err
 		} else {
@@ -135,15 +134,6 @@ func (c *core) sendCommitVote() {
 
 	code := MsgTypeCommitVote
 	vote := c.current.Vote()
-	if vote == nil {
-		logger.Error("Failed to send vote", "msg", code, "err", "current vote is nil")
-		return
-	}
-	payload, err := Encode(vote)
-	if err != nil {
-		logger.Error("Failed to encode", "msg", code, "err", err)
-		return
-	}
-	c.broadcast(code, payload)
-	logger.Trace("sendCommitVote", "msg", code, "hash", vote.Digest)
+	c.broadcast(code, vote.Bytes())
+	logger.Trace("sendCommitVote", "msg", code, "hash", vote)
 }

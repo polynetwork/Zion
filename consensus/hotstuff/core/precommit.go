@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -26,14 +27,10 @@ func (c *core) handlePrepareVote(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		vote   *Vote
+		vote   = common.BytesToHash(data.Msg)
 		code = MsgTypePrepareVote
 		src    = data.address
 	)
-	if err := data.Decode(&vote); err != nil {
-		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
-		return errFailedDecodePrepareVote
-	}
 	if err := c.checkView(code, data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
@@ -51,14 +48,7 @@ func (c *core) handlePrepareVote(data *Message) error {
 		return errAddPrepareVote
 	}
 
-	//// check committed seal
-	//if addr, err := c.validateFn(vote.Digest[:], data.CommittedSeal); err != nil {
-	//	logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err)
-	//} else if addr != src {
-	//	logger.Trace("Failed to check vote", "msg", code, "src", src, "expect", src, "got", addr)
-	//}
-
-	logger.Trace("handlePrepareVote", "msg", code, "src", src, "hash", vote.Digest)
+	logger.Trace("handlePrepareVote", "msg", code, "src", src, "hash", vote)
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() < StatePrepared {
 		prepareQC, err := c.messages2qc(c.proposer(), c.current.Proposal().Hash(), c.current.PrepareVotes())
@@ -159,15 +149,6 @@ func (c *core) sendPreCommitVote() {
 
 	code := MsgTypePreCommitVote
 	vote := c.current.Vote()
-	if vote == nil {
-		logger.Trace("Failed to send vote", "msg", code, "err", "current vote is nil")
-		return
-	}
-	payload, err := Encode(vote)
-	if err != nil {
-		logger.Error("Failed to encode", "msg", code, "err", err)
-		return
-	}
-	c.broadcast(code, payload)
-	logger.Trace("sendPreCommitVote", "msg", code, "hash", vote.Digest)
+	c.broadcast(code, vote.Bytes())
+	logger.Trace("sendPreCommitVote", "msg", code, "hash", vote)
 }

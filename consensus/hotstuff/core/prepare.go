@@ -45,11 +45,6 @@ func (c *core) sendPrepare() {
 		logger.Trace("Failed to send prepare", "msg", code, "err", "request height invalid")
 		return
 	}
-	//expectAddr := request.Proposal.Coinbase()
-	//if got := c.Address(); expectAddr != c.Address() {
-	//	logger.Trace("Failed to send prepare", "msg", code, "coinbase expect", expectAddr, "got", got)
-	//	return
-	//}
 	if c.current.HighQC().hash != request.Proposal.ParentHash() {
 		logger.Trace("Failed to send prepare", "msg", code, "err", "request parent hash invalid")
 		return
@@ -143,17 +138,8 @@ func (c *core) sendPrepareVote() {
 
 	code := MsgTypePrepareVote
 	vote := c.current.Vote()
-	if vote == nil {
-		logger.Trace("Failed to send vote", "msg", code, "err", "current vote is nil")
-		return
-	}
-	payload, err := Encode(vote)
-	if err != nil {
-		logger.Trace("Failed to encode", "msg", code, "err", err)
-		return
-	}
-	c.broadcast(code, payload)
-	logger.Trace("sendPrepareVote", "msg", code, "hash", vote.Digest)
+	c.broadcast(code, vote.Bytes())
+	logger.Trace("sendPrepareVote", "msg", code, "hash", vote)
 }
 
 func (c *core) extend(proposal hotstuff.Proposal, highQC *QuorumCert) error {
@@ -172,36 +158,14 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *QuorumCert) error {
 
 // proposal extend lockedQC `OR` hiqhQC.view > lockedQC.view
 func (c *core) safeNode(proposal hotstuff.Proposal, highQC *QuorumCert) error {
-	//logger := c.newLogger()
-
-	if proposal.Number().Uint64() == 1 && c.current.lockedQC == nil {
+	lockedQC := c.current.lockedQC
+	if proposal.Number().Uint64() == 1 && lockedQC == nil {
 		return nil
 	}
-	//safety := false
-	//liveness := false
 
-	if highQC.view.Cmp(c.current.lockedQC.view) > 0 ||
-		proposal.ParentHash() == c.current.lockedQC.hash {
+	if highQC.view.Cmp(lockedQC.view) > 0 || proposal.ParentHash() == lockedQC.hash {
 		return nil
-	} else {
-		return errSafeNode
 	}
 
-	//if c.current.PreCommittedQC() == nil {
-	//	logger.Trace("safeNodeChecking", "lockQC", "is nil")
-	//	return errSafeNode
-	//}
-	//if err := c.extend(proposal, c.current.PreCommittedQC()); err == nil {
-	//	safety = true
-	//} else {
-	//	logger.Trace("safeNodeChecking", "extend err", err)
-	//}
-	//if highQC.view.Cmp(c.current.PreCommittedQC().view) > 0 {
-	//	liveness = true
-	//}
-	//if safety || liveness {
-	//	return nil
-	//} else {
-	//	return errSafeNode
-	//}
+	return errSafeNode
 }

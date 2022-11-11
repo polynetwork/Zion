@@ -27,14 +27,10 @@ func (c *core) handleCommitVote(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		vote   *Vote
+		vote   = common.BytesToHash(data.Msg)
 		code = MsgTypeCommitVote
 		src    = data.address
 	)
-	if err := data.Decode(&vote); err != nil {
-		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
-		return errFailedDecodeCommitVote
-	}
 	if err := c.checkView(code, data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
@@ -43,8 +39,8 @@ func (c *core) handleCommitVote(data *Message) error {
 		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if c.current.PreCommittedQC() == nil || vote.Digest != c.current.PreCommittedQC().hash {
-		logger.Trace("Failed to check hash", "msg", code, "src", src, "got", vote.Digest)
+	if c.current.PreCommittedQC() == nil || vote != c.current.PreCommittedQC().hash {
+		logger.Trace("Failed to check hash", "msg", code, "src", src, "got", vote)
 		return errInvalidDigest
 	}
 	if err := c.checkMsgToProposer(); err != nil {
@@ -52,12 +48,19 @@ func (c *core) handleCommitVote(data *Message) error {
 		return err
 	}
 
+	// check committed seal
+	if addr, err := c.validateFn(vote, data.CommittedSeal); err != nil {
+		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err)
+	} else if addr != src {
+		logger.Trace("Failed to check vote", "msg", code, "src", src, "expect", src, "got", addr)
+	}
+
 	if err := c.current.AddCommitVote(data); err != nil {
 		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
 		return errAddPreCommitVote
 	}
 
-	logger.Trace("handleCommitVote", "msg", code, "src", src, "hash", vote.Digest)
+	logger.Trace("handleCommitVote", "msg", code, "src", src, "hash", vote)
 
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
 
@@ -76,14 +79,6 @@ func (c *core) handleCommitVote(data *Message) error {
 		c.current.SetState(StateCommitted)
 		c.current.SetCommittedQC(commitQC)
 		logger.Trace("acceptCommit", "msg", code, "msgSize", size)
-
-		//// todo: parse error
-		//prepareQC, _ := proposal2QC(newProposal)
-		//c.acceptPrepare(prepareQC, newProposal)
-		//logger.Trace("acceptPrepare", "msg", code, "hash", newProposal.Hash(), "msgSize", size)
-		//
-		//c.sendPreCommit()
-
 
 		c.sendDecide()
 	}

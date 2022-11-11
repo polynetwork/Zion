@@ -82,11 +82,11 @@ func (c *core) checkPreCommittedQC(qc *QuorumCert) error {
 	return nil
 }
 
-func (c *core) checkVote(data *Message, vote *Vote) error {
-	if vote == nil {
-		return fmt.Errorf("external vote is nil")
+func (c *core) checkVote(data *Message, vote common.Hash) error {
+	if vote == common.EmptyHash {
+		return fmt.Errorf("external vote is empty hash")
 	}
-	if c.current.Vote() == nil {
+	if c.current.Vote() == common.EmptyHash {
 		return fmt.Errorf("current vote is nil")
 	}
 	if !reflect.DeepEqual(c.current.Vote(), vote) {
@@ -331,11 +331,7 @@ func (c *core) verifyVoteQC(digest common.Hash, qc *QuorumCert) error {
 	}
 
 	// resturct msg payload and compare msg.hash with qc.hash
-	payload, err := Encode(&Vote{Digest: digest})
-	if err != nil {
-		return err
-	}
-	msg := NewCleanMessage(qc.view, qc.code, payload)
+	msg := NewCleanMessage(qc.view, qc.code, qc.hash.Bytes())
 	if _, err := msg.PayloadNoSig(); err != nil {
 		return err
 	}

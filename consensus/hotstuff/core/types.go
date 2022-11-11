@@ -240,17 +240,15 @@ func (m *MsgDecide) DecodeRLP(s *rlp.Stream) error {
 	return nil
 }
 
-type Vote struct {
-	Digest common.Hash // Digest of s.Announce.Proposal.Hash()
-}
+type Vote common.Hash
 
-func (v *Vote) String() string {
-	return fmt.Sprintf("{Vote Digest: %v}", v.Digest)
-}
-
-func (v *Vote) Hash() common.Hash {
-	return v.Digest
-}
+//func (v *Vote) String() string {
+//	return fmt.Sprintf("{Vote Digest: %v}", v.Digest)
+//}
+//
+//func (v *Vote) Hash() common.Hash {
+//	return v.Digest
+//}
 
 type QuorumCert struct {
 	view          *View
@@ -329,8 +327,8 @@ func (qc *QuorumCert) RoundU64() uint64 {
 
 // Hash retrieve message hash but not proposal hash
 func (qc *QuorumCert) SealHash() common.Hash {
-	payload, _ := Encode(&Vote{Digest: qc.hash})
-	msg := NewCleanMessage(qc.view, qc.code, payload)
+	//payload, _ := Encode(&Vote{Digest: qc.hash})
+	msg := NewCleanMessage(qc.view, qc.code, qc.hash.Bytes())
 	msg.PayloadNoSig()
 	return msg.hash
 }
