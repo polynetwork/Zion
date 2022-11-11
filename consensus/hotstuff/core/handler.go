@@ -110,10 +110,10 @@ func (c *core) handleEvents() {
 				c.handleRequest(&Request{Proposal: ev.Proposal})
 
 			case hotstuff.MessageEvent:
-				c.handleMsg(ev.Payload)
+				c.handleMsg(ev.Src, ev.Payload)
 
 			case backlogEvent:
-				c.handleCheckedMsg(ev.msg, ev.src)
+				c.handleCheckedMsg(ev.msg)
 			}
 
 		case _, ok := <-c.timeoutSub.Chan():
@@ -141,31 +141,31 @@ func (c *core) sendEvent(ev interface{}) {
 	c.backend.EventMux().Post(ev)
 }
 
-func (c *core) handleMsg(payload []byte) error {
+func (c *core) handleMsg(val common.Address, payload []byte) error {
 	logger := c.logger.New()
 
 	// Decode Message and check its signature
 	msg := new(Message)
-	if err := msg.FromPayload(payload, c.validateFn); err != nil {
+	if err := msg.FromPayload(val, payload, c.validateFn); err != nil {
 		logger.Error("Failed to decode Message from payload", "err", err)
 		return errFailedDecodeMessage
 	}
 
 	// Only accept message if the src is consensus participant
-	index, src := c.valSet.GetByAddress(msg.Address)
+	index, src := c.valSet.GetByAddress(val)
 	if index < 0 || src == nil {
 		logger.Error("Invalid address in Message", "msg", msg)
 		return errInvalidSigner
 	}
 
 	// handle checked Message
-	if err := c.handleCheckedMsg(msg, src); err != nil {
+	if err := c.handleCheckedMsg(msg); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (c *core) handleCheckedMsg(msg *Message, src hotstuff.Validator) (err error) {
+func (c *core) handleCheckedMsg(msg *Message) (err error) {
 	if c.current == nil {
 		c.logger.Error("engine state not prepared...")
 		return
@@ -173,28 +173,28 @@ func (c *core) handleCheckedMsg(msg *Message, src hotstuff.Validator) (err error
 
 	switch msg.Code {
 	case MsgTypeNewView:
-		err = c.handleNewView(msg, src)
+		err = c.handleNewView(msg)
 	case MsgTypePrepare:
-		err = c.handlePrepare(msg, src)
+		err = c.handlePrepare(msg)
 	case MsgTypePrepareVote:
-		err = c.handlePrepareVote(msg, src)
+		err = c.handlePrepareVote(msg)
 	case MsgTypePreCommit:
-		err = c.handlePreCommit(msg, src)
+		err = c.handlePreCommit(msg)
 	case MsgTypePreCommitVote:
-		err = c.handlePreCommitVote(msg, src)
+		err = c.handlePreCommitVote(msg)
 	case MsgTypeCommit:
-		err = c.handleCommit(msg, src)
+		err = c.handleCommit(msg)
 	case MsgTypeCommitVote:
-		err = c.handleCommitVote(msg, src)
+		err = c.handleCommitVote(msg)
 	case MsgTypeDecide:
-		err = c.handleDecide(msg, src)
+		err = c.handleDecide(msg)
 	default:
 		err = errInvalidMessage
 		c.logger.Error("msg type invalid", "unknown type", msg.Code)
 	}
 
 	if err == errFutureMessage {
-		c.storeBacklog(msg, src)
+		c.storeBacklog(msg)
 	}
 	return
 }

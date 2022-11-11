@@ -49,7 +49,7 @@ type core struct {
 	pendingRequests   *prque.Prque
 	pendingRequestsMu *sync.Mutex
 
-	validateFn func([]byte, []byte) (common.Address, error)
+	validateFn func(common.Hash, []byte) (common.Address, error)
 	isRunning  bool
 }
 
@@ -126,7 +126,10 @@ func (c *core) startNewRound(round *big.Int) {
 
 	c.valSet = c.backend.Validators(common.EmptyHash, true)
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
-	c.updateRoundState(newView, changeView, lastProposal, c.valSet)
+	if err := c.updateRoundState(newView, changeView, lastProposal, c.valSet); err != nil {
+		logger.Error("Update round state failed", "state", c.currentState(), "newView", newView, "err", err)
+		return
+	}
 
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
@@ -148,18 +151,23 @@ func (c *core) checkPoint(view *View) bool {
 	return false
 }
 
-func (c *core) updateRoundState(newView *View, changeView bool, lastProposal hotstuff.Proposal, valset hotstuff.ValidatorSet) {
-	prepareQC := proposal2QC(lastProposal, common.Big0)
-
-	if !changeView {
-		c.current = newRoundState(newView, c.valSet, prepareQC)
-		return
+func (c *core) updateRoundState(newView *View, changeView bool, lastProposal hotstuff.Proposal, valset hotstuff.ValidatorSet) error {
+	if !changeView && c.current == nil {
+		// load from db first
+		c.current = newRoundState(newView, c.valSet)
+		prepareQC, err := proposal2QC(lastProposal)
+		if err != nil {
+			return err
+		}
+		c.current.prepareQC = prepareQC
+	} else {
+		c.current.update(newView, valset)
+		//// reuse pending request if round changed
+		//lastPendingRequest := c.current.PendingRequest()
+		//c.current = newRoundState(newView, c.valSet, prepareQC)
+		//c.current.SetPendingRequest(lastPendingRequest)
 	}
-
-	// reuse pending request if round changed
-	lastPendingRequest := c.current.PendingRequest()
-	c.current = newRoundState(newView, c.valSet, prepareQC)
-	c.current.SetPendingRequest(lastPendingRequest)
+	return nil
 }
 
 func (c *core) setCurrentState(s State) {
@@ -170,6 +178,6 @@ func (c *core) setCurrentState(s State) {
 	c.processBacklog()
 }
 
-func (c *core) checkValidatorSignature(data []byte, sig []byte) (common.Address, error) {
-	return c.signer.CheckSignature(c.valSet, data, sig)
+func (c *core) checkValidatorSignature(hash common.Hash, sig []byte) (common.Address, error) {
+	return c.signer.CheckSignature(c.valSet, hash, sig)
 }

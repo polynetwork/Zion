@@ -17,60 +17,60 @@
  */
 
 package core
-
-import (
-	"testing"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/assert"
-)
-
-// notice: we need only 3 test case:
-// 1. `newView` send quorumCert, e.g: sendPreCommit, sendCommit
-// 2. `prepare` send msgNewProposal
-// 3. `prepareVote` send vote, e.g: sendPrepareVote, sendPreCommitVote, sendCommitVote
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandleMsg
-func TestHandleMsg(t *testing.T) {
-	N, H, R := 4, 5, 0
-
-	view := makeView(H, R)
-	sys := NewTestSystemWithBackend(N, H, R)
-
-	//closer := sys.Run(true)
-	//defer closer()
-
-	v0 := sys.backends[0]
-	r0 := v0.engine
-	vset := v0.Validators(common.EmptyHash, true)
-	sender := vset.GetByIndex(1)
-
-	// invalid message payload
-	{
-		payload := []byte{'1', 'a', 'b'}
-		assert.Equal(t, errFailedDecodeMessage, r0.handleMsg(payload))
-	}
-
-	// invalid sender
-	{
-		msg := &Message{
-			Code:    MsgTypeNewView,
-			View:    view,
-			Msg:     []byte{'1'},
-			Address: common.HexToAddress("0x12"),
-		}
-		payload, err := Encode(msg)
-		assert.NoError(t, err)
-		assert.Equal(t, errInvalidSigner, r0.handleMsg(payload))
-	}
-
-	// invalid msg type
-	{
-		msg := &Message{
-			Code:    100,
-			View:    view,
-			Msg:     []byte{'1'},
-			Address: sender.Address(),
-		}
-		assert.Equal(t, errInvalidMessage, r0.handleCheckedMsg(msg, sender))
-	}
-}
+//
+//import (
+//	"testing"
+//
+//	"github.com/ethereum/go-ethereum/common"
+//	"github.com/stretchr/testify/assert"
+//)
+//
+//// notice: we need only 3 test case:
+//// 1. `newView` send quorumCert, e.g: sendPreCommit, sendCommit
+//// 2. `prepare` send msgNewProposal
+//// 3. `prepareVote` send vote, e.g: sendPrepareVote, sendPreCommitVote, sendCommitVote
+//// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandleMsg
+//func TestHandleMsg(t *testing.T) {
+//	N, H, R := 4, 5, 0
+//
+//	view := makeView(H, R)
+//	sys := NewTestSystemWithBackend(N, H, R)
+//
+//	//closer := sys.Run(true)
+//	//defer closer()
+//
+//	v0 := sys.backends[0]
+//	r0 := v0.engine
+//	vset := v0.Validators(common.EmptyHash, true)
+//	sender := vset.GetByIndex(1)
+//
+//	// invalid message payload
+//	{
+//		payload := []byte{'1', 'a', 'b'}
+//		assert.Equal(t, errFailedDecodeMessage, r0.handleMsg(payload))
+//	}
+//
+//	// invalid sender
+//	{
+//		msg := &Message{
+//			Code:    MsgTypeNewView,
+//			View:    view,
+//			Msg:     []byte{'1'},
+//			Address: common.HexToAddress("0x12"),
+//		}
+//		payload, err := Encode(msg)
+//		assert.NoError(t, err)
+//		assert.Equal(t, errInvalidSigner, r0.handleMsg(payload))
+//	}
+//
+//	// invalid msg type
+//	{
+//		msg := &Message{
+//			Code:    100,
+//			View:    view,
+//			Msg:     []byte{'1'},
+//			Address: sender.Address(),
+//		}
+//		assert.Equal(t, errInvalidMessage, r0.handleCheckedMsg(msg, sender))
+//	}
+//}

@@ -48,6 +48,7 @@ var (
 	errFailedDecodeCommitVote = errors.New("failed to decode COMMIT_VOTE")
 	errInvalidSigner          = errors.New("Message not signed by the sender")
 	errInvalidProposal        = errors.New("invalid proposal")
+	errInvalidQC              = errors.New("invalid qc")
 	errVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
 	errExtend                 = errors.New("proposal extend relationship error")
 	errSafeNode               = errors.New("safeNode checking failed")

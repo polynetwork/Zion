@@ -95,7 +95,7 @@ func makeBlockWithParentHash(number int, parentHash common.Hash) *types.Block {
 		GasUsed:    0,
 		Time:       0,
 	}
-	if parentHash != EmptyHash {
+	if parentHash != common.EmptyHash {
 		header.ParentHash = parentHash
 	}
 	block := &types.Block{}
@@ -258,7 +258,7 @@ func NewTestSystemWithBackend(n, h, r int) *testSystem {
 		backend.address = vset.GetByIndex(uint64(i)).Address()
 
 		core := New(backend, config, signer.NewSigner(keys[i]))
-		core.current = newRoundState(makeView(h, r), vset, nil)
+		core.current = newRoundState(makeView(h, r), vset)
 		core.valSet = vset
 		core.logger = testLogger
 		core.validateFn = nil
@@ -402,7 +402,7 @@ func singerTestCore(t *testing.T, n int, height, round int64) (*core, hotstuff.V
 		current: newRoundState(&View{
 			Height: big.NewInt(height),
 			Round:  big.NewInt(round),
-		}, vals, nil),
+		}, vals),
 		signer:   signer.NewSigner(keys[0]),
 		backlogs: newBackLog(),
 	}
@@ -443,23 +443,24 @@ func newTestQCWithExtra(t *testing.T, s *testSystem, h int) *QuorumCert {
 	coinbase := vset.GetByIndex(uint64(h % N))
 
 	leader := s.getLeader()
-	seal, _ := leader.signer.SignHash(hash)
+	seal, _ := leader.signer.SignHash(hash, true)
 	committedSeal := make([][]byte, N-1)
 	for i, v := range s.getRepos() {
-		sig, err := v.signer.SignHash(hash)
+		sig, err := v.signer.SignHash(hash, true)
 		if err != nil {
 			t.Errorf("sign block hash failed, err: %v", err)
 		}
 		committedSeal[i] = sig
 	}
-	extra, err := types.GenerateExtraWithSignature(0, 1000000000, vset.AddressList(), seal, committedSeal)
-	if err != nil {
-		t.Errorf("generate extra with signatures failed, err: %v", err)
-	}
+	//extra, err := types.GenerateExtraWithSignature(0, 1000000000, vset.AddressList(), seal, committedSeal)
+	//if err != nil {
+	//	t.Errorf("generate extra with signatures failed, err: %v", err)
+	//}
 	return &QuorumCert{
-		view:     view,
-		hash:     hash,
-		proposer: coinbase.Address(),
-		extra:    extra,
+		view:          view,
+		hash:          hash,
+		proposer:      coinbase.Address(),
+		seal:          seal,
+		committedSeal: committedSeal,
 	}
 }

@@ -17,84 +17,84 @@
  */
 
 package core
-
-import (
-	"math/big"
-	"testing"
-
-	"github.com/ethereum/go-ethereum/common"
-)
-
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestMessageSetWithNewView
-func TestMessageSetWithNewView(t *testing.T) {
-	valSet, _ := newTestValidatorSet(4)
-
-	ms := NewMessageSet(valSet)
-
-	view := &View{
-		Round:  new(big.Int),
-		Height: new(big.Int),
-	}
-	pp := &MsgNewView{
-		View: view,
-	}
-	payload, err := Encode(pp)
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
-	msg := &Message{
-		Code:    MsgTypeNewView,
-		Msg:     payload,
-		Address: valSet.GetProposer().Address(),
-	}
-
-	if err = ms.Add(msg); err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
-
-	if err = ms.Add(msg); err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
-
-	if ms.Size() != 1 {
-		t.Errorf("the size of message set mismatch: have %v, want 1", ms.Size())
-	}
-}
-
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestMessageSetVote
-func TestMessageSetVote(t *testing.T) {
-	valSet, _ := newTestValidatorSet(4)
-
-	ms := NewMessageSet(valSet)
-
-	view := &View{
-		Round:  new(big.Int),
-		Height: new(big.Int),
-	}
-
-	sub := &Vote{
-		View:   view,
-		Digest: common.HexToHash("1234567890"),
-	}
-
-	payload, err := Encode(sub)
-	if err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
-
-	msg := &Message{
-		Code:    MsgTypePrepareVote,
-		Msg:     payload,
-		Address: valSet.GetProposer().Address(),
-	}
-
-	if err := ms.Add(msg); err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
-	if err := ms.Add(msg); err != nil {
-		t.Errorf("error mismatch: have %v, want nil", err)
-	}
-	if ms.Size() != 1 {
-		t.Errorf("the size of message set mismatch: have %v, want 1", ms.Size())
-	}
-}
+//
+//import (
+//	"math/big"
+//	"testing"
+//
+//	"github.com/ethereum/go-ethereum/common"
+//)
+//
+//// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestMessageSetWithNewView
+//func TestMessageSetWithNewView(t *testing.T) {
+//	valSet, _ := newTestValidatorSet(4)
+//
+//	ms := NewMessageSet(valSet)
+//
+//	view := &View{
+//		Round:  new(big.Int),
+//		Height: new(big.Int),
+//	}
+//	pp := &MsgNewView{
+//		View: view,
+//	}
+//	payload, err := Encode(pp)
+//	if err != nil {
+//		t.Errorf("error mismatch: have %v, want nil", err)
+//	}
+//	msg := &Message{
+//		Code:    MsgTypeNewView,
+//		Msg:     payload,
+//		Address: valSet.GetProposer().Address(),
+//	}
+//
+//	if err = ms.Add(msg); err != nil {
+//		t.Errorf("error mismatch: have %v, want nil", err)
+//	}
+//
+//	if err = ms.Add(msg); err != nil {
+//		t.Errorf("error mismatch: have %v, want nil", err)
+//	}
+//
+//	if ms.Size() != 1 {
+//		t.Errorf("the size of message set mismatch: have %v, want 1", ms.Size())
+//	}
+//}
+//
+//// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestMessageSetVote
+//func TestMessageSetVote(t *testing.T) {
+//	valSet, _ := newTestValidatorSet(4)
+//
+//	ms := NewMessageSet(valSet)
+//
+//	view := &View{
+//		Round:  new(big.Int),
+//		Height: new(big.Int),
+//	}
+//
+//	sub := &Vote{
+//		View:   view,
+//		Digest: common.HexToHash("1234567890"),
+//	}
+//
+//	payload, err := Encode(sub)
+//	if err != nil {
+//		t.Errorf("error mismatch: have %v, want nil", err)
+//	}
+//
+//	msg := &Message{
+//		Code:    MsgTypePrepareVote,
+//		Msg:     payload,
+//		Address: valSet.GetProposer().Address(),
+//	}
+//
+//	if err := ms.Add(msg); err != nil {
+//		t.Errorf("error mismatch: have %v, want nil", err)
+//	}
+//	if err := ms.Add(msg); err != nil {
+//		t.Errorf("error mismatch: have %v, want nil", err)
+//	}
+//	if ms.Size() != 1 {
+//		t.Errorf("the size of message set mismatch: have %v, want 1", ms.Size())
+//	}
+//}

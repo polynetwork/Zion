@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -157,6 +158,38 @@ func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address, epo
 		return err
 	}
 	header.Extra = append(buf.Bytes(), payload...)
+	return nil
+}
+
+func (h *Header) SetSeal(seal []byte) error {
+	extra, err := ExtractHotstuffExtra(h)
+	if err != nil {
+		return err
+	}
+	extra.Seal = seal
+	payload, err := rlp.EncodeToBytes(&extra)
+	if err != nil {
+		return err
+	}
+	h.Extra = append(h.Extra[:HotstuffExtraVanity], payload...)
+	return nil
+}
+
+func (h *Header) SetCommittedSeal(committedSeals [][]byte) error {
+	extra, err := ExtractHotstuffExtra(h)
+	if err != nil {
+		return err
+	}
+
+	extra.CommittedSeal = make([][]byte, len(committedSeals))
+	copy(extra.CommittedSeal, committedSeals)
+
+	payload, err := rlp.EncodeToBytes(&extra)
+	if err != nil {
+		return err
+	}
+
+	h.Extra = append(h.Extra[:HotstuffExtraVanity], payload...)
 	return nil
 }
 

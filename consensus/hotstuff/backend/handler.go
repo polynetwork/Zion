@@ -78,6 +78,7 @@ func (s *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		s.knownMessages.Add(hash, true)
 
 		go s.eventMux.Post(hotstuff.MessageEvent{
+			Src:     addr,
 			Payload: data,
 		})
 		return true, nil
@@ -126,6 +127,6 @@ func (s *backend) NewChainHead(header *types.Header) error {
 	return nil
 }
 
-func (s *backend) SubscribeNodes(ch chan <- consensus.StaticNodesEvent) event.Subscription {
+func (s *backend) SubscribeNodes(ch chan<- consensus.StaticNodesEvent) event.Subscription {
 	return s.nodesFeed.Subscribe(ch)
 }

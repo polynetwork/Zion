@@ -29,8 +29,12 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 )
 
-func (c *core) checkMsgFromProposer(src hotstuff.Validator) error {
-	if !c.valSet.IsProposer(src.Address()) {
+func (c *core) proposer() common.Address {
+	return c.valSet.GetProposer().Address()
+}
+
+func (c *core) checkMsgFromProposer(src common.Address) error {
+	if !c.valSet.IsProposer(src) {
 		return errNotFromProposer
 	}
 	return nil
@@ -60,7 +64,7 @@ func (c *core) checkPrepareQC(qc *QuorumCert) error {
 		return fmt.Errorf("proposer unsame, expect %v, got %v", localQC.Proposer(), qc.Proposer())
 	}
 	if localQC.hash != qc.hash {
-		return fmt.Errorf("expect %v, got %v", localQC.Hash(), qc.Hash())
+		return fmt.Errorf("expect %v, got %v", localQC.hash, qc.hash)
 	}
 	return nil
 }
@@ -78,7 +82,7 @@ func (c *core) checkPreCommittedQC(qc *QuorumCert) error {
 	return nil
 }
 
-func (c *core) checkVote(vote *Vote) error {
+func (c *core) checkVote(data *Message, vote *Vote) error {
 	if vote == nil {
 		return fmt.Errorf("external vote is nil")
 	}
@@ -88,8 +92,25 @@ func (c *core) checkVote(vote *Vote) error {
 	if !reflect.DeepEqual(c.current.Vote(), vote) {
 		return fmt.Errorf("expect %s, got %s", c.current.Vote().String(), vote.String())
 	}
+	// todo:
+	//if hash, err := c.current.SelfVoteHash(data.View, data.Code); err != nil {
+	//	return fmt.Errorf("get self vote hash failed, err: %v", err)
+	//} else if hash != data.hash {
+	//	return fmt.Errorf("expect vote hash %v, got %v", hash, data.hash)
+	//}
 	return nil
 }
+
+// todo(fuk): 这里应该考虑将qc分成两种，一种用于投票，一种用于区块，两种qc公用同一套接口，然后在signer那边可以共同验证
+//func (c *core) votes2qc(hash common.Hash, seals [][]byte) {
+//	QuorumCert{
+//		view:          nil,
+//		hash:          common.Hash{},
+//		proposer:      common.Address{},
+//		seal:          nil,
+//		committedSeal: nil,
+//	}
+//}
 
 func (c *core) checkProposal(hash common.Hash) error {
 	if c.current == nil || c.current.Proposal() == nil {
@@ -153,71 +174,58 @@ func (c *core) checkView(msgCode MsgType, view *View) error { //todo
 }
 
 func (c *core) finalizeMessage(msg *Message) ([]byte, error) {
-	var err error
-
-	// Add sender address
-	msg.Address = c.Address()
-	msg.View = c.currentView()
+	var (
+		seal, sig []byte
+		err       error
+	)
 
 	// Add proof of consensus
 	proposal := c.current.Proposal()
-	if msg.Code == MsgTypePrepareVote && proposal != nil {
-		seal, err := c.signer.SignHash(proposal.Hash())
-		if err != nil {
+	if msg.Code == MsgTypeCommitVote && proposal != nil {
+		if seal, err = c.signer.SignHash(proposal.Hash(), true); err != nil {
 			return nil, err
 		}
 		msg.CommittedSeal = seal
 	}
 
 	// Sign Message
-	data, err := msg.PayloadNoSig()
-	if err != nil {
+	if _, err = msg.PayloadNoSig(); err != nil {
 		return nil, err
 	}
-	if sig, err := c.signer.Sign(data); err != nil {
+	if sig, err = c.signer.SignHash(msg.hash, false); err != nil {
 		return nil, err
 	} else {
 		msg.Signature = sig
 	}
 
 	// Convert to payload
-	payload, err := msg.Payload()
-	if err != nil {
-		return nil, err
-	}
-
-	return payload, nil
+	return msg.Payload()
 }
 
-func (c *core) getMessageSeals(n int) [][]byte {
-	seals := make([][]byte, n)
-	for i, data := range c.current.PrepareVotes() {
-		if i < n {
-			seals[i] = data.CommittedSeal
-		}
-	}
-	return seals
-}
-
-func (c *core) broadcast(msg *Message) {
+func (c *core) broadcast(code MsgType, payload []byte) {
 	logger := c.logger.New("state", c.currentState())
 
+	// todo(fuk): forbid at start at new round
 	// forbid normal nodes send message to leader
 	if index, _ := c.valSet.GetByAddress(c.Address()); index < 0 {
 		return
 	}
 
+	msg := NewCleanMessage(c.currentView(), code, payload)
 	payload, err := c.finalizeMessage(msg)
 	if err != nil {
 		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
 		return
 	}
 
+	// todo(fuk): 这里需要注意的是，prepareQC和preCommitQC以及commitQC所需要的3轮投票中要提前将
+	// 自己的投票
 	switch msg.Code {
 	case MsgTypeNewView, MsgTypePrepareVote, MsgTypePreCommitVote, MsgTypeCommitVote:
 		if err := c.backend.Unicast(c.valSet, payload); err != nil {
 			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
 		}
+
 	case MsgTypePrepare, MsgTypePreCommit, MsgTypeCommit, MsgTypeDecide:
 		if err := c.backend.Broadcast(c.valSet, payload); err != nil {
 			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
@@ -248,16 +256,106 @@ func (c *core) Q() int {
 	return c.valSet.Q()
 }
 
-func proposal2QC(proposal hotstuff.Proposal, round *big.Int) *QuorumCert {
+func proposal2QC(proposal hotstuff.Proposal) (*QuorumCert, error) {
 	block := proposal.(*types.Block)
 	h := block.Header()
-	qc := new(QuorumCert)
-	qc.view = &View{
-		Height: block.Number(),
-		Round:  round,
+	qc := EmptyQC()
+
+	extra, err := types.ExtractHotstuffExtra(h)
+	if err != nil {
+		return nil, err
 	}
-	qc.hash = h.Hash()
-	qc.proposer = h.Coinbase
-	qc.extra = h.Extra
-	return qc
+
+	if h.Hash() == common.EmptyHash || extra.Seal == nil || extra.CommittedSeal == nil {
+		return nil, errInvalidProposal
+	}
+
+	qc.view.Height = new(big.Int).SetUint64(h.Number.Uint64())
+	qc.view.Round = big.NewInt(0)
+	copy(qc.hash[:], h.Hash().Bytes())
+	copy(qc.seal, extra.Seal)
+	copy(qc.committedSeal, extra.CommittedSeal)
+	fmt.Println("----qc.hash", qc.hash.Hex())
+	return qc, nil
+}
+
+// assemble messages to quorum cert.
+func (c *core) messages2qc(proposer common.Address, hash common.Hash, msgs []*Message) (*QuorumCert, error) {
+	if len(msgs) == 0 {
+		return nil, fmt.Errorf("assemble qc: not enough message")
+	}
+
+	qc := &QuorumCert{
+		view:          msgs[0].View,
+		code:          msgs[0].Code,
+		hash:          hash,
+		proposer:      proposer,
+		committedSeal: make([][]byte, len(msgs)),
+	}
+
+	for i, msg := range msgs {
+		if msg.address == proposer {
+			qc.seal = msg.Signature
+		}
+		qc.committedSeal[i] = msg.Signature
+	}
+
+	// proposer self vote should be add in message set first.
+	if qc.seal == nil {
+		return nil, fmt.Errorf("assemble qc: proposer self vote not exist")
+	}
+
+	return qc, nil
+}
+
+func (c *core) verifyVoteQC(digest common.Hash, qc *QuorumCert) error {
+	// check qc view
+	if qc == nil || qc.view == nil {
+		return errInvalidQC
+	}
+
+	// verify genesis qc
+	if qc.HeightU64() == 0 {
+		return nil
+	}
+
+	// check qc hash and sigs
+	if qc.seal == nil || qc.committedSeal == nil ||
+		qc.hash == common.EmptyHash || qc.proposer == common.EmptyAddress {
+		return errInvalidQC
+	}
+
+	// qc code should be vote
+	if !checkQCCode(qc.code) {
+		return errInvalidQC
+	}
+
+	// resturct msg payload and compare msg.hash with qc.hash
+	payload, err := Encode(&Vote{Digest: digest})
+	if err != nil {
+		return err
+	}
+	msg := NewCleanMessage(qc.view, qc.code, payload)
+	if _, err := msg.PayloadNoSig(); err != nil {
+		return err
+	}
+	if sealHash := qc.SealHash(); msg.hash != sealHash {
+		return fmt.Errorf("expect qc hash %v, got %v", msg.hash, sealHash)
+	}
+
+	// verify seal and committed seals
+	return c.signer.VerifyQC(qc, c.valSet)
+}
+
+// todo:
+func (c *core) verifyProposalQC() error {
+	return nil
+}
+
+// qc comes from vote
+func checkQCCode(code MsgType) bool {
+	if code == MsgTypePrepareVote || code == MsgTypePreCommitVote || code == MsgTypeCommitVote {
+		return true
+	}
+	return false
 }

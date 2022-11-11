@@ -23,22 +23,22 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
-func (c *core) storeBacklog(msg *Message, src hotstuff.Validator) {
+func (c *core) storeBacklog(msg *Message) {
 	logger := c.newLogger()
 
-	if src.Address() == c.Address() {
+	src := msg.address
+	if src == c.Address() {
 		logger.Trace("Backlog from self")
 		return
 	}
-	if _, v := c.valSet.GetByAddress(src.Address()); v == nil {
-		logger.Trace("Backlog from unknown validator", "address", src.Address())
+	if _, v := c.valSet.GetByAddress(src); v == nil {
+		logger.Trace("Backlog from unknown validator", "address", src)
 		return
 	}
 
-	logger.Trace("Retrieving backlog queue", "for", src.Address(), "backlogs_size", c.backlogs.Size(src.Address()))
+	logger.Trace("Retrieving backlog queue", "for", src, "backlogs_size", c.backlogs.Size(src))
 
 	c.backlogs.Push(msg)
 }
@@ -96,7 +96,7 @@ func newBackLog() *backlog {
 }
 
 func (b *backlog) Push(msg *Message) {
-	if msg == nil || msg.Address == EmptyAddress ||
+	if msg == nil || msg.address == common.EmptyAddress ||
 		msg.View == nil || msg.Code > MsgTypeDecide {
 		return
 	}
@@ -104,7 +104,7 @@ func (b *backlog) Push(msg *Message) {
 	b.mu.Lock()
 	defer b.mu.Unlock()
 
-	addr := msg.Address
+	addr := msg.address
 	if _, ok := b.queue[addr]; !ok {
 		b.queue[addr] = prque.New(nil)
 	}

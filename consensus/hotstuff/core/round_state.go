@@ -22,6 +22,7 @@ import (
 	"math/big"
 	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -66,9 +67,9 @@ type roundState struct {
 }
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
-func newRoundState(view *View, validatorSet hotstuff.ValidatorSet, prepareQC *QuorumCert) *roundState {
+func newRoundState(view *View, validatorSet hotstuff.ValidatorSet) *roundState {
 	rs := &roundState{
-		vs:             validatorSet,
+		vs:             validatorSet.Copy(),
 		round:          view.Round,
 		height:         view.Height,
 		state:          StateAcceptRequest,
@@ -78,12 +79,26 @@ func newRoundState(view *View, validatorSet hotstuff.ValidatorSet, prepareQC *Qu
 		commitVotes:    NewMessageSet(validatorSet),
 		mu:             new(sync.RWMutex),
 	}
-	if prepareQC != nil {
-		rs.prepareQC = prepareQC.Copy()
-		rs.lockedQC = prepareQC.Copy()
-		rs.committedQC = prepareQC.Copy()
-	}
+	//if prepareQC != nil {
+	//	rs.prepareQC = prepareQC.Copy()
+	//	rs.lockedQC = prepareQC.Copy()
+	//	rs.committedQC = prepareQC.Copy()
+	//}
+	rs.prepareQC = EmptyQC()
 	return rs
+}
+
+// clean all votes message set for new round
+func (s *roundState) update(view *View, vs hotstuff.ValidatorSet) {
+	s.vs = vs
+	s.height = view.Height
+	s.round = view.Round
+	s.state = StateAcceptRequest
+
+	s.newViews = NewMessageSet(vs)
+	s.prepareVotes = NewMessageSet(vs)
+	s.preCommitVotes = NewMessageSet(vs)
+	s.commitVotes = NewMessageSet(vs)
 }
 
 func (s *roundState) Height() *big.Int {
@@ -173,15 +188,15 @@ func (s *roundState) Vote() *Vote {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 
-	if s.proposal == nil || s.proposal.Hash() == EmptyHash {
+	return s.currentVote()
+}
+
+func (s *roundState) currentVote() *Vote {
+	if s.proposal == nil || s.proposal.Hash() == common.EmptyHash {
 		return nil
 	}
 
 	return &Vote{
-		View: &View{
-			Round:  new(big.Int).Set(s.round),
-			Height: new(big.Int).Set(s.height),
-		},
 		Digest: s.proposal.Hash(),
 	}
 }
@@ -271,6 +286,10 @@ func (s *roundState) AddPreCommitVote(msg *Message) error {
 	return s.preCommitVotes.Add(msg)
 }
 
+func (s *roundState) PreCommitVotes() []*Message {
+	return s.preCommitVotes.Values()
+}
+
 func (s *roundState) PreCommitVoteSize() int {
 	return s.preCommitVotes.Size()
 }
@@ -279,6 +298,53 @@ func (s *roundState) AddCommitVote(msg *Message) error {
 	return s.commitVotes.Add(msg)
 }
 
+func (s *roundState) CommitVotes() []*Message {
+	return s.commitVotes.Values()
+}
+
 func (s *roundState) CommitVoteSize() int {
 	return s.commitVotes.Size()
 }
+
+func (s *roundState) GetCommittedSeals(n int) [][]byte {
+	seals := make([][]byte, n)
+	for i, data := range s.commitVotes.Values() {
+		if i < n {
+			seals[i] = data.CommittedSeal
+		}
+	}
+	return seals
+}
+
+// todo(fuk): delete after test
+//func (s *roundState) AddSelfVote(code MsgType, hash common.Hash) {
+//	s.selfVote[code] = hash
+//}
+//
+//func (s *roundState) SelfVoteHash(view *View, code MsgType) (common.Hash, error) {
+//	if hash := s.selfVote[code]; hash != common.EmptyHash {
+//		return hash, nil
+//	}
+//
+//	vote := s.currentVote()
+//	if vote == nil {
+//		return common.EmptyHash, errInvalidProposal
+//	}
+//	payload, err := Encode(vote)
+//	if err != nil {
+//		return common.EmptyHash, err
+//	}
+//
+//	msg := &Message{
+//		Code: code,
+//		View: view,
+//		Msg:  payload,
+//	}
+//	if _, err := msg.PayloadNoSig(); err != nil {
+//		return common.EmptyHash, err
+//	}
+//	if msg.hash == common.EmptyHash {
+//		return common.EmptyHash, errInvalidProposal
+//	}
+//	return msg.hash, nil
+//}
