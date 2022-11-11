@@ -150,94 +150,38 @@ func (v *View) String() string {
 	return fmt.Sprintf("{Round: %d, Height: %d}", v.Round.Uint64(), v.Height.Uint64())
 }
 
-type MsgNewView struct {
-	PrepareQC *QuorumCert
-}
+//type MsgNewView struct {
+//	PrepareQC *QuorumCert
+//}
 
-type MsgPrepare struct {
+type Subject struct {
 	Proposal hotstuff.Proposal
-	HighQC   *QuorumCert
+	QC       *QuorumCert
 }
 
-func (m *MsgPrepare) EncodeRLP(w io.Writer) error {
+func (m *Subject) EncodeRLP(w io.Writer) error {
 	block, ok := m.Proposal.(*types.Block)
 	if !ok {
 		return errInvalidProposal
 	}
-	return rlp.Encode(w, []interface{}{block, m.HighQC})
+	return rlp.Encode(w, []interface{}{block, m.QC})
 }
 
-func (m *MsgPrepare) DecodeRLP(s *rlp.Stream) error {
+func (m *Subject) DecodeRLP(s *rlp.Stream) error {
 	var proposal struct {
 		Proposal *types.Block
-		HighQC   *QuorumCert
+		QC       *QuorumCert
 	}
 
 	if err := s.Decode(&proposal); err != nil {
 		return err
 	}
-	m.Proposal, m.HighQC = proposal.Proposal, proposal.HighQC
+	m.Proposal, m.QC = proposal.Proposal, proposal.QC
 	return nil
 }
 
-func (m *MsgPrepare) String() string {
+func (m *Subject) String() string {
 	return fmt.Sprintf("{NewProposal Hash: %s}", m.Proposal.Hash())
-}
-
-type MsgPreCommit struct {
-	Proposal  hotstuff.Proposal
-	PrepareQC *QuorumCert
-}
-
-func (m *MsgPreCommit) EncodeRLP(w io.Writer) error {
-	block, ok := m.Proposal.(*types.Block)
-	if !ok {
-		return errInvalidProposal
-	}
-	return rlp.Encode(w, []interface{}{block, m.PrepareQC})
-}
-
-func (m *MsgPreCommit) DecodeRLP(s *rlp.Stream) error {
-	var proposal struct {
-		Proposal  *types.Block
-		PrepareQC *QuorumCert
-	}
-
-	if err := s.Decode(&proposal); err != nil {
-		return err
-	}
-	m.Proposal, m.PrepareQC = proposal.Proposal, proposal.PrepareQC
-	return nil
-}
-
-func (m *MsgPreCommit) String() string {
-	return fmt.Sprintf("{MsgPreCommit Hash: %s}", m.Proposal.Hash())
-}
-
-type MsgDecide struct {
-	Proposal hotstuff.Proposal
-	CommitQC *QuorumCert
-}
-
-func (m *MsgDecide) EncodeRLP(w io.Writer) error {
-	block, ok := m.Proposal.(*types.Block)
-	if !ok {
-		return errInvalidProposal
-	}
-	return rlp.Encode(w, []interface{}{block, m.CommitQC})
-}
-
-func (m *MsgDecide) DecodeRLP(s *rlp.Stream) error {
-	var proposal struct {
-		Proposal *types.Block
-		CommitQC *QuorumCert
-	}
-
-	if err := s.Decode(&proposal); err != nil {
-		return err
-	}
-	m.Proposal, m.CommitQC = proposal.Proposal, proposal.CommitQC
-	return nil
 }
 
 type QuorumCert struct {
@@ -247,6 +191,29 @@ type QuorumCert struct {
 	proposer      common.Address
 	seal          []byte
 	committedSeal [][]byte
+}
+
+// EncodeRLP serializes b into the Ethereum RLP format.
+func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{qc.view, qc.code, qc.hash, qc.proposer, qc.seal, qc.committedSeal})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
+	var cert struct {
+		View          *View
+		Code          MsgType
+		Hash          common.Hash
+		Proposer      common.Address
+		Seal          []byte
+		CommittedSeal [][]byte
+	}
+
+	if err := s.Decode(&cert); err != nil {
+		return err
+	}
+	qc.view, qc.code, qc.hash, qc.proposer, qc.seal, qc.committedSeal = cert.View, cert.Code, cert.Hash, cert.Proposer, cert.Seal, cert.CommittedSeal
+	return nil
 }
 
 func (qc *QuorumCert) Height() *big.Int {
@@ -304,29 +271,6 @@ func (qc *QuorumCert) Copy() *QuorumCert {
 		return nil
 	}
 	return newQC
-}
-
-// EncodeRLP serializes b into the Ethereum RLP format.
-func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{qc.view, qc.code, qc.hash, qc.proposer, qc.seal, qc.committedSeal})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
-func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
-	var cert struct {
-		View          *View
-		Code          MsgType
-		Hash          common.Hash
-		Proposer      common.Address
-		Seal          []byte
-		CommittedSeal [][]byte
-	}
-
-	if err := s.Decode(&cert); err != nil {
-		return err
-	}
-	qc.view, qc.code, qc.hash, qc.proposer, qc.seal, qc.committedSeal = cert.View, cert.Code, cert.Hash, cert.Proposer, cert.Seal, cert.CommittedSeal
-	return nil
 }
 
 type Message struct {

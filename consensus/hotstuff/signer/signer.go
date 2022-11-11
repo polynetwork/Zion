@@ -247,12 +247,6 @@ func (s *SignerImpl) wrapCommittedHash(hash common.Hash) common.Hash {
 		Hash: hash,
 		Salt: s.commitSigSalt,
 	})
-	//var (
-	//	buf bytes.Buffer
-	//)
-	//buf.Write(hash.Bytes())
-	//buf.Write(s.commitSigSalt)
-	//return buf.Bytes()
 }
 
 func checkValidatorQuorum(committers []common.Address, valSet hotstuff.ValidatorSet) error {
@@ -292,154 +286,9 @@ func (s *SignerImpl) getSignersFromCommittedSeals(hash common.Hash, seals [][]by
 
 // getSignatureAddress gets the address address from the signature
 func getSignatureAddress(hash common.Hash, sig []byte) (common.Address, error) {
-	//// 1. Keccak data
-	//hashData := crypto.Keccak256(data)
-	//// 2. Recover public key
 	pubkey, err := crypto.SigToPub(hash.Bytes(), sig)
 	if err != nil {
 		return common.Address{}, err
 	}
 	return crypto.PubkeyToAddress(*pubkey), nil
 }
-
-//func (s *SignerImpl) SignData(data []byte) ([]byte, error) {
-//	if data == nil {
-//		return nil, ErrInvalidRawData
-//	}
-//	if s.privateKey == nil {
-//		return nil, ErrInvalidSigner
-//	}
-//	hashData := crypto.Keccak256(data)
-//	return crypto.Sign(hashData, s.privateKey)
-//}
-// todo(fuk): delete after test
-//// SignerSeal proposer sign the header hash and fill extra seal with signature.
-//func (s *SignerImpl) SealBeforeCommit(h *types.Header) error {
-//	if h == nil {
-//		return ErrInvalidHeader
-//	}
-//
-//	sigHash := h.Hash() //s.SigHash(h)
-//	seal, err := s.SignHash(sigHash)
-//	if err != nil {
-//		return ErrInvalidSignature
-//	}
-//
-//	if len(seal)%types.HotstuffExtraSeal != 0 {
-//		return ErrInvalidSignature
-//	}
-//
-//	return h.SetSeal(seal)
-//}
-//
-//// SealAfterCommit writes the extra-data field of a block header with given committed seals.
-//func (s *SignerImpl) SealAfterCommit(h *types.Header, committedSeals [][]byte) error {
-//	if h == nil {
-//		return ErrInvalidHeader
-//	}
-//	if len(committedSeals) == 0 {
-//		return ErrInvalidCommittedSeals
-//	}
-//
-//	for _, seal := range committedSeals {
-//		if len(seal) != types.HotstuffExtraSeal {
-//			return ErrInvalidCommittedSeals
-//		}
-//	}
-//
-//	return h.SetCommittedSeal(committedSeals)
-//}
-//
-//// SigHash returns the hash which is used as input for the Hotstuff
-//// signing. It is the hash of the entire header apart from the 65 byte signature
-//// contained at the end of the extra data.
-////
-//// Note, the method requires the extra data to be at least 65 bytes, otherwise it
-//// panics. This is done to avoid accidentally using both forms (signature present
-//// or not), which could be abused to produce different hashes for the same header.
-//func (s *SignerImpl) SigHash(header *types.Header) (hash common.Hash) {
-//	hasher := sha3.NewLegacyKeccak256()
-//
-//	// Clean seal is required for calculating proposer seal.
-//	rlp.Encode(hasher, types.HotstuffFilteredHeader(header))
-//	hasher.Sum(hash[:0])
-//	return hash
-//}
-//func (s *SignerImpl) VerifyHash(valSet hotstuff.ValidatorSet, hash common.Hash, sig []byte) error {
-//	if valSet == nil {
-//		return ErrInvalidValset
-//	}
-//	if hash == common.EmptyHash {
-//		return ErrInvalidRawHash
-//	}
-//	if sig == nil {
-//		return ErrInvalidSignature
-//	}
-//
-//	data := s.wrapCommittedHash(hash)
-//	signer, err := getSignatureAddress(data, sig)
-//	if err != nil {
-//		return err
-//	}
-//
-//	if _, val := valSet.GetByAddress(signer); val == nil {
-//		return ErrUnauthorizedAddress
-//	}
-//
-//	return nil
-//}
-
-//func (s *SignerImpl) VerifyCommittedSeal(valSet hotstuff.ValidatorSet, hash common.Hash, committedSeals [][]byte) error {
-//	if valSet == nil {
-//		return ErrInvalidValset
-//	}
-//	if hash == common.EmptyHash {
-//		return ErrInvalidRawHash
-//	}
-//	if committedSeals == nil {
-//		return ErrInvalidCommittedSeals
-//	}
-//
-//	signers, err := s.getSignersFromCommittedSeals(hash, committedSeals)
-//	if err != nil {
-//		return err
-//	}
-//	return checkValidatorQuorum(signers, valSet)
-//}
-//
-//func (s *SignerImpl) CheckQCParticipant(qc hotstuff.QC, signer common.Address) error {
-//	if qc == nil {
-//		return ErrInvalidQC
-//	}
-//
-//	if qc.HeightU64() == 0 {
-//		return nil
-//	}
-//	// todo(fuk): should not be deserialize
-//	//extra, err := types.ExtractHotstuffExtraPayload(qc.Extra())
-//	//if err != nil {
-//	//	return err
-//	//}
-//
-//	// check proposer signature
-//	sealHash := s.wrapCommittedHash(qc.Hash())
-//	proposer, err := getSignatureAddress(sealHash, qc.Seal())
-//	if err != nil {
-//		return err
-//	}
-//	if signer == qc.Proposer() && signer == proposer {
-//		return nil
-//	}
-//
-//	// check committed seals
-//	committers, err := s.getSignersFromCommittedSeals(qc.Hash(), qc.CommittedSeal())
-//	if err != nil {
-//		return err
-//	}
-//	for _, committer := range committers {
-//		if signer == committer {
-//			return nil
-//		}
-//	}
-//	return fmt.Errorf("address %s is not proposer or committer", signer.Hex())
-//}

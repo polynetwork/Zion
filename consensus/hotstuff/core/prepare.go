@@ -50,9 +50,9 @@ func (c *core) sendPrepare() {
 		return
 	}
 
-	prepare := &MsgPrepare{
+	prepare := &Subject{
 		Proposal: request.Proposal,
-		HighQC:   c.current.HighQC(),
+		QC:       c.current.HighQC(),
 	}
 	payload, err := Encode(prepare)
 	if err != nil {
@@ -73,9 +73,9 @@ func (c *core) handlePrepare(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		msg    *MsgPrepare
+		msg  *Subject
 		code = MsgTypePrepare
-		src    = data.address
+		src  = data.address
 	)
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
@@ -98,11 +98,11 @@ func (c *core) handlePrepare(data *Message) error {
 		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err)
 		return errVerifyUnsealedProposal
 	}
-	if err := c.extend(msg.Proposal, msg.HighQC); err != nil {
+	if err := c.extend(msg.Proposal, msg.QC); err != nil {
 		logger.Trace("Failed to check extend", "msg", code, "src", src, "err", err)
 		return errExtend
 	}
-	if err := c.safeNode(msg.Proposal, msg.HighQC); err != nil {
+	if err := c.safeNode(msg.Proposal, msg.QC); err != nil {
 		logger.Trace("Failed to check safeNode", "msg", code, "src", src, "err", err)
 		return errSafeNode
 	}
@@ -122,10 +122,10 @@ func (c *core) handlePrepare(data *Message) error {
 	// repo accept proposal and high qc
 	// todo(fuk): 是否真的需要stateHighQC
 	if !c.IsProposer() && c.currentState() < StateHighQC {
-		c.current.SetHighQC(msg.HighQC)
+		c.current.SetHighQC(msg.QC)
 		c.current.SetProposal(msg.Proposal)
 		c.setCurrentState(StateHighQC)
-		logger.Trace("acceptHighQC", "msg", code, "highQC", msg.HighQC.hash)
+		logger.Trace("acceptHighQC", "msg", code, "highQC", msg.QC.hash)
 
 		c.sendPrepareVote()
 	}

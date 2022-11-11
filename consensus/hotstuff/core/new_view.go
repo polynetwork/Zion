@@ -28,9 +28,7 @@ func (c *core) sendNewView(view *View) {
 		return
 	}
 
-	newViewMsg := &MsgNewView{
-		PrepareQC: c.current.PrepareQC(),
-	}
+	newViewMsg := c.current.PrepareQC()
 	payload, err := Encode(newViewMsg)
 	if err != nil {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
@@ -45,12 +43,12 @@ func (c *core) handleNewView(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		msg    *MsgNewView
-		code = MsgTypeNewView
-		src    = data.address
+		prepareQC *QuorumCert
+		code      = MsgTypeNewView
+		src       = data.address
 	)
 
-	if err := data.Decode(&msg); err != nil {
+	if err := data.Decode(&prepareQC); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodeNewView
 	}
@@ -69,7 +67,7 @@ func (c *core) handleNewView(data *Message) error {
 	//	return err
 	//}
 
-	if err := c.verifyVoteQC(msg.PrepareQC.hash, msg.PrepareQC); err != nil {
+	if err := c.verifyVoteQC(prepareQC.hash, prepareQC); err != nil {
 		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -80,17 +78,17 @@ func (c *core) handleNewView(data *Message) error {
 		return errAddNewViews
 	}
 
-	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", msg.PrepareQC.hash)
+	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", prepareQC.hash)
 
 	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < StateHighQC {
 		if highQC, err := c.getHighQC(); err != nil || highQC == nil {
 			logger.Trace("Failed to get highQC", "msg", code)
 			return errGetHighQC
-		} else  {
+		} else {
 			c.current.SetHighQC(highQC)
 			c.setCurrentState(StateHighQC)
 
-			logger.Trace("acceptHighQC", "msg", code, "prepareQC", msg.PrepareQC.hash, "msgSize", size)
+			logger.Trace("acceptHighQC", "msg", code, "prepareQC", prepareQC.hash, "msgSize", size)
 			c.sendPrepare()
 		}
 	}
@@ -101,12 +99,12 @@ func (c *core) handleNewView(data *Message) error {
 func (c *core) getHighQC() (*QuorumCert, error) {
 	var maxView *QuorumCert
 	for _, data := range c.current.NewViews() {
-		var msg *MsgNewView
-		if err := data.Decode(&msg); err != nil {
+		var qc *QuorumCert
+		if err := data.Decode(&qc); err != nil {
 			return nil, err
 		}
-		if maxView == nil || maxView.view.Cmp(msg.PrepareQC.view) < 0 {
-			maxView = msg.PrepareQC
+		if maxView == nil || maxView.view.Cmp(qc.view) < 0 {
+			maxView = qc
 		}
 	}
 	return maxView, nil

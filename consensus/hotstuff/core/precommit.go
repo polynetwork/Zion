@@ -27,9 +27,9 @@ func (c *core) handlePrepareVote(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		vote   = common.BytesToHash(data.Msg)
+		vote = common.BytesToHash(data.Msg)
 		code = MsgTypePrepareVote
-		src    = data.address
+		src  = data.address
 	)
 	if err := c.checkView(code, data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
@@ -68,9 +68,9 @@ func (c *core) sendPreCommit() {
 	logger := c.newLogger()
 
 	code := MsgTypePreCommit
-	msg := &MsgPreCommit{
-		Proposal:  c.current.Proposal(),
-		PrepareQC: c.current.PrepareQC(),
+	msg := &Subject{
+		Proposal: c.current.Proposal(),
+		QC:       c.current.PrepareQC(),
 	}
 	payload, err := Encode(msg)
 	if err != nil {
@@ -85,9 +85,9 @@ func (c *core) handlePreCommit(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		msg    *MsgPreCommit
+		msg  *Subject
 		code = MsgTypePreCommit
-		src    = data.address
+		src  = data.address
 	)
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to check decode", "msg", code, "src", src, "err", err)
@@ -105,15 +105,15 @@ func (c *core) handlePreCommit(data *Message) error {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if msg.Proposal.Hash() != msg.PrepareQC.hash {
-		logger.Trace("Failed to check msg", "msg", code, "src", src, "expect prepareQC hash", msg.Proposal.Hash(), "got", msg.PrepareQC.hash)
+	if msg.Proposal.Hash() != msg.QC.hash {
+		logger.Trace("Failed to check msg", "msg", code, "src", src, "expect prepareQC hash", msg.Proposal.Hash(), "got", msg.QC.hash)
 		return errInvalidProposal
 	}
 	if _, err := c.backend.Verify(msg.Proposal); err != nil {
 		logger.Trace("Failed to check verify proposal", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.verifyVoteQC(msg.PrepareQC.hash, msg.PrepareQC); err != nil {
+	if err := c.verifyVoteQC(msg.QC.hash, msg.QC); err != nil {
 		logger.Trace("Failed to verify prepareQC", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -129,8 +129,8 @@ func (c *core) handlePreCommit(data *Message) error {
 		c.sendPreCommitVote()
 	}
 	if !c.IsProposer() && c.currentState() < StatePrepared {
-		c.acceptPrepare(msg.PrepareQC, msg.Proposal)
-		logger.Trace("acceptPrepare", "msg", code, "prepareQC", msg.PrepareQC.hash)
+		c.acceptPrepare(msg.QC, msg.Proposal)
+		logger.Trace("acceptPrepare", "msg", code, "prepareQC", msg.QC.hash)
 
 		c.sendPreCommitVote()
 	}
