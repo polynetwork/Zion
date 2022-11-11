@@ -359,6 +359,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 		case <-timer.C:
 			// If mining is running resubmit a new work cycle periodically to pull in
 			// higher priced transactions. Disable this overhead for pending blocks.
+			// todo(fuk): only sent once
 			if w.IsRunning() && (w.chainConfig.HotStuff != nil && w.chainConfig.HotStuff.Protocol != "") {
 				log.Debug("Miner resubmit work", "timestamp", timestamp, "from", minRecommit)
 				commit(commitInterruptResubmit)

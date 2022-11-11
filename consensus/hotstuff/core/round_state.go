@@ -184,22 +184,17 @@ func (s *roundState) PendingRequest() *Request {
 	return s.pendingRequest
 }
 
-func (s *roundState) Vote() *Vote {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.currentVote()
+func (s *roundState) Vote() common.Hash {
+	return s.proposal.Hash()
 }
 
-func (s *roundState) currentVote() *Vote {
-	if s.proposal == nil || s.proposal.Hash() == common.EmptyHash {
-		return nil
-	}
-
-	return &Vote{
-		Digest: s.proposal.Hash(),
-	}
-}
+// todo(fuk): delete after test
+//func (s *roundState) currentVote() common.Hash {
+//	if s.proposal == nil || s.proposal.Hash() == common.EmptyHash {
+//		return common.EmptyHash
+//	}
+//	return s.proposal.Hash()
+//}
 
 func (s *roundState) SetHighQC(qc *QuorumCert) {
 	s.mu.Lock()
