@@ -17,103 +17,103 @@
  */
 
 package core
-
-import (
-	"math/big"
-	"testing"
-
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/stretchr/testify/assert"
-)
-
-func newTestPrepareMsg(t *testing.T, s *testSystem, sender common.Address, h, r int) (*MsgPrepare, *Message) {
-	view := makeView(h, r)
-	highQC := newTestQCWithExtra(t, s, h-1)
-	proposal := makeBlockWithParentHash(h, highQC.hash)
-	prepare := &MsgPrepare{
-		View:     view,
-		Proposal: proposal,
-		HighQC:   highQC,
-	}
-	payload, err := Encode(prepare)
-	if err != nil {
-		t.Error(err)
-	}
-
-	msg := &Message{
-		Code:    MsgTypePrepare,
-		View:    view,
-		Msg:     payload,
-		Address: sender,
-	}
-	return prepare, msg
-}
-
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandlePrepare
-func TestHandlePrepare(t *testing.T) {
-	N, H, R := 4, 5, 1
-
-	sys := NewTestSystemWithBackend(N, H, R)
-	leader := sys.getLeader()
-	val := leader.valSet.GetProposer()
-	prepare, msg := newTestPrepareMsg(t, sys, leader.Address(), H, R)
-	for _, backend := range sys.backends {
-		core := backend.engine
-		core.current.SetPreCommittedQC(prepare.HighQC)
-		err := core.handlePrepare(msg, val)
-		assert.NoError(t, err)
-	}
-}
-
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestPrepareFailed
-func TestPrepareFailed(t *testing.T) {
-	N, H, R := 4, 5, 1
-
-	sys := NewTestSystemWithBackend(N, H, R)
-	leader := sys.getLeader()
-	val := leader.valSet.GetProposer()
-	prepare, msg := newTestPrepareMsg(t, sys, leader.Address(), H, R)
-
-	// too old message
-	{
-		for _, backend := range sys.backends {
-			core := backend.engine
-			core.current.height = big.NewInt(int64(H + 1))
-			core.current.SetPreCommittedQC(prepare.HighQC)
-			err := core.handlePrepare(msg, val)
-			assert.Equal(t, errOldMessage, err)
-		}
-
-		for _, backend := range sys.backends {
-			core := backend.engine
-			core.current.height = big.NewInt(int64(H))
-			core.current.round = big.NewInt(int64(R + 1))
-			core.current.SetPreCommittedQC(prepare.HighQC)
-			err := core.handlePrepare(msg, val)
-			assert.Equal(t, errOldMessage, err)
-		}
-	}
-
-	// future message
-	{
-		for _, backend := range sys.backends {
-			core := backend.engine
-			core.current.height = big.NewInt(int64(H - 1))
-			core.current.SetPreCommittedQC(prepare.HighQC)
-			err := core.handlePrepare(msg, val)
-			assert.Equal(t, errFutureMessage, err)
-		}
-
-		for _, backend := range sys.backends {
-			core := backend.engine
-			core.current.height = big.NewInt(int64(H))
-			core.current.round = big.NewInt(int64(R - 1))
-			core.current.SetPreCommittedQC(prepare.HighQC)
-			err := core.handlePrepare(msg, val)
-			assert.Equal(t, errFutureMessage, err)
-		}
-	}
-}
+//
+//import (
+//	"math/big"
+//	"testing"
+//
+//	"github.com/ethereum/go-ethereum/common"
+//	"github.com/stretchr/testify/assert"
+//)
+//
+//func newTestPrepareMsg(t *testing.T, s *testSystem, sender common.Address, h, r int) (*MsgPrepare, *Message) {
+//	view := makeView(h, r)
+//	highQC := newTestQCWithExtra(t, s, h-1)
+//	proposal := makeBlockWithParentHash(h, highQC.hash)
+//	prepare := &MsgPrepare{
+//		View:     view,
+//		Proposal: proposal,
+//		HighQC:   highQC,
+//	}
+//	payload, err := Encode(prepare)
+//	if err != nil {
+//		t.Error(err)
+//	}
+//
+//	msg := &Message{
+//		Code:    MsgTypePrepare,
+//		View:    view,
+//		Msg:     payload,
+//		Address: sender,
+//	}
+//	return prepare, msg
+//}
+//
+//// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandlePrepare
+//func TestHandlePrepare(t *testing.T) {
+//	N, H, R := 4, 5, 1
+//
+//	sys := NewTestSystemWithBackend(N, H, R)
+//	leader := sys.getLeader()
+//	val := leader.valSet.GetProposer()
+//	prepare, msg := newTestPrepareMsg(t, sys, leader.Address(), H, R)
+//	for _, backend := range sys.backends {
+//		core := backend.engine
+//		core.current.SetPreCommittedQC(prepare.HighQC)
+//		err := core.handlePrepare(msg, val)
+//		assert.NoError(t, err)
+//	}
+//}
+//
+//// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestPrepareFailed
+//func TestPrepareFailed(t *testing.T) {
+//	N, H, R := 4, 5, 1
+//
+//	sys := NewTestSystemWithBackend(N, H, R)
+//	leader := sys.getLeader()
+//	val := leader.valSet.GetProposer()
+//	prepare, msg := newTestPrepareMsg(t, sys, leader.Address(), H, R)
+//
+//	// too old message
+//	{
+//		for _, backend := range sys.backends {
+//			core := backend.engine
+//			core.current.height = big.NewInt(int64(H + 1))
+//			core.current.SetPreCommittedQC(prepare.HighQC)
+//			err := core.handlePrepare(msg, val)
+//			assert.Equal(t, errOldMessage, err)
+//		}
+//
+//		for _, backend := range sys.backends {
+//			core := backend.engine
+//			core.current.height = big.NewInt(int64(H))
+//			core.current.round = big.NewInt(int64(R + 1))
+//			core.current.SetPreCommittedQC(prepare.HighQC)
+//			err := core.handlePrepare(msg, val)
+//			assert.Equal(t, errOldMessage, err)
+//		}
+//	}
+//
+//	// future message
+//	{
+//		for _, backend := range sys.backends {
+//			core := backend.engine
+//			core.current.height = big.NewInt(int64(H - 1))
+//			core.current.SetPreCommittedQC(prepare.HighQC)
+//			err := core.handlePrepare(msg, val)
+//			assert.Equal(t, errFutureMessage, err)
+//		}
+//
+//		for _, backend := range sys.backends {
+//			core := backend.engine
+//			core.current.height = big.NewInt(int64(H))
+//			core.current.round = big.NewInt(int64(R - 1))
+//			core.current.SetPreCommittedQC(prepare.HighQC)
+//			err := core.handlePrepare(msg, val)
+//			assert.Equal(t, errFutureMessage, err)
+//		}
+//	}
+//}
 
 //type testcase struct {
 //	Sys       *testSystem

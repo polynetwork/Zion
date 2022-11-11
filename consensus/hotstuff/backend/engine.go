@@ -173,7 +173,11 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	header := block.Header()
 
 	// sign the sig hash and fill extra seal
-	if err = s.signer.SealBeforeCommit(header); err != nil {
+	seal, err := s.signer.SignHash(block.Hash(), true)
+	if err != nil {
+		return err
+	}
+	if err := header.SetSeal(seal); err != nil {
 		return err
 	}
 	block = block.WithSeal(header)
@@ -213,8 +217,9 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	return nil
 }
 
-func (s *backend) SealHash(header *types.Header) common.Hash {
-	return s.signer.SigHash(header)
+func (s *backend) SealHash(header *types.Header) (hash common.Hash) {
+	cleanHeader := types.HotstuffFilteredHeader(header)
+	return hotstuff.RLPHash(cleanHeader)
 }
 
 func (s *backend) ValidateBlock(block *types.Block) error {

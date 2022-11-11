@@ -118,6 +118,7 @@ func (s *backend) Broadcast(valSet hotstuff.ValidatorSet, payload []byte) error 
 	}
 	// send to self
 	msg := hotstuff.MessageEvent{
+		Src: s.Address(),
 		Payload: payload,
 	}
 	go s.EventMux().Post(msg)
@@ -160,7 +161,7 @@ func (s *backend) Gossip(valSet hotstuff.ValidatorSet, payload []byte) error {
 
 // Unicast implements hotstuff.Backend.Unicast
 func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
-	msg := hotstuff.MessageEvent{Payload: payload}
+	msg := hotstuff.MessageEvent{Src: s.Address(), Payload: payload}
 	leader := valSet.GetProposer()
 	target := leader.Address()
 	hash := hotstuff.RLPHash(payload)
@@ -199,23 +200,30 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 
 // PreCommit implements hotstuff.Backend.PreCommit
 func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
-	// Check if the proposal is a valid block
+
+	// check proposal
 	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
+	if !ok || block.Header() == nil {
+		s.logger.Error("Invalid proposal precommit")
 		return nil, errInvalidProposal
 	}
 
-	h := block.Header()
-	// Append seals into extra-data
-	if err := s.signer.SealAfterCommit(h, seals); err != nil {
-		return nil, err
+	// check seals
+	if len(seals) == 0 {
+		return nil, errInvalidCommittedSeals
+	}
+	for _, seal := range seals {
+		if len(seal) != types.HotstuffExtraSeal {
+			return nil, errInvalidCommittedSeals
+		}
 	}
 
-	// update block's header
-	block = block.WithSeal(h)
-
-	return block, nil
+	// Append seals into extra-data and update block's header
+	h := block.Header()
+	if err := h.SetCommittedSeal(seals); err != nil {
+		return nil, err
+	}
+	return block.WithSeal(h), nil
 }
 
 func (s *backend) Commit(proposal hotstuff.Proposal) error {

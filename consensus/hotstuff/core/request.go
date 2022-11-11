@@ -43,9 +43,12 @@ func (c *core) handleRequest(request *Request) error {
 
 	case StateHighQC:
 		// consensus step is blocked for proposal is not ready
-		if c.current.PendingRequest() == nil {
+		if c.current.PendingRequest() == nil ||
+			c.current.PendingRequest().Proposal.NumberU64() < c.current.HeightU64() {
 			c.current.SetPendingRequest(request)
 			c.sendPrepare()
+		} else {
+			logger.Trace("PendingRequest exist")
 		}
 
 	default:

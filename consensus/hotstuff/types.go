@@ -55,9 +55,10 @@ type Proposal interface {
 type QC interface {
 	Height() *big.Int
 	HeightU64() uint64
-	Hash() common.Hash
+	SealHash() common.Hash
 	Proposer() common.Address
-	Extra() []byte
+	Seal() []byte
+	CommittedSeal() [][]byte
 }
 
 func RLPHash(v interface{}) (h common.Hash) {

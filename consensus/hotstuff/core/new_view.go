@@ -18,10 +18,6 @@
 
 package core
 
-import (
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-)
-
 func (c *core) sendNewView(view *View) {
 	logger := c.newLogger()
 	msgTyp := MsgTypeNewView
@@ -32,67 +28,69 @@ func (c *core) sendNewView(view *View) {
 		return
 	}
 
-	prepareQC := c.current.PrepareQC().Copy()
 	newViewMsg := &MsgNewView{
-		View:      curView,
-		PrepareQC: prepareQC,
+		PrepareQC: c.current.PrepareQC(),
 	}
 	payload, err := Encode(newViewMsg)
 	if err != nil {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
 	}
-	c.broadcast(&Message{
-		Code: MsgTypeNewView,
-		Msg:  payload,
-	})
+	c.broadcast(msgTyp, payload)
 
-	logger.Trace("sendNewView", "msg", msgTyp, "prepareQC", prepareQC.Hash())
+	logger.Trace("sendNewView", "msg", msgTyp)
 }
 
-func (c *core) handleNewView(data *Message, src hotstuff.Validator) error {
+func (c *core) handleNewView(data *Message) error {
 	logger := c.newLogger()
 
 	var (
 		msg    *MsgNewView
-		msgTyp = MsgTypeNewView
+		code = MsgTypeNewView
+		src    = data.address
 	)
 
 	if err := data.Decode(&msg); err != nil {
-		logger.Trace("Failed to decode", "msg", msgTyp, "src", src.Address(), "err", err)
+		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodeNewView
 	}
-	if err := c.checkView(msgTyp, msg.View); err != nil {
-		logger.Trace("Failed to check view", "msg", msgTyp, "src", src.Address(), "err", err)
+	if err := c.checkView(code, data.View); err != nil {
+		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
 	if err := c.checkMsgToProposer(); err != nil {
-		logger.Trace("Failed to check proposer", "msg", msgTyp, "src", src.Address(), "err", err)
+		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
 
-	if err := c.verifyCrossEpochQC(msg.PrepareQC); err != nil {
-		logger.Trace("Failed to verify highQC", "msg", msgTyp, "src", src.Address(), "err", err)
+	//// todo(fuk): verify cross epoch qc
+	//if err := c.verifyCrossEpochQC(msg.PrepareQC); err != nil {
+	//	logger.Trace("Failed to verify highQC", "msg", msgTyp, "src", src, "err", err)
+	//	return err
+	//}
+
+	if err := c.verifyVoteQC(msg.PrepareQC.hash, msg.PrepareQC); err != nil {
+		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err)
 		return err
 	}
 
 	// `checkView` ensure that +2/3 validators on the same view
 	if err := c.current.AddNewViews(data); err != nil {
-		logger.Trace("Failed to add new view", "msg", msgTyp, "src", src.Address(), "err", err)
+		logger.Trace("Failed to add new view", "msg", code, "src", src, "err", err)
 		return errAddNewViews
 	}
 
-	logger.Trace("handleNewView", "msg", msgTyp, "src", src.Address(), "prepareQC", msg.PrepareQC.Hash())
+	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", msg.PrepareQC.hash)
 
 	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < StateHighQC {
 		if highQC, err := c.getHighQC(); err != nil || highQC == nil {
-			logger.Trace("Failed to get highQC", "msg", msgTyp)
+			logger.Trace("Failed to get highQC", "msg", code)
 			return errGetHighQC
-		} else {
+		} else  {
 			c.current.SetHighQC(highQC)
 			c.setCurrentState(StateHighQC)
 
-			logger.Trace("acceptHighQC", "msg", msgTyp, "prepareQC", msg.PrepareQC.Hash(), "msgSize", size)
+			logger.Trace("acceptHighQC", "msg", code, "prepareQC", msg.PrepareQC.hash, "msgSize", size)
 			c.sendPrepare()
 		}
 	}
