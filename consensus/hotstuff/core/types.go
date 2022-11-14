@@ -75,29 +75,26 @@ func (m MsgType) Value() uint64 {
 type State uint64
 
 const (
-	StateUnknown       State = 0
 	StateAcceptRequest State = 1
 	StateHighQC        State = 2
 	StatePrepared      State = 3
-	StatePreCommitted  State = 4
+	StateLocked        State = 4
 	StateCommitted     State = 5
 )
 
 func (s State) String() string {
-	if s == StateUnknown {
-		return "StateUnknown"
-	} else if s == StateAcceptRequest {
+	if s == StateAcceptRequest {
 		return "StateAcceptRequest"
 	} else if s == StateHighQC {
 		return "StateHighQC"
 	} else if s == StatePrepared {
 		return "StatePrepared"
-	} else if s == StatePreCommitted {
-		return "StatePreCommitted"
+	} else if s == StateLocked {
+		return "StateLocked"
 	} else if s == StateCommitted {
 		return "StateCommitted"
 	} else {
-		return "Invalid"
+		return "StateUnknown"
 	}
 }
 
@@ -323,7 +320,7 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 //
 // define the functions that needs to be provided for core.
 
-func (m *Message) FromPayload(src common.Address, payload []byte, validateFn func(common.Hash, []byte) (common.Address, error)) error {
+func (m *Message) FromPayload(src common.Address, payload []byte, validateFn func(common.Hash, []byte, bool) (common.Address, error)) error {
 	// Decode Message
 	if err := rlp.DecodeBytes(payload, &m); err != nil {
 		return err
@@ -339,7 +336,7 @@ func (m *Message) FromPayload(src common.Address, payload []byte, validateFn fun
 		return err
 	}
 	if validateFn != nil {
-		signer, err := validateFn(m.hash, m.Signature)
+		signer, err := validateFn(m.hash, m.Signature, false)
 		if err != nil {
 			return err
 		}

@@ -257,8 +257,8 @@ func NewTestSystemWithBackend(n, h, r int) *testSystem {
 		backend.peers = vset
 		backend.address = vset.GetByIndex(uint64(i)).Address()
 
-		core := New(backend, config, signer.NewSigner(keys[i]))
-		core.current = newRoundState(makeView(h, r), vset)
+		core := New(backend, config, signer.NewSigner(keys[i]), nil)
+		core.current = newRoundState(makeView(h, r), vset, nil)
 		core.valSet = vset
 		core.logger = testLogger
 		core.validateFn = nil
@@ -402,7 +402,7 @@ func singerTestCore(t *testing.T, n int, height, round int64) (*core, hotstuff.V
 		current: newRoundState(&View{
 			Height: big.NewInt(height),
 			Round:  big.NewInt(round),
-		}, vals),
+		}, vals, nil),
 		signer:   signer.NewSigner(keys[0]),
 		backlogs: newBackLog(),
 	}

@@ -56,8 +56,10 @@ func (c *core) handlePrepareVote(data *Message) error {
 			logger.Trace("Failed to assemble prepareQC", "msg", code, "err", err)
 			return errInvalidQC
 		}
-		c.current.SetPrepareQC(prepareQC)
-		c.acceptPrepare(prepareQC, c.current.Proposal())
+		if err := c.acceptPrepare(prepareQC, c.current.Proposal()); err != nil {
+			logger.Trace("Failed to accept prepareQC", "msg", code, "err", err)
+			return err
+		}
 		c.sendPreCommit()
 	}
 
@@ -125,23 +127,30 @@ func (c *core) handlePreCommit(data *Message) error {
 
 	logger.Trace("handlePreCommit", "msg", code, "src", src, "hash", msg.Proposal.Hash())
 
-	if c.IsProposer() && c.currentState() < StatePreCommitted {
+	if c.IsProposer() && c.currentState() < StateLocked {
 		c.sendPreCommitVote()
 	}
 	if !c.IsProposer() && c.currentState() < StatePrepared {
-		c.acceptPrepare(msg.QC, msg.Proposal)
+		if err := c.acceptPrepare(msg.QC, msg.Proposal); err != nil {
+			logger.Trace("Failed to accept prepareQC", "msg", code, "err", err)
+			return err
+		}
 		logger.Trace("acceptPrepare", "msg", code, "prepareQC", msg.QC.hash)
-
 		c.sendPreCommitVote()
 	}
 
 	return nil
 }
 
-func (c *core) acceptPrepare(prepareQC *QuorumCert, proposal hotstuff.Proposal) {
-	c.current.SetPrepareQC(prepareQC)
-	c.current.SetProposal(proposal)
+func (c *core) acceptPrepare(prepareQC *QuorumCert, proposal hotstuff.Proposal) error {
+	if err := c.current.SetPrepareQC(prepareQC); err != nil {
+		return err
+	}
+	if err := c.current.SetProposal(proposal); err != nil {
+		return err
+	}
 	c.current.SetState(StatePrepared)
+	return nil
 }
 
 func (c *core) sendPreCommitVote() {

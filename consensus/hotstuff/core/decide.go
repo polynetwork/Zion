@@ -49,10 +49,9 @@ func (c *core) handleCommitVote(data *Message) error {
 	}
 
 	// check committed seal
-	if addr, err := c.validateFn(vote, data.CommittedSeal); err != nil {
-		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err)
-	} else if addr != src {
-		logger.Trace("Failed to check vote", "msg", code, "src", src, "expect", src, "got", addr)
+	if addr, err := c.validateFn(vote, data.CommittedSeal, true); err != nil {
+		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err, "expect", src, "got", addr)
+		return err
 	}
 
 	if err := c.current.AddCommitVote(data); err != nil {
@@ -144,7 +143,7 @@ func (c *core) handleDecide(data *Message) error {
 		}
 	}
 
-	if !c.IsProposer() && c.currentState() >= StatePreCommitted && c.currentState() < StateCommitted {
+	if !c.IsProposer() && c.currentState() >= StateLocked && c.currentState() < StateCommitted {
 		c.current.SetState(StateCommitted)
 		c.current.SetCommittedQC(c.current.PreCommittedQC())
 		if err := c.backend.Commit(c.current.Proposal()); err != nil {

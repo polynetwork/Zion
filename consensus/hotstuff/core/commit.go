@@ -53,12 +53,12 @@ func (c *core) handlePreCommitVote(data *Message) error {
 
 	logger.Trace("handlePreCommitVote", "msg", code, "src", src, "hash", vote)
 
-	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StatePreCommitted {
+	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StateLocked {
 		if preCommitQC, err := c.messages2qc(c.proposer(), vote, c.current.PreCommitVotes()); err != nil {
 			logger.Trace("Failed to assemble preCommitQC", "type", code, "err", err)
 			return err
 		} else {
-			c.lockQCAndProposal(preCommitQC)
+			c.current.SetPreCommittedQC(preCommitQC)
 		}
 
 		logger.Trace("acceptPreCommitted", "msg", code, "msgSize", size)
@@ -111,22 +111,24 @@ func (c *core) handleCommit(data *Message) error {
 	}
 
 	logger.Trace("handleCommit", "msg", code, "src", src, "proposal", msg.hash)
-
-	if c.IsProposer() && c.currentState() < StateCommitted {
-		c.sendCommitVote()
-	}
-	if !c.IsProposer() && c.currentState() < StatePreCommitted {
-		c.lockQCAndProposal(msg)
-		logger.Trace("acceptPreCommitted", "msg", code, "lockQC", msg.hash)
+	if c.currentState() < StateLocked {
+		if err := c.lockQCAndProposal(msg); err != nil {
+			logger.Trace("Failed to lockQC", "msg", code, "err", err)
+			return err
+		}
+		logger.Trace("acceptLockQC", "msg", code, "lockQC", msg.hash)
 		c.sendCommitVote()
 	}
 	return nil
 }
 
-func (c *core) lockQCAndProposal(qc *QuorumCert) {
-	c.current.SetPreCommittedQC(qc)
-	c.current.SetState(StatePreCommitted)
+func (c *core) lockQCAndProposal(qc *QuorumCert) error {
+	if err := c.current.SetLockQC(qc); err != nil {
+		return err
+	}
+	c.current.SetState(StateLocked)
 	c.current.LockProposal()
+	return nil
 }
 
 func (c *core) sendCommitVote() {

@@ -95,7 +95,7 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		recents:        recents,
 	}
 
-	backend.core = core.New(backend, config, signer)
+	backend.core = core.New(backend, config, signer, db)
 
 	return backend
 }

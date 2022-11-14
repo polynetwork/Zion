@@ -190,7 +190,7 @@ package core
 //				data = newPrepareMsg(core)
 //				core.current.SetPreCommittedQC(data.HighQC)
 //			}
-//			// msg.proposal.parentHash not equal to the field of `lockedQC.Hash`
+//			// msg.proposal.parentHash not equal to the field of `lockQC.Hash`
 //			data.HighQC.hash = common.HexToHash("0x124")
 //			msg := newP2PMsg(data)
 //			return &testcase{
@@ -211,9 +211,9 @@ package core
 //				core := backend.engine
 //				data = newPrepareMsg(core)
 //				// safety is false, and liveness false:
-//				// msg.proposal is not extend lockedQC
-//				// msg.highQC.view is smaller than lockedQC.view
-//				// or just set lockedQC is nil
+//				// msg.proposal is not extend lockQC
+//				// msg.highQC.view is smaller than lockQC.view
+//				// or just set lockQC is nil
 //				//core.current.SetPreCommittedQC(data.HighQC)
 //			}
 //			msg := newP2PMsg(data)
