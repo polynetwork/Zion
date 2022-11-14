@@ -33,7 +33,7 @@ type Signer interface {
 	SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error)
 
 	// CheckSignature extract address from signature and check if the address exist in validator set
-	CheckSignature(valSet ValidatorSet, hash common.Hash, signature []byte) (common.Address, error)
+	CheckSignature(valSet ValidatorSet, hash common.Hash, signature []byte, seal bool) (common.Address, error)
 
 	// Recover extracts the proposer address from a signed header.
 	Recover(h *types.Header) (common.Address, *types.HotstuffExtra, error)

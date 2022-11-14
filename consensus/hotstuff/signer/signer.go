@@ -20,7 +20,6 @@ package signer
 
 import (
 	"crypto/ecdsa"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -86,7 +85,7 @@ func (s *SignerImpl) SignTx(tx *types.Transaction, signer types.Signer) (*types.
 	return types.SignTx(tx, signer, s.privateKey)
 }
 
-func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, hash common.Hash, sig []byte) (common.Address, error) {
+func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, hash common.Hash, sig []byte, seal bool) (common.Address, error) {
 	if valSet == nil {
 		return common.EmptyAddress, ErrInvalidValset
 	}
@@ -98,7 +97,11 @@ func (s *SignerImpl) CheckSignature(valSet hotstuff.ValidatorSet, hash common.Ha
 	}
 
 	// 1. Get signature address
-	signer, err := getSignatureAddress(hash, sig)
+	sealHash := hash
+	if seal {
+		sealHash = s.wrapCommittedHash(hash)
+	}
+	signer, err := getSignatureAddress(sealHash, sig)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -235,7 +238,7 @@ func (s *SignerImpl) VerifyQC(qc hotstuff.QC, valSet hotstuff.ValidatorSet) erro
 	return nil
 }
 
-type WrapHash struct {
+type SealHash struct {
 	Hash common.Hash
 	Salt []byte
 }
@@ -243,7 +246,7 @@ type WrapHash struct {
 // at the `commit` step in consensus.
 // wrapCommittedHash returns a committed seal for the given hash
 func (s *SignerImpl) wrapCommittedHash(hash common.Hash) common.Hash {
-	return hotstuff.RLPHash(WrapHash{
+	return hotstuff.RLPHash(SealHash{
 		Hash: hash,
 		Salt: s.commitSigSalt,
 	})

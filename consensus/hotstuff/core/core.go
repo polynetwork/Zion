@@ -26,13 +26,15 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 )
 
 type core struct {
-	config *hotstuff.Config
+	db     ethdb.Database
 	logger log.Logger
+	config *hotstuff.Config
 
 	current  *roundState
 	backend  hotstuff.Backend
@@ -49,13 +51,14 @@ type core struct {
 	pendingRequests   *prque.Prque
 	pendingRequestsMu *sync.Mutex
 
-	validateFn func(common.Hash, []byte) (common.Address, error)
+	validateFn func(common.Hash, []byte, bool) (common.Address, error)
 	isRunning  bool
 }
 
 // New creates an HotStuff consensus core
-func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer) *core {
+func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer, db ethdb.Database) *core {
 	c := &core{
+		db:                db,
 		config:            config,
 		logger:            log.New("address", backend.Address()),
 		backend:           backend,
@@ -153,13 +156,15 @@ func (c *core) checkPoint(view *View) bool {
 
 func (c *core) updateRoundState(newView *View, changeView bool, lastProposal hotstuff.Proposal, valset hotstuff.ValidatorSet) error {
 	if !changeView && c.current == nil {
-		// todo(fuk): load from db first
-		c.current = newRoundState(newView, c.valSet)
-		prepareQC, err := genesisQC(lastProposal)
-		if err != nil {
-			return err
+		c.current = newRoundState(newView, c.valSet, c.db)
+		c.current.reload(newView)
+		if c.current.prepareQC == nil && newView.Height.Uint64() == 1 {
+			prepareQC, err := genesisQC(lastProposal)
+			if err != nil {
+				return err
+			}
+			c.current.prepareQC = prepareQC
 		}
-		c.current.prepareQC = prepareQC
 	} else {
 		c.current.update(newView, valset)
 	}
@@ -174,6 +179,6 @@ func (c *core) setCurrentState(s State) {
 	c.processBacklog()
 }
 
-func (c *core) checkValidatorSignature(hash common.Hash, sig []byte) (common.Address, error) {
-	return c.signer.CheckSignature(c.valSet, hash, sig)
+func (c *core) checkValidatorSignature(hash common.Hash, sig []byte, seal bool) (common.Address, error) {
+	return c.signer.CheckSignature(c.valSet, hash, sig, seal)
 }

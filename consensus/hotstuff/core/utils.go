@@ -218,16 +218,16 @@ func (c *core) broadcast(code MsgType, payload []byte) {
 		return
 	}
 
-	// todo(fuk): 这里需要注意的是，prepareQC和preCommitQC以及commitQC所需要的3轮投票中要提前将
-	// 自己的投票
+	// leader set source for message and add it in set directly if msg.code is kind of vote.
+	// the self voting happened before qc assembling to ensure the field of qc.seal WONT miss.
 	switch msg.Code {
 	case MsgTypeNewView, MsgTypePrepareVote, MsgTypePreCommitVote, MsgTypeCommitVote:
-		if err := c.backend.Unicast(c.valSet, payload); err != nil {
+		if err = c.backend.Unicast(c.valSet, payload); err != nil {
 			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
 		}
 
 	case MsgTypePrepare, MsgTypePreCommit, MsgTypeCommit, MsgTypeDecide:
-		if err := c.backend.Broadcast(c.valSet, payload); err != nil {
+		if err = c.backend.Broadcast(c.valSet, payload); err != nil {
 			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
 		}
 	default:
@@ -294,9 +294,15 @@ func (c *core) messages2qc(proposer common.Address, hash common.Hash, msgs []*Me
 		return nil, fmt.Errorf("assemble qc: not enough message")
 	}
 
+	var (
+		view     = msgs[0].View
+		code     = msgs[0].Code
+		sealHash = msgs[0].hash
+	)
+
 	qc := &QuorumCert{
-		view:          msgs[0].View,
-		code:          msgs[0].Code,
+		view:          view,
+		code:          code,
 		hash:          hash,
 		proposer:      proposer,
 		committedSeal: make([][]byte, len(msgs)),
@@ -311,7 +317,11 @@ func (c *core) messages2qc(proposer common.Address, hash common.Hash, msgs []*Me
 
 	// proposer self vote should be add in message set first.
 	if qc.seal == nil {
-		return nil, fmt.Errorf("assemble qc: proposer self vote not exist")
+		if sig, err := c.signer.SignHash(sealHash, false); err != nil {
+			return nil, err
+		} else {
+			qc.seal = sig
+		}
 	}
 
 	return qc, nil

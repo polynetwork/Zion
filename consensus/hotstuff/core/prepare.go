@@ -93,7 +93,8 @@ func (c *core) handlePrepare(data *Message) error {
 		logger.Trace("Failed to check proposal and msg view", "msg", code, "src", src, "err", err)
 		return err
 	}
-
+	// todo(fuk): checkQC before verify and validate, do the same judge in preCommit/commit/decide
+	
 	if _, err := c.backend.VerifyUnsealedProposal(msg.Proposal); err != nil {
 		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err)
 		return errVerifyUnsealedProposal
@@ -115,7 +116,10 @@ func (c *core) handlePrepare(data *Message) error {
 
 	// leader accept proposal
 	if c.IsProposer() && c.currentState() < StatePrepared {
-		c.current.SetProposal(msg.Proposal)
+		if err := c.current.SetProposal(msg.Proposal); err != nil {
+			logger.Trace("Failed to set proposal", "msg", code, "err", err)
+			return err
+		}
 		c.sendPrepareVote()
 	}
 
@@ -123,7 +127,10 @@ func (c *core) handlePrepare(data *Message) error {
 	// todo(fuk): 是否真的需要stateHighQC
 	if !c.IsProposer() && c.currentState() < StateHighQC {
 		c.current.SetHighQC(msg.QC)
-		c.current.SetProposal(msg.Proposal)
+		if err := c.current.SetProposal(msg.Proposal); err != nil {
+			logger.Trace("Failed to set proposal", "msg", code, "err", err)
+			return err
+		}
 		c.setCurrentState(StateHighQC)
 		logger.Trace("acceptHighQC", "msg", code, "highQC", msg.QC.hash)
 
@@ -147,6 +154,9 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *QuorumCert) error {
 	if !ok {
 		return fmt.Errorf("invalid proposal: hash %s", proposal.Hash())
 	}
+	if highQC == nil || highQC.view == nil {
+		return errInvalidQC
+	}
 	if err := c.verifyVoteQC(highQC.hash, highQC); err != nil {
 		return err
 	}
@@ -156,14 +166,21 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *QuorumCert) error {
 	return nil
 }
 
-// proposal extend lockedQC `OR` hiqhQC.view > lockedQC.view
+// proposal extend lockQC `OR` hiqhQC.view > lockQC.view
 func (c *core) safeNode(proposal hotstuff.Proposal, highQC *QuorumCert) error {
-	lockedQC := c.current.lockedQC
-	if proposal.Number().Uint64() == 1 && lockedQC == nil {
-		return nil
+	if highQC == nil || highQC.view == nil {
+		return errSafeNode
 	}
 
-	if highQC.view.Cmp(lockedQC.view) > 0 || proposal.ParentHash() == lockedQC.hash {
+	lockQC := c.current.lockQC
+	if lockQC == nil {
+		if proposal.Number().Uint64() == 1 {
+			return nil
+		} else {
+			return errSafeNode
+		}
+	}
+	if highQC.view.Cmp(lockQC.view) > 0 || proposal.ParentHash() == lockQC.hash {
 		return nil
 	}
 

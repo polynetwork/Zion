@@ -165,7 +165,7 @@ package core
 //			assert.Equal(t, v.ExpectErr, leader.handlePreCommitVote(vote, src))
 //		}
 //		if v.ExpectErr == nil {
-//			assert.Equal(t, StatePreCommitted, leader.current.State())
+//			assert.Equal(t, StateLocked, leader.current.State())
 //			assert.Equal(t, int(N), leader.current.PreCommitVoteSize())
 //		}
 //	}
@@ -330,7 +330,7 @@ package core
 //				proposal, qc = newPreCommitMsg(core)
 //				core.current.SetProposal(proposal)
 //				core.current.SetPrepareQC(qc)
-//				core.current.SetState(StatePreCommitted)
+//				core.current.SetState(StateLocked)
 //			}
 //			msg := newP2PMsg(qc)
 //			val := validator.New(sys.getLeader().Address())
