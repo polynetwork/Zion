@@ -125,6 +125,7 @@ func (c *core) handleDecide(data *Message) error {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
+	// todo: check proposal again
 	//if err := c.checkPreCommittedQC(msg.CommitQC); err != nil {
 	//	logger.Trace("Failed to check prepareQC", "msg", code, "src", src, "err", err)
 	//	return err
@@ -145,6 +146,7 @@ func (c *core) handleDecide(data *Message) error {
 
 	if !c.IsProposer() && c.currentState() >= StateLocked && c.currentState() < StateCommitted {
 		c.current.SetState(StateCommitted)
+		c.current.SetProposal(msg.Proposal)
 		c.current.SetCommittedQC(c.current.PreCommittedQC())
 		if err := c.backend.Commit(c.current.Proposal()); err != nil {
 			logger.Trace("Failed to commit proposal", "err", err)
