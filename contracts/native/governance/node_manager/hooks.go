@@ -69,6 +69,10 @@ func AfterValidatorRemoved(s *native.NativeContract, validator *Validator) error
 		return fmt.Errorf("AfterValidatorRemoved, nativeTransfer error: %v", err)
 	}
 
+	//delete signer and proposal address
+	delSignerAddr(s, validator.SignerAddress)
+	delProposalAddr(s, validator.ProposalAddress)
+
 	// delete outstanding
 	delValidatorOutstandingRewards(s, validator.ConsensusAddress)
 

@@ -154,7 +154,7 @@ func TestStake(t *testing.T) {
 		param := new(CreateValidatorParam)
 		param.ConsensusAddress = consensusAddr
 		param.SignerAddress = consensusAddr
-		param.ProposalAddress = caller
+		param.ProposalAddress = consensusAddr
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
 		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
@@ -311,7 +311,7 @@ func TestStake(t *testing.T) {
 	assert.Nil(t, err)
 	assert.Equal(t, validator.TotalStake.BigInt(), new(big.Int).Mul(big.NewInt(108000), params.ZNT1))
 	assert.Equal(t, validator.SelfStake.BigInt(), new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
-	assert.Equal(t, validator.ProposalAddress, validatorsKey[0].StakeAddress)
+	assert.Equal(t, validator.ProposalAddress, validatorsKey[0].ConsensusAddr)
 	assert.Equal(t, validator.Status, Lock)
 	assert.Equal(t, validator.Commission.Rate.BigInt(), new(big.Int).SetUint64(2500))
 	assert.Equal(t, validator.Commission.UpdateHeight, new(big.Int).SetUint64(800000))

@@ -200,6 +200,14 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, setValidator error: %v", err)
 	}
+	err = setSignerAddr(s, validator.SignerAddress)
+	if err != nil {
+		return nil, fmt.Errorf("CreateValidator, setSignerAddr error: %v", err)
+	}
+	err = setProposalAddr(s, validator.ProposalAddress)
+	if err != nil {
+		return nil, fmt.Errorf("CreateValidator, setProposalAddr error: %v", err)
+	}
 	// add validator to all validators pool
 	err = addToAllValidators(s, validator.ConsensusAddress)
 	if err != nil {
@@ -247,9 +255,17 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 
 	if params.ProposalAddress != common.EmptyAddress {
 		validator.ProposalAddress = params.ProposalAddress
+		err = setProposalAddr(s, validator.ProposalAddress)
+		if err != nil {
+			return nil, fmt.Errorf("UpdateValidator, setProposalAddr error: %v", err)
+		}
 	}
 	if params.SignerAddress != common.EmptyAddress {
 		validator.SignerAddress = params.SignerAddress
+		err = setSignerAddr(s, validator.SignerAddress)
+		if err != nil {
+			return nil, fmt.Errorf("UpdateValidator, setSignerAddr error: %v", err)
+		}
 	}
 
 	if params.Desc != "" {
