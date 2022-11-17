@@ -126,7 +126,7 @@ type testSystemBackend struct {
 }
 
 type testCommittedMsgs struct {
-	commitProposal hotstuff.Proposal
+	commitProposal *types.Block
 	committedSeals [][]byte
 }
 
@@ -171,15 +171,15 @@ func (ts *testSystemBackend) Unicast(valSet hotstuff.ValidatorSet, message []byt
 	return nil
 }
 
-func (ts *testSystemBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
+func (ts *testSystemBackend) PreCommit(proposal *types.Block, seals [][]byte) (*types.Block, error) {
 	// todo:
 	return nil, nil
 }
 
-func (ts *testSystemBackend) Commit(proposal hotstuff.Proposal) error {
+func (ts *testSystemBackend) Commit(block *types.Block) error {
 	testLogger.Info("commit message", "address", ts.Address())
 	ts.committedMsgs = append(ts.committedMsgs, testCommittedMsgs{
-		commitProposal: proposal,
+		commitProposal: block,
 		//committedSeals: seals,
 	})
 
@@ -188,18 +188,18 @@ func (ts *testSystemBackend) Commit(proposal hotstuff.Proposal) error {
 	return nil
 }
 
-func (ts *testSystemBackend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
+func (ts *testSystemBackend) Verify(block *types.Block, seal bool) (time.Duration, error) {
 	return 0, nil
 }
 
-func (ts *testSystemBackend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
-	return 0, nil
-}
+//func (ts *testSystemBackend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
+//	return 0, nil
+//}
 
 func (ts *testSystemBackend) ValidateBlock(block *types.Block) error { return nil }
 func (ts *testSystemBackend) HasBadProposal(hash common.Hash) bool   { return false }
 
-func (ts *testSystemBackend) LastProposal() (hotstuff.Proposal, common.Address) {
+func (ts *testSystemBackend) LastProposal() (*types.Block, common.Address) {
 	l := len(ts.committedMsgs)
 	if l > 0 {
 		return ts.committedMsgs[l-1].commitProposal, common.Address{}
@@ -429,7 +429,7 @@ func newTestQCWithoutExtra(c *core, h, r int) *QuorumCert {
 	coinbase := c.valSet.GetByIndex(uint64(h % N))
 	return &QuorumCert{
 		view:     view,
-		hash:     block.Hash(),
+		node:     block.Hash(),
 		proposer: coinbase.Address(),
 	}
 }
@@ -458,7 +458,7 @@ func newTestQCWithExtra(t *testing.T, s *testSystem, h int) *QuorumCert {
 	//}
 	return &QuorumCert{
 		view:          view,
-		hash:          hash,
+		node:          hash,
 		proposer:      coinbase.Address(),
 		seal:          seal,
 		committedSeal: committedSeal,

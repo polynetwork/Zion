@@ -39,10 +39,10 @@ func (c *core) handlePreCommitVote(data *Message) error {
 		logger.Trace("Failed to check vote", "type", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkProposal(vote); err != nil {
-		logger.Trace("Failed to check hash", "type", code, "src", src, "expect vote", vote)
-		return errInvalidDigest
-	}
+	//if err := c.checkProposal(vote); err != nil {
+	//	logger.Trace("Failed to check hash", "type", code, "src", src, "expect vote", vote)
+	//	return errInvalidDigest
+	//}
 	if err := c.checkMsgToProposer(); err != nil {
 		logger.Trace("Failed to check proposal", "type", code, "src", src, "err", err)
 		return err
@@ -80,7 +80,7 @@ func (c *core) sendCommit() {
 		return
 	}
 	c.broadcast(code, payload)
-	logger.Trace("sendCommit", "msg", code, "proposal", sub.hash)
+	logger.Trace("sendCommit", "msg", code, "node", sub.node)
 }
 
 func (c *core) handleCommit(data *Message) error {
@@ -112,13 +112,13 @@ func (c *core) handleCommit(data *Message) error {
 		return err
 	}
 
-	logger.Trace("handleCommit", "msg", code, "src", src, "proposal", msg.hash)
+	logger.Trace("handleCommit", "msg", code, "src", src, "preCommitQC", msg.node)
 	if c.currentState() < StateLocked {
 		if err := c.lockQCAndProposal(msg); err != nil {
 			logger.Trace("Failed to lockQC", "msg", code, "err", err)
 			return err
 		}
-		logger.Trace("acceptLockQC", "msg", code, "lockQC", msg.hash)
+		logger.Trace("acceptLockQC", "msg", code, "lockQC", msg.node)
 		c.sendCommitVote()
 	}
 	return nil
@@ -128,8 +128,10 @@ func (c *core) lockQCAndProposal(qc *QuorumCert) error {
 	if err := c.current.SetLockQC(qc); err != nil {
 		return err
 	}
+	if err := c.current.LockNode(); err != nil {
+		return err
+	}
 	c.current.SetState(StateLocked)
-	c.current.LockProposal()
 	return nil
 }
 

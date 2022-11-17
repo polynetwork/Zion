@@ -79,8 +79,8 @@ func (c *core) checkPrepareQC(qc *QuorumCert) error {
 	if localQC.proposer != qc.proposer {
 		return fmt.Errorf("proposer unsame, expect %v, got %v", localQC.Proposer(), qc.Proposer())
 	}
-	if localQC.hash != qc.hash {
-		return fmt.Errorf("expect %v, got %v", localQC.hash, qc.hash)
+	if localQC.node != qc.node {
+		return fmt.Errorf("expect %v, got %v", localQC.node, qc.node)
 	}
 	return nil
 }
@@ -106,7 +106,7 @@ func (c *core) checkVote(data *Message, vote common.Hash) error {
 		return fmt.Errorf("current vote is nil")
 	}
 	if !reflect.DeepEqual(c.current.Vote(), vote) {
-		return fmt.Errorf("expect %s, got %s", c.current.Vote().String(), vote.String())
+		return fmt.Errorf("expect %s, got %s", c.current.Vote().Hex(), vote.Hex())
 	}
 	// todo:
 	//if hash, err := c.current.SelfVoteHash(data.View, data.Code); err != nil {
@@ -128,25 +128,25 @@ func (c *core) checkVote(data *Message, vote common.Hash) error {
 //	}
 //}
 
-func (c *core) checkProposal(hash common.Hash) error {
-	if c.current == nil || c.current.Proposal() == nil {
-		return fmt.Errorf("current proposal is nil")
-	}
-	if expect := c.current.Proposal().Hash(); hash != expect {
-		return fmt.Errorf("hash expect %s got %s", expect.Hex(), hash.Hex())
-	}
-	return nil
-}
+//func (c *core) checkProposal(hash common.Hash) error {
+//	if c.current == nil || c.current.Proposal() == nil {
+//		return fmt.Errorf("current proposal is nil")
+//	}
+//	if expect := c.current.Proposal().Hash(); hash != expect {
+//		return fmt.Errorf("hash expect %s got %s", expect.Hex(), hash.Hex())
+//	}
+//	return nil
+//}
 
-func (c *core) checkProposalView(proposal hotstuff.Proposal, view *View) error {
-	if proposal == nil || view == nil || view.Height == nil {
-		return fmt.Errorf("proposal or view is invalid")
-	} else if proposal.NumberU64() != view.Height.Uint64() {
-		return fmt.Errorf("proposal height %v != view %v", proposal.NumberU64(), view.Height)
-	} else {
-		return nil
-	}
-}
+//func (c *core) checkProposalView(proposal hotstuff.Proposal, view *View) error {
+//	if proposal == nil || view == nil || view.Height == nil {
+//		return fmt.Errorf("proposal or view is invalid")
+//	} else if proposal.NumberU64() != view.Height.Uint64() {
+//		return fmt.Errorf("proposal height %v != view %v", proposal.NumberU64(), view.Height)
+//	} else {
+//		return nil
+//	}
+//}
 
 //// verifyCrossEpochQC verify quorum certificate with current validator set or
 //// last epoch's val set if current height equals to epoch start height
@@ -189,66 +189,24 @@ func (c *core) checkView(view *View) error { //todo
 	}
 }
 
-func (c *core) finalizeMessage(msg *Message) ([]byte, error) {
-	var (
-		seal, sig []byte
-		err       error
-	)
-
-	// Add proof of consensus
-	proposal := c.current.Proposal()
-	if msg.Code == MsgTypeCommitVote && proposal != nil {
-		if seal, err = c.signer.SignHash(proposal.Hash(), true); err != nil {
-			return nil, err
-		}
-		msg.CommittedSeal = seal
+func (c *core) checkSubject(sub *Subject) error {
+	if sub.Node == nil || sub.QC == nil {
+		return errInvalidMessage
 	}
-
-	// Sign Message
-	if _, err = msg.PayloadNoSig(); err != nil {
-		return nil, err
+	if sub.Node.Parent == common.EmptyHash || sub.Node.Block == nil || sub.Node.Block.Header() == nil {
+		return errInvalidMessage
 	}
-	if sig, err = c.signer.SignHash(msg.hash, false); err != nil {
-		return nil, err
-	} else {
-		msg.Signature = sig
+	if sub.QC.node == common.EmptyHash || sub.QC.view == nil {
+		return errInvalidMessage
 	}
-
-	// Convert to payload
-	return msg.Payload()
-}
-
-func (c *core) broadcast(code MsgType, payload []byte) {
-	logger := c.logger.New("state", c.currentState())
-
-	// todo(fuk): forbid at start at new round
-	// forbid normal nodes send message to leader
-	if index, _ := c.valSet.GetByAddress(c.Address()); index < 0 {
-		return
+	if sub.QC.seal == nil || sub.QC.committedSeal == nil {
+		return errInvalidMessage
 	}
-
-	msg := NewCleanMessage(c.currentView(), code, payload)
-	payload, err := c.finalizeMessage(msg)
-	if err != nil {
-		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
-		return
+	// todo(fuk): genesis block proposer is empty
+	if sub.QC.code < MsgTypeNewView || sub.QC.code > MsgTypeDecide {
+		return errInvalidMessage
 	}
-
-	// leader set source for message and add it in set directly if msg.code is kind of vote.
-	// the self voting happened before qc assembling to ensure the field of qc.seal WONT miss.
-	switch msg.Code {
-	case MsgTypeNewView, MsgTypePrepareVote, MsgTypePreCommitVote, MsgTypeCommitVote:
-		if err = c.backend.Unicast(c.valSet, payload); err != nil {
-			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
-		}
-
-	case MsgTypePrepare, MsgTypePreCommit, MsgTypeCommit, MsgTypeDecide:
-		if err = c.backend.Broadcast(c.valSet, payload); err != nil {
-			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
-		}
-	default:
-		logger.Error("invalid msg type", "msg", msg)
-	}
+	return nil
 }
 
 func (c *core) preExecuteBlock(proposal hotstuff.Proposal) error {
@@ -258,7 +216,7 @@ func (c *core) preExecuteBlock(proposal hotstuff.Proposal) error {
 
 	block, ok := proposal.(*types.Block)
 	if !ok {
-		return errInvalidProposal
+		return errInvalidNode
 	}
 	return c.backend.ValidateBlock(block)
 }
@@ -272,40 +230,45 @@ func (c *core) Q() int {
 	return c.valSet.Q()
 }
 
-func genesisQC(proposal hotstuff.Proposal) (*QuorumCert, error) {
-	if proposal.NumberU64() != 0 {
+var (
+	genesisNodeHash = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000012345")
+	genesisView     = &View{
+		Round:  big.NewInt(0),
+		Height: big.NewInt(0),
+	}
+)
+
+func genesisQC(block *types.Block) (*QuorumCert, error) {
+	if block.NumberU64() != 0 {
 		return nil, fmt.Errorf("MUST be genesis block")
 	}
 
-	block := proposal.(*types.Block)
-	h := block.Header()
 	qc := &QuorumCert{
-		view: &View{
-			Round:  big.NewInt(0),
-			Height: block.Number(),
-		},
+		view:          genesisView,
 		code:          MsgTypePrepareVote,
-		hash:          block.Hash(),
+		node:          genesisNodeHash,
 		proposer:      common.Address{},
 		seal:          make([]byte, 0),
 		committedSeal: make([][]byte, 0),
 	}
 
+	h := block.Header()
 	extra, err := types.ExtractHotstuffExtra(h)
 	if err != nil {
 		return nil, err
 	}
 	if extra.Seal == nil || extra.CommittedSeal == nil {
-		return nil, errInvalidProposal
+		return nil, errInvalidNode
 	}
 
+	//copy(qc.proposer[:], h.Coinbase[:])
 	copy(qc.seal, extra.Seal)
 	copy(qc.committedSeal, extra.CommittedSeal)
 	return qc, nil
 }
 
 // assemble messages to quorum cert.
-func (c *core) messages2qc(proposer common.Address, proposalHash common.Hash, msgs []*Message) (*QuorumCert, error) {
+func (c *core) messages2qc(proposer common.Address, node common.Hash, msgs []*Message) (*QuorumCert, error) {
 	if len(msgs) == 0 {
 		return nil, fmt.Errorf("assemble qc: not enough message")
 	}
@@ -319,7 +282,7 @@ func (c *core) messages2qc(proposer common.Address, proposalHash common.Hash, ms
 	qc := &QuorumCert{
 		view:          view,
 		code:          code,
-		hash:          proposalHash,
+		node:          node,
 		proposer:      proposer,
 		committedSeal: make([][]byte, len(msgs)),
 	}
@@ -345,15 +308,15 @@ func (c *core) messages2qc(proposer common.Address, proposalHash common.Hash, ms
 
 func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 	if data == nil || data.View == nil {
-		return errInvalidMessage
+		return fmt.Errorf("data is nil")
 	}
 	if qc == nil || qc.view == nil {
-		return errInvalidQC
+		return fmt.Errorf("qc is nil")
 	}
 
 	// reaching qc ahead of current view
-	if hdiff, rdiff := data.View.Sub(qc.view); hdiff < 0 || (hdiff == 0 && rdiff <= 0) {
-		return errInvalidMessage
+	if hdiff, rdiff := data.View.Sub(qc.view); hdiff < 0 || (hdiff == 0 && rdiff < 0) {
+		return fmt.Errorf("view is invalid")
 	}
 
 	// verify genesis qc
@@ -361,10 +324,11 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 		return nil
 	}
 
-	// check qc hash and sigs
-	if qc.seal == nil || qc.committedSeal == nil ||
-		qc.hash == common.EmptyHash || qc.proposer == common.EmptyAddress {
-		return errInvalidQC
+	if qc.seal == nil || qc.committedSeal == nil {
+		return fmt.Errorf("seal or committed seal is nil")
+	}
+	if qc.node == common.EmptyHash || qc.proposer == common.EmptyAddress {
+		return fmt.Errorf("node or proposer is nil")
 	}
 
 	// qc code should be vote
@@ -373,9 +337,9 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 	}
 
 	// resturct msg payload and compare msg.hash with qc.hash
-	msg := NewCleanMessage(qc.view, qc.code, qc.hash.Bytes())
+	msg := NewCleanMessage(qc.view, qc.code, qc.node.Bytes())
 	if _, err := msg.PayloadNoSig(); err != nil {
-		return err
+		return fmt.Errorf("payload no sig")
 	}
 	if sealHash := qc.SealHash(); msg.hash != sealHash {
 		return fmt.Errorf("expect qc hash %v, got %v", msg.hash, sealHash)

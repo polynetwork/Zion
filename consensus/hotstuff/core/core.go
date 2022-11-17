@@ -19,6 +19,7 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/core/types"
 	"math/big"
 	"sync"
 	"time"
@@ -154,7 +155,7 @@ func (c *core) checkPoint(view *View) bool {
 	return false
 }
 
-func (c *core) updateRoundState(newView *View, changeView bool, lastProposal hotstuff.Proposal, valset hotstuff.ValidatorSet) error {
+func (c *core) updateRoundState(newView *View, changeView bool, lastProposal *types.Block, valset hotstuff.ValidatorSet) error {
 	if !changeView && c.current == nil {
 		c.current = newRoundState(newView, c.valSet, c.db)
 		c.current.reload(newView)

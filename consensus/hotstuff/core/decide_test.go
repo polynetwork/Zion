@@ -64,7 +64,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPreCommittedQC(&QuorumCert{Hash: proposal.Hash()})
 //
 //				vote := newVote(core, proposal.Hash())
@@ -88,7 +88,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPreCommittedQC(&QuorumCert{Hash: proposal.Hash()})
 //
 //				vote := newVote(core, proposal.Hash())
@@ -114,7 +114,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPreCommittedQC(&QuorumCert{Hash: proposal.Hash()})
 //
 //				vote := newVote(core, proposal.Hash())
@@ -140,7 +140,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPreCommittedQC(&QuorumCert{Hash: proposal.Hash()})
 //
 //				vote := newVote(core, proposal.Hash())
@@ -165,7 +165,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPreCommittedQC(&QuorumCert{Hash: common.HexToHash("0x124")})
 //
 //				vote := newVote(core, proposal.Hash())
