@@ -67,7 +67,7 @@ func (c *core) processBacklog() {
 				logger.Trace("Skip the backlog, invalid Message")
 				continue
 			}
-			if err := c.checkView(msg.Code, msg.View); err != nil {
+			if err := c.checkView(msg.View); err != nil {
 				if err == errFutureMessage {
 					queue.Push(data, priority)
 					isFuture = true

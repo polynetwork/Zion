@@ -32,6 +32,12 @@ func (c *core) sendPrepare() {
 	if !c.IsProposer() {
 		return
 	}
+
+	var (
+		code     = MsgTypePrepare
+		highQC   = c.current.HighQC()
+		proposal hotstuff.Proposal
+	)
 	if c.currentState() != StateHighQC {
 		return
 	}
@@ -39,20 +45,20 @@ func (c *core) sendPrepare() {
 		return
 	}
 
-	code := MsgTypePrepare
 	request := c.current.PendingRequest()
 	if request.Proposal.NumberU64() != c.current.HeightU64() {
 		logger.Trace("Failed to send prepare", "msg", code, "err", "request height invalid")
 		return
 	}
-	if c.current.HighQC().hash != request.Proposal.ParentHash() {
-		logger.Trace("Failed to send prepare", "msg", code, "err", "request parent hash invalid")
-		return
-	}
+	//if highQC.hash != request.Proposal.ParentHash() {
+	//	logger.Trace("Failed to send prepare", "msg", code, "err", "request parent hash invalid")
+	//	return
+	//}
+	proposal = request.Proposal
 
 	prepare := &Subject{
-		Proposal: request.Proposal,
-		QC:       c.current.HighQC(),
+		Proposal: proposal,
+		QC:       highQC,
 	}
 	payload, err := Encode(prepare)
 	if err != nil {
@@ -81,7 +87,7 @@ func (c *core) handlePrepare(data *Message) error {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodePrepare
 	}
-	if err := c.checkView(code, data.View); err != nil {
+	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -93,12 +99,24 @@ func (c *core) handlePrepare(data *Message) error {
 		logger.Trace("Failed to check proposal and msg view", "msg", code, "src", src, "err", err)
 		return err
 	}
-	// todo(fuk): checkQC before verify and validate, do the same judge in preCommit/commit/decide
-	
-	if _, err := c.backend.VerifyUnsealedProposal(msg.Proposal); err != nil {
+	if err := c.verifyQC(data, msg.QC); err != nil {
+		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err)
+		return err
+	}
+	// locked proposal hash should be equal to msg proposal hash
+	if c.current.IsProposalLocked() {
+		if expect := c.current.Proposal().Hash(); expect != msg.Proposal.Hash() {
+			logger.Trace("Failed to check lock proposal", "msg", code, "src", src, "expect hash", expect, "got", msg.Proposal.Hash())
+			return errLockProposal
+		}
+	}
+
+	// todo(fuk): 先验证一下区块头，但是不预执行区块，等到后续安全性及活性得到确认的情况下再预执行区块
+	if _, err := c.backend.Verify(msg.Proposal); err != nil {
 		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err)
 		return errVerifyUnsealedProposal
 	}
+
 	if err := c.extend(msg.Proposal, msg.QC); err != nil {
 		logger.Trace("Failed to check extend", "msg", code, "src", src, "err", err)
 		return errExtend
@@ -107,6 +125,7 @@ func (c *core) handlePrepare(data *Message) error {
 		logger.Trace("Failed to check safeNode", "msg", code, "src", src, "err", err)
 		return errSafeNode
 	}
+
 	if err := c.preExecuteBlock(msg.Proposal); err != nil {
 		logger.Trace("Failed to pre-execute block", "msg", code, "src", src, "err", err)
 		return err
@@ -157,10 +176,8 @@ func (c *core) extend(proposal hotstuff.Proposal, highQC *QuorumCert) error {
 	if highQC == nil || highQC.view == nil {
 		return errInvalidQC
 	}
-	if err := c.verifyVoteQC(highQC.hash, highQC); err != nil {
-		return err
-	}
-	if highQC.hash != block.ParentHash() {
+	// if msgPrepare.proposal is locked, the proposal hash should be equal to qc.hash
+	if highQC.hash != block.ParentHash() && highQC.hash != block.Hash() {
 		return fmt.Errorf("block %v (parent %v) not extend hiqhQC %v", block.Hash(), block.ParentHash(), highQC.hash)
 	}
 	return nil
@@ -172,6 +189,7 @@ func (c *core) safeNode(proposal hotstuff.Proposal, highQC *QuorumCert) error {
 		return errSafeNode
 	}
 
+	// skip genesis block
 	lockQC := c.current.lockQC
 	if lockQC == nil {
 		if proposal.Number().Uint64() == 1 {
@@ -180,6 +198,7 @@ func (c *core) safeNode(proposal hotstuff.Proposal, highQC *QuorumCert) error {
 			return errSafeNode
 		}
 	}
+
 	if highQC.view.Cmp(lockQC.view) > 0 || proposal.ParentHash() == lockQC.hash {
 		return nil
 	}

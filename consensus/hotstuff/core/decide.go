@@ -31,7 +31,7 @@ func (c *core) handleCommitVote(data *Message) error {
 		code = MsgTypeCommitVote
 		src  = data.address
 	)
-	if err := c.checkView(code, data.View); err != nil {
+	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -117,7 +117,7 @@ func (c *core) handleDecide(data *Message) error {
 	}
 	commitQC := msg.QC
 
-	if err := c.checkView(code, data.View); err != nil {
+	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -130,7 +130,7 @@ func (c *core) handleDecide(data *Message) error {
 	//	logger.Trace("Failed to check prepareQC", "msg", code, "src", src, "err", err)
 	//	return err
 	//}
-	if err := c.verifyVoteQC(commitQC.hash, commitQC); err != nil {
+	if err := c.verifyQC(data, commitQC); err != nil {
 		logger.Trace("Failed to check verify qc", "msg", code, "src", src, "err", err)
 		return err
 	}

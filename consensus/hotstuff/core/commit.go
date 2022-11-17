@@ -18,7 +18,9 @@
 
 package core
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/ethereum/go-ethereum/common"
+)
 
 func (c *core) handlePreCommitVote(data *Message) error {
 	logger := c.newLogger()
@@ -29,7 +31,7 @@ func (c *core) handlePreCommitVote(data *Message) error {
 		vote = common.BytesToHash(data.Msg)
 	)
 
-	if err := c.checkView(code, data.View); err != nil {
+	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "type", code, "src", src, "err", err)
 		return err
 	}
@@ -93,7 +95,7 @@ func (c *core) handleCommit(data *Message) error {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodeCommit
 	}
-	if err := c.checkView(MsgTypeCommit, msg.view); err != nil {
+	if err := c.checkView(msg.view); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -105,7 +107,7 @@ func (c *core) handleCommit(data *Message) error {
 		logger.Trace("Failed to check prepareQC", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.verifyVoteQC(msg.hash, msg); err != nil {
+	if err := c.verifyQC(data, msg); err != nil {
 		logger.Trace("Failed to check verify qc", "msg", code, "src", src, "err", err)
 		return err
 	}

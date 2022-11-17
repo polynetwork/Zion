@@ -31,7 +31,7 @@ func (c *core) handlePrepareVote(data *Message) error {
 		code = MsgTypePrepareVote
 		src  = data.address
 	)
-	if err := c.checkView(code, data.View); err != nil {
+	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -95,7 +95,7 @@ func (c *core) handlePreCommit(data *Message) error {
 		logger.Trace("Failed to check decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodePreCommit
 	}
-	if err := c.checkView(code, data.View); err != nil {
+	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -115,15 +115,10 @@ func (c *core) handlePreCommit(data *Message) error {
 		logger.Trace("Failed to check verify proposal", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.verifyVoteQC(msg.QC.hash, msg.QC); err != nil {
+	if err := c.verifyQC(data, msg.QC); err != nil {
 		logger.Trace("Failed to verify prepareQC", "msg", code, "src", src, "err", err)
 		return err
 	}
-
-	//if err := c.signer.VerifyQC(msg.PrepareQC, c.valSet); err != nil {
-	//	logger.Trace("Failed to verify prepareQC", "msg", code, "src", src, "err", err)
-	//	return err
-	//}
 
 	logger.Trace("handlePreCommit", "msg", code, "src", src, "hash", msg.Proposal.Hash())
 

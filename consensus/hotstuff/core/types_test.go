@@ -19,6 +19,9 @@
 package core
 
 import (
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"math/big"
 	"testing"
 
@@ -42,7 +45,7 @@ func TestMessage(t *testing.T) {
 		msg        = []byte{'a', 'b'}
 		key, _     = crypto.GenerateKey()
 		signer     = crypto.PubkeyToAddress(key.PublicKey)
-		validateFn = func(hash common.Hash, sig []byte) (addresses common.Address, e error) {
+		validateFn = func(hash common.Hash, sig []byte, seal bool) (addresses common.Address, e error) {
 			//hashData := crypto.Keccak256(data)
 			pubkey, err := crypto.SigToPub(hash.Bytes(), sig)
 			if err != nil {
@@ -95,7 +98,7 @@ func TestMessage(t *testing.T) {
 		got := new(Message)
 		err = got.FromPayload(signer, payload, validateFn)
 		assert.NoError(t, err)
-		proposer, err := validateFn(proposalHash, got.CommittedSeal)
+		proposer, err := validateFn(proposalHash, got.CommittedSeal, true)
 		assert.NoError(t, err)
 		assert.Equal(t, signer, proposer)
 	}
@@ -181,6 +184,36 @@ func TestQuorumCert(t *testing.T) {
 
 }
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestSimple
+func TestSimple(t *testing.T) {
+	hash := common.HexToHash("0xf313870c2e28a138dfcb1d4c0150265a881374bd13870df5c216fe01ce4c631a")
+	data := "0x0000000000000000000000000000000000000000000000000000000000000000f901168201868201a4c0b84172ddcc9dc9855cfc5f737fc0438d0a654f54580d2ccc8f7fda4b034683de419f50df9d4a729d2e6300e9c545c065aea32bb88699ad6bf40e002f5f1f7d93fc3b00f8c9b841fb9baab3b5b464f6d0a6bff202e6c89bdcf25487a192a31a730204c4ab7f595a1b67696d3dab895e1cbc9689a13d2248e65255b0464e1510cb936ebe4664b98901b84172ddcc9dc9855cfc5f737fc0438d0a654f54580d2ccc8f7fda4b034683de419f50df9d4a729d2e6300e9c545c065aea32bb88699ad6bf40e002f5f1f7d93fc3b00b841228f6495b05e8d4fe1e5b5173e01f5554666f319f66eb1d28198b353ff9edf8c23a6ccbe4b8d2af952b9d9c47c7c7ae1181070d8a64208491e66f44ad65ddc700180"
+	raw, err := hexutil.Decode(data)
+	assert.NoError(t, err)
+
+	extra, err := types.ExtractHotstuffExtraPayload(raw)
+	assert.NoError(t, err)
+
+	validateFn := func(hash common.Hash, sig []byte) error {
+		sealHash := hotstuff.RLPHash(signer.SealHash{
+			Hash: hash,
+			Salt: []byte("commit"),
+		})
+
+		pubkey, err := crypto.SigToPub(sealHash.Bytes(), sig)
+		if err != nil {
+			return err
+		}
+		addr := crypto.PubkeyToAddress(*pubkey)
+		t.Logf("%s verify hash %s", addr.Hex(), hash.Hex())
+		return nil
+	}
+
+	assert.NoError(t, validateFn(hash, extra.Seal))
+	for _, v := range extra.CommittedSeal {
+		assert.NoError(t, validateFn(hash, v))
+	}
+}
 //// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestNewView
 //func TestNewView(t *testing.T) {
 //	pp := &MsgNewView{

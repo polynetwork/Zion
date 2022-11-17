@@ -182,3 +182,20 @@ func (c *core) setCurrentState(s State) {
 func (c *core) checkValidatorSignature(hash common.Hash, sig []byte, seal bool) (common.Address, error) {
 	return c.signer.CheckSignature(c.valSet, hash, sig, seal)
 }
+
+//
+//// todo(fuk): 根据视图追上同一block的round，不能直接进入到block，因为block的追赶在同步模块
+//// 理论上来说qc.view.round = msg.view.round - 1的情况下才能追round，qc只能证明其他节点round比自己大1
+//// startNewRound会把之前的消息列表清零，但是调用该方法的是handler，会根据err重新将消息放到backlog，这样一来，
+//// 只要是每次round增加了，backlog消息集的结果都是正确的
+//// 只允许两种情况:
+//// 1. leader received MsgNewView, prepareQC.height == current.height && prepareQC.round >= current.round
+//// 2. repo received MsgPrepare highQC.height == current.height && highQC.round >= current.round
+//func (c *core) catchUpRound(qc *QuorumCert) {
+//	if c.current.prepareQC == nil || qc.RoundU64() > c.current.prepareQC.RoundU64() {
+//		c.stopTimer()
+//		c.current.prepareQC = qc
+//		newRound := new(big.Int).Add(qc.Round(), big.NewInt(1))
+//		c.startNewRound(newRound)
+//	}
+//}
