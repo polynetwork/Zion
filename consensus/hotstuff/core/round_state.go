@@ -19,13 +19,14 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 func (c *core) currentView() *View {
@@ -97,15 +98,26 @@ func (s *roundState) update(view *View, vs hotstuff.ValidatorSet) {
 }
 
 func (s *roundState) Height() *big.Int {
+	if s.height == nil {
+		return big.NewInt(0)
+	}
+
 	return s.height
 }
 
 func (s *roundState) HeightU64() uint64 {
-	return s.height.Uint64()
+	return s.Height().Uint64()
 }
 
 func (s *roundState) Round() *big.Int {
+	if s.round == nil {
+		return big.NewInt(0)
+	}
 	return s.round
+}
+
+func (s *roundState) RoundU64() uint64 {
+	return s.Round().Uint64()
 }
 
 func (s *roundState) View() *View {
@@ -136,10 +148,24 @@ func (s *roundState) Proposal() hotstuff.Proposal {
 	return s.proposal
 }
 
-func (s *roundState) LockProposal() {
-	if s.proposal != nil && !s.proposalLocked {
-		s.proposalLocked = true
+func (s *roundState) LockProposal()  error {
+	if s.proposal == nil {
+		return fmt.Errorf("invalid proposal")
 	}
+	s.proposalLocked = true
+	return nil
+}
+
+func (s *roundState) LockedProposal() hotstuff.Proposal {
+	if s.proposalLocked && s.proposal != nil {
+		return s.proposal
+	}
+	return nil
+}
+
+// 如果在prepare阶段就开始锁，会导致更多问题，prepareQC。
+func (s *roundState) IsProposalLocked() bool {
+	return s.proposalLocked
 }
 
 func (s *roundState) SetPendingRequest(req *Request) {

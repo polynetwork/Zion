@@ -56,4 +56,5 @@ var (
 	errAddPrepareVote         = errors.New("add prepare vote error")
 	errAddPreCommitVote       = errors.New("add pre commit vote error")
 	errGetHighQC              = errors.New("assemble highQC failed")
+	errLockProposal 		  = errors.New("lock proposal invalid")
 )

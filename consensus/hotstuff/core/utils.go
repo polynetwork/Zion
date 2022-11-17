@@ -33,6 +33,22 @@ func (c *core) proposer() common.Address {
 	return c.valSet.GetProposer().Address()
 }
 
+func (c *core) HeightU64() uint64 {
+	if c.current == nil {
+		return 0
+	} else {
+		return c.current.HeightU64()
+	}
+}
+
+func (c *core) RoundU64() uint64 {
+	if c.current == nil {
+		return 0
+	} else {
+		return c.current.RoundU64()
+	}
+}
+
 func (c *core) checkMsgFromProposer(src common.Address) error {
 	if !c.valSet.IsProposer(src) {
 		return errNotFromProposer
@@ -132,28 +148,28 @@ func (c *core) checkProposalView(proposal hotstuff.Proposal, view *View) error {
 	}
 }
 
-// verifyCrossEpochQC verify quorum certificate with current validator set or
-// last epoch's val set if current height equals to epoch start height
-func (c *core) verifyCrossEpochQC(qc *QuorumCert) error {
-	valset := c.backend.Validators(qc.hash, false)
-	if err := c.signer.VerifyQC(qc, valset); err != nil {
-		return err
-	}
-	return nil
-}
+//// verifyCrossEpochQC verify quorum certificate with current validator set or
+//// last epoch's val set if current height equals to epoch start height
+//func (c *core) verifyCrossEpochQC(qc *QuorumCert) error {
+//	valset := c.backend.Validators(qc.hash, false)
+//	if err := c.signer.VerifyQC(qc, valset); err != nil {
+//		return err
+//	}
+//	return nil
+//}
 
-// checkView checks the Message state, remote msg view should not be nil(local view WONT be nil).
-// if the view is ahead of current view we name the Message to be future Message, and if the view
-// is behind of current view, we name it as old Message. `old Message` and `invalid Message` will
-// be dropped. and we use the storage of `backlog` to cache the future Message, it only allow the
-// Message height not bigger than `current height + 1` to ensure that the `backlog` memory won't be
-// too large, it won't interrupt the consensus process, because that the `core` instance will sync
-// block until the current height to the correct value.
+// checkView checks the Message sequence remote msg view should not be nil(local view WONT be nil).
+// if the view is ahead of current view we name the Message to be future Message, and if the view is behind
+// of current view, we name it as old Message. `old Message` and `invalid Message` will be dropped. and we use t
+// he storage of `backlog` to cache the future Message, it only allow the Message height not bigger than
+// `current height + 1` to ensure that the `backlog` memory won't be too large, it won't interrupt the consensus
+// process, because that the `core` instance will sync block until the current height to the correct value.
+//
 //
 // if the view is equal the current view, compare the Message type and round state, with the right
 // round state sequence, Message ahead of certain state is `old Message`, and Message behind certain
 // state is `future Message`. Message type and round state table as follow:
-func (c *core) checkView(msgCode MsgType, view *View) error { //todo
+func (c *core) checkView(view *View) error { //todo
 	if view == nil || view.Height == nil || view.Round == nil {
 		return errInvalidMessage
 	}
@@ -289,7 +305,7 @@ func genesisQC(proposal hotstuff.Proposal) (*QuorumCert, error) {
 }
 
 // assemble messages to quorum cert.
-func (c *core) messages2qc(proposer common.Address, hash common.Hash, msgs []*Message) (*QuorumCert, error) {
+func (c *core) messages2qc(proposer common.Address, proposalHash common.Hash, msgs []*Message) (*QuorumCert, error) {
 	if len(msgs) == 0 {
 		return nil, fmt.Errorf("assemble qc: not enough message")
 	}
@@ -303,7 +319,7 @@ func (c *core) messages2qc(proposer common.Address, hash common.Hash, msgs []*Me
 	qc := &QuorumCert{
 		view:          view,
 		code:          code,
-		hash:          hash,
+		hash:          proposalHash,
 		proposer:      proposer,
 		committedSeal: make([][]byte, len(msgs)),
 	}
@@ -327,10 +343,17 @@ func (c *core) messages2qc(proposer common.Address, hash common.Hash, msgs []*Me
 	return qc, nil
 }
 
-func (c *core) verifyVoteQC(digest common.Hash, qc *QuorumCert) error {
-	// check qc view
+func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
+	if data == nil || data.View == nil {
+		return errInvalidMessage
+	}
 	if qc == nil || qc.view == nil {
 		return errInvalidQC
+	}
+
+	// reaching qc ahead of current view
+	if hdiff, rdiff := data.View.Sub(qc.view); hdiff < 0 || (hdiff == 0 && rdiff <= 0) {
+		return errInvalidMessage
 	}
 
 	// verify genesis qc
@@ -358,13 +381,10 @@ func (c *core) verifyVoteQC(digest common.Hash, qc *QuorumCert) error {
 		return fmt.Errorf("expect qc hash %v, got %v", msg.hash, sealHash)
 	}
 
-	// verify seal and committed seals
+	// find the correct validator set and verify seal & committed seals
+	//valset := c.backend.Validators(qc.hash, false)
+	// todo: fix epoch change valset change
 	return c.signer.VerifyQC(qc, c.valSet)
-}
-
-// todo:
-func (c *core) verifyProposalQC() error {
-	return nil
 }
 
 // qc comes from vote

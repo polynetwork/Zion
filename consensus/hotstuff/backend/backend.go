@@ -288,7 +288,8 @@ func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 	return 0, err
 }
 
-func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
+// todo(fuk): delete after test
+/*func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
 	// Check if the proposal is a valid block
 	block, ok := proposal.(*types.Block)
 	if !ok {
@@ -320,6 +321,7 @@ func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Durat
 		return 0, err
 	}
 }
+*/
 
 func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 	block := s.chain.CurrentBlock()

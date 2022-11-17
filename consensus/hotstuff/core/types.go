@@ -373,7 +373,7 @@ func (m *Message) Decode(val interface{}) error {
 }
 
 func (m *Message) String() string {
-	return fmt.Sprintf("{MsgType: %v, view: %v}", m.Code, m.View)
+	return fmt.Sprintf("{MsgType: %v, view: %v, address: %v}", m.Code, m.View, m.address)
 }
 
 type timeoutEvent struct{}

@@ -18,6 +18,8 @@
 
 package core
 
+import "fmt"
+
 func (c *core) sendNewView(view *View) {
 	logger := c.newLogger()
 	msgTyp := MsgTypeNewView
@@ -43,32 +45,31 @@ func (c *core) handleNewView(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		prepareQC *QuorumCert
+		qc *QuorumCert
 		code      = MsgTypeNewView
 		src       = data.address
 	)
 
-	if err := data.Decode(&prepareQC); err != nil {
+	if err := data.Decode(&qc); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodeNewView
 	}
-	if err := c.checkView(code, data.View); err != nil {
+
+	// leader WONT catch up round
+	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkMsgToProposer(); err != nil {
-		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
+
+	// leader如果处于更高的状态
+
+	if err := c.verifyQC(data, qc); err != nil {
+		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err)
 		return err
 	}
 
-	//// todo(fuk): verify cross epoch qc
-	//if err := c.verifyCrossEpochQC(msg.PrepareQC); err != nil {
-	//	logger.Trace("Failed to verify highQC", "msg", msgTyp, "src", src, "err", err)
-	//	return err
-	//}
-
-	if err := c.verifyVoteQC(prepareQC.hash, prepareQC); err != nil {
-		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err)
+	if err := c.checkMsgToProposer(); err != nil {
+		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
 
@@ -78,19 +79,19 @@ func (c *core) handleNewView(data *Message) error {
 		return errAddNewViews
 	}
 
-	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", prepareQC.hash)
+	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", qc.hash)
 
 	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < StateHighQC {
-		if highQC, err := c.getHighQC(); err != nil || highQC == nil {
+		highQC, err := c.getHighQC()
+		if err != nil {
 			logger.Trace("Failed to get highQC", "msg", code)
 			return errGetHighQC
-		} else {
-			c.current.SetHighQC(highQC)
-			c.setCurrentState(StateHighQC)
-
-			logger.Trace("acceptHighQC", "msg", code, "prepareQC", prepareQC.hash, "msgSize", size)
-			c.sendPrepare()
 		}
+		c.current.SetHighQC(highQC)
+		c.setCurrentState(StateHighQC)
+
+		logger.Trace("acceptHighQC", "msg", code, "prepareQC", qc.hash, "msgSize", size)
+		c.sendPrepare()
 	}
 
 	return nil
@@ -106,6 +107,9 @@ func (c *core) getHighQC() (*QuorumCert, error) {
 		if maxView == nil || maxView.view.Cmp(qc.view) < 0 {
 			maxView = qc
 		}
+	}
+	if maxView == nil {
+		return nil, fmt.Errorf("failed to get highQC")
 	}
 	return maxView, nil
 }
