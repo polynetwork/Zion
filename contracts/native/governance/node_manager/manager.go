@@ -254,18 +254,20 @@ func UpdateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	if params.ProposalAddress != common.EmptyAddress {
-		validator.ProposalAddress = params.ProposalAddress
-		err = setProposalAddr(s, validator.ProposalAddress)
+		err = setProposalAddr(s, params.ProposalAddress)
 		if err != nil {
 			return nil, fmt.Errorf("UpdateValidator, setProposalAddr error: %v", err)
 		}
+		delProposalAddr(s, validator.ProposalAddress)
+		validator.ProposalAddress = params.ProposalAddress
 	}
 	if params.SignerAddress != common.EmptyAddress {
-		validator.SignerAddress = params.SignerAddress
-		err = setSignerAddr(s, validator.SignerAddress)
+		err = setSignerAddr(s, params.SignerAddress)
 		if err != nil {
 			return nil, fmt.Errorf("UpdateValidator, setSignerAddr error: %v", err)
 		}
+		delSignerAddr(s, validator.SignerAddress)
+		validator.SignerAddress = params.SignerAddress
 	}
 
 	if params.Desc != "" {
