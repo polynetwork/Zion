@@ -147,44 +147,57 @@ func (v *View) String() string {
 	return fmt.Sprintf("{Round: %d, Height: %d}", v.Round.Uint64(), v.Height.Uint64())
 }
 
-//type MsgNewView struct {
-//	PrepareQC *QuorumCert
-//}
+// type node denote the `Node` in hotstuff basic protocol, and the field of block is `cmd`
+type Node struct {
+	hash common.Hash
 
-type Subject struct {
-	Proposal hotstuff.Proposal
-	QC       *QuorumCert
+	Parent common.Hash  // parent node hash
+	Block  *types.Block // named cmd in paper
 }
 
-func (m *Subject) EncodeRLP(w io.Writer) error {
-	block, ok := m.Proposal.(*types.Block)
-	if !ok {
-		return errInvalidProposal
+func NewNode(parent common.Hash, block *types.Block) *Node {
+	node := &Node{
+		Parent: parent,
+		Block:  block,
 	}
-	return rlp.Encode(w, []interface{}{block, m.QC})
+	node.Hash()
+	return node
 }
 
-func (m *Subject) DecodeRLP(s *rlp.Stream) error {
-	var proposal struct {
-		Proposal *types.Block
-		QC       *QuorumCert
+func (n *Node) EncodeRLP(w io.Writer) error {
+	return rlp.Encode(w, []interface{}{n.Parent, n.Block})
+}
+
+// DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
+func (n *Node) DecodeRLP(s *rlp.Stream) error {
+	var data struct {
+		Parent common.Hash
+		Block  *types.Block
 	}
 
-	if err := s.Decode(&proposal); err != nil {
+	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	m.Proposal, m.QC = proposal.Proposal, proposal.QC
+
+	n.Parent, n.Block = data.Parent, data.Block
 	return nil
 }
 
-func (m *Subject) String() string {
-	return fmt.Sprintf("{NewProposal Hash: %s}", m.Proposal.Hash())
+func (n *Node) Hash() common.Hash {
+	if n.hash == common.EmptyHash {
+		n.hash = hotstuff.RLPHash([]common.Hash{n.Parent, n.Block.Hash()})
+	}
+	return n.hash
+}
+
+func (n *Node) String() string {
+	return fmt.Sprintf("{Node: %v, parent: %v, block: %v}", n.Hash(), n.Parent, n.Block.Hash())
 }
 
 type QuorumCert struct {
 	view          *View
 	code          MsgType
-	hash          common.Hash // proposal hash but not message hash
+	node          common.Hash // node hash but not block hash
 	proposer      common.Address
 	seal          []byte
 	committedSeal [][]byte
@@ -192,7 +205,7 @@ type QuorumCert struct {
 
 // EncodeRLP serializes b into the Ethereum RLP format.
 func (qc *QuorumCert) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{qc.view, qc.code, qc.hash, qc.proposer, qc.seal, qc.committedSeal})
+	return rlp.Encode(w, []interface{}{qc.view, qc.code, qc.node, qc.proposer, qc.seal, qc.committedSeal})
 }
 
 // DecodeRLP implements rlp.Decoder, and load the consensus fields from a RLP stream.
@@ -200,7 +213,7 @@ func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 	var cert struct {
 		View          *View
 		Code          MsgType
-		Hash          common.Hash
+		Node          common.Hash
 		Proposer      common.Address
 		Seal          []byte
 		CommittedSeal [][]byte
@@ -209,7 +222,7 @@ func (qc *QuorumCert) DecodeRLP(s *rlp.Stream) error {
 	if err := s.Decode(&cert); err != nil {
 		return err
 	}
-	qc.view, qc.code, qc.hash, qc.proposer, qc.seal, qc.committedSeal = cert.View, cert.Code, cert.Hash, cert.Proposer, cert.Seal, cert.CommittedSeal
+	qc.view, qc.code, qc.node, qc.proposer, qc.seal, qc.committedSeal = cert.View, cert.Code, cert.Node, cert.Proposer, cert.Seal, cert.CommittedSeal
 	return nil
 }
 
@@ -237,7 +250,7 @@ func (qc *QuorumCert) RoundU64() uint64 {
 
 // Hash retrieve message hash but not proposal hash
 func (qc *QuorumCert) SealHash() common.Hash {
-	msg := NewCleanMessage(qc.view, qc.code, qc.hash.Bytes())
+	msg := NewCleanMessage(qc.view, qc.code, qc.node.Bytes())
 	msg.PayloadNoSig()
 	return msg.hash
 }
@@ -255,7 +268,7 @@ func (qc *QuorumCert) CommittedSeal() [][]byte {
 }
 
 func (qc *QuorumCert) String() string {
-	return fmt.Sprintf("{QuorumCert View: %v, Hash: %v, Proposer: %v}", qc.view, qc.hash, qc.proposer)
+	return fmt.Sprintf("{QuorumCert View: %v, Node: %v, Proposer: %v}", qc.view, qc.node, qc.proposer)
 }
 
 func (qc *QuorumCert) Copy() *QuorumCert {
@@ -268,6 +281,15 @@ func (qc *QuorumCert) Copy() *QuorumCert {
 		return nil
 	}
 	return newQC
+}
+
+type Subject struct {
+	Node *Node
+	QC   *QuorumCert
+}
+
+func (m *Subject) String() string {
+	return fmt.Sprintf("{Node: %s, Block: %v, Parent: %v, QC: %v}", m.Node.Hash(), m.Node.Block.Hash(), m.Node.Parent, m.QC.node)
 }
 
 type Message struct {
@@ -383,7 +405,7 @@ type backlogEvent struct {
 }
 
 type Request struct {
-	Proposal hotstuff.Proposal
+	block *types.Block
 }
 
 func Encode(val interface{}) ([]byte, error) {

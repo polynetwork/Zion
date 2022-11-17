@@ -19,7 +19,6 @@
 package core
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -53,7 +52,8 @@ type roundState struct {
 	state  State
 
 	pendingRequest *Request
-	proposal       hotstuff.Proposal // validator's prepare proposal
+	node           *Node        //
+	lockedBlock    *types.Block // validator's prepare proposal
 	proposalLocked bool
 
 	// o(4n)
@@ -135,32 +135,49 @@ func (s *roundState) State() State {
 	return s.state
 }
 
-func (s *roundState) SetProposal(proposal hotstuff.Proposal) error {
-	if err := s.storeProposal(proposal); err != nil {
+func (s *roundState) SetNode(node *Node) error {
+	if err := s.storeNode(node); err != nil {
 		return err
 	}
-	s.proposal = proposal
-	s.proposalLocked = false
+	s.node = node
 	return nil
 }
 
-func (s *roundState) Proposal() hotstuff.Proposal {
-	return s.proposal
+func (s *roundState) SetNodeWithSealBlock(block *types.Block) error {
+	s.node.Block = block
+	if err := s.storeNode(s.node); err != nil {
+		return err
+	}
+	s.lockedBlock = block
+	return nil
 }
 
-func (s *roundState) LockProposal()  error {
-	if s.proposal == nil {
-		return fmt.Errorf("invalid proposal")
+func (s *roundState) Node() *Node {
+	return s.node
+}
+
+//func (s *roundState) Proposal() hotstuff.Proposal {
+//	return s.proposal
+//}
+
+func (s *roundState) LockNode() error {
+	if s.node == nil || s.node.Block == nil {
+		return errInvalidNode
 	}
+	s.lockedBlock = s.node.Block
 	s.proposalLocked = true
 	return nil
 }
 
-func (s *roundState) LockedProposal() hotstuff.Proposal {
-	if s.proposalLocked && s.proposal != nil {
-		return s.proposal
+func (s *roundState) LockedNode() *Node {
+	if s.proposalLocked && s.node != nil {
+		return s.node
 	}
 	return nil
+}
+
+func (s *roundState) LockedBlock() *types.Block {
+	return s.lockedBlock
 }
 
 // 如果在prepare阶段就开始锁，会导致更多问题，prepareQC。
@@ -177,7 +194,7 @@ func (s *roundState) PendingRequest() *Request {
 }
 
 func (s *roundState) Vote() common.Hash {
-	return s.proposal.Hash()
+	return s.node.Hash()
 }
 
 func (s *roundState) SetHighQC(qc *QuorumCert) {
@@ -303,7 +320,8 @@ const (
 	prepareQCSuffix    = "prepareQC"
 	lockQCSuffix       = "lockQC"
 	commitQCSuffix     = "commitQC"
-	proposalSuffix     = "proposal"
+	nodeSuffix         = "node"
+	blockSuffix        = "block"
 )
 
 // todo(fuk): 不能返回error，这里需要考虑到两种情况，一种是节点半路加入共识，此时其所有的存储状态为空，也就是之前的qc都没有存储过
@@ -313,7 +331,7 @@ func (s *roundState) reload(view *View) {
 	_ = s.loadPrepareQC()
 	_ = s.loadLockQC()
 	_ = s.loadCommitQC()
-	_ = s.loadProposal()
+	_ = s.loadNode()
 }
 
 func (s *roundState) storeView(view *View) error {
@@ -435,34 +453,64 @@ func (s *roundState) loadCommitQC() error {
 	return nil
 }
 
-func (s *roundState) storeProposal(proposal hotstuff.Proposal) error {
+func (s *roundState) storeNode(node *Node) error {
 	if s.db == nil {
 		return nil
 	}
 
-	raw, err := Encode(proposal)
+	raw, err := Encode(node)
 	if err != nil {
 		return err
 	}
-	return s.db.Put(proposalKey(), raw)
+	return s.db.Put(nodeKey(), raw)
 }
 
-func (s *roundState) loadProposal() error {
+func (s *roundState) loadNode() error {
 	if s.db == nil {
 		return nil
 	}
 
-	data := new(types.Block)
-	raw, err := s.db.Get(proposalKey())
+	data := new(Node)
+	raw, err := s.db.Get(nodeKey())
 	if err != nil {
 		return err
 	}
 	if err = rlp.DecodeBytes(raw, data); err != nil {
 		return err
 	}
-	s.proposal = data
+	s.node = data
 	return nil
 }
+
+// todo(fuk): delete after test
+//func (s *roundState) storeBlock(block *types.Block) error {
+//	if s.db == nil {
+//		return nil
+//	}
+//
+//	raw, err := Encode(block)
+//	if err != nil {
+//		return err
+//	}
+//	return s.db.Put(nodeKey(), raw)
+//}
+//
+//func (s *roundState) loadBlock() error {
+//	if s.db == nil {
+//		return nil
+//	}
+//
+//	data := new(Node)
+//	raw, err := s.db.Get(nodeKey())
+//	if err != nil {
+//		return err
+//	}
+//	if err = rlp.DecodeBytes(raw, data); err != nil {
+//		return err
+//	}
+//	s.node = data
+//	return nil
+//}
 
 func viewKey() []byte {
 	return append([]byte(dbRoundStatePrefix), []byte(viewSuffix)...)
@@ -480,6 +528,10 @@ func commitQCKey() []byte {
 	return append([]byte(dbRoundStatePrefix), []byte(commitQCSuffix)...)
 }
 
-func proposalKey() []byte {
-	return append([]byte(dbRoundStatePrefix), []byte(proposalSuffix)...)
+func nodeKey() []byte {
+	return append([]byte(dbRoundStatePrefix), []byte(nodeSuffix)...)
+}
+
+func blockKey() []byte {
+	return append([]byte(dbRoundStatePrefix), []byte(blockSuffix)...)
 }

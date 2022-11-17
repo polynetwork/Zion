@@ -64,7 +64,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //
 //				vote := newVote(core, proposal.Hash())
 //				msg := newVoteMsg(vote)
@@ -87,7 +87,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //
 //				vote := newVote(core, proposal.Hash())
 //				vote.view.Height = new(big.Int).SetUint64(H - 1)
@@ -112,7 +112,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //
 //				vote := newVote(core, proposal.Hash())
 //				vote.view.Round = new(big.Int).SetUint64(R + 1)
@@ -137,7 +137,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //
 //				vote := newVote(core, proposal.Hash())
 //				vote.Digest = common.HexToHash("0x1234")
@@ -206,7 +206,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //			}
 //			msg := newP2PMsg(qc)
 //			return &testcase{
@@ -229,7 +229,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //			}
 //			qc.view.Height = new(big.Int).SetUint64(H - 1)
 //			msg := newP2PMsg(qc)
@@ -253,7 +253,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //			}
 //			qc.view.Round = new(big.Int).SetUint64(R + 1)
 //			msg := newP2PMsg(qc)
@@ -275,7 +275,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //			}
 //			msg := newP2PMsg(qc)
 //			val := validator.New(sys.getRepos()[0].Address())
@@ -297,7 +297,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetState(StatePrepared)
 //			}
 //			msg := newP2PMsg(qc)

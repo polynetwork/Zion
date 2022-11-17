@@ -64,7 +64,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPrepareQC(&QuorumCert{Hash: proposal.Hash()})
 //
 //				vote := newVote(core, proposal.Hash())
@@ -88,7 +88,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPrepareQC(&QuorumCert{Hash: proposal.Hash()})
 //
 //				vote := newVote(core, proposal.Hash())
@@ -114,7 +114,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPrepareQC(&QuorumCert{Hash: proposal.Hash()})
 //
 //				vote := newVote(core, proposal.Hash())
@@ -140,7 +140,7 @@ package core
 //			votes := make(map[hotstuff.Validator]*hotstuff.Message)
 //			for _, v := range sys.backends {
 //				core := v.core()
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPrepareQC(&QuorumCert{Hash: proposal.Hash()})
 //
 //				vote := newVote(core, proposal.Hash())
@@ -210,7 +210,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPrepareQC(qc)
 //			}
 //			msg := newP2PMsg(qc)
@@ -234,7 +234,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPrepareQC(qc)
 //			}
 //			qc.view.Height = new(big.Int).SetUint64(H - 1)
@@ -259,7 +259,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPrepareQC(qc)
 //			}
 //			qc.view.Round = new(big.Int).SetUint64(R + 1)
@@ -282,7 +282,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPrepareQC(qc)
 //			}
 //			msg := newP2PMsg(qc)
@@ -305,7 +305,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPrepareQC(&QuorumCert{Hash: common.HexToHash("0x124")})
 //			}
 //			msg := newP2PMsg(qc)
@@ -328,7 +328,7 @@ package core
 //			for _, backend := range sys.backends {
 //				core := backend.core()
 //				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetProposal(proposal)
+//				core.current.SetBlock(proposal)
 //				core.current.SetPrepareQC(qc)
 //				core.current.SetState(StateLocked)
 //			}

@@ -199,11 +199,10 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 }
 
 // PreCommit implements hotstuff.Backend.PreCommit
-func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
+func (s *backend) PreCommit(block *types.Block, seals [][]byte) (*types.Block, error) {
 
 	// check proposal
-	block, ok := proposal.(*types.Block)
-	if !ok || block.Header() == nil {
+	if block.Header() == nil {
 		s.logger.Error("Invalid proposal precommit")
 		return nil, errInvalidProposal
 	}
@@ -226,15 +225,8 @@ func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuf
 	return block.WithSeal(h), nil
 }
 
-func (s *backend) Commit(proposal hotstuff.Proposal) error {
-	// Check if the proposal is a valid block
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Committed to miner worker", "proposal", "not block")
-		return errInvalidProposal
-	}
-
-	s.logger.Info("Committed", "address", s.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
+func (s *backend) Commit(block *types.Block) error {
+	s.logger.Info("Committed", "address", s.Address(), "hash", block.Hash(), "number", block.NumberU64())
 	// - if the proposed and committed blocks are the same, send the proposed hash
 	//   to commit channel, which is being watched inside the engine.Seal() function.
 	// - otherwise, we try to insert the block.
@@ -254,15 +246,7 @@ func (s *backend) Commit(proposal hotstuff.Proposal) error {
 }
 
 // Verify implements hotstuff.Backend.Verify
-func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
-	// Check if the proposal is a valid block
-	block := &types.Block{}
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
-		return 0, errInvalidProposal
-	}
-
+func (s *backend) Verify(block *types.Block, seal bool) (time.Duration, error) {
 	// check bad block
 	if s.HasBadProposal(block.Hash()) {
 		return 0, errBADProposal
@@ -279,7 +263,7 @@ func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 	}
 
 	// verify the header of proposed block
-	err := s.VerifyHeader(s.chain, block.Header(), false)
+	err := s.VerifyHeader(s.chain, block.Header(), seal)
 	if err == nil {
 		return 0, nil
 	} else if err == consensus.ErrFutureBlock {
@@ -323,13 +307,15 @@ func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 }
 */
 
-func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
+func (s *backend) LastProposal() (*types.Block, common.Address) {
+	var (
+		proposer common.Address
+		err error
+	)
+
 	block := s.chain.CurrentBlock()
-	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
-		var err error
-		proposer, err = s.Author(block.Header())
-		if err != nil {
+		if proposer, err = s.Author(block.Header()); err != nil {
 			s.logger.Error("Failed to get block proposer", "err", err)
 			return nil, common.Address{}
 		}

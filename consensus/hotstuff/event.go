@@ -26,7 +26,7 @@ import (
 // RequestEvent is posted to propose a proposal (posting the incoming block to
 // the main hotstuff engine anyway regardless of being the speaker or delegators)
 type RequestEvent struct {
-	Proposal Proposal
+	Block *types.Block
 }
 
 // MessageEvent is posted for HotStuff engine communication (posting the incoming

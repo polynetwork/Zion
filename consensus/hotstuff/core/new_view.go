@@ -30,8 +30,8 @@ func (c *core) sendNewView(view *View) {
 		return
 	}
 
-	newViewMsg := c.current.PrepareQC()
-	payload, err := Encode(newViewMsg)
+	prepareQC := c.current.PrepareQC()
+	payload, err := Encode(prepareQC)
 	if err != nil {
 		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
 		return
@@ -54,32 +54,25 @@ func (c *core) handleNewView(data *Message) error {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodeNewView
 	}
-
-	// leader WONT catch up round
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
-
-	// leader如果处于更高的状态
-
-	if err := c.verifyQC(data, qc); err != nil {
-		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err)
-		return err
-	}
-
 	if err := c.checkMsgToProposer(); err != nil {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
-
+	if err := c.verifyQC(data, qc); err != nil {
+		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err)
+		return err
+	}
 	// `checkView` ensure that +2/3 validators on the same view
 	if err := c.current.AddNewViews(data); err != nil {
 		logger.Trace("Failed to add new view", "msg", code, "src", src, "err", err)
 		return errAddNewViews
 	}
 
-	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", qc.hash)
+	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", qc.node)
 
 	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < StateHighQC {
 		highQC, err := c.getHighQC()
@@ -90,7 +83,7 @@ func (c *core) handleNewView(data *Message) error {
 		c.current.SetHighQC(highQC)
 		c.setCurrentState(StateHighQC)
 
-		logger.Trace("acceptHighQC", "msg", code, "prepareQC", qc.hash, "msgSize", size)
+		logger.Trace("acceptHighQC", "msg", code, "prepareQC", qc.node, "msgSize", size)
 		c.sendPrepare()
 	}
 
@@ -98,18 +91,18 @@ func (c *core) handleNewView(data *Message) error {
 }
 
 func (c *core) getHighQC() (*QuorumCert, error) {
-	var maxView *QuorumCert
+	var highQC *QuorumCert
 	for _, data := range c.current.NewViews() {
 		var qc *QuorumCert
 		if err := data.Decode(&qc); err != nil {
 			return nil, err
 		}
-		if maxView == nil || maxView.view.Cmp(qc.view) < 0 {
-			maxView = qc
+		if highQC == nil || highQC.view.Cmp(qc.view) < 0 {
+			highQC = qc
 		}
 	}
-	if maxView == nil {
+	if highQC == nil {
 		return nil, fmt.Errorf("failed to get highQC")
 	}
-	return maxView, nil
+	return highQC, nil
 }
