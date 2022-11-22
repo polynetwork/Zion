@@ -39,6 +39,8 @@ var ErrEof = errors.New("EOF")
 const (
 	SKP_GLOBAL_CONFIG                 = "st_global_config"
 	SKP_VALIDATOR                     = "st_validator"
+	SKP_SIGNER_ADDR                   = "st_signer_addr"
+	SKP_PROPOSAL_ADDR                 = "st_proposal_addr"
 	SKP_ALL_VALIDATOR                 = "st_all_validator"
 	SKP_TOTAL_POOL                    = "st_lock_pool"
 	SKP_STAKE_INFO                    = "st_stake_info"
@@ -379,6 +381,36 @@ func getValidator(s *native.NativeContract, consensusAddr common.Address) (*Vali
 		return nil, false, fmt.Errorf("getValidator, deserialize validator error: %v", err)
 	}
 	return validator, true, nil
+}
+
+func setSignerAddr(s *native.NativeContract, signerAddr common.Address) error {
+	key := signerAddrKey(signerAddr)
+	_, err := get(s, key)
+	if err != ErrEof {
+		return fmt.Errorf("signer address aleady exist")
+	}
+	set(s, key, []byte{0x01})
+	return nil
+}
+
+func delSignerAddr(s *native.NativeContract, signerAddr common.Address) {
+	key := signerAddrKey(signerAddr)
+	del(s, key)
+}
+
+func setProposalAddr(s *native.NativeContract, proposalAddr common.Address) error {
+	key := proposalAddrKey(proposalAddr)
+	_, err := get(s, key)
+	if err != ErrEof {
+		return fmt.Errorf("proposal address aleady exist")
+	}
+	set(s, key, []byte{0x01})
+	return nil
+}
+
+func delProposalAddr(s *native.NativeContract, proposalAddr common.Address) {
+	key := proposalAddrKey(proposalAddr)
+	del(s, key)
 }
 
 func setAllValidators(s *native.NativeContract, allValidators *AllValidators) error {
@@ -890,6 +922,14 @@ func globalConfigKey() []byte {
 
 func validatorKey(consensusAddr common.Address) []byte {
 	return utils.ConcatKey(this, []byte(SKP_VALIDATOR), consensusAddr[:])
+}
+
+func signerAddrKey(signerAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_SIGNER_ADDR), signerAddr[:])
+}
+
+func proposalAddrKey(proposalAddr common.Address) []byte {
+	return utils.ConcatKey(this, []byte(SKP_PROPOSAL_ADDR), proposalAddr[:])
 }
 
 func allValidatorKey() []byte {
