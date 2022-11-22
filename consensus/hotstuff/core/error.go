@@ -21,7 +21,6 @@ package core
 import "errors"
 
 var (
-	errInvalidDigest = errors.New("invalid digest")
 	// errNotFromProposer is returned when received Message is supposed to be from proposer.
 	errNotFromProposer = errors.New("Message does not come from proposer")
 	errNotToProposer   = errors.New("Message does not send to proposer")
@@ -38,17 +37,12 @@ var (
 	// errFailedDecodeNewView is returned when the NEWVIEW Message is malformed.
 	errFailedDecodeNewView = errors.New("failed to decode NEWVIEW")
 	// errFailedDecodePrepare is returned when the PREPARE Message is malformed.
-	errFailedDecodePrepare     = errors.New("failed to decode PREPARE")
-	errFailedDecodePrepareVote = errors.New("failed to decode PREPARE_VOTE")
-	// errFailedDecodePreCommit is returned when the PRECOMMIT Message is malformed.
-	errFailedDecodePreCommit     = errors.New("failed to decode PRECOMMIT")
-	errFailedDecodePreCommitVote = errors.New("faild to decode PRECOMMIT_VOTE")
+	errFailedDecodePrepare   = errors.New("failed to decode PREPARE")
+	errFailedDecodePreCommit = errors.New("failed to decode PRECOMMIT")
 	// errFailedDecodeCommit is returned when the COMMIT Message is malformed.
 	errFailedDecodeCommit     = errors.New("failed to decode COMMIT")
-	errFailedDecodeCommitVote = errors.New("failed to decode COMMIT_VOTE")
 	errInvalidSigner          = errors.New("Message not signed by the sender")
 	errInvalidNode            = errors.New("invalid node")
-	errNoLockedBlock          = errors.New("no locked block")
 	errInvalidCode            = errors.New("message type invalid")
 	errInvalidQC              = errors.New("invalid qc")
 	errVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
@@ -57,7 +51,5 @@ var (
 	errAddNewViews            = errors.New("add new view error")
 	errAddPrepareVote         = errors.New("add prepare vote error")
 	errAddPreCommitVote       = errors.New("add pre commit vote error")
-	errGetHighQC              = errors.New("assemble highQC failed")
 	errNilHighQC              = errors.New("highQC is nil")
-	errLockProposal           = errors.New("lock proposal invalid")
 )
