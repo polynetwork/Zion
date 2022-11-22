@@ -122,6 +122,9 @@ func (c *core) checkNode(node *Node) error {
 	if local.Hash() != node.Hash() {
 		return fmt.Errorf("expect node %v but got %v", local.Hash(), node.Hash())
 	}
+	if local.Block.Hash() != node.Block.Hash() {
+		return fmt.Errorf("expect block %v but got %v", local.Block.Hash(), node.Block.Hash())
+	}
 	return nil
 }
 
@@ -300,7 +303,9 @@ func (c *core) messages2qc(code MsgType) (*QuorumCert, error) {
 }
 
 func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
-	// reaching qc ahead of current view
+	if qc == nil || qc.view == nil {
+		return errInvalidQC
+	}
 	if hdiff, rdiff := data.View.Sub(qc.view); hdiff < 0 || (hdiff == 0 && rdiff < 0) {
 		return fmt.Errorf("view is invalid")
 	}
@@ -308,6 +313,10 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 	// verify genesis qc
 	if qc.HeightU64() == 0 {
 		return nil
+	}
+	if qc.node == common.EmptyHash || qc.proposer == common.EmptyAddress ||
+		qc.seal == nil || qc.committedSeal == nil {
+		return errInvalidQC
 	}
 
 	// qc code should be vote
@@ -323,7 +332,9 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 		if qc.proposer != c.proposer() {
 			return fmt.Errorf("expect proposer %v, got %v", c.proposer(), qc.proposer)
 		}
-		if node := c.current.Node(); node != nil && node.Hash() != qc.node {
+		if node := c.current.Node(); node == nil {
+			return fmt.Errorf("current node is nil")
+		} else if node.Hash() != qc.node {
 			return fmt.Errorf("expect node %v, got %v", node.Hash(), qc.node)
 		}
 	}

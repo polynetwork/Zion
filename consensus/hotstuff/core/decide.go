@@ -64,41 +64,34 @@ func (c *core) handleCommitVote(data *Message) error {
 
 	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
 		seals := c.current.GetCommittedSeals(size)
+		sealedBlock, err := c.backend.SealBlock(lockedBlock, seals)
+		if err != nil {
+			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
+			return err
+		}
 		commitQC, err := c.messages2qc(code)
 		if err != nil {
 			logger.Trace("Failed to assemble commitQC", "msg", code, "err", err)
 			return err
 		}
-		sealBlocked, err := c.backend.SealBlock(lockedBlock, seals)
-		if err != nil {
-			logger.Trace("Failed to assemble committed proposal", "msg", code, "err", err)
-			return err
+		if err := c.acceptCommitQC(sealedBlock, commitQC); err != nil {
+			logger.Trace("Failed to accept commitQC")
 		}
-
-		if err := c.current.SetSealedBlock(sealBlocked); err != nil {
-			logger.Trace("Failed to set node with sealBlock", "msg", code, "err", err)
-			return err
-		}
-		if err := c.current.SetCommittedQC(commitQC); err != nil {
-			logger.Trace("Failed to set commitQC", "msg", code, "err", err)
-			return err
-		}
-		c.current.SetState(StateCommitted)
-
 		logger.Trace("acceptCommit", "msg", code, "msgSize", size)
-		c.sendDecide()
+
+		c.sendDecide(commitQC)
 	}
 
 	return nil
 }
 
-func (c *core) sendDecide() {
+func (c *core) sendDecide(commitQC *QuorumCert) {
 	logger := c.newLogger()
 
 	code := MsgTypeDecide
 	msg := &Subject{
 		Node: c.current.Node(),
-		QC:   c.current.CommittedQC(),
+		QC:   commitQC,
 	}
 	payload, err := Encode(msg)
 	if err != nil {
@@ -114,12 +107,12 @@ func (c *core) handleDecide(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		msg      *Subject
-		code     = MsgTypeDecide
-		src      = data.address
-		node     *Node
-		commitQC *QuorumCert
-		block    *types.Block
+		msg         *Subject
+		code        = MsgTypeDecide
+		src         = data.address
+		node        *Node
+		commitQC    *QuorumCert
+		sealedBlock *types.Block
 	)
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
@@ -139,42 +132,56 @@ func (c *core) handleDecide(data *Message) error {
 	} else {
 		node = msg.Node
 		commitQC = msg.QC
-		block = node.Block
+		sealedBlock = node.Block
 	}
 
+	if err := c.checkNode(node); err != nil {
+		logger.Trace("Failed to check node", "msg", code, "src", src, "err", err)
+		return err
+	}
 	if err := c.verifyQC(data, commitQC); err != nil {
 		logger.Trace("Failed to verify qc", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if _, err := c.backend.Verify(block, true); err != nil {
+	if err := c.checkBlock(sealedBlock); err != nil {
+		logger.Trace("Failed to check block", "msg", code, "src", src, "err", err)
+		return err
+	}
+	if _, err := c.backend.Verify(sealedBlock, true); err != nil {
 		logger.Trace("Failed to verify block")
 	}
 	logger.Trace("handleDecide", "msg", code, "src", src, "node", commitQC.node)
 
+	// accept commitQC and commit block to miner
 	if c.IsProposer() && c.currentState() == StateCommitted {
-		if err := c.backend.Commit(block); err != nil {
+		if err := c.backend.Commit(sealedBlock); err != nil {
 			logger.Trace("Failed to commit proposal", "msg", code, "err", err)
 			return err
 		}
 	}
-
-	if !c.IsProposer() && c.currentState() >= StateLocked && c.currentState() < StateCommitted {
-		c.current.SetState(StateCommitted)
-		if err := c.current.SetNode(node); err != nil {
-			logger.Trace("Failed to set seal node", "msg", code, "err", err)
+	if !c.IsProposer() && c.currentState() == StateLocked {
+		if err := c.acceptCommitQC(sealedBlock, commitQC); err != nil {
+			logger.Trace("Failed to accept commitQC", "msg", code, "err", err)
 			return err
 		}
-		if err := c.current.SetCommittedQC(commitQC); err != nil {
-			logger.Trace("Failed to set commitQC", "msg", code, "err", err)
-			return err
-		}
-		if err := c.backend.Commit(block); err != nil {
+		if err := c.backend.Commit(sealedBlock); err != nil {
 			logger.Trace("Failed to commit proposal", "err", err)
 			return err
 		}
 	}
 
 	c.startNewRound(common.Big0)
+	return nil
+}
+
+func (c *core) acceptCommitQC(sealedBlock *types.Block, commitQC *QuorumCert) error {
+	if err := c.current.SetSealedBlock(sealedBlock); err != nil {
+		return err
+	}
+	if err := c.current.SetCommittedQC(commitQC); err != nil {
+		return err
+	}
+	c.current.SetState(StateCommitted)
 	return nil
 }
 

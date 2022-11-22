@@ -46,7 +46,7 @@ type SignerImpl struct {
 	commitSigSalt []byte
 }
 
-func NewSigner(privateKey *ecdsa.PrivateKey) hotstuff.Signer {
+func NewSigner(privateKey *ecdsa.PrivateKey) *SignerImpl {
 	signatures, _ := lru.NewARC(inmemorySignatures)
 	address := crypto.PubkeyToAddress(privateKey.PublicKey)
 	return &SignerImpl{

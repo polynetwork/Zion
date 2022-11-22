@@ -205,8 +205,7 @@ func (c *core) handleTimeoutMsg() {
 func (c *core) broadcast(code MsgType, payload []byte) {
 	logger := c.logger.New("state", c.currentState())
 
-	// todo(fuk): forbid at start at new round
-	// forbid normal nodes send message to leader
+	// forbid unConsensus nodes send message to leader
 	if index, _ := c.valSet.GetByAddress(c.Address()); index < 0 {
 		return
 	}
@@ -243,7 +242,7 @@ func (c *core) finalizeMessage(msg *Message) ([]byte, error) {
 
 	// Add proof of consensus
 	node := c.current.Node()
-	if msg.Code == MsgTypeCommitVote && node != nil {
+	if msg.Code == MsgTypeCommitVote && node != nil && node.Block != nil {
 		if seal, err = c.signer.SignHash(node.Block.Hash(), true); err != nil {
 			return nil, err
 		}

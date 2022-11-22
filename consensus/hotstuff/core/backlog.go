@@ -149,6 +149,6 @@ var messagePriorityTable = map[MsgType]int64{
 }
 
 func (b *backlog) toPriority(msgCode MsgType, view *View) int64 {
-	priority := -(view.Height.Int64()*100 + view.Round.Int64()*10 + int64(messagePriorityTable[msgCode]))
+	priority := -(view.Height.Int64()*100 + view.Round.Int64()*10 + messagePriorityTable[msgCode])
 	return priority
 }

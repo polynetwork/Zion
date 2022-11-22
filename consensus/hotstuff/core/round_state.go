@@ -171,11 +171,13 @@ func (s *roundState) PendingRequest() *Request {
 }
 
 func (s *roundState) SetNode(node *Node) error {
+	if node == nil || node.Block == nil {
+		return errInvalidNode
+	}
+
 	if temp := s.node.temp; temp == nil {
 		s.node.temp = node
 		return nil
-	} else if temp.Hash() != node.Hash() {
-		return fmt.Errorf("expect node %v, got %v", temp.Hash(), node.Hash())
 	} else {
 		if err := s.storeNode(node); err != nil {
 			return err

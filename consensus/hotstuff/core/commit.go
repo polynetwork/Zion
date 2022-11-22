@@ -60,8 +60,8 @@ func (c *core) handlePreCommitVote(data *Message) error {
 			logger.Trace("Failed to accept lockQC", "msg", code, "err", err)
 			return err
 		}
+		logger.Trace("acceptLockQC", "msg", code, "msgSize", size)
 
-		logger.Trace("acceptPreCommitted", "msg", code, "msgSize", size)
 		c.sendCommit(lockQC)
 	}
 	return nil
@@ -84,9 +84,9 @@ func (c *core) handleCommit(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		lockQC  *QuorumCert
-		code = MsgTypeCommit
-		src  = data.address
+		lockQC *QuorumCert
+		code   = MsgTypeCommit
+		src    = data.address
 	)
 	if err := data.Decode(&lockQC); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)

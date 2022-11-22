@@ -150,7 +150,7 @@ func (c *core) handlePrepare(data *Message) error {
 	logger.Trace("handlePrepare", "msg", code, "src", src, "node", node.Hash(), "block", block.Hash())
 
 	// accept msg info, DONT persist node before accept `prepareQC`
-	if c.IsProposer() && c.currentState() < StatePrepared {
+	if c.IsProposer() && c.currentState() == StateHighQC {
 		c.sendVote(MsgTypePrepareVote, node.Hash())
 	}
 	if !c.IsProposer() && c.currentState() < StateHighQC {
