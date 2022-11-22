@@ -48,23 +48,23 @@ const (
 func (m MsgType) String() string {
 	switch m {
 	case MsgTypeNewView:
-		return "NEW_VIEW"
+		return "NewView"
 	case MsgTypePrepare:
-		return "PREPARE"
+		return "Prepare"
 	case MsgTypePrepareVote:
-		return "PREPARE_VOTE"
+		return "PrepareVote"
 	case MsgTypePreCommit:
-		return "PRECOMMIT"
+		return "PreCommit"
 	case MsgTypePreCommitVote:
-		return "PRECOMMIT_VOTE"
+		return "PreCommitVote"
 	case MsgTypeCommit:
-		return "COMMIT"
+		return "Commit"
 	case MsgTypeCommitVote:
-		return "COMMIT_VOTE"
+		return "CommitVote"
 	case MsgTypeDecide:
-		return "DECIDE"
+		return "Decide"
 	default:
-		return "UNKNOWN"
+		return "Unknown"
 	}
 }
 
@@ -121,6 +121,20 @@ func (s State) Cmp(y State) int {
 type View struct {
 	Round  *big.Int
 	Height *big.Int
+}
+
+func (v *View) HeightU64() uint64 {
+	if v.Height == nil {
+		return 0
+	}
+	return v.Height.Uint64()
+}
+
+func (v *View) RoundU64() uint64 {
+	if v.Round == nil {
+		return 0
+	}
+	return v.Round.Uint64()
 }
 
 // Cmp compares v and y and returns:
@@ -286,6 +300,13 @@ func (qc *QuorumCert) Copy() *QuorumCert {
 type Subject struct {
 	Node *Node
 	QC   *QuorumCert
+}
+
+func NewSubject(node *Node, qc *QuorumCert) *Subject {
+	return &Subject{
+		Node: node,
+		QC:   qc,
+	}
 }
 
 func (m *Subject) String() string {

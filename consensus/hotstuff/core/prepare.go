@@ -25,67 +25,92 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+// sendPrepare leader send message of prepare(view, node, highQC)
 func (c *core) sendPrepare() {
-	logger := c.newLogger()
 
-	if !c.IsProposer() {
+	// filter incorrect proposer and state
+	if !c.IsProposer() || c.currentState() != StateHighQC {
 		return
 	}
 
 	var (
+		block  *types.Block
 		code   = MsgTypePrepare
 		highQC = c.current.HighQC()
+		logger = c.newLogger()
 	)
 
-	if c.currentState() != StateHighQC {
-		return
-	}
-	if c.current.PendingRequest() == nil || c.current.PendingRequest().block == nil {
-		return
+	// fetch block with locked node or miner pending request
+	if lockedBlock := c.current.LockedBlock(); lockedBlock != nil {
+		if lockedBlock.NumberU64() != c.HeightU64() {
+			logger.Trace("Locked block height invalid", "msg", code, "expect", c.HeightU64(), "got", lockedBlock.NumberU64())
+			return
+		}
+		block = lockedBlock
+		logger.Trace("Reuse lock block", "msg", code, "hash", block.Hash(), "number", block.NumberU64())
+	} else {
+		request := c.current.PendingRequest()
+		if request == nil || request.block == nil || request.block.NumberU64() != c.HeightU64() {
+			logger.Trace("Pending request invalid", "msg", code)
+			return
+		} else {
+			block = c.current.PendingRequest().block
+			logger.Trace("Use pending request", "msg", code, "hash", block.Hash(), "number", block.NumberU64())
+		}
 	}
 
-	// todo(fuk): if block is locked, use lock block instead
-	request := c.current.PendingRequest()
-	if request.block.NumberU64() != c.current.HeightU64() {
-		logger.Trace("Failed to send prepare", "msg", code, "err", "request height invalid")
-		return
+	// consensus spent time always less than a block period, waiting for `delay` time to catch up the system time.
+	if block.Time() > uint64(time.Now().Unix()) {
+		delay := time.Unix(int64(block.Time()), 0).Sub(time.Now())
+		time.Sleep(delay)
+		logger.Trace("delay to broadcast proposal", "msg", code, "time", delay.Milliseconds())
 	}
-	// todo(fuk): request must extend lastProposal
-	node := NewNode(c.current.highQC.node, request.block)
-	prepare := &Subject{
-		Node: node,
-		QC:   highQC,
-	}
+
+	// assemble message as formula: MSG(view, node, prepareQC)
+	parent := highQC.node
+	node := NewNode(parent, block)
+	prepare := NewSubject(node, highQC)
 	payload, err := Encode(prepare)
 	if err != nil {
 		logger.Trace("Failed to encode", "msg", code, "err", err)
 		return
 	}
 
-	// consensus spent time always less than a block period, waiting for `delay` time to catch up the system time.
-	delay := time.Unix(int64(prepare.Node.Block.Time()), 0).Sub(time.Now())
-	time.Sleep(delay)
-	logger.Trace("delay to broadcast proposal", "msg", code, "time", delay.Milliseconds())
+	// store the node before `handlePrepare` to prevent the replica from receiving the message and voting earlier
+	// than the leader, and finally causing `handlePrepareVote` to fail.
+	if err := c.current.SetNode(node); err != nil {
+		logger.Trace("Failed to set node", "msg", code, "err", err)
+		return
+	}
 
 	c.broadcast(code, payload)
-	logger.Trace("sendPrepare", "msg", code, "node", prepare.Node.Hash(), "block", request.block.Hash())
+	logger.Trace("sendPrepare", "msg", code, "node", node.Hash(), "block", block.Hash())
 }
 
 func (c *core) handlePrepare(data *Message) error {
-	logger := c.newLogger()
-
 	var (
-		msg    *Subject
 		code   = MsgTypePrepare
 		src    = data.address
+		logger = c.newLogger()
+
+		msg    *Subject
 		node   *Node
 		highQC *QuorumCert
 		block  *types.Block
 	)
 
+	// check parameters
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodePrepare
+	}
+	if err := c.checkView(data.View); err != nil {
+		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
+		return err
+	}
+	if err := c.checkMsgSource(src); err != nil {
+		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
+		return err
 	}
 	if err := c.checkSubject(msg); err != nil {
 		logger.Trace("Failed to check subject", "msg", code, "src", src, "err", err)
@@ -96,37 +121,19 @@ func (c *core) handlePrepare(data *Message) error {
 		block = node.Block
 	}
 
-	if err := c.checkView(data.View); err != nil {
-		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
-		return err
-	}
-	if err := c.checkMsgFromProposer(src); err != nil {
-		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
-		return err
-	}
-
-	//if err := c.checkProposalView(msg.Proposal, data.View); err != nil {
-	//	logger.Trace("Failed to check proposal and msg view", "msg", code, "src", src, "err", err)
-	//	return err
-	//}
+	// judge safety and liveness
 	if err := c.verifyQC(data, highQC); err != nil {
 		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err, "highQC", highQC)
 		return err
 	}
-	//// locked proposal hash should be equal to msg proposal hash
-	//if c.current.IsProposalLocked() {
-	//	if expect := c.current.Proposal().Hash(); expect != msg.Proposal.Hash() {
-	//		logger.Trace("Failed to check lock proposal", "msg", code, "src", src, "expect hash", expect, "got", msg.Proposal.Hash())
-	//		return errLockProposal
-	//	}
-	//}
-
-	// todo(fuk): 先验证一下区块头，但是不预执行区块，等到后续安全性及活性得到确认的情况下再预执行区块
+	if err := c.checkBlock(block); err != nil {
+		logger.Trace("Failed to check block", "msg", code, "src", src, "err", err)
+		return err
+	}
 	if _, err := c.backend.Verify(block, false); err != nil {
 		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err)
 		return errVerifyUnsealedProposal
 	}
-
 	if err := c.extend(node, highQC); err != nil {
 		logger.Trace("Failed to check extend", "msg", code, "src", src, "err", err)
 		return errExtend
@@ -135,7 +142,6 @@ func (c *core) handlePrepare(data *Message) error {
 		logger.Trace("Failed to check safeNode", "msg", code, "src", src, "err", err)
 		return errSafeNode
 	}
-
 	if err := c.preExecuteBlock(block); err != nil {
 		logger.Trace("Failed to pre-execute block", "msg", code, "src", src, "err", err)
 		return err
@@ -143,38 +149,21 @@ func (c *core) handlePrepare(data *Message) error {
 
 	logger.Trace("handlePrepare", "msg", code, "src", src, "node", node.Hash(), "block", block.Hash())
 
-	// leader accept proposal
+	// accept msg info, DONT persist node before accept `prepareQC`
 	if c.IsProposer() && c.currentState() < StatePrepared {
-		if err := c.current.SetNode(node); err != nil {
-			logger.Trace("Failed to set proposal", "msg", code, "err", err)
-			return err
-		}
-		c.sendPrepareVote()
+		c.sendVote(MsgTypePrepareVote, node.Hash())
 	}
-
-	// repo accept proposal and high qc
-	// todo(fuk): 是否真的需要stateHighQC
 	if !c.IsProposer() && c.currentState() < StateHighQC {
 		if err := c.current.SetNode(node); err != nil {
-			logger.Trace("Failed to set proposal", "msg", code, "err", err)
+			logger.Trace("Failed to set node", "msg", code, "err", err)
 			return err
 		}
 		c.setCurrentState(StateHighQC)
-		logger.Trace("acceptHighQC", "msg", code, "highQC", highQC.node)
-
-		c.sendPrepareVote()
+		logger.Trace("acceptHighQC", "msg", code, "highQC", highQC.node, "node", node.Hash())
+		c.sendVote(MsgTypePrepareVote, node.Hash())
 	}
 
 	return nil
-}
-
-func (c *core) sendPrepareVote() {
-	logger := c.newLogger()
-
-	code := MsgTypePrepareVote
-	vote := c.current.Vote()
-	c.broadcast(code, vote.Bytes())
-	logger.Trace("sendPrepareVote", "msg", code, "hash", vote)
 }
 
 func (c *core) extend(node *Node, highQC *QuorumCert) error {

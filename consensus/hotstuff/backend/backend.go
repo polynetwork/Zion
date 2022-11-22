@@ -118,7 +118,7 @@ func (s *backend) Broadcast(valSet hotstuff.ValidatorSet, payload []byte) error 
 	}
 	// send to self
 	msg := hotstuff.MessageEvent{
-		Src: s.Address(),
+		Src:     s.Address(),
 		Payload: payload,
 	}
 	go s.EventMux().Post(msg)
@@ -198,8 +198,8 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	return nil
 }
 
-// PreCommit implements hotstuff.Backend.PreCommit
-func (s *backend) PreCommit(block *types.Block, seals [][]byte) (*types.Block, error) {
+// SealBlock fullfill multi signatures into block header
+func (s *backend) SealBlock(block *types.Block, seals [][]byte) (*types.Block, error) {
 
 	// check proposal
 	if block.Header() == nil {
@@ -272,45 +272,10 @@ func (s *backend) Verify(block *types.Block, seal bool) (time.Duration, error) {
 	return 0, err
 }
 
-// todo(fuk): delete after test
-/*func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
-	// Check if the proposal is a valid block
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
-		return 0, errInvalidProposal
-	}
-
-	// check bad block
-	if s.HasBadProposal(block.Hash()) {
-		return 0, errBADProposal
-	}
-
-	// check block body
-	txnHash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil))
-	uncleHash := types.CalcUncleHash(block.Uncles())
-	if txnHash != block.Header().TxHash {
-		return 0, errMismatchTxhashes
-	}
-	if uncleHash != nilUncleHash {
-		return 0, errInvalidUncleHash
-	}
-
-	// verify the header of proposed block
-	if err := s.VerifyHeader(s.chain, block.Header(), false); err == nil {
-		return 0, nil
-	} else if err == consensus.ErrFutureBlock {
-		return time.Unix(int64(block.Header().Time), 0).Sub(now()), consensus.ErrFutureBlock
-	} else {
-		return 0, err
-	}
-}
-*/
-
 func (s *backend) LastProposal() (*types.Block, common.Address) {
 	var (
 		proposer common.Address
-		err error
+		err      error
 	)
 
 	block := s.chain.CurrentBlock()

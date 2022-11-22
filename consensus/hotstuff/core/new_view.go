@@ -18,36 +18,33 @@
 
 package core
 
-import "fmt"
-
-func (c *core) sendNewView(view *View) {
+// sendNewView, repo send message of new-view, formula as follow:
+// 	MSG(new-view, _, prepareQC)
+// the field of view will be packaged in message before broadcast.
+func (c *core) sendNewView() {
 	logger := c.newLogger()
-	msgTyp := MsgTypeNewView
-
-	curView := c.currentView()
-	if curView.Cmp(view) > 0 {
-		logger.Trace("Cannot send out the round change", "msg", msgTyp, "current round", curView.Round, "target round", view.Round)
-		return
-	}
+	code := MsgTypeNewView
 
 	prepareQC := c.current.PrepareQC()
 	payload, err := Encode(prepareQC)
 	if err != nil {
-		logger.Trace("Failed to encode", "msg", msgTyp, "err", err)
+		logger.Trace("Failed to encode", "msg", code, "err", err)
 		return
 	}
-	c.broadcast(msgTyp, payload)
 
-	logger.Trace("sendNewView", "msg", msgTyp)
+	c.broadcast(code, payload)
+	logger.Trace("sendNewView", "msg", code)
 }
 
+// handleNewView, leader gather new-view messages and pick the max `prepareQC` to be `highQC` by view sequence.
+// `stateHighQC` denote that node is ready to pack block to send the `prepare` message.
 func (c *core) handleNewView(data *Message) error {
 	logger := c.newLogger()
 
 	var (
-		qc *QuorumCert
-		code      = MsgTypeNewView
-		src       = data.address
+		qc   *QuorumCert
+		code = MsgTypeNewView
+		src  = data.address
 	)
 
 	if err := data.Decode(&qc); err != nil {
@@ -58,7 +55,7 @@ func (c *core) handleNewView(data *Message) error {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkMsgToProposer(); err != nil {
+	if err := c.checkMsgDest(); err != nil {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -77,8 +74,8 @@ func (c *core) handleNewView(data *Message) error {
 	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < StateHighQC {
 		highQC, err := c.getHighQC()
 		if err != nil {
-			logger.Trace("Failed to get highQC", "msg", code)
-			return errGetHighQC
+			logger.Trace("Failed to get highQC", "msg", code, "err", err)
+			return err
 		}
 		c.current.SetHighQC(highQC)
 		c.setCurrentState(StateHighQC)
@@ -90,6 +87,7 @@ func (c *core) handleNewView(data *Message) error {
 	return nil
 }
 
+// getHighQC leader find the highest `prepareQC` as highQC by `view` sequence.
 func (c *core) getHighQC() (*QuorumCert, error) {
 	var highQC *QuorumCert
 	for _, data := range c.current.NewViews() {
@@ -102,7 +100,7 @@ func (c *core) getHighQC() (*QuorumCert, error) {
 		}
 	}
 	if highQC == nil {
-		return nil, fmt.Errorf("failed to get highQC")
+		return nil, errNilHighQC
 	}
 	return highQC, nil
 }

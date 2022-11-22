@@ -20,6 +20,8 @@ package signer
 
 import (
 	"crypto/ecdsa"
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -289,6 +291,13 @@ func (s *SignerImpl) getSignersFromCommittedSeals(hash common.Hash, seals [][]by
 
 // getSignatureAddress gets the address address from the signature
 func getSignatureAddress(hash common.Hash, sig []byte) (common.Address, error) {
+	if hash == common.EmptyHash {
+		return common.EmptyAddress, fmt.Errorf("invalid hash")
+	}
+	if sig == nil {
+		return common.EmptyAddress, fmt.Errorf("invalid sig")
+	}
+
 	pubkey, err := crypto.SigToPub(hash.Bytes(), sig)
 	if err != nil {
 		return common.Address{}, err

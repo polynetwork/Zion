@@ -19,7 +19,10 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
+
+	"github.com/ethereum/go-ethereum/log"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -43,18 +46,27 @@ func (c *core) currentProposer() hotstuff.Validator {
 	return c.valSet.GetProposer()
 }
 
+type roundNode struct {
+	temp *Node // cache node before `prepared`
+	node *Node
+}
+
 type roundState struct {
-	db ethdb.Database
-	vs hotstuff.ValidatorSet
+	db     ethdb.Database
+	logger log.Logger
+	vs     hotstuff.ValidatorSet
 
 	round  *big.Int
 	height *big.Int
 	state  State
 
-	pendingRequest *Request
-	node           *Node        //
-	lockedBlock    *types.Block // validator's prepare proposal
-	proposalLocked bool
+	lastChainedBlock *types.Block
+	pendingRequest   *Request
+	node             *roundNode
+	lockedBlock      *types.Block // validator's prepare proposal
+	proposalLocked   bool
+
+	// todo(fuk): need temp nodes queue
 
 	// o(4n)
 	newViews       *MessageSet // data set for newView message
@@ -70,54 +82,46 @@ type roundState struct {
 }
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
-func newRoundState(view *View, validatorSet hotstuff.ValidatorSet, db ethdb.Database) *roundState {
+func newRoundState(db ethdb.Database, logger log.Logger, validatorSet hotstuff.ValidatorSet, lastChainedBlock *types.Block, view *View) *roundState {
 	rs := &roundState{
-		db:             db,
-		vs:             validatorSet.Copy(),
-		round:          view.Round,
-		height:         view.Height,
-		state:          StateAcceptRequest,
-		newViews:       NewMessageSet(validatorSet),
-		prepareVotes:   NewMessageSet(validatorSet),
-		preCommitVotes: NewMessageSet(validatorSet),
-		commitVotes:    NewMessageSet(validatorSet),
+		db:               db,
+		logger:           logger,
+		vs:               validatorSet.Copy(),
+		round:            view.Round,
+		height:           view.Height,
+		state:            StateAcceptRequest,
+		node:             new(roundNode),
+		lastChainedBlock: lastChainedBlock,
+		newViews:         NewMessageSet(validatorSet),
+		prepareVotes:     NewMessageSet(validatorSet),
+		preCommitVotes:   NewMessageSet(validatorSet),
+		commitVotes:      NewMessageSet(validatorSet),
 	}
 	return rs
 }
 
 // clean all votes message set for new round
-func (s *roundState) update(view *View, vs hotstuff.ValidatorSet) {
-	s.vs = vs
+func (s *roundState) update(vs hotstuff.ValidatorSet, lastChainedBlock *types.Block, view *View) {
+	if view.HeightU64() > s.HeightU64() {
+		if lastChainedBlock.NumberU64() == s.lastChainedBlock.NumberU64() {
+			panic(fmt.Sprintf("block fork choice, last view %v, current view %v,"+
+				" last round hash %v, current round hash %v",
+				s.View(), view, s.lastChainedBlock.Hash(), lastChainedBlock.Hash()))
+		} else if lastChainedBlock.NumberU64() != s.lastChainedBlock.NumberU64()+1 {
+			panic(fmt.Sprintf("invalid `lastProposal` height, expect %v, got %v",
+				s.lastChainedBlock.NumberU64()+1, lastChainedBlock.NumberU64()))
+		} else {
+			s.lastChainedBlock = lastChainedBlock
+		}
+	}
+
+	s.vs = vs.Copy()
 	s.height = view.Height
 	s.round = view.Round
-	s.state = StateAcceptRequest
 	s.newViews = NewMessageSet(vs)
 	s.prepareVotes = NewMessageSet(vs)
 	s.preCommitVotes = NewMessageSet(vs)
 	s.commitVotes = NewMessageSet(vs)
-}
-
-func (s *roundState) Height() *big.Int {
-	if s.height == nil {
-		return big.NewInt(0)
-	}
-
-	return s.height
-}
-
-func (s *roundState) HeightU64() uint64 {
-	return s.Height().Uint64()
-}
-
-func (s *roundState) Round() *big.Int {
-	if s.round == nil {
-		return big.NewInt(0)
-	}
-	return s.round
-}
-
-func (s *roundState) RoundU64() uint64 {
-	return s.Round().Uint64()
 }
 
 func (s *roundState) View() *View {
@@ -125,6 +129,22 @@ func (s *roundState) View() *View {
 		Round:  s.round,
 		Height: s.height,
 	}
+}
+
+func (s *roundState) Height() *big.Int {
+	return s.height
+}
+
+func (s *roundState) HeightU64() uint64 {
+	return s.height.Uint64()
+}
+
+func (s *roundState) Round() *big.Int {
+	return s.round
+}
+
+func (s *roundState) RoundU64() uint64 {
+	return s.round.Uint64()
 }
 
 func (s *roundState) SetState(state State) {
@@ -135,66 +155,100 @@ func (s *roundState) State() State {
 	return s.state
 }
 
-func (s *roundState) SetNode(node *Node) error {
-	if err := s.storeNode(node); err != nil {
-		return err
-	}
-	s.node = node
-	return nil
+func (s *roundState) LastChainedBlock() *types.Block {
+	return s.lastChainedBlock
 }
 
-func (s *roundState) SetNodeWithSealBlock(block *types.Block) error {
-	s.node.Block = block
-	if err := s.storeNode(s.node); err != nil {
-		return err
-	}
-	s.lockedBlock = block
-	return nil
-}
-
-func (s *roundState) Node() *Node {
-	return s.node
-}
-
-//func (s *roundState) Proposal() hotstuff.Proposal {
-//	return s.proposal
-//}
-
-func (s *roundState) LockNode() error {
-	if s.node == nil || s.node.Block == nil {
-		return errInvalidNode
-	}
-	s.lockedBlock = s.node.Block
-	s.proposalLocked = true
-	return nil
-}
-
-func (s *roundState) LockedNode() *Node {
-	if s.proposalLocked && s.node != nil {
-		return s.node
-	}
-	return nil
-}
-
-func (s *roundState) LockedBlock() *types.Block {
-	return s.lockedBlock
-}
-
-// 如果在prepare阶段就开始锁，会导致更多问题，prepareQC。
-func (s *roundState) IsProposalLocked() bool {
-	return s.proposalLocked
-}
-
+// accept pending request from miner only for once.
 func (s *roundState) SetPendingRequest(req *Request) {
-	s.pendingRequest = req
+	if s.pendingRequest == nil {
+		s.pendingRequest = req
+	}
 }
 
 func (s *roundState) PendingRequest() *Request {
 	return s.pendingRequest
 }
 
+func (s *roundState) SetNode(node *Node) error {
+	if temp := s.node.temp; temp == nil {
+		s.node.temp = node
+		return nil
+	} else if temp.Hash() != node.Hash() {
+		return fmt.Errorf("expect node %v, got %v", temp.Hash(), node.Hash())
+	} else {
+		if err := s.storeNode(node); err != nil {
+			return err
+		}
+		s.node.node = node
+		s.node.temp = nil
+	}
+	return nil
+}
+
+func (s *roundState) Node() *Node {
+	if temp := s.node.temp; temp != nil {
+		return temp
+	} else {
+		return s.node.node
+	}
+}
+
+func (s *roundState) Lock(qc *QuorumCert) error {
+	if s.node == nil || s.node.node == nil {
+		return errInvalidNode
+	}
+
+	if err := s.storeLockQC(qc); err != nil {
+		return err
+	}
+	if err := s.storeNode(s.node.node); err != nil {
+		return err
+	}
+
+	s.lockQC = qc
+	s.lockedBlock = s.node.node.Block
+	s.proposalLocked = true
+	return nil
+}
+
+// Unlock it's happened at the start of new round, new state is `StateAcceptRequest`, and `lockQC` keep to judge safety rule
+func (s *roundState) Unlock() error {
+	s.pendingRequest = nil
+	s.proposalLocked = false
+	s.lockedBlock = nil
+	s.node.temp = nil
+	return nil
+}
+
+func (s *roundState) LockedBlock() *types.Block {
+	if s.proposalLocked && s.lockedBlock != nil {
+		return s.lockedBlock
+	}
+	return nil
+}
+
+func (s *roundState) SetSealedBlock(block *types.Block) error {
+	if s.node.node == nil || s.node.node.Block == nil {
+		return fmt.Errorf("locked block is nil")
+	}
+	if s.node.node.Block.Hash() != block.Hash() {
+		return fmt.Errorf("node block not equal to multi-seal block")
+	}
+	s.node.node.Block = block
+	if err := s.storeNode(s.node.node); err != nil {
+		return err
+	}
+	s.lockedBlock = block
+	return nil
+}
+
 func (s *roundState) Vote() common.Hash {
-	return s.node.Hash()
+	if node := s.Node(); node == nil {
+		return common.EmptyHash
+	} else {
+		return node.Hash()
+	}
 }
 
 func (s *roundState) SetHighQC(qc *QuorumCert) {
@@ -225,18 +279,6 @@ func (s *roundState) PreCommittedQC() *QuorumCert {
 	return s.preCommitQC
 }
 
-func (s *roundState) SetLockQC(qc *QuorumCert) error {
-	if err := s.storeLockQC(qc); err != nil {
-		return err
-	}
-	s.lockQC = qc
-	return nil
-}
-
-func (s *roundState) LockQC() *QuorumCert {
-	return s.lockQC
-}
-
 func (s *roundState) SetCommittedQC(qc *QuorumCert) error {
 	if err := s.storeCommitQC(qc); err != nil {
 		return err
@@ -249,7 +291,11 @@ func (s *roundState) CommittedQC() *QuorumCert {
 	return s.committedQC
 }
 
-// message set has it's own mutex, do not lock or unlock with roundState mutex.
+// -----------------------------------------------------------------------
+//
+// leader collect votes
+//
+// -----------------------------------------------------------------------
 func (s *roundState) AddNewViews(msg *Message) error {
 	return s.newViews.Add(msg)
 }
@@ -326,12 +372,34 @@ const (
 
 // todo(fuk): 不能返回error，这里需要考虑到两种情况，一种是节点半路加入共识，此时其所有的存储状态为空，也就是之前的qc都没有存储过
 // 此外就是对于block1，可能存在几轮都失败的情况
+// state是否需要reload???
 func (s *roundState) reload(view *View) {
-	_ = s.loadView(view)
-	_ = s.loadPrepareQC()
-	_ = s.loadLockQC()
-	_ = s.loadCommitQC()
-	_ = s.loadNode()
+	var (
+		err      error
+		printErr = s.logger != nil && s.height.Uint64() > 1
+	)
+
+	if err = s.loadView(view); err != nil && printErr {
+		s.logger.Warn("Load view failed", "err", err)
+	}
+	if err = s.loadPrepareQC(); err != nil && printErr {
+		s.logger.Warn("Load prepareQC failed", "err", err)
+	}
+	if err = s.loadLockQC(); err != nil && printErr {
+		s.logger.Warn("Load lockQC failed", "err", err)
+	}
+	if err = s.loadCommitQC(); err != nil && printErr {
+		s.logger.Warn("Load commitQC failed", "err", err)
+	}
+	if err = s.loadNode(); err != nil && printErr {
+		s.logger.Warn("Load node failed", "err", err)
+	}
+
+	// reset locked node
+	if s.lockQC != nil && s.node.node != nil && s.node.node.Block != nil && s.lockQC.node == s.node.node.Hash() {
+		s.lockedBlock = s.node.node.Block
+		s.proposalLocked = true
+	}
 }
 
 func (s *roundState) storeView(view *View) error {
@@ -478,39 +546,9 @@ func (s *roundState) loadNode() error {
 	if err = rlp.DecodeBytes(raw, data); err != nil {
 		return err
 	}
-	s.node = data
+	s.node.node = data
 	return nil
 }
-
-// todo(fuk): delete after test
-//func (s *roundState) storeBlock(block *types.Block) error {
-//	if s.db == nil {
-//		return nil
-//	}
-//
-//	raw, err := Encode(block)
-//	if err != nil {
-//		return err
-//	}
-//	return s.db.Put(nodeKey(), raw)
-//}
-//
-//func (s *roundState) loadBlock() error {
-//	if s.db == nil {
-//		return nil
-//	}
-//
-//	data := new(Node)
-//	raw, err := s.db.Get(nodeKey())
-//	if err != nil {
-//		return err
-//	}
-//	if err = rlp.DecodeBytes(raw, data); err != nil {
-//		return err
-//	}
-//	s.node = data
-//	return nil
-//}
 
 func viewKey() []byte {
 	return append([]byte(dbRoundStatePrefix), []byte(viewSuffix)...)

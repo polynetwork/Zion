@@ -59,7 +59,7 @@ func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 	if c.current == nil {
 		return false
 	}
-	if proposal := c.current.Node().Block; proposal != nil && proposal.Hash() == blockHash {
+	if node := c.current.Node(); node != nil && node.Block != nil && node.Block.Hash() == blockHash {
 		return true
 	}
 	if req := c.current.PendingRequest(); req != nil && req.block != nil && req.block.Hash() == blockHash {
@@ -159,10 +159,7 @@ func (c *core) handleMsg(val common.Address, payload []byte) error {
 	}
 
 	// handle checked Message
-	if err := c.handleCheckedMsg(msg); err != nil {
-		return err
-	}
-	return nil
+	return c.handleCheckedMsg(msg)
 }
 
 func (c *core) handleCheckedMsg(msg *Message) (err error) {

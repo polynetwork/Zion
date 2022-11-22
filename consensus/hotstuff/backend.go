@@ -47,8 +47,8 @@ type Backend interface {
 	// Unicast send a message to single peer
 	Unicast(valSet ValidatorSet, payload []byte) error
 
-	// PreCommit write seal to header and assemble new qc
-	PreCommit(block *types.Block, seals [][]byte) (*types.Block, error)
+	// SealBlock write seal to header and assemble new qc
+	SealBlock(block *types.Block, seals [][]byte) (*types.Block, error)
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
@@ -57,11 +57,6 @@ type Backend interface {
 	// Verify verifies the proposal. If a consensus.ErrFutureBlock error is returned,
 	// the time difference of the proposal and current time is also returned.
 	Verify(block *types.Block, seal bool) (time.Duration, error)
-
-	// todo(fuk): delete this function after test
-	// Verify verifies the proposal. If a consensus.ErrFutureBlock error is returned,
-	// the time difference of the proposal and current time is also returned.
-	//VerifyUnsealedProposal(Proposal) (time.Duration, error)
 
 	// LastProposal retrieves latest committed proposal and the address of proposer
 	LastProposal() (*types.Block, common.Address)

@@ -24,13 +24,14 @@ import (
 )
 
 func (c *core) handlePrepareVote(data *Message) error {
-	logger := c.newLogger()
 
 	var (
-		vote = common.BytesToHash(data.Msg)
-		code = MsgTypePrepareVote
-		src  = data.address
+		logger = c.newLogger()
+		vote   = common.BytesToHash(data.Msg)
+		code   = MsgTypePrepareVote
+		src    = data.address
 	)
+
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
@@ -39,7 +40,7 @@ func (c *core) handlePrepareVote(data *Message) error {
 		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkMsgToProposer(); err != nil {
+	if err := c.checkMsgDest(); err != nil {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -48,32 +49,30 @@ func (c *core) handlePrepareVote(data *Message) error {
 		return errAddPrepareVote
 	}
 
-	logger.Trace("handlePrepareVote", "msg", code, "src", src, "hash", vote)
+	logger.Trace("handlePrepareVote", "msg", code, "src", src, "vote", vote)
 
 	if size := c.current.PrepareVoteSize(); size >= c.Q() && c.currentState() < StatePrepared {
-		prepareQC, err := c.messages2qc(c.proposer(), c.current.Node().Hash(), c.current.PrepareVotes())
+		prepareQC, err := c.messages2qc(code)
 		if err != nil {
 			logger.Trace("Failed to assemble prepareQC", "msg", code, "err", err)
 			return errInvalidQC
 		}
+		// save node before repo
 		if err := c.acceptPrepare(prepareQC, c.current.Node()); err != nil {
 			logger.Trace("Failed to accept prepareQC", "msg", code, "err", err)
 			return err
 		}
-		c.sendPreCommit()
+		c.sendPreCommit(c.current.Node(), prepareQC)
 	}
 
 	return nil
 }
 
-func (c *core) sendPreCommit() {
+func (c *core) sendPreCommit(node *Node, prepareQC *QuorumCert) {
 	logger := c.newLogger()
 
 	code := MsgTypePreCommit
-	msg := &Subject{
-		Node: c.current.Node(),
-		QC:   c.current.PrepareQC(),
-	}
+	msg := NewSubject(node, prepareQC)
 	payload, err := Encode(msg)
 	if err != nil {
 		logger.Trace("Failed to encode", "msg", code, "err", err)
@@ -94,12 +93,18 @@ func (c *core) handlePreCommit(data *Message) error {
 		prepareQC *QuorumCert
 		block     *types.Block
 	)
+
+	// check parameters
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to check decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodePreCommit
 	}
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
+		return err
+	}
+	if err := c.checkMsgSource(src); err != nil {
+		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
 	if err := c.checkSubject(msg); err != nil {
@@ -110,31 +115,29 @@ func (c *core) handlePreCommit(data *Message) error {
 		prepareQC = msg.QC
 		block = node.Block
 	}
-	//if err := c.checkProposalView(msg.Proposal, data.View); err != nil {
-	//	logger.Trace("Failed to check proposal and msg view", "msg", code, "src", src, "err", err)
-	//	return err
-	//}
-	if err := c.checkMsgFromProposer(src); err != nil {
-		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
+
+	if err := c.checkNode(node); err != nil {
+		logger.Trace("Failed to check node", "msg", code, "src", src, "err", err)
 		return err
 	}
-	//if msg.Proposal.Hash() != msg.QC.hash {
-	//	logger.Trace("Failed to check msg", "msg", code, "src", src, "expect prepareQC hash", msg.Proposal.Hash(), "got", msg.QC.hash)
-	//	return errInvalidNode
-	//}
-	if _, err := c.backend.Verify(block, false); err != nil {
-		logger.Trace("Failed to check verify proposal", "msg", code, "src", src, "err", err)
+	if err := c.checkBlock(block); err != nil {
+		logger.Trace("Failed to check block", "msg", code, "src", src, "err", err)
 		return err
 	}
 	if err := c.verifyQC(data, prepareQC); err != nil {
 		logger.Trace("Failed to verify prepareQC", "msg", code, "src", src, "err", err)
 		return err
 	}
+	if _, err := c.backend.Verify(block, false); err != nil {
+		logger.Trace("Failed to check verify proposal", "msg", code, "src", src, "err", err)
+		return err
+	}
 
 	logger.Trace("handlePreCommit", "msg", code, "src", src, "hash", node.Hash())
 
+	// accept msg info and state
 	if c.IsProposer() && c.currentState() < StateLocked {
-		c.sendPreCommitVote()
+		c.sendVote(MsgTypePreCommitVote)
 	}
 	if !c.IsProposer() && c.currentState() < StatePrepared {
 		if err := c.acceptPrepare(prepareQC, node); err != nil {
@@ -142,28 +145,19 @@ func (c *core) handlePreCommit(data *Message) error {
 			return err
 		}
 		logger.Trace("acceptPrepare", "msg", code, "prepareQC", prepareQC.node)
-		c.sendPreCommitVote()
+		c.sendVote(MsgTypePreCommitVote)
 	}
 
 	return nil
 }
 
 func (c *core) acceptPrepare(prepareQC *QuorumCert, node *Node) error {
-	if err := c.current.SetPrepareQC(prepareQC); err != nil {
+	if err := c.current.SetNode(node); err != nil {
 		return err
 	}
-	if err := c.current.SetNode(node); err != nil {
+	if err := c.current.SetPrepareQC(prepareQC); err != nil {
 		return err
 	}
 	c.current.SetState(StatePrepared)
 	return nil
-}
-
-func (c *core) sendPreCommitVote() {
-	logger := c.newLogger()
-
-	code := MsgTypePreCommitVote
-	vote := c.current.Vote()
-	c.broadcast(code, vote.Bytes())
-	logger.Trace("sendPreCommitVote", "msg", code, "hash", vote)
 }

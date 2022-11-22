@@ -171,7 +171,7 @@ func (ts *testSystemBackend) Unicast(valSet hotstuff.ValidatorSet, message []byt
 	return nil
 }
 
-func (ts *testSystemBackend) PreCommit(proposal *types.Block, seals [][]byte) (*types.Block, error) {
+func (ts *testSystemBackend) SealBlock(proposal *types.Block, seals [][]byte) (*types.Block, error) {
 	// todo:
 	return nil, nil
 }
@@ -258,7 +258,7 @@ func NewTestSystemWithBackend(n, h, r int) *testSystem {
 		backend.address = vset.GetByIndex(uint64(i)).Address()
 
 		core := New(backend, config, signer.NewSigner(keys[i]), nil)
-		core.current = newRoundState(makeView(h, r), vset, nil)
+		core.current = newRoundState(nil, nil, vset, nil, makeView(h, r))
 		core.valSet = vset
 		core.logger = testLogger
 		core.validateFn = nil
@@ -399,10 +399,10 @@ func singerTestCore(t *testing.T, n int, height, round int64) (*core, hotstuff.V
 	c := &core{
 		logger: log.New("backend", "test", "id", 0),
 		valSet: vals,
-		current: newRoundState(&View{
+		current: newRoundState(nil, nil, vals, nil, &View{
 			Height: big.NewInt(height),
 			Round:  big.NewInt(round),
-		}, vals, nil),
+		}),
 		signer:   signer.NewSigner(keys[0]),
 		backlogs: newBackLog(),
 	}
