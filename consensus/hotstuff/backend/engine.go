@@ -342,7 +342,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return nil
 	}
 
-	// Ensure that the block's timestamp isn't too close to it's parent
+	// Ensure that the block's timestamp isn't less than it's parent
 	var (
 		parent *types.Header
 	)
@@ -354,8 +354,11 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if (header.Time < parent.Time+s.config.BlockPeriod) || (header.Time > uint64(now().Unix())) {
+	if header.Time < parent.Time {
 		return errInvalidTimestamp
+	}
+	if header.Time > uint64(now().Unix()) {
+		return consensus.ErrFutureBlock
 	}
 
 	// Get validator set
