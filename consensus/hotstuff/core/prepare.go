@@ -129,8 +129,8 @@ func (c *core) handlePrepare(data *Message) error {
 		logger.Trace("Failed to check block", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if _, err := c.backend.Verify(block, false); err != nil {
-		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err)
+	if duration, err := c.backend.Verify(block, false); err != nil {
+		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err, "duration", duration)
 		return errVerifyUnsealedProposal
 	}
 	if err := c.preExecuteBlock(block); err != nil {

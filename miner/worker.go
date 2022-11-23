@@ -769,11 +769,10 @@ func (w *worker) commitNewWork(interrupt *int32, timestamp int64) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
+	// just use current time as block timestamp
 	tstart := time.Now()
 	parent := w.chain.CurrentBlock()
-	if parent.Time() >= uint64(timestamp) {
-		timestamp = int64(parent.Time() + 3)
-	}
+	timestamp = tstart.Unix()
 	num := parent.Number()
 	header := &types.Header{
 		ParentHash: parent.Hash(),
