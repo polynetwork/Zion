@@ -63,19 +63,7 @@ func (c *core) checkMsgDest() error {
 	return nil
 }
 
-func (c *core) checkPreCommittedQC(qc *QuorumCert) error {
-	if qc == nil {
-		return fmt.Errorf("external pre-committed qc is nil")
-	}
-	if c.current.PreCommittedQC() == nil {
-		return fmt.Errorf("current pre-committed qc is nil")
-	}
-	if !reflect.DeepEqual(c.current.PreCommittedQC(), qc) {
-		return fmt.Errorf("expect %s, got %s", c.current.PreCommittedQC().String(), qc.String())
-	}
-	return nil
-}
-
+// checkVote vote should equal to current node hash
 func (c *core) checkVote(data *Message, vote common.Hash) error {
 	if vote == common.EmptyHash {
 		return fmt.Errorf("external vote is empty hash")
@@ -89,7 +77,17 @@ func (c *core) checkVote(data *Message, vote common.Hash) error {
 	return nil
 }
 
+// checkBlock check the extend relationship between remote block and latest chained block.
+// ensure that the remote block equals to locked block if it exist.
 func (c *core) checkBlock(block *types.Block) error {
+	lastChainedBlock := c.current.LastChainedBlock()
+	if lastChainedBlock.NumberU64()+1 != block.NumberU64() {
+		return fmt.Errorf("expect block number %v, got %v", lastChainedBlock.NumberU64()+1, block.NumberU64())
+	}
+	if lastChainedBlock.Hash() != block.ParentHash() {
+		return fmt.Errorf("expect parent hash %v, got %v", lastChainedBlock.Hash(), block.ParentHash())
+	}
+
 	if lockedBlock := c.current.LockedBlock(); lockedBlock != nil {
 		if block.NumberU64() != lockedBlock.NumberU64() {
 			return fmt.Errorf("expect locked block number %v, got %v", lockedBlock.NumberU64(), block.NumberU64())
@@ -99,20 +97,18 @@ func (c *core) checkBlock(block *types.Block) error {
 		}
 	}
 
-	lastChainedBlock := c.current.LastChainedBlock()
-	if lastChainedBlock.NumberU64()+1 != block.NumberU64() {
-		return fmt.Errorf("expect block number %v, got %v", lastChainedBlock.NumberU64()+1, block.NumberU64())
-	}
-	if lastChainedBlock.Hash() != block.ParentHash() {
-		return fmt.Errorf("expect parent hash %v, got %v", lastChainedBlock.Hash(), block.ParentHash())
-	}
-
 	return nil
 }
 
-func (c *core) checkNode(node *Node) error {
-	if node == nil {
+// checkNode repo compare remote node with local node
+func (c *core) checkNode(node *Node, compare bool) error {
+	if node == nil || node.Parent == common.EmptyHash ||
+		node.Block == nil || node.Block.Header() == nil {
 		return errInvalidNode
+	}
+
+	if !compare {
+		return nil
 	}
 
 	local := c.current.Node()
@@ -157,28 +153,6 @@ func (c *core) checkView(view *View) error { //todo
 	} else {
 		return errFutureMessage
 	}
-}
-
-func (c *core) checkSubject(sub *Subject) error {
-	if sub.Node == nil || sub.QC == nil {
-		return errInvalidMessage
-	}
-	if sub.Node.Parent == common.EmptyHash || sub.Node.Block == nil || sub.Node.Block.Header() == nil {
-		return errInvalidMessage
-	}
-	if sub.QC.node == common.EmptyHash || sub.QC.view == nil {
-		return errInvalidMessage
-	}
-	if sub.QC.seal == nil || sub.QC.committedSeal == nil {
-		return errInvalidMessage
-	}
-	if sub.QC.proposer == common.EmptyAddress && sub.QC.HeightU64() > 1 {
-		return errInvalidMessage
-	}
-	if sub.QC.code < MsgTypeNewView || sub.QC.code > MsgTypeDecide {
-		return errInvalidMessage
-	}
-	return nil
 }
 
 func (c *core) preExecuteBlock(proposal hotstuff.Proposal) error {
@@ -302,32 +276,36 @@ func (c *core) messages2qc(code MsgType) (*QuorumCert, error) {
 	return qc, nil
 }
 
+// verifyQC check and validate qc.
 func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 	if qc == nil || qc.view == nil {
 		return errInvalidQC
 	}
-	if hdiff, rdiff := data.View.Sub(qc.view); hdiff < 0 || (hdiff == 0 && rdiff < 0) {
-		return fmt.Errorf("view is invalid")
-	}
 
-	// verify genesis qc
+	// skip genesis block
 	if qc.HeightU64() == 0 {
 		return nil
 	}
-	if qc.node == common.EmptyHash || qc.proposer == common.EmptyAddress ||
-		qc.seal == nil || qc.committedSeal == nil {
+
+	// qc fields checking
+	if qc.node == common.EmptyHash || qc.seal == nil || qc.committedSeal == nil ||
+		(qc.proposer == common.EmptyAddress && qc.HeightU64() > 1) {
 		return errInvalidQC
 	}
 
-	// qc code should be vote
-	if !checkQCCode(qc.code) {
-		return errInvalidQC
+	// matching code
+	if (data.Code == MsgTypeNewView && qc.code != MsgTypePrepareVote) ||
+		(data.Code == MsgTypePrepare && qc.code != MsgTypePrepareVote) ||
+		(data.Code == MsgTypePreCommit && qc.code != MsgTypePrepareVote) ||
+		(data.Code == MsgTypeCommit && qc.code != MsgTypePreCommitVote) ||
+		(data.Code == MsgTypeDecide && qc.code != MsgTypeCommitVote) {
+		return fmt.Errorf("qc.code %s not matching message code", qc.code.String())
 	}
 
-	// repo should compare `current.node` with `qc.node` after `current.setNode`
+	// matching view and compare proposer and local node
 	if data.Code == MsgTypePreCommit || data.Code == MsgTypeCommit || data.Code == MsgTypeDecide {
-		if qc.view.Cmp(c.currentView()) != 0 {
-			return fmt.Errorf("expect qc view %v, got %v", c.currentView(), qc.view)
+		if qc.view.Cmp(data.View) != 0 {
+			return fmt.Errorf("qc.view %v not matching message view", qc.view)
 		}
 		if qc.proposer != c.proposer() {
 			return fmt.Errorf("expect proposer %v, got %v", c.proposer(), qc.proposer)
@@ -336,6 +314,10 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 			return fmt.Errorf("current node is nil")
 		} else if node.Hash() != qc.node {
 			return fmt.Errorf("expect node %v, got %v", node.Hash(), qc.node)
+		}
+	} else {
+		if hdiff, rdiff := data.View.Sub(qc.view); hdiff < 0 || (hdiff == 0 && rdiff < 0) {
+			return fmt.Errorf("view is invalid")
 		}
 	}
 
@@ -367,12 +349,4 @@ func (c *core) sendVote(code MsgType, votes ...common.Hash) {
 	c.broadcast(code, vote.Bytes())
 	prefix := fmt.Sprintf("send%s", code.String())
 	logger.Trace(prefix, "msg", code, "hash", vote)
-}
-
-// qc comes from vote
-func checkQCCode(code MsgType) bool {
-	if code == MsgTypePrepareVote || code == MsgTypePreCommitVote || code == MsgTypeCommitVote {
-		return true
-	}
-	return false
 }

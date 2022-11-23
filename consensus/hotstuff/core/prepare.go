@@ -87,19 +87,22 @@ func (c *core) sendPrepare() {
 	logger.Trace("sendPrepare", "msg", code, "node", node.Hash(), "block", block.Hash())
 }
 
+// handlePrepare implement description as follow:
+// ```
+//  repo wait for message m : matchingMsg(m, prepare, curView) from leader(curView)
+//	if m.node extends from m.justify.node ∧
+//	safeNode(m.node, m.justify) then
+//	send voteMsg(prepare, m.node, ⊥) to leader(curView)
+// ```
 func (c *core) handlePrepare(data *Message) error {
 	var (
-		code   = MsgTypePrepare
-		src    = data.address
 		logger = c.newLogger()
-
+		code   = data.Code
+		src    = data.address
 		msg    *Subject
-		node   *Node
-		highQC *QuorumCert
-		block  *types.Block
 	)
 
-	// check parameters
+	// check message
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodePrepare
@@ -112,20 +115,16 @@ func (c *core) handlePrepare(data *Message) error {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkSubject(msg); err != nil {
-		logger.Trace("Failed to check subject", "msg", code, "src", src, "err", err)
+
+	// local node is nil before `handlePrepare`, only check fields here.
+	node := msg.Node
+	if err := c.checkNode(node, false); err != nil {
+		logger.Trace("Failed to check node", "msg", code, "src", src, "err", err)
 		return err
-	} else {
-		node = msg.Node
-		highQC = msg.QC
-		block = node.Block
 	}
 
-	// judge safety and liveness
-	if err := c.verifyQC(data, highQC); err != nil {
-		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err, "highQC", highQC)
-		return err
-	}
+	// ensure remote block is legal.
+	block := node.Block
 	if err := c.checkBlock(block); err != nil {
 		logger.Trace("Failed to check block", "msg", code, "src", src, "err", err)
 		return err
@@ -134,6 +133,17 @@ func (c *core) handlePrepare(data *Message) error {
 		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err)
 		return errVerifyUnsealedProposal
 	}
+	if err := c.preExecuteBlock(block); err != nil {
+		logger.Trace("Failed to pre-execute block", "msg", code, "src", src, "err", err)
+		return err
+	}
+
+	// safety and liveness rules judgement.
+	highQC := msg.QC
+	if err := c.verifyQC(data, highQC); err != nil {
+		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err, "highQC", highQC)
+		return err
+	}
 	if err := c.extend(node, highQC); err != nil {
 		logger.Trace("Failed to check extend", "msg", code, "src", src, "err", err)
 		return errExtend
@@ -141,10 +151,6 @@ func (c *core) handlePrepare(data *Message) error {
 	if err := c.safeNode(node, highQC); err != nil {
 		logger.Trace("Failed to check safeNode", "msg", code, "src", src, "err", err)
 		return errSafeNode
-	}
-	if err := c.preExecuteBlock(block); err != nil {
-		logger.Trace("Failed to pre-execute block", "msg", code, "src", src, "err", err)
-		return err
 	}
 
 	logger.Trace("handlePrepare", "msg", code, "src", src, "node", node.Hash(), "block", block.Hash())
@@ -166,18 +172,18 @@ func (c *core) handlePrepare(data *Message) error {
 	return nil
 }
 
+// remote node's parent should equals to highQC's node
 func (c *core) extend(node *Node, highQC *QuorumCert) error {
 	if highQC == nil || highQC.view == nil {
 		return errInvalidQC
 	}
-	// if msgPrepare.proposal is locked, the proposal hash should be equal to qc.hash
 	if highQC.node != node.Parent {
 		return fmt.Errorf("expect parent %v, got %v", highQC.node, node.Parent)
 	}
 	return nil
 }
 
-// proposal extend lockQC `OR` hiqhQC.view > lockQC.view
+// proposal extend lockQC `OR` highQC.view > lockQC.view
 func (c *core) safeNode(node *Node, highQC *QuorumCert) error {
 	if highQC == nil || highQC.view == nil {
 		return errSafeNode

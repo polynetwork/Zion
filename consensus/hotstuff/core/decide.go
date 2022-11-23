@@ -23,14 +23,21 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
+// handleCommitVote implement description as follow:
+// ```
+// leader wait for (n n f) votes: V ← {v | matchingMsg(v, commit, curView)}
+//	commitQC ← QC(V )
+//	broadcast Msg(decide, ⊥, commitQC )
+// ```
 func (c *core) handleCommitVote(data *Message) error {
-	logger := c.newLogger()
-
 	var (
-		vote = common.BytesToHash(data.Msg)
-		code = MsgTypeCommitVote
-		src  = data.address
+		logger = c.newLogger()
+		vote   = common.BytesToHash(data.Msg)
+		code   = data.Code
+		src    = data.address
 	)
+
+	// check message
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
@@ -44,7 +51,7 @@ func (c *core) handleCommitVote(data *Message) error {
 		return err
 	}
 
-	// check committed seal
+	// check locked block's committed seals
 	lockedBlock := c.current.LockedBlock()
 	if lockedBlock == nil {
 		logger.Trace("Failed to get lockBlock", "msg", code, "src", src, "err", "block is nil")
@@ -55,6 +62,7 @@ func (c *core) handleCommitVote(data *Message) error {
 		return err
 	}
 
+	// queue vote into messageSet to ensure that at least 2/3 validator vote at the same step.
 	if err := c.current.AddCommitVote(data); err != nil {
 		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
 		return errAddPreCommitVote
@@ -62,7 +70,8 @@ func (c *core) handleCommitVote(data *Message) error {
 
 	logger.Trace("handleCommitVote", "msg", code, "src", src, "hash", vote)
 
-	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() < StateCommitted {
+	// assemble committed signatures to reorg the locked block, and create `commitQC` at the same time.
+	if size := c.current.CommitVoteSize(); size >= c.Q() && c.currentState() == StateLocked {
 		seals := c.current.GetCommittedSeals(size)
 		sealedBlock, err := c.backend.SealBlock(lockedBlock, seals)
 		if err != nil {
@@ -103,17 +112,16 @@ func (c *core) sendDecide(commitQC *QuorumCert) {
 	logger.Trace("sendDecide", "msg", code, "node", msg.Node.Hash())
 }
 
+// handleDecide repo receive MsgDecide and try to commit the final block.
 func (c *core) handleDecide(data *Message) error {
-	logger := c.newLogger()
-
 	var (
-		msg         *Subject
-		code        = MsgTypeDecide
-		src         = data.address
-		node        *Node
-		commitQC    *QuorumCert
-		sealedBlock *types.Block
+		logger = c.newLogger()
+		code   = data.Code
+		src    = data.address
+		msg    *Subject
 	)
+
+	// check message
 	if err := data.Decode(&msg); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodeCommit
@@ -126,23 +134,22 @@ func (c *core) handleDecide(data *Message) error {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkSubject(msg); err != nil {
-		logger.Trace("Failed to check subject", "msg", code, "src", src, "err", err)
-		return err
-	} else {
-		node = msg.Node
-		commitQC = msg.QC
-		sealedBlock = node.Block
-	}
 
-	if err := c.checkNode(node); err != nil {
+	// ensure that remote node equals to locked node.
+	if err := c.checkNode(msg.Node, true); err != nil {
 		logger.Trace("Failed to check node", "msg", code, "src", src, "err", err)
 		return err
 	}
+
+	// ensure commitQC is legal
+	commitQC := msg.QC
 	if err := c.verifyQC(data, commitQC); err != nil {
 		logger.Trace("Failed to verify qc", "msg", code, "src", src, "err", err)
 		return err
 	}
+
+	// validate block safety rule, and verify block with committed seals.
+	sealedBlock := msg.Node.Block
 	if err := c.checkBlock(sealedBlock); err != nil {
 		logger.Trace("Failed to check block", "msg", code, "src", src, "err", err)
 		return err

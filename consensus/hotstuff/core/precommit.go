@@ -22,15 +22,22 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// handlePrepareVote implement basic hotstuff description as follow:
+// ```
+//  leader wait for (n n f) votes: V ← {v | matchingMsg(v, prepare, curView)}
+//	prepareQC ← QC(V )
+//	broadcast Msg(pre-commit, ⊥, prepareQC )
+// ```
 func (c *core) handlePrepareVote(data *Message) error {
 
 	var (
 		logger = c.newLogger()
 		vote   = common.BytesToHash(data.Msg)
-		code   = MsgTypePrepareVote
+		code   = data.Code
 		src    = data.address
 	)
 
+	// check message
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
@@ -43,6 +50,8 @@ func (c *core) handlePrepareVote(data *Message) error {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
+
+	// queued vote into messageSet to ensure that at least 2/3 validators vote on the same step.
 	if err := c.current.AddPrepareVote(data); err != nil {
 		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
 		return errAddPrepareVote
@@ -68,6 +77,7 @@ func (c *core) handlePrepareVote(data *Message) error {
 	return nil
 }
 
+// sendPreCommit leader send message of `prepareQC`
 func (c *core) sendPreCommit(prepareQC *QuorumCert) {
 	logger := c.newLogger()
 
@@ -81,16 +91,21 @@ func (c *core) sendPreCommit(prepareQC *QuorumCert) {
 	logger.Trace("sendPreCommit", "msg", code, "node", prepareQC.node)
 }
 
+// handlePreCommit implement description as follow:
+// ```
+//  repo wait for message m : matchingQC(m.justify, prepare, curView) from leader(curView)
+//	prepareQC ← m.justify
+//	send voteMsg(pre-commit, m.justify.node, ⊥) to leader(curView)
+// ```
 func (c *core) handlePreCommit(data *Message) error {
-	logger := c.newLogger()
-
 	var (
-		code      = MsgTypePreCommit
+		logger    = c.newLogger()
+		code      = data.Code
 		src       = data.address
 		prepareQC *QuorumCert
 	)
 
-	// check parameters
+	// check message
 	if err := data.Decode(&prepareQC); err != nil {
 		logger.Trace("Failed to check decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodePreCommit
@@ -103,6 +118,8 @@ func (c *core) handlePreCommit(data *Message) error {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
+
+	// ensure `prepareQC` is legal
 	if err := c.verifyQC(data, prepareQC); err != nil {
 		logger.Trace("Failed to verify prepareQC", "msg", code, "src", src, "err", err)
 		return err

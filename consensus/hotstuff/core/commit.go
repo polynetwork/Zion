@@ -22,14 +22,21 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
+// handlePreCommitVote implement description as follow:
+// ```
+//  leader wait for (n n f) votes: V ← {v | matchingMsg(v, pre-commit, curView)}
+//	precommitQC ← QC(V )
+//	broadcast Msg(commit, ⊥, precommitQC )
+// ```
 func (c *core) handlePreCommitVote(data *Message) error {
 	var (
 		logger = c.newLogger()
-		code   = MsgTypePreCommitVote
+		code   = data.Code
 		src    = data.address
 		vote   = common.BytesToHash(data.Msg)
 	)
 
+	// check message
 	if err := c.checkView(data.View); err != nil {
 		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
@@ -43,6 +50,7 @@ func (c *core) handlePreCommitVote(data *Message) error {
 		return err
 	}
 
+	// queued vote into messageSet to ensure that at least 2/3 validator vote on the same step
 	if err := c.current.AddPreCommitVote(data); err != nil {
 		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
 		return errAddPreCommitVote
@@ -80,14 +88,21 @@ func (c *core) sendCommit(lockQC *QuorumCert) {
 	logger.Trace("sendCommit", "msg", code, "node", lockQC.node)
 }
 
+// handleCommit implement description as follow:
+// ```
+// repo wait for message m : matchingQC(m.justify, pre-commit, curView) from leader(curView)
+//	lockedQC ← m.justify
+//	send voteMsg(commit, m.justify.node, ⊥) to leader(curView)
+// ```
 func (c *core) handleCommit(data *Message) error {
-	logger := c.newLogger()
-
 	var (
-		lockQC *QuorumCert
-		code   = MsgTypeCommit
+		logger = c.newLogger()
+		code   = data.Code
 		src    = data.address
+		lockQC *QuorumCert
 	)
+
+	// check message
 	if err := data.Decode(&lockQC); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodeCommit
@@ -100,6 +115,8 @@ func (c *core) handleCommit(data *Message) error {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
+
+	// ensure `lockQC` is legal
 	if err := c.verifyQC(data, lockQC); err != nil {
 		logger.Trace("Failed to check verify qc", "msg", code, "src", src, "err", err)
 		return err

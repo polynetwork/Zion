@@ -39,15 +39,15 @@ func (c *core) sendNewView() {
 // handleNewView, leader gather new-view messages and pick the max `prepareQC` to be `highQC` by view sequence.
 // `stateHighQC` denote that node is ready to pack block to send the `prepare` message.
 func (c *core) handleNewView(data *Message) error {
-	logger := c.newLogger()
-
 	var (
-		qc   *QuorumCert
-		code = MsgTypeNewView
-		src  = data.address
+		logger    = c.newLogger()
+		prepareQC *QuorumCert
+		code      = data.Code
+		src       = data.address
 	)
 
-	if err := data.Decode(&qc); err != nil {
+	// check message
+	if err := data.Decode(&prepareQC); err != nil {
 		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodeNewView
 	}
@@ -59,17 +59,19 @@ func (c *core) handleNewView(data *Message) error {
 		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.verifyQC(data, qc); err != nil {
+
+	// ensure remote `prepareQC` is legal.
+	if err := c.verifyQC(data, prepareQC); err != nil {
 		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err)
 		return err
 	}
-	// `checkView` ensure that +2/3 validators on the same view
+	// messages queued in messageSet to ensure there will be at least 2/3 validators on the same step
 	if err := c.current.AddNewViews(data); err != nil {
 		logger.Trace("Failed to add new view", "msg", code, "src", src, "err", err)
 		return errAddNewViews
 	}
 
-	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", qc.node)
+	logger.Trace("handleNewView", "msg", code, "src", src, "prepareQC", prepareQC.node)
 
 	if size := c.current.NewViewSize(); size >= c.Q() && c.currentState() < StateHighQC {
 		highQC, err := c.getHighQC()
@@ -80,7 +82,7 @@ func (c *core) handleNewView(data *Message) error {
 		c.current.SetHighQC(highQC)
 		c.setCurrentState(StateHighQC)
 
-		logger.Trace("acceptHighQC", "msg", code, "prepareQC", qc.node, "msgSize", size)
+		logger.Trace("acceptHighQC", "msg", code, "prepareQC", prepareQC.node, "msgSize", size)
 		c.sendPrepare()
 	}
 
