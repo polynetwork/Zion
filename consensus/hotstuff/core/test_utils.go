@@ -135,7 +135,7 @@ func (ts *testSystemBackend) Address() common.Address {
 }
 
 // Peers returns all connected peers
-func (ts *testSystemBackend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSet {
+func (ts *testSystemBackend) Validators(height uint64, mining bool) hotstuff.ValidatorSet {
 	return ts.peers
 }
 

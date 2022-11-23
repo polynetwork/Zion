@@ -132,10 +132,10 @@ func (c *core) checkNode(node *Node, compare bool) error {
 // process, because that the `core` instance will sync block until the current height to the correct value.
 //
 //
-// if the view is equal the current view, compare the Message type and round state, with the right
+// todo(fuk):if the view is equal the current view, compare the Message type and round state, with the right
 // round state sequence, Message ahead of certain state is `old Message`, and Message behind certain
 // state is `future Message`. Message type and round state table as follow:
-func (c *core) checkView(view *View) error { //todo
+func (c *core) checkView(view *View) error {
 	if view == nil || view.Height == nil || view.Round == nil {
 		return errInvalidMessage
 	}
@@ -203,7 +203,6 @@ func genesisQC(lastBlock *types.Block) (*QuorumCert, error) {
 		return nil, errInvalidNode
 	}
 
-	//todo(fuk): copy(qc.proposer[:], h.Coinbase[:])
 	copy(qc.seal, extra.Seal)
 	copy(qc.committedSeal, extra.CommittedSeal)
 	return qc, nil
@@ -303,6 +302,7 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 	}
 
 	// matching view and compare proposer and local node
+	var valset hotstuff.ValidatorSet
 	if data.Code == MsgTypePreCommit || data.Code == MsgTypeCommit || data.Code == MsgTypeDecide {
 		if qc.view.Cmp(data.View) != 0 {
 			return fmt.Errorf("qc.view %v not matching message view", qc.view)
@@ -315,10 +315,12 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 		} else if node.Hash() != qc.node {
 			return fmt.Errorf("expect node %v, got %v", node.Hash(), qc.node)
 		}
+		valset = c.valSet.Copy()
 	} else {
 		if hdiff, rdiff := data.View.Sub(qc.view); hdiff < 0 || (hdiff == 0 && rdiff < 0) {
 			return fmt.Errorf("view is invalid")
 		}
+		valset = c.backend.Validators(qc.HeightU64(), false)
 	}
 
 	// resturct msg payload and compare msg.hash with qc.hash
@@ -331,9 +333,7 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 	}
 
 	// find the correct validator set and verify seal & committed seals
-	//valset := c.backend.Validators(qc.hash, false)
-	// todo: fix epoch change valset change
-	return c.signer.VerifyQC(qc, c.valSet)
+	return c.signer.VerifyQC(qc, valset)
 }
 
 // sendVote repo send kinds of vote to leader, use `current.node` after repo `prepared`.

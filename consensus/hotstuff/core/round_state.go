@@ -72,7 +72,6 @@ type roundState struct {
 	commitVotes    *MessageSet // data set for commitVote message
 
 	highQC      *QuorumCert // leader highQC
-	preCommitQC *QuorumCert // leader preCommitQC
 	prepareQC   *QuorumCert // prepareQC for repo and leader
 	lockQC      *QuorumCert // lockQC for repo and leader
 	committedQC *QuorumCert // committedQC for repo and leader
@@ -270,14 +269,6 @@ func (s *roundState) PrepareQC() *QuorumCert {
 	return s.prepareQC
 }
 
-func (s *roundState) SetPreCommittedQC(qc *QuorumCert) {
-	s.preCommitQC = qc
-}
-
-func (s *roundState) PreCommittedQC() *QuorumCert {
-	return s.preCommitQC
-}
-
 func (s *roundState) SetCommittedQC(qc *QuorumCert) error {
 	if err := s.storeCommitQC(qc); err != nil {
 		return err
@@ -369,9 +360,7 @@ const (
 	blockSuffix        = "block"
 )
 
-// todo(fuk): 不能返回error，这里需要考虑到两种情况，一种是节点半路加入共识，此时其所有的存储状态为空，也就是之前的qc都没有存储过
-// 此外就是对于block1，可能存在几轮都失败的情况
-// state是否需要reload???
+// todo(fuk): add comments
 func (s *roundState) reload(view *View) {
 	var (
 		err      error

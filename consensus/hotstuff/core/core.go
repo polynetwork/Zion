@@ -130,7 +130,7 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 
 	// calculate validator set
-	c.valSet = c.backend.Validators(common.EmptyHash, true)
+	c.valSet = c.backend.Validators(newView.HeightU64(), true)
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 
 	// update smr and try to unlock at the round0
