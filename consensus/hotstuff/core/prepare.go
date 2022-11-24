@@ -60,6 +60,7 @@ func (c *core) sendPrepare() {
 	}
 
 	// consensus spent time always less than a block period, waiting for `delay` time to catch up the system time.
+	// todo(fuk): waiting in `startNewRound`
 	if block.Time() > uint64(time.Now().Unix()) {
 		delay := time.Unix(int64(block.Time()), 0).Sub(time.Now())
 		time.Sleep(delay)
@@ -186,16 +187,17 @@ func (c *core) extend(node *Node, highQC *QuorumCert) error {
 // proposal extend lockQC `OR` highQC.view > lockQC.view
 func (c *core) safeNode(node *Node, highQC *QuorumCert) error {
 	if highQC == nil || highQC.view == nil {
-		return errSafeNode
+		return errInvalidQC
 	}
 
-	// skip genesis block
-	lockQC := c.current.lockQC
+	// skip epoch start block
+	lockQC := c.current.LockQC()
+	height := node.Block.NumberU64()
 	if lockQC == nil {
-		if node.Block.NumberU64() == 1 {
+		if c.isEpochStartQC(nil, highQC) && height == highQC.HeightU64()+1 {
 			return nil
 		} else {
-			return errSafeNode
+			return fmt.Errorf("lockQC is nil, point %v, node.block.height %v, highQC.view %v", c.point, height, highQC.view)
 		}
 	}
 

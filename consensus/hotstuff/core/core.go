@@ -52,7 +52,10 @@ type core struct {
 	pendingRequests   *prque.Prque
 	pendingRequestsMu *sync.Mutex
 
-	validateFn func(common.Hash, []byte, bool) (common.Address, error)
+	lastVals hotstuff.ValidatorSet // validator set for last epoch
+	point    uint64                // epoch start height, header's extra contains valset
+
+	validateFn func(common.Hash, []byte) (common.Address, error)
 	isRunning  bool
 }
 
@@ -158,7 +161,10 @@ func (c *core) startNewRound(round *big.Int) {
 
 // check point and return true if the engine is stopped, return false if the validators not changed
 func (c *core) checkPoint(view *View) bool {
-	if c.backend.CheckPoint(view.Height.Uint64()) {
+	if epochStart, ok := c.backend.CheckPoint(view.HeightU64()); ok {
+		c.point = epochStart
+		c.lastVals = c.valSet.Copy()
+		c.logger.Trace("CheckPoint done", "view", view, "point", c.point)
 		c.backend.ReStart()
 	}
 	if !c.isRunning {
@@ -168,24 +174,41 @@ func (c *core) checkPoint(view *View) bool {
 }
 
 func (c *core) updateRoundState(lastProposal *types.Block, newView *View) error {
-	if c.current != nil {
-		c.current.update(c.valSet, lastProposal, newView)
+	if c.current == nil {
+		c.current = newRoundState(c.db, c.logger.New(), c.valSet, lastProposal, newView)
+		c.current.reload(newView)
+	} else {
+		c.current = c.current.update(c.valSet, lastProposal, newView)
+	}
+
+	// genesis 区块为0，那么第一个区块共识的时候，prepareQC.view = (0, 0),时特殊处理，一旦有过达成一次`prepared`, 那么高度就变成 >= (1, 0)
+	// epoch start 区块为30， 该区块包含validatorset，extra中包含对区块hash的多签，最开始使用extra构造prepareQC的时候，那么prepareQC.view = (30, 0),
+	// 一旦达成一次prepared之后，prepareQC.view就成为(31, 0)
+	if !c.isEpochStartQC(c.currentView(), nil) {
 		return nil
 	}
 
-	// new current
-	c.current = newRoundState(c.db, c.logger.New(), c.valSet, lastProposal, newView)
-	c.current.reload(newView)
-	if c.current.prepareQC == nil && lastProposal.NumberU64() == 0 {
-		prepareQC, err := genesisQC(lastProposal)
-		if err != nil {
-			return err
-		}
-		c.current.prepareQC = prepareQC
+	prepareQC := c.current.PrepareQC()
+	if prepareQC != nil && prepareQC.node == lastProposal.Hash() {
+		c.logger.Trace("EpochStartPrepareQC already exist!", "newView", newView, "last block height", lastProposal.NumberU64(), "last block hash", lastProposal.Hash(), "qc.node", prepareQC.node, "qc.view", prepareQC.view, "qc.proposer", prepareQC.proposer)
+		return nil
 	}
+
+	qc, err := epochStartQC(lastProposal)
+	if err != nil {
+		return err
+	}
+	if err := c.current.SetPrepareQC(qc); err != nil {
+		return err
+	}
+	// clear old `lockQC` and `commitQC`
+	c.current.lockQC = nil
+	c.current.committedQC = nil
+	c.logger.Trace("EpochStartPrepareQC settled!", "newView", newView, "last block height", lastProposal.NumberU64(), "last block hash", lastProposal.Hash(), "qc.node", qc.node, "qc.view", qc.view, "qc.proposer", qc.proposer)
 	return nil
 }
 
+// setCurrentState handle backlog message after round state settled.
 func (c *core) setCurrentState(s State) {
 	c.current.SetState(s)
 	if s == StateAcceptRequest || s == StateHighQC {
@@ -194,6 +217,6 @@ func (c *core) setCurrentState(s State) {
 	c.processBacklog()
 }
 
-func (c *core) checkValidatorSignature(hash common.Hash, sig []byte, seal bool) (common.Address, error) {
-	return c.signer.CheckSignature(c.valSet, hash, sig, seal)
+func (c *core) checkValidatorSignature(hash common.Hash, sig []byte) (common.Address, error) {
+	return c.signer.CheckSignature(c.valSet, hash, sig)
 }

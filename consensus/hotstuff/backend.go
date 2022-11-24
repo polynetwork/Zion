@@ -67,7 +67,8 @@ type Backend interface {
 	// ValidateBlock execute block which contained in prepare message, and validate block state
 	ValidateBlock(block *types.Block) error
 
-	CheckPoint(height uint64) bool
+	// CheckPoint retrieve the flag of epoch change and new epoch start height
+	CheckPoint(height uint64) (uint64, bool)
 
 	ReStart()
 

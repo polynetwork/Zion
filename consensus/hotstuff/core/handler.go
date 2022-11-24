@@ -243,7 +243,7 @@ func (c *core) finalizeMessage(msg *Message) ([]byte, error) {
 	// Add proof of consensus
 	node := c.current.Node()
 	if msg.Code == MsgTypeCommitVote && node != nil && node.Block != nil {
-		if seal, err = c.signer.SignHash(node.Block.Hash(), true); err != nil {
+		if seal, err = c.signer.SignHash(node.Block.Hash()); err != nil {
 			return nil, err
 		}
 		msg.CommittedSeal = seal
@@ -253,7 +253,7 @@ func (c *core) finalizeMessage(msg *Message) ([]byte, error) {
 	if _, err = msg.PayloadNoSig(); err != nil {
 		return nil, err
 	}
-	if sig, err = c.signer.SignHash(msg.hash, false); err != nil {
+	if sig, err = c.signer.SignHash(msg.hash); err != nil {
 		return nil, err
 	} else {
 		msg.Signature = sig

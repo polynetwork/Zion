@@ -97,27 +97,31 @@ func newRoundState(db ethdb.Database, logger log.Logger, validatorSet hotstuff.V
 }
 
 // clean all votes message set for new round
-func (s *roundState) update(vs hotstuff.ValidatorSet, lastChainedBlock *types.Block, view *View) {
-	if view.HeightU64() > s.HeightU64() {
-		if lastChainedBlock.NumberU64() == s.lastChainedBlock.NumberU64() {
-			panic(fmt.Sprintf("block fork choice, last view %v, current view %v,"+
-				" last round hash %v, current round hash %v",
-				s.View(), view, s.lastChainedBlock.Hash(), lastChainedBlock.Hash()))
-		} else if lastChainedBlock.NumberU64() != s.lastChainedBlock.NumberU64()+1 {
-			panic(fmt.Sprintf("invalid `lastProposal` height, expect %v, got %v",
-				s.lastChainedBlock.NumberU64()+1, lastChainedBlock.NumberU64()))
-		} else {
-			s.lastChainedBlock = lastChainedBlock
-		}
-	}
+func (s *roundState) update(vs hotstuff.ValidatorSet, lastChainedBlock *types.Block, view *View) *roundState {
+	// todo(fuk): useless code
+	//if view.HeightU64() > s.HeightU64() {
+	//	if lastChainedBlock.NumberU64() == s.lastChainedBlock.NumberU64() {
+	//		panic(fmt.Sprintf("block fork choice, last view %v, current view %v,"+
+	//			" last round hash %v, current round hash %v",
+	//			s.View(), view, s.lastChainedBlock.Hash(), lastChainedBlock.Hash()))
+	//	} else if lastChainedBlock.NumberU64() != s.lastChainedBlock.NumberU64()+1 {
+	//		panic(fmt.Sprintf("invalid `lastProposal` height, expect %v, got %v",
+	//			s.lastChainedBlock.NumberU64()+1, lastChainedBlock.NumberU64()))
+	//	} else {
+	//		s.lastChainedBlock = lastChainedBlock
+	//	}
+	//}
 
 	s.vs = vs.Copy()
 	s.height = view.Height
 	s.round = view.Round
+	s.lastChainedBlock = lastChainedBlock
 	s.newViews = NewMessageSet(vs)
 	s.prepareVotes = NewMessageSet(vs)
 	s.preCommitVotes = NewMessageSet(vs)
 	s.commitVotes = NewMessageSet(vs)
+
+	return s
 }
 
 func (s *roundState) View() *View {
@@ -208,6 +212,10 @@ func (s *roundState) Lock(qc *QuorumCert) error {
 	s.lockedBlock = s.node.node.Block
 	s.proposalLocked = true
 	return nil
+}
+
+func (s *roundState) LockQC() *QuorumCert {
+	return s.lockQC
 }
 
 // Unlock it's happened at the start of new round, new state is `StateAcceptRequest`, and `lockQC` keep to judge safety rule

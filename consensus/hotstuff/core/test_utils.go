@@ -212,9 +212,9 @@ func (ts *testSystemBackend) HasPropsal(hash common.Hash, number *big.Int) bool 
 	return number.Cmp(big.NewInt(5)) == 0
 }
 
-func (ts *testSystemBackend) Close() error                  { return nil }
-func (ts *testSystemBackend) ReStart()                      {}
-func (ts *testSystemBackend) CheckPoint(height uint64) bool { return false }
+func (ts *testSystemBackend) Close() error                            { return nil }
+func (ts *testSystemBackend) ReStart()                                {}
+func (ts *testSystemBackend) CheckPoint(height uint64) (uint64, bool) { return 0, false }
 
 // ==============================================
 //
@@ -369,8 +369,7 @@ func (ts *testSigner) SealAfterCommit(h *types.Header, committedSeals [][]byte) 
 func (ts *testSigner) VerifyHeader(header *types.Header, valSet hotstuff.ValidatorSet, seal bool) (*types.HotstuffExtra, error) {
 	return nil, nil
 }
-func (ts *testSigner) VerifyQC(qc hotstuff.QC, valSet hotstuff.ValidatorSet) error    { return nil }
-func (ts *testSigner) CheckQCParticipant(qc hotstuff.QC, signer common.Address) error { return nil }
+func (ts *testSigner) VerifyQC(qc hotstuff.QC, valSet hotstuff.ValidatorSet, epoch bool) error    { return nil }
 func (ts *testSigner) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, signature []byte) (common.Address, error) {
 	return common.EmptyAddress, nil
 }
@@ -443,10 +442,10 @@ func newTestQCWithExtra(t *testing.T, s *testSystem, h int) *QuorumCert {
 	coinbase := vset.GetByIndex(uint64(h % N))
 
 	leader := s.getLeader()
-	seal, _ := leader.signer.SignHash(hash, true)
+	seal, _ := leader.signer.SignHash(hash)
 	committedSeal := make([][]byte, N-1)
 	for i, v := range s.getRepos() {
-		sig, err := v.signer.SignHash(hash, true)
+		sig, err := v.signer.SignHash(hash)
 		if err != nil {
 			t.Errorf("sign block hash failed, err: %v", err)
 		}

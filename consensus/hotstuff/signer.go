@@ -27,13 +27,13 @@ type Signer interface {
 	Address() common.Address
 
 	// SignHash returns an signature of wrapped proposal hash which used as an vote
-	SignHash(hash common.Hash, seal bool) ([]byte, error)
+	SignHash(hash common.Hash) ([]byte, error)
 
 	// SignTx sign transaction and full fill it with signature
 	SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error)
 
 	// CheckSignature extract address from signature and check if the address exist in validator set
-	CheckSignature(valSet ValidatorSet, hash common.Hash, signature []byte, seal bool) (common.Address, error)
+	CheckSignature(valSet ValidatorSet, hash common.Hash, signature []byte) (common.Address, error)
 
 	// Recover extracts the proposer address from a signed header.
 	Recover(h *types.Header) (common.Address, *types.HotstuffExtra, error)
@@ -42,5 +42,5 @@ type Signer interface {
 	VerifyHeader(header *types.Header, valSet ValidatorSet, seal bool) (*types.HotstuffExtra, error)
 
 	// VerifyQC verify quorum cert in consensus procedure
-	VerifyQC(qc QC, valSet ValidatorSet) error
+	VerifyQC(qc QC, valSet ValidatorSet, epoch bool) error
 }

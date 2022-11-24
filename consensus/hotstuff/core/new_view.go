@@ -62,7 +62,7 @@ func (c *core) handleNewView(data *Message) error {
 
 	// ensure remote `prepareQC` is legal.
 	if err := c.verifyQC(data, prepareQC); err != nil {
-		logger.Trace("Failed to verify highQC", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to verify prepareQC", "msg", code, "src", src, "err", err)
 		return err
 	}
 	// messages queued in messageSet to ensure there will be at least 2/3 validators on the same step

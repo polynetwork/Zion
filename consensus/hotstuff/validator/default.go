@@ -20,7 +20,6 @@ package validator
 
 import (
 	"errors"
-	"math"
 	"reflect"
 	"sort"
 	"sync"
@@ -261,7 +260,7 @@ func (valSet *defaultSet) CheckQuorum(committers []common.Address) error {
 	return nil
 }
 
-func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
+func (valSet *defaultSet) F() int { return (valSet.Size() - 1) / 3 }
 
 func (valSet *defaultSet) Q() int { return valSet.Size() - valSet.F() }
 

@@ -176,36 +176,19 @@ func (c *core) Q() int {
 	return c.valSet.Q()
 }
 
-var (
-	genesisView = &View{
-		Round:  big.NewInt(0),
-		Height: big.NewInt(0),
-	}
-	genesisNodeHash = common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000012345")
-)
+// sendVote repo send kinds of vote to leader, use `current.node` after repo `prepared`.
+func (c *core) sendVote(code MsgType, votes ...common.Hash) {
+	logger := c.newLogger()
 
-func genesisQC(lastBlock *types.Block) (*QuorumCert, error) {
-	qc := &QuorumCert{
-		view:          genesisView,
-		code:          MsgTypePrepareVote,
-		node:          genesisNodeHash,
-		proposer:      common.Address{},
-		seal:          make([]byte, 0),
-		committedSeal: make([][]byte, 0),
+	var vote common.Hash
+	if len(votes) == 0 {
+		vote = c.current.Vote()
+	} else {
+		vote = votes[0]
 	}
-
-	h := lastBlock.Header()
-	extra, err := types.ExtractHotstuffExtra(h)
-	if err != nil {
-		return nil, err
-	}
-	if extra.Seal == nil || extra.CommittedSeal == nil {
-		return nil, errInvalidNode
-	}
-
-	copy(qc.seal, extra.Seal)
-	copy(qc.committedSeal, extra.CommittedSeal)
-	return qc, nil
+	c.broadcast(code, vote.Bytes())
+	prefix := fmt.Sprintf("send%s", code.String())
+	logger.Trace(prefix, "msg", code, "hash", vote)
 }
 
 // assemble messages to quorum cert.
@@ -265,7 +248,7 @@ func (c *core) messages2qc(code MsgType) (*QuorumCert, error) {
 
 	// proposer self vote should be add in message set first.
 	if qc.seal == nil {
-		if sig, err := c.signer.SignHash(sealHash, false); err != nil {
+		if sig, err := c.signer.SignHash(sealHash); err != nil {
 			return nil, err
 		} else {
 			qc.seal = sig
@@ -287,8 +270,8 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 	}
 
 	// qc fields checking
-	if qc.node == common.EmptyHash || qc.seal == nil || qc.committedSeal == nil ||
-		(qc.proposer == common.EmptyAddress && qc.HeightU64() > 1) {
+	if qc.node == common.EmptyHash || qc.proposer == common.EmptyAddress ||
+		qc.seal == nil || qc.committedSeal == nil {
 		return errInvalidQC
 	}
 
@@ -301,8 +284,19 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 		return fmt.Errorf("qc.code %s not matching message code", qc.code.String())
 	}
 
+	// prepareQC's view should lower than message's view
+	if data.Code == MsgTypeNewView || data.Code == MsgTypePrepare {
+		if hdiff, rdiff := data.View.Sub(qc.view); hdiff < 0 || (hdiff == 0 && rdiff < 0) {
+			return fmt.Errorf("view is invalid")
+		}
+	}
+
+	// qc.node is not node hash but block hash, only used for epoch change.
+	if c.isEpochStartQC(nil, qc) {
+		return c.verifyEpochStartQC(qc)
+	}
+
 	// matching view and compare proposer and local node
-	var valset hotstuff.ValidatorSet
 	if data.Code == MsgTypePreCommit || data.Code == MsgTypeCommit || data.Code == MsgTypeDecide {
 		if qc.view.Cmp(data.View) != 0 {
 			return fmt.Errorf("qc.view %v not matching message view", qc.view)
@@ -315,12 +309,6 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 		} else if node.Hash() != qc.node {
 			return fmt.Errorf("expect node %v, got %v", node.Hash(), qc.node)
 		}
-		valset = c.valSet.Copy()
-	} else {
-		if hdiff, rdiff := data.View.Sub(qc.view); hdiff < 0 || (hdiff == 0 && rdiff < 0) {
-			return fmt.Errorf("view is invalid")
-		}
-		valset = c.backend.Validators(qc.HeightU64(), false)
 	}
 
 	// resturct msg payload and compare msg.hash with qc.hash
@@ -333,20 +321,56 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 	}
 
 	// find the correct validator set and verify seal & committed seals
-	return c.signer.VerifyQC(qc, valset)
+	return c.signer.VerifyQC(qc, c.valSet, false)
 }
 
-// sendVote repo send kinds of vote to leader, use `current.node` after repo `prepared`.
-func (c *core) sendVote(code MsgType, votes ...common.Hash) {
-	logger := c.newLogger()
-
-	var vote common.Hash
-	if len(votes) == 0 {
-		vote = c.current.Vote()
-	} else {
-		vote = votes[0]
+func (c *core) verifyEpochStartQC(qc *QuorumCert) error {
+	if err := c.signer.VerifyQC(qc, c.lastVals, true); err != nil {
+		return fmt.Errorf("verify EpochStartQC failed, view %v, node hash %v, valset %v, err: %v", qc.view, qc.node, c.lastVals, err)
 	}
-	c.broadcast(code, vote.Bytes())
-	prefix := fmt.Sprintf("send%s", code.String())
-	logger.Trace(prefix, "msg", code, "hash", vote)
+	return nil
+}
+
+func (c *core) isEpochStartQC(curView *View, qc *QuorumCert) bool {
+	// only check view
+	if (curView != nil && qc == nil) && (curView.HeightU64() == 1 || curView.HeightU64() == c.point+1) && curView.RoundU64() == 0 {
+		return true
+	}
+	// only check qc.view
+	if (curView == nil && qc != nil) && qc.HeightU64() == c.point && qc.RoundU64() == 0 && qc.code == MsgTypePrepareVote {
+		return true
+	}
+	return false
+}
+
+// epochStartQC use block hash as node hash
+func epochStartQC(lastBlock *types.Block) (*QuorumCert, error) {
+	qc := &QuorumCert{
+		view: &View{
+			Round:  big.NewInt(0),
+			Height: lastBlock.Number(),
+		},
+		code: MsgTypePrepareVote,
+	}
+
+	// allow genesis node and proposer to be empty
+	if lastBlock.NumberU64() == 0 {
+		qc.proposer = common.Address{}
+		qc.node = common.HexToHash("0x12345")
+	} else {
+		qc.proposer = lastBlock.Coinbase()
+		qc.node = lastBlock.Hash()
+	}
+
+	extra, err := types.ExtractHotstuffExtra(lastBlock.Header())
+	if err != nil {
+		return nil, err
+	}
+	if extra.Seal == nil || extra.CommittedSeal == nil {
+		return nil, errInvalidNode
+	}
+
+	qc.seal = extra.Seal
+	qc.committedSeal = extra.CommittedSeal
+	return qc, nil
 }

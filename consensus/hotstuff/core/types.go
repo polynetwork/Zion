@@ -269,6 +269,10 @@ func (qc *QuorumCert) SealHash() common.Hash {
 	return msg.hash
 }
 
+func (qc *QuorumCert) NodeHash() common.Hash {
+	return qc.node
+}
+
 func (qc *QuorumCert) Proposer() common.Address {
 	return qc.proposer
 }
@@ -363,7 +367,7 @@ func (m *Message) DecodeRLP(s *rlp.Stream) error {
 //
 // define the functions that needs to be provided for core.
 
-func (m *Message) FromPayload(src common.Address, payload []byte, validateFn func(common.Hash, []byte, bool) (common.Address, error)) error {
+func (m *Message) FromPayload(src common.Address, payload []byte, validateFn func(common.Hash, []byte) (common.Address, error)) error {
 	// Decode Message
 	if err := rlp.DecodeBytes(payload, &m); err != nil {
 		return err
@@ -379,7 +383,7 @@ func (m *Message) FromPayload(src common.Address, payload []byte, validateFn fun
 		return err
 	}
 	if validateFn != nil {
-		signer, err := validateFn(m.hash, m.Signature, false)
+		signer, err := validateFn(m.hash, m.Signature)
 		if err != nil {
 			return err
 		}

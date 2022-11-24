@@ -57,7 +57,7 @@ func (c *core) handleCommitVote(data *Message) error {
 		logger.Trace("Failed to get lockBlock", "msg", code, "src", src, "err", "block is nil")
 		return errInvalidNode
 	}
-	if addr, err := c.validateFn(lockedBlock.Hash(), data.CommittedSeal, true); err != nil {
+	if addr, err := c.validateFn(lockedBlock.Hash(), data.CommittedSeal); err != nil {
 		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err, "expect", src, "got", addr)
 		return err
 	}

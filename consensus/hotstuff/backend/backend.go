@@ -73,7 +73,7 @@ type backend struct {
 	broadcaster consensus.Broadcaster // event subscription for ChainHeadEvent event
 	nodesFeed   event.Feed            // event subscription for static nodes listen
 	eventMux    *event.TypeMux
-	point       int32 // check point mutex
+	epochMu     int32 // check point mutex
 }
 
 func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) *backend {

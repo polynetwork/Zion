@@ -173,7 +173,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	header := block.Header()
 
 	// sign the sig hash and fill extra seal
-	seal, err := s.signer.SignHash(block.Hash(), true)
+	seal, err := s.signer.SignHash(block.Hash())
 	if err != nil {
 		return err
 	}
