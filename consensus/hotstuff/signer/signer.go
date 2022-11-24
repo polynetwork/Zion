@@ -46,6 +46,7 @@ type SignerImpl struct {
 	commitSigSalt []byte
 }
 
+// todo(fuk): commitSalt contract spent and develop
 func NewSigner(privateKey *ecdsa.PrivateKey) *SignerImpl {
 	signatures, _ := lru.NewARC(inmemorySignatures)
 	address := crypto.PubkeyToAddress(privateKey.PublicKey)
