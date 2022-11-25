@@ -214,13 +214,10 @@ func (c *core) acceptCommitQC(sealedBlock *types.Block, commitQC *QuorumCert) er
 	}
 
 	// update sealed block for executedState
-	executed := c.current.ExecutedBlock(sealedBlock.Hash())
-	if executed == nil {
+	if executed := c.current.ExecutedBlock(sealedBlock.Hash()); executed == nil {
 		if err := c.executeBlock(sealedBlock); err != nil {
 			return fmt.Errorf("execute block failed, err: %v", err)
 		}
-		executed = c.current.ExecutedBlock(sealedBlock.Hash())
-		c.current.AddExecutedBlock(executed)
 	} else {
 		if err := c.current.UpdateExecutedBlock(sealedBlock); err != nil {
 			return fmt.Errorf("update executed block failed, err: %v", err)
