@@ -20,6 +20,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -29,6 +30,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -313,6 +315,27 @@ func (s *backend) HasBadProposal(hash common.Hash) bool {
 		return false
 	}
 	return s.hasBadBlock(s.db, hash)
+}
+
+func (s *backend) ExecuteBlock(block *types.Block) (*state.BlockExecuteState, error) {
+	return s.chain.ExecuteBlock(block)
+}
+
+func (s *backend) WriteExecutedBlock(data *state.BlockExecuteState) error {
+	if data == nil || data.Block == nil {
+		return fmt.Errorf("invalid blockExecuteState")
+	}
+	extra, err := types.ExtractHotstuffExtraPayload(data.Block.Header().Extra)
+	if err != nil {
+		return err
+	}
+	if len(extra.Seal) != 65 {
+		return fmt.Errorf("invalid seal")
+	}
+	if len(extra.CommittedSeal) == 0 {
+		return fmt.Errorf("committed seals length is 0")
+	}
+	return s.chain.WriteExecutedBlock(data)
 }
 
 func (s *backend) SendValidatorsChange(list []common.Address) {

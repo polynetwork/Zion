@@ -32,6 +32,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -83,7 +84,7 @@ func makeBlock(number int) *types.Block {
 	return block.WithSeal(header)
 }
 
-func newTestProposal() hotstuff.Proposal {
+func newTestProposal() *types.Block {
 	return makeBlock(1)
 }
 
@@ -192,12 +193,11 @@ func (ts *testSystemBackend) Verify(block *types.Block, seal bool) (time.Duratio
 	return 0, nil
 }
 
-//func (ts *testSystemBackend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
-//	return 0, nil
-//}
-
-func (ts *testSystemBackend) ValidateBlock(block *types.Block) error { return nil }
-func (ts *testSystemBackend) HasBadProposal(hash common.Hash) bool   { return false }
+func (ts *testSystemBackend) ExecuteBlock(block *types.Block) (*state.BlockExecuteState, error) {
+	return nil, nil
+}
+func (ts *testSystemBackend) WriteExecutedBlock(data *state.BlockExecuteState) error { return nil }
+func (ts *testSystemBackend) HasBadProposal(hash common.Hash) bool                   { return false }
 
 func (ts *testSystemBackend) LastProposal() (*types.Block, common.Address) {
 	l := len(ts.committedMsgs)
@@ -369,7 +369,9 @@ func (ts *testSigner) SealAfterCommit(h *types.Header, committedSeals [][]byte) 
 func (ts *testSigner) VerifyHeader(header *types.Header, valSet hotstuff.ValidatorSet, seal bool) (*types.HotstuffExtra, error) {
 	return nil, nil
 }
-func (ts *testSigner) VerifyQC(qc hotstuff.QC, valSet hotstuff.ValidatorSet, epoch bool) error    { return nil }
+func (ts *testSigner) VerifyQC(qc hotstuff.QC, valSet hotstuff.ValidatorSet, epoch bool) error {
+	return nil
+}
 func (ts *testSigner) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, signature []byte) (common.Address, error) {
 	return common.EmptyAddress, nil
 }

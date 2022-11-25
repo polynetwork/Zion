@@ -54,19 +54,23 @@ type ChainHeaderReader interface {
 type ChainReader interface {
 	ChainHeaderReader
 
+	// State returns a new mutable state based on the current HEAD block.
+	State() (*state.StateDB, error)
+
+	// CurrentBlock retrieve latest chained block
+	CurrentBlock() *types.Block
+
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
 	// GetBlockByHash retrieves a block from the database by hash
 	GetBlockByHash(hash common.Hash) *types.Block
 
-	// PreExecuteBlock pre-execute block transactions and validate states
-	PreExecuteBlock(block *types.Block) error
+	// ExecuteBlock pre-execute block transactions and validate states
+	ExecuteBlock(block *types.Block) (*state.BlockExecuteState, error)
 
-	CurrentBlock() *types.Block
-
-	// State returns a new mutable state based on the current HEAD block.
-	State() (*state.StateDB, error)
+	// WriteExecutedBlock write block with receipts, logs and caching stateDB
+	WriteExecutedBlock(data *state.BlockExecuteState) error
 }
 
 // Engine is an algorithm agnostic consensus engine.

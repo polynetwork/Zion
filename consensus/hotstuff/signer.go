@@ -43,4 +43,7 @@ type Signer interface {
 
 	// VerifyQC verify quorum cert in consensus procedure
 	VerifyQC(qc QC, valSet ValidatorSet, epoch bool) error
+
+	// VerifyCommittedSeal verify signatures in header's extra
+	VerifyCommittedSeal(valset ValidatorSet, hash common.Hash, committedSeal [][]byte) error
 }

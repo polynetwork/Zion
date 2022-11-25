@@ -317,6 +317,12 @@ func (m *Subject) String() string {
 	return fmt.Sprintf("{Node: %s, Block: %v, Parent: %v, QC: %v}", m.Node.Hash(), m.Node.Block.Hash(), m.Node.Parent, m.QC.node)
 }
 
+type Diploma struct {
+	CommitQC       *QuorumCert
+	BlockHash      common.Hash
+	CommittedSeals [][]byte
+}
+
 type Message struct {
 	address common.Address
 	hash    common.Hash

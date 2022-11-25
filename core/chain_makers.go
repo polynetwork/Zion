@@ -296,12 +296,15 @@ func (cr *fakeChainReader) Config() *params.ChainConfig {
 	return cr.config
 }
 
+func (cr *fakeChainReader) State() (*state.StateDB, error)                          { return nil, nil }
 func (cr *fakeChainReader) CurrentHeader() *types.Header                            { return nil }
+func (cr *fakeChainReader) CurrentBlock() *types.Block                              { return nil }
 func (cr *fakeChainReader) GetHeaderByNumber(number uint64) *types.Header           { return nil }
 func (cr *fakeChainReader) GetHeaderByHash(hash common.Hash) *types.Header          { return nil }
 func (cr *fakeChainReader) GetHeader(hash common.Hash, number uint64) *types.Header { return nil }
 func (cr *fakeChainReader) GetBlock(hash common.Hash, number uint64) *types.Block   { return nil }
 func (cr *fakeChainReader) GetBlockByHash(hash common.Hash) *types.Block            { return nil }
-func (cr *fakeChainReader) PreExecuteBlock(block *types.Block) error                { return nil }
-func (cr *fakeChainReader) CurrentBlock() *types.Block                              { return nil }
-func (cr *fakeChainReader) State() (*state.StateDB, error)                          { return nil, nil }
+func (cr *fakeChainReader) WriteExecutedBlock(data *state.BlockExecuteState) error  { return nil }
+func (cr *fakeChainReader) ExecuteBlock(block *types.Block) (*state.BlockExecuteState, error) {
+	return nil, nil
+}

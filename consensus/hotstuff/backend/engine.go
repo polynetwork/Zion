@@ -222,10 +222,6 @@ func (s *backend) SealHash(header *types.Header) (hash common.Hash) {
 	return hotstuff.RLPHash(cleanHeader)
 }
 
-func (s *backend) ValidateBlock(block *types.Block) error {
-	return s.chain.PreExecuteBlock(block)
-}
-
 // useless
 func (s *backend) CalcDifficulty(chain consensus.ChainHeaderReader, time uint64, parent *types.Header) *big.Int {
 	return new(big.Int)

@@ -134,7 +134,7 @@ func (c *core) handlePrepare(data *Message) error {
 		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err, "duration", duration)
 		return errVerifyUnsealedProposal
 	}
-	if err := c.preExecuteBlock(block); err != nil {
+	if err := c.executeBlock(block); err != nil {
 		logger.Trace("Failed to pre-execute block", "msg", code, "src", src, "err", err)
 		return err
 	}
@@ -170,6 +170,16 @@ func (c *core) handlePrepare(data *Message) error {
 		c.sendVote(MsgTypePrepareVote, node.Hash())
 	}
 
+	return nil
+}
+
+func (c *core) executeBlock(block *types.Block) error {
+	result, err := c.backend.ExecuteBlock(block)
+	if err != nil {
+		return err
+	}
+
+	c.current.AddExecutedBlock(result)
 	return nil
 }
 

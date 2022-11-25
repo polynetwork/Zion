@@ -24,11 +24,14 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rlp"
 )
+
+const executedBlockCachingSize = 5 // caching amount of executed blocks
 
 func (c *core) currentView() *View {
 	return &View{
@@ -64,6 +67,7 @@ type roundState struct {
 	node             *roundNode
 	lockedBlock      *types.Block // validator's prepare proposal
 	proposalLocked   bool
+	executed         map[common.Hash]*state.BlockExecuteState // executed block with receipts and logs
 
 	// o(4n)
 	newViews       *MessageSet // data set for newView message
@@ -92,6 +96,7 @@ func newRoundState(db ethdb.Database, logger log.Logger, validatorSet hotstuff.V
 		prepareVotes:     NewMessageSet(validatorSet),
 		preCommitVotes:   NewMessageSet(validatorSet),
 		commitVotes:      NewMessageSet(validatorSet),
+		executed:         make(map[common.Hash]*state.BlockExecuteState),
 	}
 	return rs
 }
@@ -120,6 +125,8 @@ func (s *roundState) update(vs hotstuff.ValidatorSet, lastChainedBlock *types.Bl
 	s.prepareVotes = NewMessageSet(vs)
 	s.preCommitVotes = NewMessageSet(vs)
 	s.commitVotes = NewMessageSet(vs)
+
+	s.ClearExecutedBlocks(executedBlockCachingSize)
 
 	return s
 }
@@ -193,6 +200,42 @@ func (s *roundState) Node() *Node {
 		return temp
 	} else {
 		return s.node.node
+	}
+}
+
+func (s *roundState) AddExecutedBlock(result *state.BlockExecuteState) {
+	hash := result.Block.Hash()
+	if _, ok := s.executed[hash]; !ok {
+		s.executed[hash] = result
+	}
+}
+
+func (s *roundState) UpdateExecutedBlock(block *types.Block) error {
+	hash := block.Hash()
+	executed := s.executed[hash]
+	if executed == nil {
+		return fmt.Errorf("executed state %v is nil", hash)
+	}
+	executed.Block = block
+	s.executed[hash] = executed
+	return nil
+}
+
+func (s *roundState) ExecutedBlock(hash common.Hash) *state.BlockExecuteState {
+	return s.executed[hash]
+}
+
+func (s *roundState) ClearExecutedBlocks(threshold uint64) {
+	if s.HeightU64() < threshold {
+		return
+	} else {
+		threshold = s.HeightU64() - threshold
+	}
+
+	for hash, v := range s.executed {
+		if v.Block.NumberU64() <= threshold {
+			delete(s.executed, hash)
+		}
 	}
 }
 

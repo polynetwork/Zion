@@ -24,7 +24,6 @@ import (
 	"reflect"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/log"
 )
@@ -155,18 +154,6 @@ func (c *core) checkView(view *View) error {
 	}
 }
 
-func (c *core) preExecuteBlock(proposal hotstuff.Proposal) error {
-	if c.IsProposer() {
-		return nil
-	}
-
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		return errInvalidNode
-	}
-	return c.backend.ValidateBlock(block)
-}
-
 func (c *core) newLogger() log.Logger {
 	logger := c.logger.New("state", c.currentState(), "view", c.currentView())
 	return logger
@@ -261,7 +248,7 @@ func (c *core) messages2qc(code MsgType) (*QuorumCert, error) {
 // verifyQC check and validate qc.
 func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 	if qc == nil || qc.view == nil {
-		return errInvalidQC
+		return fmt.Errorf("qc or qc.view is nil")
 	}
 
 	// skip genesis block
@@ -272,7 +259,7 @@ func (c *core) verifyQC(data *Message, qc *QuorumCert) error {
 	// qc fields checking
 	if qc.node == common.EmptyHash || qc.proposer == common.EmptyAddress ||
 		qc.seal == nil || qc.committedSeal == nil {
-		return errInvalidQC
+		return fmt.Errorf("qc.node, proposer, seal or committedSeal is nil")
 	}
 
 	// matching code

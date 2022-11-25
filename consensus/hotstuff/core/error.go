@@ -45,6 +45,7 @@ var (
 	errInvalidNode            = errors.New("invalid node")
 	errInvalidCode            = errors.New("message type invalid")
 	errInvalidQC              = errors.New("invalid qc")
+	errInvalidBlock           = errors.New("invalid block")
 	errVerifyUnsealedProposal = errors.New("verify unsealed proposal failed")
 	errExtend                 = errors.New("proposal extend relationship error")
 	errSafeNode               = errors.New("safeNode checking failed")

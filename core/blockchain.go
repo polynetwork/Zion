@@ -2514,19 +2514,34 @@ func (bc *BlockChain) SubscribeBlockProcessingEvent(ch chan<- bool) event.Subscr
 	return bc.scope.Track(bc.blockProcFeed.Subscribe(ch))
 }
 
-func (bc *BlockChain) PreExecuteBlock(block *types.Block) error {
+func (bc *BlockChain) ExecuteBlock(block *types.Block) (*state.BlockExecuteState, error) {
 	parent := bc.GetBlockByHash(block.ParentHash())
 	statedb, err := bc.StateAt(parent.Root())
 	if err != nil {
-		return err
+		return nil, err
 	}
 
-	receipts, _, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
+	receipts, allLogs, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err := bc.validator.ValidateState(block, statedb, receipts, usedGas); err != nil {
-		return err
+		return nil, err
 	}
-	return nil
+
+	result := &state.BlockExecuteState{
+		Block:    block,
+		Receipts: receipts,
+		Logs:     allLogs,
+		State:    statedb,
+	}
+	return result, nil
+}
+
+func (bc *BlockChain) WriteExecutedBlock(data *state.BlockExecuteState) error {
+	bc.chainmu.Lock()
+	defer bc.chainmu.Unlock()
+
+	_, err := bc.writeBlockWithState(data.Block, data.Receipts, data.Logs, data.State, true)
+	return err
 }

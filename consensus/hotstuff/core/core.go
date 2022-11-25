@@ -85,7 +85,8 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 
 	var (
-		changeView                 = false
+		changeView = false
+		// todo(fuk): chain.currentBlock related with state but not header
 		lastProposal, lastProposer = c.backend.LastProposal()
 	)
 
@@ -181,9 +182,6 @@ func (c *core) updateRoundState(lastProposal *types.Block, newView *View) error 
 		c.current = c.current.update(c.valSet, lastProposal, newView)
 	}
 
-	// genesis 区块为0，那么第一个区块共识的时候，prepareQC.view = (0, 0),时特殊处理，一旦有过达成一次`prepared`, 那么高度就变成 >= (1, 0)
-	// epoch start 区块为30， 该区块包含validatorset，extra中包含对区块hash的多签，最开始使用extra构造prepareQC的时候，那么prepareQC.view = (30, 0),
-	// 一旦达成一次prepared之后，prepareQC.view就成为(31, 0)
 	if !c.isEpochStartQC(c.currentView(), nil) {
 		return nil
 	}
