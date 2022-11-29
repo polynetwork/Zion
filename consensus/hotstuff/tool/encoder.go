@@ -175,3 +175,15 @@ func PubkeyID(pub *ecdsa.PublicKey) Discv5NodeID {
 	copy(id[:], pbytes[1:])
 	return id
 }
+
+func ID2PubKey(raw []byte) *ecdsa.PublicKey {
+	id := make([]byte, 65)
+	id[0] = 4
+	copy(id[1:], raw[:])
+	x, y := elliptic.Unmarshal(crypto.S256(), id[:])
+	return &ecdsa.PublicKey{
+		Curve: crypto.S256(),
+		X:     x,
+		Y:     y,
+	}
+}
