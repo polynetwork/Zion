@@ -130,3 +130,7 @@ func (s *backend) NewChainHead(header *types.Header) error {
 func (s *backend) SubscribeNodes(ch chan<- consensus.StaticNodesEvent) event.Subscription {
 	return s.nodesFeed.Subscribe(ch)
 }
+
+func (s *backend) SubscribeBlock(ch chan<- consensus.ExecutedBlock) event.Subscription {
+	return s.executeFeed.Subscribe(ch)
+}

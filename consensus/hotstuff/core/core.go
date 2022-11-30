@@ -111,7 +111,7 @@ func (c *core) startNewRound(round *big.Int) {
 		logger.Warn("New height should be larger than current height", "new_height", lastProposal.NumberU64)
 		return
 	} else if round.Sign() == 0 {
-		logger.Debug("Latest proposal not chained", "chained", lastProposal.NumberU64(), "current", c.HeightU64())
+		// logger.Debug("Latest proposal not chained", "chained", lastProposal.NumberU64(), "current", c.HeightU64())
 		return
 	} else if round.Uint64() < c.RoundU64() {
 		logger.Warn("New round should not be smaller than current round", "height", lastProposal.NumberU64(), "new_round", round, "old_round", c.RoundU64())

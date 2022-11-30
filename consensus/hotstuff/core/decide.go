@@ -19,8 +19,6 @@
 package core
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -190,11 +188,6 @@ func (c *core) handleDecide(data *Message) error {
 			logger.Trace("Failed to accept commitQC", "msg", code, "err", err)
 			return err
 		}
-		executedResult := c.current.ExecutedBlock(sealedBlock.Hash())
-		if err := c.backend.WriteExecutedBlock(executedResult); err != nil {
-			logger.Trace("Failed to write executed block", "msg", code, "err", err)
-			return err
-		}
 		if err := c.backend.Commit(sealedBlock); err != nil {
 			logger.Trace("Failed to commit proposal", "err", err)
 			return err
@@ -212,18 +205,6 @@ func (c *core) acceptCommitQC(sealedBlock *types.Block, commitQC *QuorumCert) er
 	if err := c.current.SetCommittedQC(commitQC); err != nil {
 		return err
 	}
-
-	// update sealed block for executedState
-	if executed := c.current.ExecutedBlock(sealedBlock.Hash()); executed == nil {
-		if err := c.executeBlock(sealedBlock); err != nil {
-			return fmt.Errorf("execute block failed, err: %v", err)
-		}
-	} else {
-		if err := c.current.UpdateExecutedBlock(sealedBlock); err != nil {
-			return fmt.Errorf("update executed block failed, err: %v", err)
-		}
-	}
-
 	c.current.SetState(StateCommitted)
 	return nil
 }

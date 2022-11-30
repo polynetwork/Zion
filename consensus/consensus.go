@@ -67,10 +67,7 @@ type ChainReader interface {
 	GetBlockByHash(hash common.Hash) *types.Block
 
 	// ExecuteBlock pre-execute block transactions and validate states
-	ExecuteBlock(block *types.Block) (*state.BlockExecuteState, error)
-
-	// WriteExecutedBlock write block with receipts, logs and caching stateDB
-	WriteExecutedBlock(data *state.BlockExecuteState) error
+	ExecuteBlock(block *types.Block) (*state.StateDB, types.Receipts, []*types.Log, error)
 }
 
 // Engine is an algorithm agnostic consensus engine.
@@ -184,6 +181,9 @@ type Handler interface {
 
 	// SubscribeNodes event subscribe for listening static nodes in eth handler
 	SubscribeNodes(ch chan<- StaticNodesEvent) event.Subscription
+
+	// SubscribeBlock subscribe for listening executedBlock in miner.worker
+	SubscribeBlock(ch chan<- ExecutedBlock) event.Subscription
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -196,3 +196,10 @@ type PoW interface {
 
 // StaticNodesEvent notify the eth.backend to handle `changeEpoch`
 type StaticNodesEvent struct{ Validators []common.Address }
+
+type ExecutedBlock struct {
+	State    *state.StateDB
+	Block    *types.Block
+	Receipts types.Receipts
+	Logs     []*types.Log
+}

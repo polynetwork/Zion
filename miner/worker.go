@@ -72,6 +72,9 @@ const (
 
 	// staleThreshold is the maximum depth of the acceptable stale block.
 	staleThreshold = 7
+
+	// executedBlockCap is the capacity to receive pending remote block.
+	executedBlockCap = 7
 )
 
 // environment is the worker's current environment and holds all of the current state information.
@@ -153,6 +156,9 @@ type worker struct {
 	pendingMu    sync.RWMutex
 	pendingTasks map[common.Hash]*task
 
+	executedBlockCh  chan consensus.ExecutedBlock // channel for listening `executedBlock`
+	executedBlockSub event.Subscription           // subscribe consensus `executedBlock`
+
 	snapshotMu    sync.RWMutex // The lock used to protect the block snapshot and state snapshot
 	snapshotBlock *types.Block
 	snapshotState *state.StateDB
@@ -195,6 +201,12 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	// Subscribe events for blockchain
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
+
+	// Subscribe remote pending task
+	if handler, ok := worker.engine.(consensus.Handler); ok {
+		worker.executedBlockCh = make(chan consensus.ExecutedBlock, executedBlockCap)
+		worker.executedBlockSub = handler.SubscribeBlock(worker.executedBlockCh)
+	}
 
 	recommit := worker.config.Recommit
 	if recommit < minRecommitInterval {
@@ -356,10 +368,12 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			timestamp = time.Now().Unix()
 			commit(commitInterruptNewHead)
 
+		case data := <-w.executedBlockCh:
+			w.commitRemote(&data)
+
 		case <-timer.C:
 			// If mining is running resubmit a new work cycle periodically to pull in
 			// higher priced transactions. Disable this overhead for pending blocks.
-			// todo(fuk): only sent once
 			if w.IsRunning() && (w.chainConfig.HotStuff != nil && w.chainConfig.HotStuff.Protocol != "") {
 				log.Debug("Miner resubmit work", "timestamp", timestamp, "from", minRecommit)
 				commit(commitInterruptResubmit)
@@ -774,6 +788,17 @@ func (w *worker) commitNewWork(interrupt *int32, timestamp int64) {
 	parent := w.chain.CurrentBlock()
 	timestamp = tstart.Unix()
 	num := parent.Number()
+
+	// check duplicated pending task
+	w.pendingMu.RLock()
+	for _, task := range w.pendingTasks {
+		if task != nil && task.block != nil && task.block.NumberU64() == num.Uint64()+1 {
+			log.Debug("Exist pending task at the same height", "number", task.block.Number(), "hash", task.block.Hash())
+			return
+		}
+	}
+	w.pendingMu.RUnlock()
+
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
@@ -859,6 +884,26 @@ func (w *worker) commit(update bool, start time.Time) error {
 		w.updateSnapshot()
 	}
 	return nil
+}
+
+// commitRemote assembles the remote block executing result as local task.
+func (w *worker) commitRemote(data *consensus.ExecutedBlock) {
+	// logs and receipts may be nil
+	if data == nil || data.Block == nil || data.State == nil {
+		log.Warn("Commit remote work failed", "err", "executed block invalid")
+		return
+	}
+
+	if w.IsRunning() {
+		select {
+		case w.taskCh <- &task{receipts: data.Receipts, state: data.State, block: data.Block, createdAt: time.Now()}:
+			log.Info("Commit remote work", "number", data.Block.Number(), "sealhash", w.engine.SealHash(data.Block.Header()),
+				"txs", w.current.tcount, "gas", data.Block.GasUsed(), "fees", totalFees(data.Block, data.Receipts))
+
+		case <-w.exitCh:
+			log.Info("Worker has exited")
+		}
+	}
 }
 
 // copyReceipts makes a deep copy of the given receipts.

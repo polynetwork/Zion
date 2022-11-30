@@ -2514,34 +2514,21 @@ func (bc *BlockChain) SubscribeBlockProcessingEvent(ch chan<- bool) event.Subscr
 	return bc.scope.Track(bc.blockProcFeed.Subscribe(ch))
 }
 
-func (bc *BlockChain) ExecuteBlock(block *types.Block) (*state.BlockExecuteState, error) {
+// ExecuteBlock executing and validate block for hotstuff consensus `prepare` step.
+func (bc *BlockChain) ExecuteBlock(block *types.Block) (*state.StateDB, types.Receipts, []*types.Log, error) {
 	parent := bc.GetBlockByHash(block.ParentHash())
 	statedb, err := bc.StateAt(parent.Root())
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
 	receipts, allLogs, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
 	if err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 	if err := bc.validator.ValidateState(block, statedb, receipts, usedGas); err != nil {
-		return nil, err
+		return nil, nil, nil, err
 	}
 
-	result := &state.BlockExecuteState{
-		Block:    block,
-		Receipts: receipts,
-		Logs:     allLogs,
-		State:    statedb,
-	}
-	return result, nil
-}
-
-func (bc *BlockChain) WriteExecutedBlock(data *state.BlockExecuteState) error {
-	bc.chainmu.Lock()
-	defer bc.chainmu.Unlock()
-
-	_, err := bc.writeBlockWithState(data.Block, data.Receipts, data.Logs, data.State, true)
-	return err
+	return statedb, receipts, allLogs, nil
 }

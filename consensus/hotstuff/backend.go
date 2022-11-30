@@ -23,7 +23,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 )
@@ -66,10 +65,7 @@ type Backend interface {
 	HasBadProposal(hash common.Hash) bool
 
 	// ExecuteBlock execute block which contained in prepare message, and validate block state
-	ExecuteBlock(block *types.Block) (*state.BlockExecuteState, error)
-
-	// WriteExecuteBlock write block with executed receipts and logs
-	WriteExecutedBlock(data *state.BlockExecuteState) error
+	ExecuteBlock(block *types.Block) error
 
 	// CheckPoint retrieve the flag of epoch change and new epoch start height
 	CheckPoint(height uint64) (uint64, bool)

@@ -173,39 +173,37 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	header := block.Header()
 
 	// sign the sig hash and fill extra seal
-	seal, err := s.signer.SignHash(block.Hash())
-	if err != nil {
-		return err
+	local := block.Coinbase() == s.Address()
+	if local {
+		seal, err := s.signer.SignHash(block.Hash())
+		if err != nil {
+			return err
+		}
+		if err := header.SetSeal(seal); err != nil {
+			return err
+		}
+		block = block.WithSeal(header)
+		s.logger.Trace("Worker seal local block", "hash", block.Hash(), "number", block.Number())
+	} else {
+		s.logger.Trace("Worker seal remote block", "hash", block.Hash(), "number", block.Number())
 	}
-	if err := header.SetSeal(seal); err != nil {
-		return err
-	}
-	block = block.WithSeal(header)
 
 	go func() {
-		// get the proposed block hash and clear it if the seal() is completed.
+		// lock current proposal sealing procedure before the committed block arrived,
+		// and the committed block may be an remote block, and it's hash may not equal to local block hash.
 		s.sealMu.Lock()
-		s.proposedBlockHash = block.Hash()
-		s.logger.Trace("WorkerSealNewBlock", "hash", block.Hash(), "number", block.Number())
-
-		defer func() {
-			s.proposedBlockHash = common.EmptyHash
-			s.sealMu.Unlock()
-		}()
+		defer s.sealMu.Unlock()
 
 		// post block into Istanbul engine
-		go s.EventMux().Post(hotstuff.RequestEvent{
-			Block: block,
-		})
+		if local {
+			go s.EventMux().Post(hotstuff.RequestEvent{Block: block})
+		}
 
 		for {
 			select {
 			case result := <-s.commitCh:
-				// if the block hash and the hash from channel are the same,
-				// return the result. Otherwise, keep waiting the next hash.
-				if result != nil && block.Hash() == result.Hash() {
+				if result != nil {
 					results <- result
-					return
 				}
 			case <-stop:
 				s.logger.Trace("Stop seal block", "check miner status!", block.NumberU64())
@@ -261,8 +259,8 @@ func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(db ethdb.R
 		s.vals = next.Copy()
 	}
 
-	// waiting for p2p connected
-	s.SendValidatorsChange(s.vals.AddressList())
+	// p2p module connect nodes directly
+	s.nodesFeed.Send(consensus.StaticNodesEvent{Validators: s.vals.AddressList()})
 
 	// MUST start in single goroutine because that the core.startNewRound need to request proposal in async mode.
 	s.core.Start(chain)

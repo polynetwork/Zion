@@ -135,7 +135,7 @@ func (c *core) handlePrepare(data *Message) error {
 		return errVerifyUnsealedProposal
 	}
 	if err := c.executeBlock(block); err != nil {
-		logger.Trace("Failed to pre-execute block", "msg", code, "src", src, "err", err)
+		logger.Trace("Failed to execute block", "msg", code, "src", src, "err", err)
 		return err
 	}
 
@@ -173,13 +173,11 @@ func (c *core) handlePrepare(data *Message) error {
 	return nil
 }
 
+// proposer do not need execute block again after miner.worker commitNewWork.
 func (c *core) executeBlock(block *types.Block) error {
-	result, err := c.backend.ExecuteBlock(block)
-	if err != nil {
-		return err
+	if !c.IsProposer() {
+		return c.backend.ExecuteBlock(block)
 	}
-
-	c.current.AddExecutedBlock(result)
 	return nil
 }
 

@@ -32,7 +32,6 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethdb"
@@ -192,13 +191,8 @@ func (ts *testSystemBackend) Commit(block *types.Block) error {
 func (ts *testSystemBackend) Verify(block *types.Block, seal bool) (time.Duration, error) {
 	return 0, nil
 }
-
-func (ts *testSystemBackend) ExecuteBlock(block *types.Block) (*state.BlockExecuteState, error) {
-	return nil, nil
-}
-func (ts *testSystemBackend) WriteExecutedBlock(data *state.BlockExecuteState) error { return nil }
-func (ts *testSystemBackend) HasBadProposal(hash common.Hash) bool                   { return false }
-
+func (ts *testSystemBackend) ExecuteBlock(block *types.Block) error { return nil }
+func (ts *testSystemBackend) HasBadProposal(hash common.Hash) bool  { return false }
 func (ts *testSystemBackend) LastProposal() (*types.Block, common.Address) {
 	l := len(ts.committedMsgs)
 	if l > 0 {

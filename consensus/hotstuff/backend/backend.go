@@ -20,7 +20,6 @@ package backend
 
 import (
 	"crypto/ecdsa"
-	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -30,7 +29,6 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	snr "github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
@@ -46,36 +44,37 @@ const (
 
 // HotStuff is the scalable hotstuff consensus engine
 type backend struct {
-	config         *hotstuff.Config
-	db             ethdb.Database // Database to store and retrieve necessary information
-	core           hotstuff.CoreEngine
-	signer         hotstuff.Signer
-	chain          consensus.ChainReader
-	currentBlock   func() *types.Block
-	getBlockByHash func(hash common.Hash) *types.Block
-	hasBadBlock    func(db ethdb.Reader, hash common.Hash) bool
-	logger         log.Logger
+	db     ethdb.Database // Database to store and retrieve necessary information
+	logger log.Logger
+	config *hotstuff.Config
+	core   hotstuff.CoreEngine
+	signer hotstuff.Signer
+	chain  consensus.ChainReader
+	vals   hotstuff.ValidatorSet // consensus participant collection
 
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	//snaps *snapshots // store snaps in desc order according to epoch start height
-	vals hotstuff.ValidatorSet
+	// fields for receive sealing and committed proposal
+	sealMu   sync.Mutex
+	commitCh chan *types.Block
 
-	// The channels for hotstuff engine notifications
-	sealMu            sync.Mutex
-	commitCh          chan *types.Block
-	proposedBlockHash common.Hash
-	coreStarted       bool
-	sigMu             sync.RWMutex // Protects the address fields
-	consenMu          sync.Mutex   // Ensure a round can only start after the last one has finished
-	coreMu            sync.RWMutex
+	// signal for engine running status
+	coreStarted bool
+	coreMu      sync.RWMutex
 
 	broadcaster consensus.Broadcaster // event subscription for ChainHeadEvent event
 	nodesFeed   event.Feed            // event subscription for static nodes listen
-	eventMux    *event.TypeMux
-	epochMu     int32 // check point mutex
+	executeFeed event.Feed            // event subscription for executed state
+	eventMux    *event.TypeMux        // message sender for engine
+
+	epochMu int32 // check point mutex
+
+	// closure for help
+	currentBlock   func() *types.Block
+	getBlockByHash func(hash common.Hash) *types.Block
+	hasBadBlock    func(db ethdb.Reader, hash common.Hash) bool
 }
 
 func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) *backend {
@@ -227,23 +226,12 @@ func (s *backend) SealBlock(block *types.Block, seals [][]byte) (*types.Block, e
 	return block.WithSeal(h), nil
 }
 
+// Commit for most pos and pow chain, the local block should be write in state database directly,
+// and the remote block only need to broadcast to other nodes. in hotstuff consensus,
+// sent the finalized block to miner.worker although it may be an remote block.
 func (s *backend) Commit(block *types.Block) error {
-	s.logger.Info("Committed", "address", s.Address(), "hash", block.Hash(), "number", block.NumberU64())
-	// - if the proposed and committed blocks are the same, send the proposed hash
-	//   to commit channel, which is being watched inside the engine.Seal() function.
-	// - otherwise, we try to insert the block.
-	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
-	//    the next block and the previous Seal() will be stopped.
-	// -- otherwise, a error will be returned and a round change event will be fired.
-	if s.proposedBlockHash == block.Hash() {
-		// feed block hash to Seal() and wait the Seal() result
-		s.commitCh <- block
-		return nil
-	}
-
-	if s.broadcaster != nil {
-		s.broadcaster.Enqueue(fetcherID, block)
-	}
+	s.commitCh <- block
+	s.logger.Info("Committed", "address", s.Address(), "hash", block.Hash(), "number", block.Number())
 	return nil
 }
 
@@ -317,27 +305,16 @@ func (s *backend) HasBadProposal(hash common.Hash) bool {
 	return s.hasBadBlock(s.db, hash)
 }
 
-func (s *backend) ExecuteBlock(block *types.Block) (*state.BlockExecuteState, error) {
-	return s.chain.ExecuteBlock(block)
-}
-
-func (s *backend) WriteExecutedBlock(data *state.BlockExecuteState) error {
-	if data == nil || data.Block == nil {
-		return fmt.Errorf("invalid blockExecuteState")
-	}
-	extra, err := types.ExtractHotstuffExtraPayload(data.Block.Header().Extra)
+func (s *backend) ExecuteBlock(block *types.Block) error {
+	state, receipts, allLogs, err := s.chain.ExecuteBlock(block)
 	if err != nil {
-		return err
+		return nil
 	}
-	if len(extra.Seal) != 65 {
-		return fmt.Errorf("invalid seal")
-	}
-	if len(extra.CommittedSeal) == 0 {
-		return fmt.Errorf("committed seals length is 0")
-	}
-	return s.chain.WriteExecutedBlock(data)
-}
-
-func (s *backend) SendValidatorsChange(list []common.Address) {
-	s.nodesFeed.Send(consensus.StaticNodesEvent{Validators: list})
+	s.executeFeed.Send(consensus.ExecutedBlock{
+		State:    state,
+		Block:    block,
+		Receipts: receipts,
+		Logs:     allLogs,
+	})
+	return nil
 }
