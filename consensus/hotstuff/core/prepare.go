@@ -200,13 +200,9 @@ func (c *core) safeNode(node *Node, highQC *QuorumCert) error {
 
 	// skip epoch start block
 	lockQC := c.current.LockQC()
-	height := node.Block.NumberU64()
 	if lockQC == nil {
-		if c.isEpochStartQC(nil, highQC) && height == highQC.HeightU64()+1 {
-			return nil
-		} else {
-			return fmt.Errorf("lockQC is nil, point %v, node.block.height %v, highQC.view %v", c.point, height, highQC.view)
-		}
+		c.logger.Warn("LockQC be nil should only happen at `startUp`")
+		return nil
 	}
 
 	if highQC.view.Cmp(lockQC.view) > 0 || node.Parent == lockQC.node {
