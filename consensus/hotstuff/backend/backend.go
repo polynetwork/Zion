@@ -37,11 +37,6 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 )
 
-const (
-	// fetcherID is the ID indicates the block is from HotStuff engine
-	fetcherID = "hotstuff"
-)
-
 // HotStuff is the scalable hotstuff consensus engine
 type backend struct {
 	db     ethdb.Database // Database to store and retrieve necessary information
