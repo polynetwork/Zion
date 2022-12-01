@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/consensus"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -63,6 +65,7 @@ type roundState struct {
 	pendingRequest   *Request
 	node             *roundNode
 	lockedBlock      *types.Block // validator's prepare proposal
+	executed         *consensus.ExecutedBlock
 	proposalLocked   bool
 
 	// o(4n)
@@ -210,6 +213,7 @@ func (s *roundState) Unlock() error {
 	s.proposalLocked = false
 	s.lockedBlock = nil
 	s.node.temp = nil
+	s.executed = nil
 	return nil
 }
 
@@ -232,6 +236,9 @@ func (s *roundState) SetSealedBlock(block *types.Block) error {
 		return err
 	}
 	s.lockedBlock = block
+	if s.executed != nil && s.executed.Block != nil && s.executed.Block.Hash() == block.Hash() {
+		s.executed.Block = block
+	}
 	return nil
 }
 

@@ -27,6 +27,8 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/consensus"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
@@ -176,7 +178,8 @@ func (ts *testSystemBackend) SealBlock(proposal *types.Block, seals [][]byte) (*
 	return nil, nil
 }
 
-func (ts *testSystemBackend) Commit(block *types.Block) error {
+func (ts *testSystemBackend) Commit(executed *consensus.ExecutedBlock) error {
+	block := executed.Block
 	testLogger.Info("commit message", "address", ts.Address())
 	ts.committedMsgs = append(ts.committedMsgs, testCommittedMsgs{
 		commitProposal: block,
@@ -191,8 +194,10 @@ func (ts *testSystemBackend) Commit(block *types.Block) error {
 func (ts *testSystemBackend) Verify(block *types.Block, seal bool) (time.Duration, error) {
 	return 0, nil
 }
-func (ts *testSystemBackend) ExecuteBlock(block *types.Block) error { return nil }
-func (ts *testSystemBackend) HasBadProposal(hash common.Hash) bool  { return false }
+func (ts *testSystemBackend) ExecuteBlock(block *types.Block) (*consensus.ExecutedBlock, error) {
+	return nil, nil
+}
+func (ts *testSystemBackend) HasBadProposal(hash common.Hash) bool { return false }
 func (ts *testSystemBackend) LastProposal() (*types.Block, common.Address) {
 	l := len(ts.committedMsgs)
 	if l > 0 {

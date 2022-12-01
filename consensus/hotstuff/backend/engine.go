@@ -173,40 +173,40 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	header := block.Header()
 
 	// sign the sig hash and fill extra seal
-	local := block.Coinbase() == s.Address()
-	if local {
-		seal, err := s.signer.SignHash(block.Hash())
-		if err != nil {
-			return err
-		}
-		if err := header.SetSeal(seal); err != nil {
-			return err
-		}
-		block = block.WithSeal(header)
-		s.logger.Trace("Worker seal local block", "hash", block.Hash(), "number", block.Number())
-	} else {
-		s.logger.Trace("Worker seal remote block", "hash", block.Hash(), "number", block.Number())
+	seal, err := s.signer.SignHash(block.Hash())
+	if err != nil {
+		return err
 	}
+	if err := header.SetSeal(seal); err != nil {
+		return err
+	}
+	block = block.WithSeal(header)
 
 	go func() {
 		// lock current proposal sealing procedure before the committed block arrived,
 		// and the committed block may be an remote block, and it's hash may not equal to local block hash.
 		s.sealMu.Lock()
-		defer s.sealMu.Unlock()
+		s.proposedBlockHash = block.Hash()
+		s.logger.Trace("WorkerSealNewBlock", "hash", block.Hash(), "number", block.Number())
+
+		defer func() {
+			s.proposedBlockHash = common.EmptyHash
+			s.sealMu.Unlock()
+		}()
 
 		// post block into Istanbul engine
-		if local {
-			go s.EventMux().Post(hotstuff.RequestEvent{Block: block})
-		}
+		go s.EventMux().Post(hotstuff.RequestEvent{Block: block})
 
 		for {
 			select {
 			case result := <-s.commitCh:
-				if result != nil {
+				// if the block hash and the hash from channel are the same,
+				// return the result. Otherwise, keep waiting the next hash.
+				if result != nil && block.Hash() == result.Hash() {
 					results <- result
 				}
 			case <-stop:
-				s.logger.Trace("Stop seal block", "check miner status!", block.NumberU64())
+				s.logger.Trace("Stop seal block", "num", block.NumberU64(), "hash", block.Hash())
 				results <- nil
 				return
 			}

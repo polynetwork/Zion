@@ -22,6 +22,8 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/ethereum/go-ethereum/consensus"
+
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -175,9 +177,16 @@ func (c *core) handlePrepare(data *Message) error {
 
 // proposer do not need execute block again after miner.worker commitNewWork.
 func (c *core) executeBlock(block *types.Block) error {
-	if !c.IsProposer() {
-		return c.backend.ExecuteBlock(block)
+	if c.IsProposer() {
+		c.current.executed = &consensus.ExecutedBlock{Block: block}
+		return nil
 	}
+
+	executed, err := c.backend.ExecuteBlock(block)
+	if err != nil {
+		return err
+	}
+	c.current.executed = executed
 	return nil
 }
 

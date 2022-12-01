@@ -52,7 +52,7 @@ type Backend interface {
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
-	Commit(block *types.Block) error
+	Commit(executedBlock *consensus.ExecutedBlock) error
 
 	// Verify verifies the proposal. If a consensus.ErrFutureBlock error is returned,
 	// the time difference of the proposal and current time is also returned.
@@ -65,7 +65,7 @@ type Backend interface {
 	HasBadProposal(hash common.Hash) bool
 
 	// ExecuteBlock execute block which contained in prepare message, and validate block state
-	ExecuteBlock(block *types.Block) error
+	ExecuteBlock(block *types.Block) (*consensus.ExecutedBlock, error)
 
 	// CheckPoint retrieve the flag of epoch change and new epoch start height
 	CheckPoint(height uint64) (uint64, bool)

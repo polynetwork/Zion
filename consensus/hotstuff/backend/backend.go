@@ -20,6 +20,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -52,8 +53,9 @@ type backend struct {
 	knownMessages  *lru.ARCCache // the cache of self messages
 
 	// fields for receive sealing and committed proposal
-	sealMu   sync.Mutex
-	commitCh chan *types.Block
+	sealMu            sync.Mutex
+	commitCh          chan *types.Block
+	proposedBlockHash common.Hash
 
 	// signal for engine running status
 	coreStarted bool
@@ -224,8 +226,20 @@ func (s *backend) SealBlock(block *types.Block, seals [][]byte) (*types.Block, e
 // Commit for most pos and pow chain, the local block should be write in state database directly,
 // and the remote block only need to broadcast to other nodes. in hotstuff consensus,
 // sent the finalized block to miner.worker although it may be an remote block.
-func (s *backend) Commit(block *types.Block) error {
-	s.commitCh <- block
+func (s *backend) Commit(executed *consensus.ExecutedBlock) error {
+	if executed == nil || executed.Block == nil {
+		return fmt.Errorf("invalid executed block")
+	}
+	block := executed.Block
+
+	if block.Hash() == s.proposedBlockHash {
+		s.commitCh <- executed.Block
+	} else if executed.State == nil {
+		return fmt.Errorf("remote executed block statedb invalid")
+	} else {
+		s.executeFeed.Send(*executed)
+	}
+
 	s.logger.Info("Committed", "address", s.Address(), "hash", block.Hash(), "number", block.Number())
 	return nil
 }
@@ -300,16 +314,15 @@ func (s *backend) HasBadProposal(hash common.Hash) bool {
 	return s.hasBadBlock(s.db, hash)
 }
 
-func (s *backend) ExecuteBlock(block *types.Block) error {
+func (s *backend) ExecuteBlock(block *types.Block) (*consensus.ExecutedBlock, error) {
 	state, receipts, allLogs, err := s.chain.ExecuteBlock(block)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	s.executeFeed.Send(consensus.ExecutedBlock{
+	return &consensus.ExecutedBlock{
 		State:    state,
 		Block:    block,
 		Receipts: receipts,
 		Logs:     allLogs,
-	})
-	return nil
+	}, nil
 }

@@ -19,7 +19,10 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -173,7 +176,7 @@ func (c *core) handleDecide(data *Message) error {
 
 	// accept commitQC and commit block to miner
 	if c.IsProposer() && c.currentState() == StateCommitted {
-		if err := c.backend.Commit(c.current.LockedBlock()); err != nil {
+		if err := c.commit(c.current.LockedBlock()); err != nil {
 			logger.Trace("Failed to commit proposal", "msg", code, "err", err)
 			return err
 		}
@@ -188,7 +191,7 @@ func (c *core) handleDecide(data *Message) error {
 			logger.Trace("Failed to accept commitQC", "msg", code, "err", err)
 			return err
 		}
-		if err := c.backend.Commit(sealedBlock); err != nil {
+		if err := c.commit(sealedBlock); err != nil {
 			logger.Trace("Failed to commit proposal", "err", err)
 			return err
 		}
@@ -207,6 +210,31 @@ func (c *core) acceptCommitQC(sealedBlock *types.Block, commitQC *QuorumCert) er
 	}
 	c.current.SetState(StateCommitted)
 	return nil
+}
+
+func (c *core) commit(sealedBlock *types.Block) error {
+	if lockedBlock := c.current.LockedBlock(); lockedBlock == nil {
+		return fmt.Errorf("locked block is nil")
+	} else if lockedBlock.Hash() != sealedBlock.Hash() {
+		return fmt.Errorf("expect locked block %v, got %v", lockedBlock.Hash(), sealedBlock.Hash())
+	}
+
+	if c.IsProposer() {
+		if c.current.executed == nil {
+			c.current.executed = &consensus.ExecutedBlock{Block: sealedBlock}
+		}
+	} else {
+		if c.current.executed == nil || c.current.executed.Block == nil ||
+			c.current.executed.State == nil || c.current.executed.Block.Hash() != sealedBlock.Hash() {
+			executed, err := c.backend.ExecuteBlock(sealedBlock)
+			if err != nil {
+				return fmt.Errorf("failed to execute block %v, err: %v", sealedBlock.Hash(), err)
+			}
+			executed.Block = sealedBlock
+		}
+	}
+
+	return c.backend.Commit(c.current.executed)
 }
 
 // handleFinalCommitted start new round if consensus engine accept notify signal from miner.worker.
