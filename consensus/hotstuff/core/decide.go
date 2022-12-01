@@ -231,6 +231,7 @@ func (c *core) commit(sealedBlock *types.Block) error {
 				return fmt.Errorf("failed to execute block %v, err: %v", sealedBlock.Hash(), err)
 			}
 			executed.Block = sealedBlock
+			c.current.executed = executed
 		}
 	}
 
