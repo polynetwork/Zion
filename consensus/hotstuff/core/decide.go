@@ -21,8 +21,9 @@ package core
 import (
 	"fmt"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 )
 
@@ -219,13 +220,10 @@ func (c *core) commit(sealedBlock *types.Block) error {
 		return fmt.Errorf("expect locked block %v, got %v", lockedBlock.Hash(), sealedBlock.Hash())
 	}
 
-	if c.IsProposer() {
-		if c.current.executed == nil {
+	if c.current.executed == nil || c.current.executed.Block == nil || c.current.executed.Block.Hash() != sealedBlock.Hash() {
+		if c.IsProposer() {
 			c.current.executed = &consensus.ExecutedBlock{Block: sealedBlock}
-		}
-	} else {
-		if c.current.executed == nil || c.current.executed.Block == nil ||
-			c.current.executed.State == nil || c.current.executed.Block.Hash() != sealedBlock.Hash() {
+		} else {
 			executed, err := c.backend.ExecuteBlock(sealedBlock)
 			if err != nil {
 				return fmt.Errorf("failed to execute block %v, err: %v", sealedBlock.Hash(), err)
