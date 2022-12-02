@@ -153,6 +153,8 @@ type worker struct {
 	coinbase common.Address
 	extra    []byte
 
+	wg sync.WaitGroup
+
 	pendingMu    sync.RWMutex
 	pendingTasks map[common.Hash]*task
 
@@ -214,6 +216,7 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 		recommit = minRecommitInterval
 	}
 
+	worker.wg.Add(4)
 	go worker.mainLoop()
 	go worker.newWorkLoop(recommit)
 	go worker.resultLoop()
@@ -313,10 +316,12 @@ func (w *worker) Close() {
 	}
 	atomic.StoreInt32(&w.running, 0)
 	close(w.exitCh)
+	w.wg.Wait()
 }
 
 // newWorkLoop is a standalone goroutine to submit new mining work upon received events.
 func (w *worker) newWorkLoop(recommit time.Duration) {
+	defer w.wg.Done()
 	var (
 		interrupt   *int32
 		minRecommit = recommit // minimal resubmit interval specified by user.
@@ -417,6 +422,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 
 // mainLoop is a standalone goroutine to regenerate the sealing task based on the received event.
 func (w *worker) mainLoop() {
+	defer w.wg.Done()
 	defer w.txsSub.Unsubscribe()
 	defer w.chainHeadSub.Unsubscribe()
 	defer func() {
@@ -482,6 +488,7 @@ func (w *worker) mainLoop() {
 // taskLoop is a standalone goroutine to fetch sealing task from the generator and
 // push them to consensus engine.
 func (w *worker) taskLoop() {
+	w.wg.Done()
 	var (
 		stopCh chan struct{}
 		prev   common.Hash
@@ -529,6 +536,7 @@ func (w *worker) taskLoop() {
 // resultLoop is a standalone goroutine to handle sealing result submitting
 // and flush relative data to the database.
 func (w *worker) resultLoop() {
+	w.wg.Done()
 	for {
 		select {
 		case block := <-w.resultCh:
