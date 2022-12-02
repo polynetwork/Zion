@@ -19,16 +19,16 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"math/big"
+	"reflect"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -45,8 +45,7 @@ func TestMessage(t *testing.T) {
 		msg        = []byte{'a', 'b'}
 		key, _     = crypto.GenerateKey()
 		signer     = crypto.PubkeyToAddress(key.PublicKey)
-		validateFn = func(hash common.Hash, sig []byte, seal bool) (addresses common.Address, e error) {
-			//hashData := crypto.Keccak256(data)
+		validateFn = func(hash common.Hash, sig []byte) (addresses common.Address, e error) {
 			pubkey, err := crypto.SigToPub(hash.Bytes(), sig)
 			if err != nil {
 				return common.Address{}, err
@@ -98,7 +97,7 @@ func TestMessage(t *testing.T) {
 		got := new(Message)
 		err = got.FromPayload(signer, payload, validateFn)
 		assert.NoError(t, err)
-		proposer, err := validateFn(proposalHash, got.CommittedSeal, true)
+		proposer, err := validateFn(proposalHash, got.CommittedSeal)
 		assert.NoError(t, err)
 		assert.Equal(t, signer, proposer)
 	}
@@ -167,7 +166,7 @@ func TestQuorumCert(t *testing.T) {
 		expect := &QuorumCert{
 			view:          view,
 			code:          MsgTypePrepareVote,
-			hash:          hash,
+			node:          hash,
 			proposer:      proposer,
 			seal:          []byte{'a', 'b'},
 			committedSeal: [][]byte{[]byte{'a', '1'}, []byte{'c', 'b'}},
@@ -179,13 +178,13 @@ func TestQuorumCert(t *testing.T) {
 		assert.NoError(t, rlp.DecodeBytes(payload, got))
 		assert.Equal(t, expect, got)
 
-		t.Logf("proposer %s, view %v, hash %s, seal %s", got.proposer.Hex(), got.view, got.hash.Hex(), string(got.seal))
+		t.Logf("proposer %s, view %v, hash %s, seal %s", got.proposer.Hex(), got.view, got.node.Hex(), string(got.seal))
 	}
 
 }
 
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestSimple
-func TestSimple(t *testing.T) {
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestVerifyCommittedSeal
+func TestVerifyCommittedSeal(t *testing.T) {
 	hash := common.HexToHash("0xf313870c2e28a138dfcb1d4c0150265a881374bd13870df5c216fe01ce4c631a")
 	data := "0x0000000000000000000000000000000000000000000000000000000000000000f901168201868201a4c0b84172ddcc9dc9855cfc5f737fc0438d0a654f54580d2ccc8f7fda4b034683de419f50df9d4a729d2e6300e9c545c065aea32bb88699ad6bf40e002f5f1f7d93fc3b00f8c9b841fb9baab3b5b464f6d0a6bff202e6c89bdcf25487a192a31a730204c4ab7f595a1b67696d3dab895e1cbc9689a13d2248e65255b0464e1510cb936ebe4664b98901b84172ddcc9dc9855cfc5f737fc0438d0a654f54580d2ccc8f7fda4b034683de419f50df9d4a729d2e6300e9c545c065aea32bb88699ad6bf40e002f5f1f7d93fc3b00b841228f6495b05e8d4fe1e5b5173e01f5554666f319f66eb1d28198b353ff9edf8c23a6ccbe4b8d2af952b9d9c47c7c7ae1181070d8a64208491e66f44ad65ddc700180"
 	raw, err := hexutil.Decode(data)
@@ -195,12 +194,7 @@ func TestSimple(t *testing.T) {
 	assert.NoError(t, err)
 
 	validateFn := func(hash common.Hash, sig []byte) error {
-		sealHash := hotstuff.RLPHash(signer.SealHash{
-			Hash: hash,
-			Salt: []byte("commit"),
-		})
-
-		pubkey, err := crypto.SigToPub(sealHash.Bytes(), sig)
+		pubkey, err := crypto.SigToPub(hash.Bytes(), sig)
 		if err != nil {
 			return err
 		}
@@ -214,121 +208,105 @@ func TestSimple(t *testing.T) {
 		assert.NoError(t, validateFn(hash, v))
 	}
 }
-//// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestNewView
-//func TestNewView(t *testing.T) {
-//	pp := &MsgNewView{
-//		View: &View{
-//			Round:  big.NewInt(1),
-//			Height: big.NewInt(2),
-//		},
-//		PrepareQC: &QuorumCert{
-//			view: &View{
-//				Round:  big.NewInt(0),
-//				Height: big.NewInt(1),
-//			},
-//			hash: makeBlock(0).Hash(),
-//		},
-//	}
-//	payload, err := Encode(pp)
-//	assert.NoError(t, err)
-//
-//	addr := singerAddress()
-//	m := &Message{
-//		View: &View{
-//			Round:  big.NewInt(0),
-//			Height: big.NewInt(1),
-//		},
-//		Code:    MsgTypeNewView,
-//		Msg:     payload,
-//		Address: addr,
-//	}
-//
-//	msgPayload, err := m.Payload()
-//	assert.NoError(t, err)
-//
-//	decodedMsg := new(Message)
-//	if err = decodedMsg.FromPayload(msgPayload, nil); err != nil {
-//		t.Errorf("error mismatch: have %v, want nil", err)
-//	}
-//
-//	var decodedPP *MsgNewView
-//	if err = decodedMsg.Decode(&decodedPP); err != nil {
-//		t.Errorf("error mismatch: have %v, want nil", err)
-//	}
-//
-//	// if block is encoded/decoded by rlp, we cannot to compare interface data type using reflect.DeepEqual. (like istanbul.Proposal)
-//	// so individual comparison here.
-//	if !reflect.DeepEqual(pp.PrepareQC.Hash(), decodedPP.PrepareQC.Hash()) {
-//		t.Errorf("proposal hash mismatch: have %v, want %v", decodedPP.PrepareQC.Hash(), pp.PrepareQC.Hash())
-//	}
-//
-//	if !reflect.DeepEqual(pp.View, decodedPP.View) {
-//		t.Errorf("view mismatch: have %v, want %v", decodedPP.View, pp.View)
-//	}
-//}
-//
-//// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestQuorumCertWithSig
-//func TestQuorumCertWithSig(t *testing.T) {
-//	s := &QuorumCert{
-//		view: &View{
-//			Round:  big.NewInt(1),
-//			Height: big.NewInt(2),
-//		},
-//		hash: common.HexToHash("1234567890"),
-//	}
-//	expectedSig := []byte{0x01}
-//
-//	subjectPayload, _ := Encode(s)
-//	// 1. Encode test
-//	address := common.HexToAddress("0x1234567890")
-//	m := &Message{
-//		View: &View{
-//			Round:  big.NewInt(1),
-//			Height: big.NewInt(2),
-//		},
-//		Code:          MsgTypePrepareVote,
-//		Msg:           subjectPayload,
-//		Address:       address,
-//		Signature:     expectedSig,
-//		CommittedSeal: []byte{},
-//	}
-//
-//	msgPayload, err := m.Payload()
-//	if err != nil {
-//		t.Errorf("error mismatch: have %v, want nil", err)
-//	}
-//
-//	// 2. Decode test
-//	// 2.1 Test normal validate func
-//	decodedMsg := new(Message)
-//	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte) (common.Address, error) {
-//		return address, nil
-//	})
-//	if err != nil {
-//		t.Errorf("error mismatch: have %v, want nil", err)
-//	}
-//
-//	if !reflect.DeepEqual(decodedMsg, m) {
-//		t.Errorf("error mismatch: have %v, want nil", err)
-//	}
-//
-//	// 2.2 Test nil validate func
-//	decodedMsg = new(Message)
-//	err = decodedMsg.FromPayload(msgPayload, nil)
-//	if err != nil {
-//		t.Error(err)
-//	}
-//
-//	if !reflect.DeepEqual(decodedMsg, m) {
-//		t.Errorf("Message mismatch: have %v, want %v", decodedMsg, m)
-//	}
-//
-//	// 2.3 Test failed validate func
-//	decodedMsg = new(Message)
-//	err = decodedMsg.FromPayload(msgPayload, func(data []byte, sig []byte) (common.Address, error) {
-//		return common.Address{}, errInvalidSigner
-//	})
-//	if err != errInvalidSigner {
-//		t.Errorf("error mismatch: have %v, want %v", err, errInvalidSigner)
-//	}
-//}
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestNewView
+func TestNewView(t *testing.T) {
+	pp := &QuorumCert{
+		code: MsgTypePrepareVote,
+		view: makeView(1, 0),
+		node: makeBlock(0).Hash(),
+	}
+	payload, err := Encode(pp)
+	assert.NoError(t, err)
+
+	addr := singerAddress()
+	m := &Message{
+		View: &View{
+			Round:  big.NewInt(0),
+			Height: big.NewInt(1),
+		},
+		Code:    MsgTypeNewView,
+		Msg:     payload,
+		address: addr,
+	}
+
+	msgPayload, err := m.Payload()
+	assert.NoError(t, err)
+
+	decodedMsg := new(Message)
+	if err = decodedMsg.FromPayload(addr, msgPayload, nil); err != nil {
+		t.Errorf("error mismatch: have %v, want nil", err)
+	}
+
+	var decodedPP *QuorumCert
+	if err = decodedMsg.Decode(&decodedPP); err != nil {
+		t.Errorf("error mismatch: have %v, want nil", err)
+	}
+
+	// if block is encoded/decoded by rlp, we cannot to compare interface data type using reflect.DeepEqual. (like istanbul.Proposal)
+	// so individual comparison here.
+	if !reflect.DeepEqual(pp.SealHash(), decodedPP.SealHash()) {
+		t.Errorf("proposal hash mismatch: have %v, want %v", decodedPP.SealHash(), pp.SealHash())
+	}
+
+	if !reflect.DeepEqual(pp.view, decodedPP.view) {
+		t.Errorf("view mismatch: have %v, want %v", decodedPP.view, pp.view)
+	}
+}
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestQuorumCertWithSig
+func TestQuorumCertWithSig(t *testing.T) {
+	s := &QuorumCert{
+		code: MsgTypePrepareVote,
+		view: makeView(2, 1),
+		node: common.HexToHash("1234567890"),
+	}
+	expectedSig := []byte{0x01}
+
+	subjectPayload, _ := Encode(s)
+	// 1. Encode test
+	address := common.HexToAddress("0x1234567890")
+	m := &Message{
+		View:          s.view,
+		Code:          s.code,
+		Msg:           subjectPayload,
+		address:       address,
+		Signature:     expectedSig,
+		CommittedSeal: []byte{},
+	}
+
+	msgPayload, err := m.Payload()
+	if err != nil {
+		t.Errorf("error mismatch: have %v, want nil", err)
+	}
+
+	// 2. Decode test
+	// 2.1 Test normal validate func
+	decodedMsg := new(Message)
+	if err := decodedMsg.FromPayload(address, msgPayload, func(data common.Hash, sig []byte) (common.Address, error) {
+		return address, nil
+	}); err != nil {
+		t.Errorf("error mismatch: have %v, want nil", err)
+	}
+	_, err = m.PayloadNoSig()
+	assert.NoError(t, err)
+	assert.Equal(t, decodedMsg.hash, m.hash)
+
+	// 2.2 Test nil validate func
+	decodedMsg = new(Message)
+	if err := decodedMsg.FromPayload(address, msgPayload, nil); err != nil {
+		t.Error(err)
+	}
+
+	if !reflect.DeepEqual(decodedMsg, m) {
+		t.Errorf("Message mismatch: have %v, want %v", decodedMsg, m)
+	}
+
+	// 2.3 Test failed validate func
+	decodedMsg = new(Message)
+	if err := decodedMsg.FromPayload(address, msgPayload, func(data common.Hash, sig []byte) (common.Address, error) {
+		return common.Address{}, errInvalidSigner
+	}); err != errInvalidSigner {
+		t.Errorf("error mismatch: have %v, want %v", err, errInvalidSigner)
+	}
+}

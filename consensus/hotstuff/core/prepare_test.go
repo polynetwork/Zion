@@ -17,211 +17,105 @@
  */
 
 package core
-//
-//import (
-//	"math/big"
-//	"testing"
-//
-//	"github.com/ethereum/go-ethereum/common"
-//	"github.com/stretchr/testify/assert"
-//)
-//
-//func newTestPrepareMsg(t *testing.T, s *testSystem, sender common.Address, h, r int) (*MsgPrepare, *Message) {
-//	view := makeView(h, r)
-//	highQC := newTestQCWithExtra(t, s, h-1)
-//	proposal := makeBlockWithParentHash(h, highQC.hash)
-//	prepare := &MsgPrepare{
-//		View:     view,
-//		Proposal: proposal,
-//		HighQC:   highQC,
-//	}
-//	payload, err := Encode(prepare)
-//	if err != nil {
-//		t.Error(err)
-//	}
-//
-//	msg := &Message{
-//		Code:    MsgTypePrepare,
-//		View:    view,
-//		Msg:     payload,
-//		Address: sender,
-//	}
-//	return prepare, msg
-//}
-//
-//// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandlePrepare
-//func TestHandlePrepare(t *testing.T) {
-//	N, H, R := 4, 5, 1
-//
-//	sys := NewTestSystemWithBackend(N, H, R)
-//	leader := sys.getLeader()
-//	val := leader.valSet.GetProposer()
-//	prepare, msg := newTestPrepareMsg(t, sys, leader.Address(), H, R)
-//	for _, backend := range sys.backends {
-//		core := backend.engine
-//		core.current.SetPreCommittedQC(prepare.HighQC)
-//		err := core.handlePrepare(msg, val)
-//		assert.NoError(t, err)
-//	}
-//}
-//
-//// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestPrepareFailed
-//func TestPrepareFailed(t *testing.T) {
-//	N, H, R := 4, 5, 1
-//
-//	sys := NewTestSystemWithBackend(N, H, R)
-//	leader := sys.getLeader()
-//	val := leader.valSet.GetProposer()
-//	prepare, msg := newTestPrepareMsg(t, sys, leader.Address(), H, R)
-//
-//	// too old message
-//	{
-//		for _, backend := range sys.backends {
-//			core := backend.engine
-//			core.current.height = big.NewInt(int64(H + 1))
-//			core.current.SetPreCommittedQC(prepare.HighQC)
-//			err := core.handlePrepare(msg, val)
-//			assert.Equal(t, errOldMessage, err)
-//		}
-//
-//		for _, backend := range sys.backends {
-//			core := backend.engine
-//			core.current.height = big.NewInt(int64(H))
-//			core.current.round = big.NewInt(int64(R + 1))
-//			core.current.SetPreCommittedQC(prepare.HighQC)
-//			err := core.handlePrepare(msg, val)
-//			assert.Equal(t, errOldMessage, err)
-//		}
-//	}
-//
-//	// future message
-//	{
-//		for _, backend := range sys.backends {
-//			core := backend.engine
-//			core.current.height = big.NewInt(int64(H - 1))
-//			core.current.SetPreCommittedQC(prepare.HighQC)
-//			err := core.handlePrepare(msg, val)
-//			assert.Equal(t, errFutureMessage, err)
-//		}
-//
-//		for _, backend := range sys.backends {
-//			core := backend.engine
-//			core.current.height = big.NewInt(int64(H))
-//			core.current.round = big.NewInt(int64(R - 1))
-//			core.current.SetPreCommittedQC(prepare.HighQC)
-//			err := core.handlePrepare(msg, val)
-//			assert.Equal(t, errFutureMessage, err)
-//		}
-//	}
-//}
 
-//type testcase struct {
-//	Sys       *testSystem
-//	Msg       *Message
-//	Leader    hotstuff.Validator
-//	ExpectErr error
-//}
-//
-//}
-//	// errMsgOld
-//	func() *testcase {
-//		sys := NewTestSystemWithBackend(N, H, R)
-//		var data *MsgPrepare
-//		for _, backend := range sys.backends {
-//			core := backend.engine
-//			data = newPrepareMsg(core)
-//			core.current.height = new(big.Int).SetUint64(uint64(H + 1))
-//		}
-//		msg := newP2PMsg(data)
-//		leader := validator.New(sys.getLeader().Address())
-//		return &testcase{
-//			Sys:       sys,
-//			Msg:       msg,
-//			Leader:    leader,
-//			ExpectErr: errOldMessage,
-//		}
-//	}(),
-//
-//	// errFutureMsg
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, H, R)
-//			var data *MsgPrepare
-//			for _, backend := range sys.backends {
-//				core := backend.engine
-//				data = newPrepareMsg(core)
-//				core.current.round = new(big.Int).SetUint64(uint64(R - 1))
-//			}
-//			msg := newP2PMsg(data)
-//			leader := validator.New(sys.getLeader().Address())
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    leader,
-//				ExpectErr: errFutureMessage,
-//			}
-//		}(),
-//
-//	// errNotFromProposer
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, H, R)
-//			var data *MsgPrepare
-//			for _, backend := range sys.backends {
-//				core := backend.engine
-//				data = newPrepareMsg(core)
-//			}
-//			msg := newP2PMsg(data)
-//			wrongLeader := validator.New(sys.getRepos()[0].Address())
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    wrongLeader,
-//				ExpectErr: errNotFromProposer,
-//			}
-//		}(),
-//
-//	// errExtend
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, H, R)
-//			leader := sys.getLeader()
-//			val := validator.New(leader.Address())
-//			var data *MsgPrepare
-//			for _, backend := range sys.backends {
-//				core := backend.engine
-//				data = newPrepareMsg(core)
-//				core.current.SetPreCommittedQC(data.HighQC)
-//			}
-//			// msg.proposal.parentHash not equal to the field of `lockQC.Hash`
-//			data.HighQC.hash = common.HexToHash("0x124")
-//			msg := newP2PMsg(data)
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    val,
-//				ExpectErr: errExtend,
-//			}
-//		}(),
-//
-//	// errSafeNode
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, H, R)
-//			leader := sys.getLeader()
-//			val := validator.New(leader.Address())
-//			var data *MsgPrepare
-//			for _, backend := range sys.backends {
-//				core := backend.engine
-//				data = newPrepareMsg(core)
-//				// safety is false, and liveness false:
-//				// msg.proposal is not extend lockQC
-//				// msg.highQC.view is smaller than lockQC.view
-//				// or just set lockQC is nil
-//				//core.current.SetPreCommittedQC(data.HighQC)
-//			}
-//			msg := newP2PMsg(data)
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    val,
-//				ExpectErr: errSafeNode,
-//			}
-//		}(),
-//}
+import (
+	"math/big"
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/stretchr/testify/assert"
+)
+
+func newTestPrepareMsg(t *testing.T, s *testSystem, sender common.Address, parentBlock common.Hash, h, r int) (*Subject, *Message) {
+	view := makeView(h, r)
+	highQC := newTestQCWithExtra(t, s, common.HexToHash("0x123"), MsgTypePrepareVote, h-1, r)
+	proposal := makeBlockWithParentHash(h, parentBlock)
+	node := NewNode(highQC.node, proposal)
+	prepare := NewSubject(node, highQC)
+	payload, err := Encode(prepare)
+	if err != nil {
+		t.Error(err)
+	}
+
+	msg := &Message{
+		Code:    MsgTypePrepare,
+		View:    view,
+		Msg:     payload,
+		address: sender,
+	}
+	return prepare, msg
+}
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandlePrepare
+func TestHandlePrepare(t *testing.T) {
+	N, H, R := 4, 5, 1
+
+	sys := NewTestSystemWithBackend(N, H, R)
+	sys.Run(false)
+	leader := sys.getLeader()
+	parent := makeBlock(H - 1)
+	prepare, msg := newTestPrepareMsg(t, sys, leader.Address(), parent.Hash(), H, R)
+	for _, backend := range sys.backends {
+		core := backend.engine
+		core.current.lastChainedBlock = parent
+		core.current.prepareQC = prepare.QC
+		err := core.handlePrepare(msg)
+		assert.NoError(t, err)
+	}
+}
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestPrepareFailed
+func TestPrepareFailed(t *testing.T) {
+	N, H, R := 4, 5, 1
+
+	sys := NewTestSystemWithBackend(N, H, R)
+	leader := sys.getLeader()
+	parent := makeBlock(H - 1)
+	prepare, msg := newTestPrepareMsg(t, sys, leader.Address(), parent.Hash(), H, R)
+
+	// too old message
+	{
+		for _, backend := range sys.backends {
+			core := backend.engine
+			core.current.lastChainedBlock = parent
+			core.current.height = big.NewInt(int64(H + 1))
+			core.current.prepareQC = prepare.QC
+			err := core.handlePrepare(msg)
+			assert.Equal(t, errOldMessage, err)
+		}
+	}
+	{
+		for _, backend := range sys.backends {
+			core := backend.engine
+			core.current.lastChainedBlock = parent
+			core.current.height = big.NewInt(int64(H))
+			core.current.round = big.NewInt(int64(R + 1))
+			core.current.prepareQC = prepare.QC
+			err := core.handlePrepare(msg)
+			assert.Equal(t, errOldMessage, err)
+		}
+	}
+
+	// future message
+	{
+		for _, backend := range sys.backends {
+			core := backend.engine
+			core.current.lastChainedBlock = parent
+			core.current.height = big.NewInt(int64(H - 1))
+			core.current.prepareQC = prepare.QC
+			err := core.handlePrepare(msg)
+			assert.Equal(t, errFutureMessage, err)
+		}
+	}
+	{
+		for _, backend := range sys.backends {
+			core := backend.engine
+			core.current.lastChainedBlock = parent
+			core.current.height = big.NewInt(int64(H))
+			core.current.round = big.NewInt(int64(R - 1))
+			core.current.prepareQC = prepare.QC
+			err := core.handlePrepare(msg)
+			assert.Equal(t, errFutureMessage, err)
+		}
+	}
+}

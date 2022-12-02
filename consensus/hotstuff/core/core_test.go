@@ -59,8 +59,8 @@ package core
 //	return common.BytesToHash(num.Bytes())
 //}
 //
-//func makeView(h, r uint64) *view {
-//	return &view{
+//func makeView(h, r uint64) *View {
+//	return &View{
 //		Height: new(big.Int).SetUint64(h),
 //		Round:  new(big.Int).SetUint64(r),
 //	}
@@ -103,13 +103,10 @@ package core
 //}
 //
 //func TestQuorumSize(t *testing.T) {
-//	N := uint64(4)
-//	F := uint64(1)
-//	H := uint64(1)
-//	R := uint64(0)
+//	N, H, R := 4, 1, 0
 //
-//	sys := NewTestSystemWithBackend(N, F, H, R)
-//	backend := sys.backends[0]
+//	sys := NewTestSystemWithBackend(N, H, R)c
+//	backend := sys.bakends[0]
 //	c := backend.engine.(*core)
 //
 //	valSet := c.valSet

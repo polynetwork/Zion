@@ -157,13 +157,11 @@ func (ts *testSystemBackend) Broadcast(valSet hotstuff.ValidatorSet, message []b
 }
 
 func (ts *testSystemBackend) Gossip(valSet hotstuff.ValidatorSet, message []byte) error {
-	return nil
 	testLogger.Warn("not sign any data")
 	return nil
 }
 
 func (ts *testSystemBackend) Unicast(valSet hotstuff.ValidatorSet, message []byte) error {
-	return nil
 	testLogger.Info("enqueuing a message...", "address", ts.Address())
 	ts.sentMsgs = append(ts.sentMsgs, message)
 	ts.sys.queuedMessage <- hotstuff.MessageEvent{
@@ -434,33 +432,29 @@ func newTestQCWithoutExtra(c *core, h, r int) *QuorumCert {
 	}
 }
 
-func newTestQCWithExtra(t *testing.T, s *testSystem, h int) *QuorumCert {
-	view := makeView(h, 0)
-	block := makeBlock(h)
-	hash := block.Hash()
+func newTestQCWithExtra(t *testing.T, s *testSystem, node common.Hash, code MsgType, h, r int) *QuorumCert {
+	view := makeView(h, r)
 	vset := s.backends[0].engine.valSet
 	N := vset.Size()
-	coinbase := vset.GetByIndex(uint64(h % N))
 
 	leader := s.getLeader()
-	seal, _ := leader.signer.SignHash(hash)
+	qc := &QuorumCert{
+		view:     view,
+		node:     node,
+		code:     code,
+		proposer: leader.Address(),
+	}
+	sealhash := qc.SealHash()
+	seal, _ := leader.signer.SignHash(sealhash)
+	qc.seal = seal
 	committedSeal := make([][]byte, N-1)
 	for i, v := range s.getRepos() {
-		sig, err := v.signer.SignHash(hash)
+		sig, err := v.signer.SignHash(sealhash)
 		if err != nil {
 			t.Errorf("sign block hash failed, err: %v", err)
 		}
 		committedSeal[i] = sig
 	}
-	//extra, err := types.GenerateExtraWithSignature(0, 1000000000, vset.AddressList(), seal, committedSeal)
-	//if err != nil {
-	//	t.Errorf("generate extra with signatures failed, err: %v", err)
-	//}
-	return &QuorumCert{
-		view:          view,
-		node:          hash,
-		proposer:      coinbase.Address(),
-		seal:          seal,
-		committedSeal: committedSeal,
-	}
+	qc.committedSeal = committedSeal
+	return qc
 }
