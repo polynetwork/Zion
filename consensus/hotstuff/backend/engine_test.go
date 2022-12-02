@@ -79,6 +79,7 @@ func TestSealStopChannel(t *testing.T) {
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	stop := make(chan struct{}, 1)
 	eventSub := engine.EventMux().Subscribe(hotstuff.RequestEvent{})
+	blockSub := engine.SubscribeBlock(make(chan consensus.ExecutedBlock))
 	eventLoop := func() {
 		ev := <-eventSub.Chan()
 		if _, ok := ev.Data.(hotstuff.RequestEvent); !ok {
@@ -86,6 +87,7 @@ func TestSealStopChannel(t *testing.T) {
 		}
 		stop <- struct{}{}
 		eventSub.Unsubscribe()
+		blockSub.Unsubscribe()
 	}
 	resultCh := make(chan *types.Block, 10)
 	go func() {
@@ -101,15 +103,17 @@ func TestSealStopChannel(t *testing.T) {
 	}
 }
 
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestSealCommittedOtherHash
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestSealOtherHash
 // TestSealCommittedOtherHash result channel should be empty if engine commit another block before seal
-func TestSealCommittedOtherHash(t *testing.T) {
+func TestSealOtherHash(t *testing.T) {
 	chain, engine := singleNodeChain()
 	defer engine.Stop()
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	otherBlock := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	otherBlock.Header().GasUsed = 10
 
+	blockCh := make(chan consensus.ExecutedBlock)
+	blockSub := engine.SubscribeBlock(blockCh)
 	eventSub := engine.EventMux().Subscribe(hotstuff.RequestEvent{})
 	blockOutputChannel := make(chan *types.Block)
 	stopChannel := make(chan struct{})
@@ -119,10 +123,11 @@ func TestSealCommittedOtherHash(t *testing.T) {
 		if _, ok := ev.Data.(hotstuff.RequestEvent); !ok {
 			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
 		}
-		if err := engine.Commit(otherBlock); err != nil {
+		if err := engine.Commit(&consensus.ExecutedBlock{Block: otherBlock}); err != nil {
 			t.Error(err.Error())
 		}
 		eventSub.Unsubscribe()
+		blockSub.Unsubscribe()
 	}()
 
 	go func() {
@@ -179,7 +184,7 @@ func TestSealCommitted(t *testing.T) {
 	}
 }
 
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestVerifyHeader
+// go test -count=1 -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestVerifyHeader
 func TestVerifyHeader(t *testing.T) {
 	chain, engine := singleNodeChain()
 	defer engine.Stop()
@@ -231,7 +236,7 @@ func TestVerifyHeader(t *testing.T) {
 	// invalid timestamp
 	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	header = block.Header()
-	header.Time = chain.Genesis().Time() + (engine.config.BlockPeriod - 1)
+	header.Time = chain.Genesis().Time() - 1
 
 	if err := engine.VerifyHeader(chain, header, false); err != errInvalidTimestamp {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidTimestamp)
@@ -241,7 +246,7 @@ func TestVerifyHeader(t *testing.T) {
 	block = makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	header = block.Header()
 	header.Time = uint64(time.Now().Unix() + 1)
-	if err := engine.VerifyHeader(chain, header, false); err != errInvalidTimestamp {
-		t.Errorf("error mismatch: have %v, want %v", err, errInvalidTimestamp)
+	if err := engine.VerifyHeader(chain, header, false); err != consensus.ErrFutureBlock {
+		t.Errorf("error mismatch: have %v, want %v", err, consensus.ErrFutureBlock)
 	}
 }

@@ -419,6 +419,11 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 func (w *worker) mainLoop() {
 	defer w.txsSub.Unsubscribe()
 	defer w.chainHeadSub.Unsubscribe()
+	defer func() {
+		if w.executedBlockSub != nil {
+			w.executedBlockSub.Unsubscribe()
+		}
+	}()
 
 	for {
 		select {

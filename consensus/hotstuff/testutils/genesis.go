@@ -90,5 +90,6 @@ func Genesis(validators []common.Address) (*core.Genesis, error) {
 	}
 	g.ExtraData = rawExtra
 	g.GasLimit = 30000000
+	g.Timestamp = 1638385012 // 2021
 	return g, nil
 }
