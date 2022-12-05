@@ -52,11 +52,6 @@ type backend struct {
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	// fields for receive sealing and committed proposal
-	sealMu            sync.Mutex
-	commitCh          chan *types.Block
-	proposedBlockHash common.Hash
-
 	// signal for engine running status
 	coreStarted bool
 	coreMu      sync.RWMutex
@@ -84,7 +79,6 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		config:         config,
 		db:             db,
 		logger:         log.New(),
-		commitCh:       make(chan *types.Block, 1),
 		coreStarted:    false,
 		eventMux:       new(event.TypeMux),
 		signer:         signer,
@@ -230,17 +224,8 @@ func (s *backend) Commit(executed *consensus.ExecutedBlock) error {
 	if executed == nil || executed.Block == nil {
 		return fmt.Errorf("invalid executed block")
 	}
-	block := executed.Block
-
-	if block.Hash() == s.proposedBlockHash {
-		s.commitCh <- executed.Block
-	} else if executed.State == nil {
-		return fmt.Errorf("remote executed block statedb invalid")
-	} else {
-		s.executeFeed.Send(*executed)
-	}
-
-	s.logger.Info("Committed", "address", s.Address(), "hash", block.Hash(), "number", block.Number())
+	s.executeFeed.Send(*executed)
+	s.logger.Info("Committed", "address", s.Address(), "hash", executed.Block.Hash(), "number", executed.Block.Number())
 	return nil
 }
 

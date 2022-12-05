@@ -182,36 +182,9 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	}
 	block = block.WithSeal(header)
 
-	go func() {
-		// lock current proposal sealing procedure before the committed block arrived,
-		// and the committed block may be an remote block, and it's hash may not equal to local block hash.
-		s.sealMu.Lock()
-		s.proposedBlockHash = block.Hash()
-		s.logger.Trace("WorkerSealNewBlock", "hash", block.Hash(), "number", block.Number())
+	go s.EventMux().Post(hotstuff.RequestEvent{Block: block})
 
-		defer func() {
-			s.proposedBlockHash = common.EmptyHash
-			s.sealMu.Unlock()
-		}()
-
-		// post block into Istanbul engine
-		go s.EventMux().Post(hotstuff.RequestEvent{Block: block})
-
-		for {
-			select {
-			case result := <-s.commitCh:
-				// if the block hash and the hash from channel are the same,
-				// return the result. Otherwise, keep waiting the next hash.
-				if result != nil && block.Hash() == result.Hash() {
-					results <- result
-				}
-			case <-stop:
-				s.logger.Trace("Stop seal block", "num", block.NumberU64(), "hash", block.Hash())
-				results <- nil
-				return
-			}
-		}
-	}()
+	s.logger.Trace("WorkerSealNewBlock", "hash", block.Hash(), "number", block.Number())
 	return nil
 }
 
@@ -242,12 +215,6 @@ func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(db ethdb.R
 	if s.coreStarted {
 		return ErrStartedEngine
 	}
-
-	// clear previous data
-	if s.commitCh != nil {
-		close(s.commitCh)
-	}
-	s.commitCh = make(chan *types.Block, 1)
 
 	s.chain = chain
 	s.hasBadBlock = hasBadBlock

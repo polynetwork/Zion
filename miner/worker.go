@@ -373,9 +373,6 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			timestamp = time.Now().Unix()
 			commit(commitInterruptNewHead)
 
-		case data := <-w.executedBlockCh:
-			w.commitRemote(&data)
-
 		case <-timer.C:
 			// If mining is running resubmit a new work cycle periodically to pull in
 			// higher priced transactions. Disable this overhead for pending blocks.
@@ -594,6 +591,75 @@ func (w *worker) resultLoop() {
 			// Insert the block into the set of pending ones to resultLoop for confirmations
 			w.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
+		case data := <-w.executedBlockCh: // only used for hotstuff
+			block := data.Block
+			if block == nil {
+				log.Warn("Executed block is nil")
+				continue
+			}
+			if w.chain.HasBlock(block.Hash(), block.NumberU64()) {
+				log.Debug("Block already exist", block.Number(), block.Hash())
+				continue
+			}
+
+			var (
+				sealhash = w.engine.SealHash(block.Header())
+				hash     = block.Hash()
+				receipts []*types.Receipt
+				logs     []*types.Log
+				statedb  *state.StateDB
+				task     *task
+				exist    bool
+			)
+
+			// Different block could share same sealhash, deep copy here to prevent write-write conflict. Use executed state if exist.
+			if data.State != nil {
+				receipts = data.Receipts
+				logs = data.Logs
+				statedb = data.State
+			} else {
+				w.pendingMu.RLock()
+				task, exist = w.pendingTasks[sealhash]
+				w.pendingMu.RUnlock()
+				if !exist {
+					log.Error("Failed to find local task", "hash", block.Hash())
+					continue
+				}
+
+				receipts = make([]*types.Receipt, len(task.receipts))
+				statedb = task.state
+				for i, receipt := range task.receipts {
+					// add block location fields
+					receipt.BlockHash = hash
+					receipt.BlockNumber = block.Number()
+					receipt.TransactionIndex = uint(i)
+
+					receipts[i] = new(types.Receipt)
+					*receipts[i] = *receipt
+					// Update the block hash in all logs since it is now available and not when the
+					// receipt/log of individual transactions were created.
+					for _, log := range receipt.Logs {
+						log.BlockHash = hash
+					}
+					logs = append(logs, receipt.Logs...)
+				}
+			}
+
+			// Commit block and state to database.
+			_, err := w.chain.WriteBlockWithState(block, receipts, logs, statedb, true)
+			if err != nil {
+				log.Error("Failed writing block to chain", "err", err)
+				continue
+			}
+			log.Info("Successfully sealed new block", "number", block.Number(), "sealhash", sealhash, "hash", hash)
+
+			// Broadcast the block and announce chain insertion event
+			w.mux.Post(core.NewMinedBlockEvent{Block: block})
+
+			// Insert the block into the set of pending ones to resultLoop for confirmations
+			if exist {
+				w.unconfirmed.Insert(block.NumberU64(), block.Hash())
+			}
 		case <-w.exitCh:
 			return
 		}
@@ -802,16 +868,6 @@ func (w *worker) commitNewWork(interrupt *int32, timestamp int64) {
 	timestamp = tstart.Unix()
 	num := parent.Number()
 
-	// check duplicated pending task
-	//w.pendingMu.RLock()
-	//for _, task := range w.pendingTasks {
-	//	if task != nil && task.block != nil && task.block.NumberU64() == num.Uint64()+1 {
-	//		log.Debug("Exist pending task at the same height", "number", task.block.Number(), "hash", task.block.Hash())
-	//		return
-	//	}
-	//}
-	//w.pendingMu.RUnlock()
-
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
@@ -897,37 +953,6 @@ func (w *worker) commit(update bool, start time.Time) error {
 		w.updateSnapshot()
 	}
 	return nil
-}
-
-// commitRemote assembles the remote block executing result as local task.
-func (w *worker) commitRemote(data *consensus.ExecutedBlock) {
-	if !w.IsRunning() {
-		log.Info("Miner worker not running")
-		return
-	}
-
-	// logs and receipts may be nil
-	if data == nil || data.Block == nil || data.State == nil {
-		log.Warn("Commit remote work failed", "err", "executed block invalid")
-		return
-	}
-
-	block := data.Block
-	if w.chain.HasBlock(block.Hash(), block.NumberU64()) {
-		log.Info("Remote block already exist", block.Number(), block.Hash())
-		return
-	}
-
-	// Commit block and state to database.
-	_, err := w.chain.WriteBlockWithState(block, data.Receipts, data.Logs, data.State, true)
-	if err != nil {
-		log.Error("Failed writing block to chain", "err", err)
-		return
-	}
-	log.Info("Successfully sealed remote block", "number", block.Number(), "hash", block.Hash())
-
-	// Broadcast the block and announce chain insertion event
-	w.mux.Post(core.NewMinedBlockEvent{Block: block})
 }
 
 // copyReceipts makes a deep copy of the given receipts.
