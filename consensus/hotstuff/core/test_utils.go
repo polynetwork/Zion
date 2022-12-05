@@ -21,16 +21,14 @@ package core
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/ethereum/go-ethereum/trie"
 	"math/big"
 	"math/rand"
 	"strings"
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/consensus"
-
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
@@ -41,6 +39,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	elog "github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/trie"
 )
 
 type Keys []*ecdsa.PrivateKey
