@@ -21,6 +21,7 @@ package core
 import (
 	"crypto/ecdsa"
 	"fmt"
+	"github.com/ethereum/go-ethereum/trie"
 	"math/big"
 	"math/rand"
 	"strings"
@@ -81,8 +82,7 @@ func makeBlock(number int) *types.Block {
 		GasUsed:    0,
 		Time:       0,
 	}
-	block := &types.Block{}
-	return block.WithSeal(header)
+	return types.NewBlock(header, nil, nil, nil, trie.NewStackTrie(nil))
 }
 
 func newTestProposal() *types.Block {
@@ -172,8 +172,7 @@ func (ts *testSystemBackend) Unicast(valSet hotstuff.ValidatorSet, message []byt
 }
 
 func (ts *testSystemBackend) SealBlock(proposal *types.Block, seals [][]byte) (*types.Block, error) {
-	// todo:
-	return nil, nil
+	return proposal, nil
 }
 
 func (ts *testSystemBackend) Commit(executed *consensus.ExecutedBlock) error {

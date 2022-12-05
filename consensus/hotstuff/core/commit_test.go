@@ -17,336 +17,139 @@
  */
 
 package core
-//
-//import (
-//	"math/big"
-//	"testing"
-//
-//	"github.com/ethereum/go-ethereum/common"
-//	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-//	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
-//	"github.com/stretchr/testify/assert"
-//)
-//
-//func TestHandlePreCommitVote(t *testing.T) {
-//	N := uint64(4)
-//	F := uint64(1)
-//	H := uint64(5)
-//	R := uint64(1)
-//
-//	newVote := func(c *core, hash common.Hash) *Vote {
-//		view := c.currentView()
-//		return &Vote{
-//			view:   view,
-//			Digest: hash,
-//		}
-//	}
-//	newVoteMsg := func(vote *Vote) *hotstuff.Message {
-//		payload, _ := Encode(vote)
-//		return &hotstuff.Message{
-//			Code: MsgTypePreCommitVote,
-//			Msg:  payload,
-//		}
-//	}
-//
-//	type testcase struct {
-//		Sys       *testSystem
-//		Votes     map[hotstuff.Validator]*hotstuff.Message
-//		ExpectErr error
-//	}
-//
-//	testcases := []*testcase{
-//
-//		// normal case
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			proposal := makeBlock(int64(H))
-//			votes := make(map[hotstuff.Validator]*hotstuff.Message)
-//			for _, v := range sys.backends {
-//				core := v.core()
-//				core.current.SetBlock(proposal)
-//				core.current.SetPrepareQC(&QuorumCert{Hash: proposal.Hash()})
-//
-//				vote := newVote(core, proposal.Hash())
-//				msg := newVoteMsg(vote)
-//				msg.Address = core.Address()
-//				val := validator.New(msg.Address)
-//
-//				votes[val] = msg
-//			}
-//			return &testcase{
-//				Sys:       sys,
-//				Votes:     votes,
-//				ExpectErr: nil,
-//			}
-//		}(),
-//
-//		// errOldMessage
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			proposal := makeBlock(int64(H))
-//			votes := make(map[hotstuff.Validator]*hotstuff.Message)
-//			for _, v := range sys.backends {
-//				core := v.core()
-//				core.current.SetBlock(proposal)
-//				core.current.SetPrepareQC(&QuorumCert{Hash: proposal.Hash()})
-//
-//				vote := newVote(core, proposal.Hash())
-//				vote.view.Height = new(big.Int).SetUint64(H - 1)
-//
-//				msg := newVoteMsg(vote)
-//				msg.Address = core.Address()
-//				val := validator.New(msg.Address)
-//
-//				votes[val] = msg
-//			}
-//			return &testcase{
-//				Sys:       sys,
-//				Votes:     votes,
-//				ExpectErr: errOldMessage,
-//			}
-//		}(),
-//
-//		// errFutureMessage
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			proposal := makeBlock(int64(H))
-//			votes := make(map[hotstuff.Validator]*hotstuff.Message)
-//			for _, v := range sys.backends {
-//				core := v.core()
-//				core.current.SetBlock(proposal)
-//				core.current.SetPrepareQC(&QuorumCert{Hash: proposal.Hash()})
-//
-//				vote := newVote(core, proposal.Hash())
-//				vote.view.Round = new(big.Int).SetUint64(R + 1)
-//
-//				msg := newVoteMsg(vote)
-//				msg.Address = core.Address()
-//				val := validator.New(msg.Address)
-//
-//				votes[val] = msg
-//			}
-//			return &testcase{
-//				Sys:       sys,
-//				Votes:     votes,
-//				ExpectErr: errFutureMessage,
-//			}
-//		}(),
-//
-//		// errInconsistentVote
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			proposal := makeBlock(int64(H))
-//			votes := make(map[hotstuff.Validator]*hotstuff.Message)
-//			for _, v := range sys.backends {
-//				core := v.core()
-//				core.current.SetBlock(proposal)
-//				core.current.SetPrepareQC(&QuorumCert{Hash: proposal.Hash()})
-//
-//				vote := newVote(core, proposal.Hash())
-//				vote.Digest = common.HexToHash("0x1234")
-//				msg := newVoteMsg(vote)
-//				msg.Address = core.Address()
-//				val := validator.New(msg.Address)
-//
-//				votes[val] = msg
-//			}
-//			return &testcase{
-//				Sys:       sys,
-//				Votes:     votes,
-//				ExpectErr: errInconsistentVote,
-//			}
-//		}(),
-//	}
-//
-//	for _, v := range testcases {
-//		leader := v.Sys.getLeader()
-//		for src, vote := range v.Votes {
-//			assert.Equal(t, v.ExpectErr, leader.handlePreCommitVote(vote, src))
-//		}
-//		if v.ExpectErr == nil {
-//			assert.Equal(t, StateLocked, leader.current.State())
-//			assert.Equal(t, int(N), leader.current.PreCommitVoteSize())
-//		}
-//	}
-//}
-//
-//func TestHandleCommit(t *testing.T) {
-//	N := uint64(4)
-//	F := uint64(1)
-//	H := uint64(5)
-//	R := uint64(1)
-//
-//	newPreCommitMsg := func(c *core) (hotstuff.Proposal, *QuorumCert) {
-//		coreView := c.currentView()
-//		h := coreView.Height.Uint64()
-//		r := coreView.Round.Uint64()
-//		return newProposalAndQC(c, h, r)
-//	}
-//	newP2PMsg := func(msg *QuorumCert) *hotstuff.Message {
-//		payload, _ := Encode(msg)
-//		return &hotstuff.Message{
-//			Code: MsgTypeCommit,
-//			Msg:  payload,
-//		}
-//	}
-//
-//	type testcase struct {
-//		Sys       *testSystem
-//		Msg       *hotstuff.Message
-//		Leader    hotstuff.Validator
-//		ExpectErr error
-//	}
-//	testcases := []*testcase{
-//		// normal case
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			leader := sys.getLeader()
-//			val := validator.New(leader.Address())
-//			var (
-//				proposal hotstuff.Proposal
-//				qc       *QuorumCert
-//			)
-//			for _, backend := range sys.backends {
-//				core := backend.core()
-//				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetBlock(proposal)
-//				core.current.SetPrepareQC(qc)
-//			}
-//			msg := newP2PMsg(qc)
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    val,
-//				ExpectErr: nil,
-//			}
-//		}(),
-//
-//		// errOldMsg
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			leader := sys.getLeader()
-//			val := validator.New(leader.Address())
-//			var (
-//				proposal hotstuff.Proposal
-//				qc       *QuorumCert
-//			)
-//			for _, backend := range sys.backends {
-//				core := backend.core()
-//				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetBlock(proposal)
-//				core.current.SetPrepareQC(qc)
-//			}
-//			qc.view.Height = new(big.Int).SetUint64(H - 1)
-//			msg := newP2PMsg(qc)
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    val,
-//				ExpectErr: errOldMessage,
-//			}
-//		}(),
-//
-//		// errFutureMsg
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			leader := sys.getLeader()
-//			val := validator.New(leader.Address())
-//			var (
-//				proposal hotstuff.Proposal
-//				qc       *QuorumCert
-//			)
-//			for _, backend := range sys.backends {
-//				core := backend.core()
-//				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetBlock(proposal)
-//				core.current.SetPrepareQC(qc)
-//			}
-//			qc.view.Round = new(big.Int).SetUint64(R + 1)
-//			msg := newP2PMsg(qc)
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    val,
-//				ExpectErr: errFutureMessage,
-//			}
-//		}(),
-//
-//		// errNotFromProposer
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			var (
-//				proposal hotstuff.Proposal
-//				qc       *QuorumCert
-//			)
-//			for _, backend := range sys.backends {
-//				core := backend.core()
-//				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetBlock(proposal)
-//				core.current.SetPrepareQC(qc)
-//			}
-//			msg := newP2PMsg(qc)
-//			val := validator.New(sys.getRepos()[0].Address())
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    val,
-//				ExpectErr: errNotFromProposer,
-//			}
-//		}(),
-//
-//		// errInconsistentPrepareQC
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			var (
-//				proposal hotstuff.Proposal
-//				qc       *QuorumCert
-//			)
-//			for _, backend := range sys.backends {
-//				core := backend.core()
-//				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetBlock(proposal)
-//				core.current.SetPrepareQC(&QuorumCert{Hash: common.HexToHash("0x124")})
-//			}
-//			msg := newP2PMsg(qc)
-//			val := validator.New(sys.getLeader().Address())
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    val,
-//				ExpectErr: nil,
-//			}
-//		}(),
-//
-//		// errState
-//		func() *testcase {
-//			sys := NewTestSystemWithBackend(N, F, H, R)
-//			var (
-//				proposal hotstuff.Proposal
-//				qc       *QuorumCert
-//			)
-//			for _, backend := range sys.backends {
-//				core := backend.core()
-//				proposal, qc = newPreCommitMsg(core)
-//				core.current.SetBlock(proposal)
-//				core.current.SetPrepareQC(qc)
-//				core.current.SetState(StateLocked)
-//			}
-//			msg := newP2PMsg(qc)
-//			val := validator.New(sys.getLeader().Address())
-//			return &testcase{
-//				Sys:       sys,
-//				Msg:       msg,
-//				Leader:    val,
-//				ExpectErr: errState,
-//			}
-//		}(),
-//	}
-//
-//	for _, c := range testcases {
-//		for _, backend := range c.Sys.backends {
-//			core := backend.core()
-//			assert.Equal(t, c.ExpectErr, core.handleCommit(c.Msg, c.Leader))
-//		}
-//	}
-//}
+
+import (
+	"testing"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
+	"github.com/stretchr/testify/assert"
+)
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandlePreCommitVote
+func TestHandlePreCommitVote(t *testing.T) {
+	N, H, R := 4, 5, 1
+
+	newVoteMsg := func(hash common.Hash, sender common.Address, h, r int) *Message {
+		return &Message{
+			Code:    MsgTypePreCommitVote,
+			Msg:     hash.Bytes(),
+			View:    makeView(h, r),
+			address: sender,
+		}
+	}
+
+	type testcase struct {
+		Sys       *testSystem
+		Votes     map[hotstuff.Validator]*Message
+		ExpectErr error
+	}
+
+	parentNode := common.HexToHash("0x123")
+	testcases := []*testcase{
+
+		// normal case
+		func() *testcase {
+			sys := NewTestSystemWithBackend(N, H, R)
+			proposal := makeBlock(H)
+			node := NewNode(parentNode, proposal)
+			votes := make(map[hotstuff.Validator]*Message)
+			for _, v := range sys.backends {
+				core := v.engine
+				core.current.node.node = node
+				core.current.node.temp = node
+				core.current.SetPrepareQC(&QuorumCert{node: node.Hash()})
+				msg := newVoteMsg(node.Hash(), core.Address(), H, R)
+				val := validator.New(msg.address)
+				msg.PayloadNoSig()
+				sig, _ := v.engine.signer.SignHash(msg.hash)
+				msg.Signature = sig
+				votes[val] = msg
+			}
+			sys.getLeader().current.state = StatePrepared
+			sys.Run(false)
+			return &testcase{
+				Sys:       sys,
+				Votes:     votes,
+				ExpectErr: nil,
+			}
+		}(),
+	}
+
+	for _, v := range testcases {
+		leader := v.Sys.getLeader()
+		for _, vote := range v.Votes {
+			assert.Equal(t, v.ExpectErr, leader.handlePreCommitVote(vote))
+		}
+		if v.ExpectErr == nil {
+			assert.Equal(t, StateLocked, leader.current.State())
+			assert.Equal(t, int(N), leader.current.PreCommitVoteSize())
+		}
+	}
+}
+
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestHandleCommit
+func TestHandleCommit(t *testing.T) {
+	N, H, R := 4, 5, 1
+
+	parentNode := common.HexToHash("0x123")
+	newCommitMsg := func(backend *testSystemBackend) (*Subject, *Message) {
+		coreView := backend.engine.currentView()
+		h := int(coreView.Height.Uint64())
+		r := int(coreView.Round.Uint64())
+		proposal := makeBlock(h)
+		node := NewNode(parentNode, proposal)
+		qc := newTestQCWithExtra(t, backend.sys, node.Hash(), MsgTypePreCommitVote, h, r)
+		sub := NewSubject(node, qc)
+		payload, _ := Encode(qc)
+		leader := backend.sys.getLeader()
+		msg := &Message{
+			address: leader.Address(),
+			Code:    MsgTypeCommit,
+			Msg:     payload,
+			View:    coreView,
+		}
+		msg.PayloadNoSig()
+		sig, _ := leader.signer.SignHash(msg.hash)
+		msg.Signature = sig
+		return sub, msg
+	}
+
+	type testcase struct {
+		Sys       *testSystem
+		Msg       *Message
+		Leader    hotstuff.Validator
+		ExpectErr error
+	}
+	testcases := []*testcase{
+		func() *testcase {
+			sys := NewTestSystemWithBackend(N, H, R)
+			sys.Run(false)
+			leader := sys.getLeader()
+			val := validator.New(leader.Address())
+			msgs := make([]*Message, N)
+			for i, backend := range sys.backends {
+				core := backend.engine
+				subject, msg := newCommitMsg(backend)
+				core.current.node.node = subject.Node
+				core.current.node.temp = subject.Node
+				core.current.SetPrepareQC(&QuorumCert{node: subject.Node.Hash()})
+				msgs[i] = msg
+			}
+			return &testcase{
+				Sys:       sys,
+				Msg:       msgs[0],
+				Leader:    val,
+				ExpectErr: nil,
+			}
+		}(),
+	}
+
+	for _, c := range testcases {
+		for _, backend := range c.Sys.backends {
+			core := backend.engine
+			assert.Equal(t, c.ExpectErr, core.handleCommit(c.Msg))
+		}
+	}
+}

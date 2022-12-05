@@ -60,9 +60,12 @@ func (c *core) handleCommitVote(data *Message) error {
 		logger.Trace("Failed to get lockBlock", "msg", code, "src", src, "err", "block is nil")
 		return errInvalidNode
 	}
-	if addr, err := c.validateFn(lockedBlock.Hash(), data.CommittedSeal); err != nil {
-		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err, "expect", src, "got", addr)
-		return err
+	// validateFn used to check block hash signature, it is an closure function which can be nil in unit test.
+	if c.validateFn != nil {
+		if addr, err := c.validateFn(lockedBlock.Hash(), data.CommittedSeal); err != nil {
+			logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err, "expect", src, "got", addr)
+			return err
+		}
 	}
 
 	// queue vote into messageSet to ensure that at least 2/3 validator vote at the same step.
