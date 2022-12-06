@@ -136,7 +136,7 @@ type Engine interface {
 // Broadcaster defines the interface to enqueue blocks to fetcher and find peer
 type Broadcaster interface {
 	// Enqueue add a block into fetcher queue
-	Enqueue(id string, block *types.Block)
+	// Enqueue(id string, block *types.Block)
 	// FindPeers retrives peers by addresses
 	FindPeers(map[common.Address]bool) map[common.Address]Peer
 	// FindPeer find peer by address

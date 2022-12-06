@@ -67,9 +67,10 @@ type backend struct {
 	currentBlock   func() *types.Block
 	getBlockByHash func(hash common.Hash) *types.Block
 	hasBadBlock    func(db ethdb.Reader, hash common.Hash) bool
+	systemTxHook   SystemTxFn
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) *backend {
+func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, mock bool) *backend {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
@@ -87,7 +88,13 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		recents:        recents,
 	}
 
-	backend.core = core.New(backend, config, signer, db)
+	if mock {
+		backend.systemTxHook = nil
+		backend.core = core.New(backend, config, signer, db, nil)
+	} else {
+		backend.systemTxHook = backend.executeSystemTxs
+		backend.core = core.New(backend, config, signer, db, backend.CheckPoint)
+	}
 
 	return backend
 }

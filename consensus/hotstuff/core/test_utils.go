@@ -252,7 +252,7 @@ func NewTestSystemWithBackend(n, h, r int) *testSystem {
 		backend.peers = vset
 		backend.address = vset.GetByIndex(uint64(i)).Address()
 
-		core := New(backend, config, signer.NewSigner(keys[i]), nil)
+		core := New(backend, config, signer.NewSigner(keys[i]), nil, nil)
 		core.current = newRoundState(nil, nil, vset, nil, makeView(h, r))
 		core.valSet = vset
 		core.logger = testLogger

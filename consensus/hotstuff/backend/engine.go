@@ -111,9 +111,12 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
 	uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
 
-	if err := s.executeSystemTxs(chain, header, state, txs, receipts, systemTxs, usedGas, false); err != nil {
-		return err
+	if s.systemTxHook != nil {
+		if err := s.executeSystemTxs(chain, header, state, txs, receipts, systemTxs, usedGas, false); err != nil {
+			return err
+		}
 	}
+
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 	return nil
@@ -130,13 +133,18 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 		receipts = make([]*types.Receipt, 0)
 	}
 
-	if err := s.executeSystemTxs(chain, header, state, &txs, &receipts, nil, &header.GasUsed, true); err != nil {
-		return nil, nil, err
+	if s.systemTxHook != nil {
+		if err := s.executeSystemTxs(chain, header, state, &txs, &receipts, nil, &header.GasUsed, true); err != nil {
+			return nil, nil, err
+		}
 	}
+
 	// Assemble and return the final block for sealing
 	block := packBlock(state, chain, header, txs, receipts)
 	return block, receipts, nil
 }
+
+type SystemTxFn func(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64, mining bool) error
 
 // executeSystemTxs governance tx execution do not allow failure, the consensus will halt if tx failed and return error.
 func (s *backend) executeSystemTxs(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,

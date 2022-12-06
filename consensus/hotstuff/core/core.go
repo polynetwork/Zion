@@ -55,12 +55,13 @@ type core struct {
 	lastVals hotstuff.ValidatorSet // validator set for last epoch
 	point    uint64                // epoch start height, header's extra contains valset
 
-	validateFn func(common.Hash, []byte) (common.Address, error)
-	isRunning  bool
+	validateFn   func(common.Hash, []byte) (common.Address, error)
+	checkPointFn func(uint64) (uint64, bool)
+	isRunning    bool
 }
 
 // New creates an HotStuff consensus core
-func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer, db ethdb.Database) *core {
+func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Signer, db ethdb.Database, checkPointFn func(uint64) (uint64, bool)) *core {
 	c := &core{
 		db:                db,
 		config:            config,
@@ -72,7 +73,7 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 		pendingRequestsMu: new(sync.Mutex),
 	}
 	c.validateFn = c.checkValidatorSignature
-
+	c.checkPointFn = checkPointFn
 	return c
 }
 
@@ -161,7 +162,11 @@ func (c *core) startNewRound(round *big.Int) {
 
 // check point and return true if the engine is stopped, return false if the validators not changed
 func (c *core) checkPoint(view *View) bool {
-	if epochStart, ok := c.backend.CheckPoint(view.HeightU64()); ok {
+	if c.checkPointFn == nil {
+		return false
+	}
+
+	if epochStart, ok := c.checkPointFn(view.HeightU64()); ok {
 		c.point = epochStart
 		c.lastVals = c.valSet.Copy()
 		c.logger.Trace("CheckPoint done", "view", view, "point", c.point)
