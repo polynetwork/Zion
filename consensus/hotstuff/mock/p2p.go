@@ -19,7 +19,6 @@
 package mock
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -81,12 +80,10 @@ func (b *broadcaster) Connect(b2 *broadcaster) {
 }
 
 func (b *broadcaster) add(remote common.Address, rw *p2p.MsgPipeRW) {
-	peer := &MockPeer{rw: rw, local: b.addr, remote: remote}
+	peer := &MockPeer{rw: rw, local: b.addr, remote: remote, geth: b.geth}
 	b.peers[remote] = peer
-	handler, ok := b.eng.(consensus.Handler)
-	if !ok {
-		panic(fmt.Sprintf("engine convert to handler failed!"))
-	}
+	handler := b.eng.(consensus.Handler)
+
 	log.Debug("connect", "local", b.addr, "remote", remote)
 	go func() {
 		defer peer.Close()
@@ -95,11 +92,11 @@ func (b *broadcaster) add(remote common.Address, rw *p2p.MsgPipeRW) {
 			msg, err := peer.ReadMsg()
 			if err != nil {
 				log.Error("Failed to read message", "err", err)
-				break
+				return
 			}
 			if _, err := handler.HandleMsg(remote, msg); err != nil {
 				log.Error("Failed to handle message", "err", err)
-				break
+				return
 			}
 			if msg.Code == eth.NewBlockMsg {
 				b.geth.handleBlock(msg)
@@ -111,6 +108,7 @@ func (b *broadcaster) add(remote common.Address, rw *p2p.MsgPipeRW) {
 type MockPeer struct {
 	local, remote common.Address
 	rw            *p2p.MsgPipeRW
+	geth          *Geth
 }
 
 func (p *MockPeer) SendNewBlock(block *types.Block, td *big.Int) error {
@@ -121,6 +119,13 @@ func (p *MockPeer) SendNewBlock(block *types.Block, td *big.Int) error {
 }
 
 func (p *MockPeer) Send(msgcode uint64, data interface{}) error {
+	if p.geth.hook != nil && msgcode == hotstuffMsg {
+		if raw, ok := data.([]byte); !ok {
+			panic("Send hotstuff message data convert failed")
+		} else {
+			p.geth.hook(raw)
+		}
+	}
 	if err := p2p.Send(p.rw, msgcode, data); err != nil {
 		log.Error("Failed to send msg", "local", p.local, "remote", p.remote, "err", err)
 		return err

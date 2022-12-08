@@ -34,6 +34,8 @@ import (
 const (
 	EpochStart = uint64(0)
 	EpochEnd   = uint64(10000000000)
+
+	hotstuffMsg = 0x11
 )
 
 func init() {

@@ -109,12 +109,16 @@ func (m *miner) Start() {
 		case <-m.nodesCh:
 
 		case <-m.exit:
+			log.Info("miner stopped")
 			return
 		}
 	}
 }
 
 func (m *miner) Stop() {
+	m.chainHeadSub.Unsubscribe()
+	m.nodesSub.Unsubscribe()
+	m.executedSub.Unsubscribe()
 	close(m.exit)
 }
 

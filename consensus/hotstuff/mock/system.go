@@ -21,6 +21,7 @@ package mock
 import (
 	"crypto/ecdsa"
 	"math/big"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
@@ -41,6 +42,7 @@ type Geth struct {
 	hotstuff    consensus.HotStuff
 	api         *backend.API
 	broadcaster *broadcaster
+	hook        func(raw []byte)
 }
 
 func MakeGeth(privateKey *ecdsa.PrivateKey, vals []common.Address) *Geth {
@@ -71,8 +73,10 @@ func (g *Geth) Start() {
 
 func (g *Geth) Stop() {
 	g.broadcaster.Stop()
+	time.Sleep(10 * time.Millisecond)
 	g.hotstuff.Stop()
 	g.miner.Stop()
+	g.chain.Stop()
 }
 
 func (g *Geth) Sequence() (uint64, uint64) {
@@ -123,14 +127,15 @@ func (g *Geth) handleBlock(msg p2p.Msg) {
 			log.Error("failed to writeBlockWithState", "err", err)
 		}
 	}
-	////g.chain.GetBlockByHash(block.Hash())
-	//if _, err := g.chain.InsertChain([]*types.Block{block}); err != nil {
-	//	log.Error("insert chain failed", "num", block.Number(), "hash", block.Hash(), "err", err)
-	//}
+}
+
+func (g *Geth) setHook(hook func(data []byte)) {
+	g.hook = hook
 }
 
 type System struct {
 	nodes []*Geth
+	exit  chan struct{}
 }
 
 func makeSystem(n int) *System {
@@ -141,7 +146,7 @@ func makeSystem(n int) *System {
 		nodes[i] = MakeGeth(pks[i], addrs)
 	}
 
-	return &System{nodes: nodes}
+	return &System{nodes: nodes, exit: make(chan struct{})}
 }
 
 func (s *System) Start() {
@@ -156,14 +161,35 @@ func (s *System) Start() {
 			}
 		}
 	}
+
 	for _, node := range s.nodes {
 		go node.Start()
 	}
+
+	go func() {
+		for {
+			select {
+			case <-s.exit:
+				for _, cli := range s.nodes {
+					cli.Stop()
+				}
+				log.Info("-----System stopped!-----")
+				return
+			}
+		}
+	}()
 }
 
 func (s *System) Stop() {
-	for _, cli := range s.nodes {
-		go cli.Stop()
+	close(s.exit)
+}
+
+func (s *System) Close(n int) {
+	timer := time.NewTimer(time.Duration(n) * time.Second)
+	select {
+	case <-timer.C:
+		s.Stop()
+		time.Sleep(1 * time.Second)
 	}
 }
 
@@ -174,6 +200,26 @@ func (s *System) Leader() *Geth {
 		}
 	}
 	return nil
+}
+
+func (s *System) Repos(n int) []*Geth {
+	var list []*Geth
+	for _, node := range s.nodes {
+		if !node.IsProposer() {
+			list = append(list, node)
+		}
+		if len(list) == n {
+			break
+		}
+	}
+	return list
+}
+
+func (s *System) RepoHook(n int, hook func(data []byte)) {
+	nodes := s.Repos(n)
+	for _, node := range nodes {
+		node.setHook(hook)
+	}
 }
 
 func newAccountLists(n int) ([]*ecdsa.PrivateKey, []common.Address) {
