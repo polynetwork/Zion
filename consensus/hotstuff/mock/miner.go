@@ -33,8 +33,10 @@ import (
 )
 
 type miner struct {
+	addr   common.Address
 	chain  *core.BlockChain
 	engine consensus.HotStuff
+	geth   *Geth
 
 	current *environment
 
@@ -66,8 +68,9 @@ type task struct {
 	block    *types.Block
 }
 
-func makeMiner(chain *core.BlockChain, engine consensus.HotStuff) *miner {
+func makeMiner(address common.Address, chain *core.BlockChain, engine consensus.HotStuff) *miner {
 	miner := &miner{
+		addr:         address,
 		chain:        chain,
 		engine:       engine,
 		headCh:       make(chan core.ChainHeadEvent, 1),
@@ -85,16 +88,19 @@ func makeMiner(chain *core.BlockChain, engine consensus.HotStuff) *miner {
 }
 
 func (m *miner) Start() {
-	timer := time.NewTimer(3 * time.Second)
-	m.newWork()
+	timer := time.NewTimer(0 * time.Second)
 
 	for {
 		select {
-		case <-m.headCh:
+		case data := <-m.headCh:
+			if h, ok := m.engine.(consensus.Handler); ok {
+				h.NewChainHead(data.Block.Header())
+			}
 			m.newWork()
 
 		case <-timer.C:
 			m.newWork()
+			timer.Reset(2 * time.Second)
 
 		case data := <-m.executedCh:
 			m.commit(&data)
@@ -215,9 +221,11 @@ func (m *miner) commit(data *consensus.ExecutedBlock) {
 		log.Error("Failed writing block to chain", "err", err)
 		return
 	}
-	log.Info("Successfully sealed new block", "number", block.Number(), "sealhash", sealhash, "hash", hash)
+	log.Info("Successfully sealed new block", "address", m.addr, "number", block.Number(), "sealhash", sealhash, "hash", hash)
 
-	// todo(fuk): broadcast block to all nodes
+	if m.geth != nil {
+		go m.geth.broadcastBlock(block)
+	}
 }
 
 func (m *miner) makeCurrent(header *types.Header) {

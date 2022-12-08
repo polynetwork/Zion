@@ -20,44 +20,58 @@ package mock
 
 import (
 	"crypto/ecdsa"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/eth/protocols/eth"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/p2p"
 )
 
 type Geth struct {
-	miner  *miner
-	chain  *core.BlockChain
-	engine Engine
-	api    *backend.API
+	miner       *miner
+	chain       *core.BlockChain
+	engine      Engine
+	hotstuff    consensus.HotStuff
+	api         *backend.API
+	broadcaster *broadcaster
 }
 
 func MakeGeth(privateKey *ecdsa.PrivateKey, vals []common.Address) *Geth {
 	db := rawdb.NewMemoryDatabase()
 	engine := makeEngine(privateKey, db)
 	chain := makeChain(db, engine, vals)
-	miner := makeMiner(chain, engine.(consensus.HotStuff))
+	hotstuffEngine := engine.(consensus.HotStuff)
+	broadcaster := engine.(consensus.Handler).GetBroadcaster().(*broadcaster)
 	api := engine.APIs(chain)[0].Service.(*backend.API)
-	return &Geth{
-		miner:  miner,
-		chain:  chain,
-		engine: engine,
-		api:    api,
+	miner := makeMiner(broadcaster.addr, chain, hotstuffEngine)
+	geth := &Geth{
+		miner:       miner,
+		chain:       chain,
+		engine:      engine,
+		api:         api,
+		hotstuff:    hotstuffEngine,
+		broadcaster: broadcaster,
 	}
+	miner.geth = geth
+	broadcaster.geth = geth
+	return geth
 }
 
 func (g *Geth) Start() {
-	g.engine.(consensus.HotStuff).Start(g.chain, nil)
+	g.hotstuff.Start(g.chain, nil)
 	g.miner.Start()
 }
 
 func (g *Geth) Stop() {
-	g.engine.(consensus.Handler).GetBroadcaster().Stop()
-	g.engine.(consensus.HotStuff).Stop()
+	g.broadcaster.Stop()
+	g.hotstuff.Stop()
 	g.miner.Stop()
 }
 
@@ -67,6 +81,52 @@ func (g *Geth) Sequence() (uint64, uint64) {
 
 func (g *Geth) IsProposer() bool {
 	return g.api.IsProposer()
+}
+
+func (g *Geth) broadcastBlock(block *types.Block) {
+	var (
+		td   *big.Int
+		hash = block.Hash()
+	)
+	if parent := g.chain.GetBlock(block.ParentHash(), block.NumberU64()-1); parent != nil {
+		td = new(big.Int).Add(block.Difficulty(), g.chain.GetTd(block.ParentHash(), block.NumberU64()-1))
+	} else {
+		log.Error("Propagating dangling block", "number", block.Number(), "hash", hash)
+		return
+	}
+
+	// Send the block to a subset of our peers
+	for _, peer := range g.broadcaster.peers {
+		go func(p *MockPeer) {
+			if err := p.SendNewBlock(block, td); err != nil {
+				log.Error("SendNewBlock", "to", peer.remote, "err", err)
+			}
+		}(peer)
+	}
+}
+
+func (g *Geth) handleBlock(msg p2p.Msg) {
+	ann := new(eth.NewBlockPacket)
+	if err := msg.Decode(ann); err != nil {
+		log.Error("decode newBlockPacket failed", "err", err)
+		return
+	}
+	block := ann.Block
+	curBlock := g.chain.CurrentBlock().Copy()
+	if block.NumberU64() == curBlock.NumberU64()+1 && block.ParentHash() == curBlock.Hash() {
+		statedb, receipts, allLogs, err := g.chain.ExecuteBlock(block)
+		if err != nil {
+			log.Error("failed to execute block", "err", err)
+			return
+		}
+		if _, err := g.chain.WriteBlockWithState(block, receipts, allLogs, statedb, false); err != nil {
+			log.Error("failed to writeBlockWithState", "err", err)
+		}
+	}
+	////g.chain.GetBlockByHash(block.Hash())
+	//if _, err := g.chain.InsertChain([]*types.Block{block}); err != nil {
+	//	log.Error("insert chain failed", "num", block.Number(), "hash", block.Hash(), "err", err)
+	//}
 }
 
 type System struct {

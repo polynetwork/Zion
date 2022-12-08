@@ -196,7 +196,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 
 	go s.EventMux().Post(hotstuff.RequestEvent{Block: block})
 
-	s.logger.Trace("WorkerSealNewBlock", "hash", block.Hash(), "number", block.Number())
+	s.logger.Trace("WorkerSealNewBlock", "address", s.Address(), "hash", block.Hash(), "number", block.Number())
 	return nil
 }
 

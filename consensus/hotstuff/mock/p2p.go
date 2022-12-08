@@ -20,9 +20,12 @@ package mock
 
 import (
 	"fmt"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/eth/protocols/eth"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
 )
@@ -31,6 +34,7 @@ type broadcaster struct {
 	addr  common.Address
 	eng   Engine
 	peers map[common.Address]*MockPeer
+	geth  *Geth
 }
 
 func makeBroadcaster(addr common.Address, engine Engine) *broadcaster {
@@ -97,6 +101,9 @@ func (b *broadcaster) add(remote common.Address, rw *p2p.MsgPipeRW) {
 				log.Error("Failed to handle message", "err", err)
 				break
 			}
+			if msg.Code == eth.NewBlockMsg {
+				b.geth.handleBlock(msg)
+			}
 		}
 	}()
 }
@@ -104,6 +111,13 @@ func (b *broadcaster) add(remote common.Address, rw *p2p.MsgPipeRW) {
 type MockPeer struct {
 	local, remote common.Address
 	rw            *p2p.MsgPipeRW
+}
+
+func (p *MockPeer) SendNewBlock(block *types.Block, td *big.Int) error {
+	return p2p.Send(p.rw, eth.NewBlockMsg, &eth.NewBlockPacket{
+		Block: block,
+		TD:    td,
+	})
 }
 
 func (p *MockPeer) Send(msgcode uint64, data interface{}) error {
