@@ -142,7 +142,9 @@ type Broadcaster interface {
 	// FindPeer find peer by address
 	FindPeer(target common.Address) Peer
 	// PeerCount return peers number
-	PeerCount() int
+	// PeerCount() int
+
+	Stop()
 }
 
 // Peer defines the interface to communicate with peer
@@ -166,6 +168,9 @@ type HotStuff interface {
 
 	// IsSystemCall return method id and true if the tx is an system transaction
 	IsSystemTransaction(tx *types.Transaction, header *types.Header) (string, bool)
+
+	// HasSystemTxHook return true if systemTxHook is not nil
+	HasSystemTxHook() bool
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message
@@ -178,6 +183,8 @@ type Handler interface {
 
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster)
+
+	GetBroadcaster() Broadcaster
 
 	// SubscribeNodes event subscribe for listening static nodes in eth handler
 	SubscribeNodes(ch chan<- StaticNodesEvent) event.Subscription

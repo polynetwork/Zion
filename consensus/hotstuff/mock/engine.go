@@ -16,30 +16,24 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package backend
+package mock
 
 import (
-	"github.com/ethereum/go-ethereum/common"
+	"crypto/ecdsa"
+
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
-// API is a user facing RPC API to allow controlling the address and voting
-// mechanisms of the HotStuff scheme.
-type API struct {
-	chain    consensus.ChainHeaderReader
-	hotstuff *backend
-}
+type Engine consensus.Engine
 
-// Proposals returns the current proposals the node tries to uphold and vote on.
-func (api *API) Proposals() map[common.Address]bool {
-	return make(map[common.Address]bool)
-}
-
-// CurrentView retrieve current proposal height and round number
-func (api *API) CurrentSequence() (uint64, uint64) {
-	return api.hotstuff.core.CurrentSequence()
-}
-
-func (api *API) IsProposer() bool {
-	return api.hotstuff.core.IsProposer()
+// backend is engine but also hotstuff engine and consensus handler.
+func makeEngine(privateKey *ecdsa.PrivateKey, db ethdb.Database) Engine {
+	config := hotstuff.DefaultBasicConfig
+	engine := backend.New(config, privateKey, db, true)
+	broadcaster := makeBroadcaster(engine.Address(), engine)
+	engine.SetBroadcaster(broadcaster)
+	return engine
 }

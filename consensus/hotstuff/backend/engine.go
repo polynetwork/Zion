@@ -111,7 +111,7 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
 	uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
 
-	if s.systemTxHook != nil {
+	if s.HasSystemTxHook() {
 		if err := s.executeSystemTxs(chain, header, state, txs, receipts, systemTxs, usedGas, false); err != nil {
 			return err
 		}
@@ -133,7 +133,7 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 		receipts = make([]*types.Receipt, 0)
 	}
 
-	if s.systemTxHook != nil {
+	if s.HasSystemTxHook() {
 		if err := s.executeSystemTxs(chain, header, state, &txs, &receipts, nil, &header.GasUsed, true); err != nil {
 			return nil, nil, err
 		}
@@ -145,6 +145,10 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 }
 
 type SystemTxFn func(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64, mining bool) error
+
+func (s *backend) HasSystemTxHook() bool {
+	return s.systemTxHook != nil
+}
 
 // executeSystemTxs governance tx execution do not allow failure, the consensus will halt if tx failed and return error.
 func (s *backend) executeSystemTxs(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,

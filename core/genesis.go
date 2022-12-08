@@ -284,23 +284,22 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		db = rawdb.NewMemoryDatabase()
 	}
 
-	// check genesis fields
-	g.checkGovernance()
-	g.checkExtra()
-	
 	statedb, err := state.New(common.Hash{}, state.NewDatabase(db), nil)
 	if err != nil {
 		panic(err)
 	}
 
-	// mint native token for genesis validators
-	g.mintNativeToken(statedb)
 
-	// create native contracts
-	for _, v := range native.NativeContractAddrMap {
-		g.createNativeContract(statedb, v)
+	// initialize zion native contract and governance parameters, and `regGenesis` should be nil in mock mode.
+	if RegGenesis != nil {
+		g.checkExtra()
+		g.checkGovernance()
+		g.mintNativeToken(statedb)
+		for _, v := range native.NativeContractAddrMap {
+			g.createNativeContract(statedb, v)
+		}
+		RegGenesis(statedb, g)
 	}
-	RegGenesis(statedb, g)
 
 	root := statedb.IntermediateRoot(false)
 	head := &types.Header{

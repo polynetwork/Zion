@@ -83,6 +83,9 @@ type CoreEngine interface {
 	// IsProposer return true if self address equal leader/proposer address in current round/height
 	IsProposer() bool
 
+	// CurrentSequence return current proposal height and consensus round
+	CurrentSequence() (uint64, uint64)
+
 	// verify if a hash is the same as the proposed block in the current pending request
 	//
 	// this is useful when the engine is currently the speaker

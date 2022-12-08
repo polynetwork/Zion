@@ -117,6 +117,10 @@ func (s *backend) SetBroadcaster(broadcaster consensus.Broadcaster) {
 	s.broadcaster = broadcaster
 }
 
+func (s *backend) GetBroadcaster() consensus.Broadcaster {
+	return s.broadcaster
+}
+
 func (s *backend) NewChainHead(header *types.Header) error {
 	s.coreMu.RLock()
 	defer s.coreMu.RUnlock()

@@ -68,6 +68,11 @@ func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 	return false
 }
 
+func (c *core) CurrentSequence() (uint64, uint64) {
+	view := c.currentView()
+	return view.HeightU64(), view.RoundU64()
+}
+
 // ----------------------------------------------------------------------------
 
 // Subscribe both internal and external events
