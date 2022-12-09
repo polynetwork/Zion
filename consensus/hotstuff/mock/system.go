@@ -25,7 +25,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
+	hcore "github.com/ethereum/go-ethereum/consensus/hotstuff/core"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -36,13 +39,15 @@ import (
 )
 
 type Geth struct {
+	addr        common.Address
 	miner       *miner
 	chain       *core.BlockChain
 	engine      Engine
 	hotstuff    consensus.HotStuff
 	api         *backend.API
 	broadcaster *broadcaster
-	hook        func(raw []byte)
+	signer      hotstuff.Signer
+	hook        func(node *Geth, raw []byte) []byte
 }
 
 func MakeGeth(privateKey *ecdsa.PrivateKey, vals []common.Address) *Geth {
@@ -60,7 +65,9 @@ func MakeGeth(privateKey *ecdsa.PrivateKey, vals []common.Address) *Geth {
 		api:         api,
 		hotstuff:    hotstuffEngine,
 		broadcaster: broadcaster,
+		signer:      signer.NewSigner(privateKey),
 	}
+	geth.addr = geth.signer.Address()
 	miner.geth = geth
 	broadcaster.geth = geth
 	return geth
@@ -129,8 +136,21 @@ func (g *Geth) handleBlock(msg p2p.Msg) {
 	}
 }
 
-func (g *Geth) setHook(hook func(data []byte)) {
+func (g *Geth) setHook(hook func(node *Geth, data []byte) []byte) {
 	g.hook = hook
+}
+
+func (g *Geth) resignMsg(msg *hcore.Message) ([]byte, error) {
+	hash, err := msg.Hash()
+	if err != nil {
+		return nil, err
+	}
+	sig, err := g.signer.SignHash(hash)
+	if err != nil {
+		return nil, err
+	}
+	msg.Signature = sig
+	return msg.Payload()
 }
 
 type System struct {
@@ -152,12 +172,8 @@ func makeSystem(n int) *System {
 func (s *System) Start() {
 	for i := 0; i < len(s.nodes); i++ {
 		for j := 0; j < len(s.nodes); j++ {
-			if i != j {
-				src := s.nodes[i].engine.(consensus.Handler).GetBroadcaster()
-				dst := s.nodes[j].engine.(consensus.Handler).GetBroadcaster()
-				bsrc := src.(*broadcaster)
-				bdst := dst.(*broadcaster)
-				bsrc.Connect(bdst)
+			if j > i {
+				s.nodes[i].broadcaster.Connect(s.nodes[j].broadcaster)
 			}
 		}
 	}
@@ -200,26 +216,6 @@ func (s *System) Leader() *Geth {
 		}
 	}
 	return nil
-}
-
-func (s *System) Repos(n int) []*Geth {
-	var list []*Geth
-	for _, node := range s.nodes {
-		if !node.IsProposer() {
-			list = append(list, node)
-		}
-		if len(list) == n {
-			break
-		}
-	}
-	return list
-}
-
-func (s *System) RepoHook(n int, hook func(data []byte)) {
-	nodes := s.Repos(n)
-	for _, node := range nodes {
-		node.setHook(hook)
-	}
 }
 
 func newAccountLists(n int) ([]*ecdsa.PrivateKey, []common.Address) {

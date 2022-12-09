@@ -425,6 +425,31 @@ func (m *Message) Decode(val interface{}) error {
 	return rlp.DecodeBytes(m.Msg, val)
 }
 
+func (m *Message) Hash() (common.Hash, error) {
+	if m.hash != common.EmptyHash {
+		return m.hash, nil
+	}
+	if _, err := m.PayloadNoSig(); err != nil {
+		return common.EmptyHash, err
+	}
+	return m.hash, nil
+}
+
+func (m *Message) Copy() *Message {
+	view := &View{
+		Height: new(big.Int).SetUint64(m.View.HeightU64()),
+		Round:  new(big.Int).SetUint64(m.View.RoundU64()),
+	}
+	msg := make([]byte, len(m.Msg))
+	copy(msg[:], m.Msg[:])
+
+	return &Message{
+		Code: m.Code,
+		View: view,
+		Msg:  msg,
+	}
+}
+
 func (m *Message) String() string {
 	return fmt.Sprintf("{MsgType: %v, view: %v, address: %v}", m.Code, m.View, m.address)
 }

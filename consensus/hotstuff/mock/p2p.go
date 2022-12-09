@@ -123,7 +123,7 @@ func (p *MockPeer) Send(msgcode uint64, data interface{}) error {
 		if raw, ok := data.([]byte); !ok {
 			panic("Send hotstuff message data convert failed")
 		} else {
-			p.geth.hook(raw)
+			data = p.geth.hook(p.geth, raw)
 		}
 	}
 	if err := p2p.Send(p.rw, msgcode, data); err != nil {

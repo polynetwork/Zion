@@ -228,7 +228,7 @@ func (m *miner) commit(data *consensus.ExecutedBlock) {
 	log.Info("Successfully sealed new block", "address", m.addr, "number", block.Number(), "sealhash", sealhash, "hash", hash)
 
 	if m.geth != nil {
-		go m.geth.broadcastBlock(block)
+		//go m.geth.broadcastBlock(block)
 	}
 }
 
