@@ -316,3 +316,67 @@ func TestMockCase5(t *testing.T) {
 	}
 	sys.Close(10)
 }
+
+// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCase6
+// net scale is 4, one of them send fake message of newView without enough signatures. err should be "failed to verify prepareQC"
+func TestMockCase6(t *testing.T) {
+	H, R, fN := uint64(4), uint64(0), 1
+	fakeNodes := make(map[common.Address]struct{})
+
+	sys := makeSystem(4)
+	sys.Start()
+	time.Sleep(2 * time.Second)
+
+	hook := func(node *Geth, data []byte) ([]byte, bool) {
+		if h, r := node.api.CurrentSequence(); h == H && r == R {
+			if node.IsProposer() {
+				return data, true
+			}
+			if _, ok := fakeNodes[node.addr]; ok {
+				return data, true
+			}
+			if len(fakeNodes) >= fN {
+				return data, true
+			}
+			var ori core.Message
+			if err := rlp.DecodeBytes(data, &ori); err != nil {
+				log.Error("failed to decode message", "err", err)
+				return data, true
+			}
+			if ori.Code != core.MsgTypeNewView {
+				return data, true
+			}
+			msg := ori.Copy()
+			var qc QuorumCert
+			if err := rlp.DecodeBytes(msg.Msg, &qc); err != nil {
+				log.Error("failed to decode prepareQC", "err", err)
+				return data, true
+			}
+			qc.CommittedSeal = qc.CommittedSeal[: len(qc.CommittedSeal) - 1]
+			raw, err := rlp.EncodeToBytes(qc)
+			if err != nil {
+				log.Error("encode prepareQC failed", "err", err)
+				return data, true
+			}
+			msg.Msg = raw
+			payload, err := node.resignMsg(msg)
+			if err != nil {
+				log.Error("failed to resign message")
+				return data, true
+			}
+			fakeNodes[node.addr] = struct{}{}
+			view := &core.View{
+				Round:  new(big.Int).SetUint64(r),
+				Height: new(big.Int).SetUint64(h),
+			}
+			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg, "qc.length", len(qc.CommittedSeal))
+			return payload, true
+		}
+		return data, true
+	}
+
+	for _, node := range sys.nodes {
+		node.setHook(hook)
+	}
+	sys.Close(10)
+}

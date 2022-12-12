@@ -228,8 +228,9 @@ func (s *SignerImpl) VerifyCommittedSeal(valset hotstuff.ValidatorSet, hash comm
 
 func (s *SignerImpl) checkQuorum(valset hotstuff.ValidatorSet, hash common.Hash, seals [][]byte) error {
 	var (
-		addrs []common.Address
-		vals  = valset.Copy()
+		addrs  []common.Address
+		quorum = valset.Q()
+		vals   = valset.Copy()
 	)
 
 	for _, seal := range seals {
@@ -249,7 +250,7 @@ func (s *SignerImpl) checkQuorum(valset hotstuff.ValidatorSet, hash common.Hash,
 	}
 
 	// The length of validSeal should be larger than number of faulty node + 1
-	if validSeal < vals.Q() {
+	if validSeal < quorum {
 		return fmt.Errorf("validSeal %v not enough", validSeal)
 	}
 	return nil
