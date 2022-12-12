@@ -20,6 +20,7 @@ package mock
 
 import (
 	"math/big"
+	"sync"
 	"testing"
 	"time"
 
@@ -41,6 +42,7 @@ func TestSimple(t *testing.T) {
 func TestMockNewViewCase1(t *testing.T) {
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int(1)
 	fakeNodes := make(map[common.Address]struct{})
+	mu := new(sync.Mutex)
 
 	sys := makeSystem(4)
 	sys.Start()
@@ -51,12 +53,18 @@ func TestMockNewViewCase1(t *testing.T) {
 			if node.IsProposer() {
 				return data, true
 			}
+
+			mu.Lock()
 			if _, ok := fakeNodes[node.addr]; ok {
+				mu.Unlock()
 				return data, true
 			}
 			if len(fakeNodes) >= fN {
+				mu.Unlock()
 				return data, true
 			}
+			mu.Unlock()
+
 			var ori core.Message
 			if err := rlp.DecodeBytes(data, &ori); err != nil {
 				log.Error("failed to decode message", "err", err)
@@ -72,12 +80,16 @@ func TestMockNewViewCase1(t *testing.T) {
 				log.Error("failed to resign message")
 				return data, true
 			}
+
+			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			mu.Unlock()
+
 			view := &core.View{
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
+			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
 		return data, true
@@ -94,6 +106,7 @@ func TestMockNewViewCase1(t *testing.T) {
 func TestMockNewViewCase2(t *testing.T) {
 	H, R, fN := uint64(4), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
+	mu := new(sync.Mutex)
 
 	sys := makeSystem(4)
 	sys.Start()
@@ -104,12 +117,18 @@ func TestMockNewViewCase2(t *testing.T) {
 			if node.IsProposer() {
 				return data, true
 			}
+
+			mu.Lock()
 			if _, ok := fakeNodes[node.addr]; ok {
+				mu.Unlock()
 				return data, true
 			}
 			if len(fakeNodes) >= fN {
+				mu.Unlock()
 				return data, true
 			}
+			mu.Unlock()
+
 			var ori core.Message
 			if err := rlp.DecodeBytes(data, &ori); err != nil {
 				log.Error("failed to decode message", "err", err)
@@ -136,12 +155,16 @@ func TestMockNewViewCase2(t *testing.T) {
 				log.Error("failed to resign message")
 				return data, true
 			}
+
+			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			mu.Unlock()
+
 			view := &core.View{
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
+			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
 		return data, true
@@ -158,6 +181,7 @@ func TestMockNewViewCase2(t *testing.T) {
 func TestMockNewViewCase3(t *testing.T) {
 	H, R, fN := uint64(4), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
+	mu := new(sync.Mutex)
 
 	sys := makeSystem(4)
 	sys.Start()
@@ -168,12 +192,18 @@ func TestMockNewViewCase3(t *testing.T) {
 			if node.IsProposer() {
 				return data, true
 			}
+
+			mu.Lock()
 			if _, ok := fakeNodes[node.addr]; ok {
+				mu.Unlock()
 				return data, true
 			}
 			if len(fakeNodes) >= fN {
+				mu.Unlock()
 				return data, true
 			}
+			mu.Unlock()
+
 			var ori core.Message
 			if err := rlp.DecodeBytes(data, &ori); err != nil {
 				log.Error("failed to decode message", "err", err)
@@ -190,12 +220,15 @@ func TestMockNewViewCase3(t *testing.T) {
 				}
 			}
 
+			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			mu.Unlock()
+
 			view := &core.View{
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", ori.Code, "view", view)
+			log.Info("-----fake message", "address", node.addr, "msg", ori.Code, "view", view)
 			return data, false
 		}
 		return data, true
@@ -212,6 +245,7 @@ func TestMockNewViewCase3(t *testing.T) {
 func TestMockNewViewCase4(t *testing.T) {
 	H, R, fH, fN := uint64(4), uint64(0), uint64(5), 1
 	fakeNodes := make(map[common.Address]struct{})
+	mu := new(sync.Mutex)
 
 	sys := makeSystem(4)
 	sys.Start()
@@ -222,12 +256,18 @@ func TestMockNewViewCase4(t *testing.T) {
 			if node.IsProposer() {
 				return data, true
 			}
+
+			mu.Lock()
 			if _, ok := fakeNodes[node.addr]; ok {
+				mu.Unlock()
 				return data, true
 			}
 			if len(fakeNodes) >= fN {
+				mu.Unlock()
 				return data, true
 			}
+			mu.Unlock()
+
 			var ori core.Message
 			if err := rlp.DecodeBytes(data, &ori); err != nil {
 				log.Error("failed to decode message", "err", err)
@@ -254,12 +294,16 @@ func TestMockNewViewCase4(t *testing.T) {
 				log.Error("failed to resign message")
 				return data, true
 			}
+
+			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			mu.Unlock()
+
 			view := &core.View{
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
+			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
 		return data, true
@@ -276,7 +320,7 @@ func TestMockNewViewCase4(t *testing.T) {
 func TestMockNewViewCase5(t *testing.T) {
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), 1
 	fakeNodes := make(map[common.Address]struct{})
-
+	mu := new(sync.Mutex)
 	sys := makeSystem(4)
 	sys.Start()
 	time.Sleep(2 * time.Second)
@@ -286,12 +330,18 @@ func TestMockNewViewCase5(t *testing.T) {
 			if node.IsProposer() {
 				return data, true
 			}
+
+			mu.Lock()
 			if _, ok := fakeNodes[node.addr]; ok {
+				mu.Unlock()
 				return data, true
 			}
 			if len(fakeNodes) >= fN {
+				mu.Unlock()
 				return data, true
 			}
+			mu.Unlock()
+
 			var ori core.Message
 			if err := rlp.DecodeBytes(data, &ori); err != nil {
 				log.Error("failed to decode message", "err", err)
@@ -318,12 +368,16 @@ func TestMockNewViewCase5(t *testing.T) {
 				log.Error("failed to resign message")
 				return data, true
 			}
+
+			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			mu.Unlock()
+
 			view := &core.View{
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
+			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
 		return data, true
@@ -340,6 +394,7 @@ func TestMockNewViewCase5(t *testing.T) {
 func TestMockNewViewCase6(t *testing.T) {
 	H, R, fN := uint64(4), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
+	mu := new(sync.Mutex)
 
 	sys := makeSystem(4)
 	sys.Start()
@@ -350,12 +405,18 @@ func TestMockNewViewCase6(t *testing.T) {
 			if node.IsProposer() {
 				return data, true
 			}
+
+			mu.Lock()
 			if _, ok := fakeNodes[node.addr]; ok {
+				mu.Unlock()
 				return data, true
 			}
 			if len(fakeNodes) >= fN {
+				mu.Unlock()
 				return data, true
 			}
+			mu.Unlock()
+
 			var ori core.Message
 			if err := rlp.DecodeBytes(data, &ori); err != nil {
 				log.Error("failed to decode message", "err", err)
@@ -382,12 +443,16 @@ func TestMockNewViewCase6(t *testing.T) {
 				log.Error("failed to resign message")
 				return data, true
 			}
+
+			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			mu.Unlock()
+
 			view := &core.View{
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg, "qc.length", len(qc.CommittedSeal))
+			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg, "qc.length", len(qc.CommittedSeal))
 			return payload, true
 		}
 		return data, true
