@@ -29,17 +29,10 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestSimple
-func TestSimple(t *testing.T) {
-	sys := makeSystem(7)
-	sys.Start()
-	sys.Close(10)
-}
-
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase1
-// net scale is 7, 2 of them send fake message of newView with wrong height.
-func TestMockNewViewCase1(t *testing.T) {
-	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int(1)
+// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareCase1
+// net scale is 4, leader send fake message of newView with wrong height, repos change view.
+func TestMockPrepareCase1(t *testing.T) {
+	H, R, fH, fN := uint64(4), uint64(0), uint64(5), int(1)
 	fakeNodes := make(map[common.Address]struct{})
 
 	sys := makeSystem(4)
@@ -48,7 +41,7 @@ func TestMockNewViewCase1(t *testing.T) {
 
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
 		if h, r := node.api.CurrentSequence(); h == H && r == R {
-			if node.IsProposer() {
+			if !node.IsProposer() {
 				return data, true
 			}
 			if _, ok := fakeNodes[node.addr]; ok {
@@ -62,7 +55,60 @@ func TestMockNewViewCase1(t *testing.T) {
 				log.Error("failed to decode message", "err", err)
 				return data, true
 			}
-			if ori.Code != core.MsgTypeNewView {
+			if ori.Code != core.MsgTypePrepare {
+				return data, true
+			}
+			msg := ori.Copy()
+			msg.View.Height = new(big.Int).SetUint64(fH)
+			payload, err := node.resignMsg(msg)
+			if err != nil {
+				log.Error("failed to resign message")
+				return data, true
+			}
+			fakeNodes[node.addr] = struct{}{}
+			view := &core.View{
+				Round:  new(big.Int).SetUint64(r),
+				Height: new(big.Int).SetUint64(h),
+			}
+			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
+			return payload, true
+		}
+		return data, true
+	}
+
+	for _, node := range sys.nodes {
+		node.setHook(hook)
+	}
+	sys.Close(10)
+}
+
+// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareCase2
+// net scale is 4, leader send fake message of newView with wrong height, repos change view.
+func TestMockPrepareCase2(t *testing.T) {
+	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int(1)
+	fakeNodes := make(map[common.Address]struct{})
+
+	sys := makeSystem(4)
+	sys.Start()
+	time.Sleep(2 * time.Second)
+
+	hook := func(node *Geth, data []byte) ([]byte, bool) {
+		if h, r := node.api.CurrentSequence(); h == H && r == R {
+			if !node.IsProposer() {
+				return data, true
+			}
+			if _, ok := fakeNodes[node.addr]; ok {
+				return data, true
+			}
+			if len(fakeNodes) >= fN {
+				return data, true
+			}
+			var ori core.Message
+			if err := rlp.DecodeBytes(data, &ori); err != nil {
+				log.Error("failed to decode message", "err", err)
+				return data, true
+			}
+			if ori.Code != core.MsgTypePrepare {
 				return data, true
 			}
 			msg := ori.Copy()
@@ -89,10 +135,10 @@ func TestMockNewViewCase1(t *testing.T) {
 	sys.Close(10)
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase2
-// net scale is 4, one of them send fake message of newView with wrong node. err should be "failed to verify prepareQC"
-func TestMockNewViewCase2(t *testing.T) {
-	H, R, fN := uint64(4), uint64(0), 1
+// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareCase3
+// net scale is 4, leader send fake message of newView with wrong qc.view.height, repos change view.
+func TestMockPrepareCase3(t *testing.T) {
+	H, R, fH, fN := uint64(4), uint64(0), uint64(4), int(1)
 	fakeNodes := make(map[common.Address]struct{})
 
 	sys := makeSystem(4)
@@ -101,7 +147,7 @@ func TestMockNewViewCase2(t *testing.T) {
 
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
 		if h, r := node.api.CurrentSequence(); h == H && r == R {
-			if node.IsProposer() {
+			if !node.IsProposer() {
 				return data, true
 			}
 			if _, ok := fakeNodes[node.addr]; ok {
@@ -115,140 +161,38 @@ func TestMockNewViewCase2(t *testing.T) {
 				log.Error("failed to decode message", "err", err)
 				return data, true
 			}
-			if ori.Code != core.MsgTypeNewView {
+			if ori.Code != core.MsgTypePrepare {
 				return data, true
 			}
 			msg := ori.Copy()
+			var sub core.Subject
+			if err := rlp.DecodeBytes(msg.Msg, &sub); err != nil {
+				log.Error("failed to decode subject", "err", err)
+				return data, true
+			}
 			var qc QuorumCert
-			if err := rlp.DecodeBytes(msg.Msg, &qc); err != nil {
-				log.Error("failed to decode prepareQC", "err", err)
+			if raw, err := rlp.EncodeToBytes(sub.QC); err != nil {
+				log.Error("failed to encode prepareQC", "err", err)
 				return data, true
-			}
-			qc.Node = common.HexToHash("0x123")
-			raw, err := rlp.EncodeToBytes(qc)
-			if err != nil {
-				log.Error("encode prepareQC failed", "err", err)
-				return data, true
-			}
-			msg.Msg = raw
-			payload, err := node.resignMsg(msg)
-			if err != nil {
-				log.Error("failed to resign message")
-				return data, true
-			}
-			fakeNodes[node.addr] = struct{}{}
-			view := &core.View{
-				Round:  new(big.Int).SetUint64(r),
-				Height: new(big.Int).SetUint64(h),
-			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
-			return payload, true
-		}
-		return data, true
-	}
-
-	for _, node := range sys.nodes {
-		node.setHook(hook)
-	}
-	sys.Close(10)
-}
-
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase3
-// net scale is 4, one of them send message of newView to wrong leader
-func TestMockNewViewCase3(t *testing.T) {
-	H, R, fN := uint64(4), uint64(0), 1
-	fakeNodes := make(map[common.Address]struct{})
-
-	sys := makeSystem(4)
-	sys.Start()
-	time.Sleep(2 * time.Second)
-
-	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
-			if node.IsProposer() {
-				return data, true
-			}
-			if _, ok := fakeNodes[node.addr]; ok {
-				return data, true
-			}
-			if len(fakeNodes) >= fN {
-				return data, true
-			}
-			var ori core.Message
-			if err := rlp.DecodeBytes(data, &ori); err != nil {
-				log.Error("failed to decode message", "err", err)
-				return data, true
-			}
-			if ori.Code != core.MsgTypeNewView {
-				return data, true
-			}
-
-			// send to other repo
-			for _, peer := range node.broadcaster.peers {
-				if !peer.geth.IsProposer() && peer.geth.addr != node.addr {
-					peer.Send(hotstuffMsg, data)
-				}
-			}
-
-			fakeNodes[node.addr] = struct{}{}
-			view := &core.View{
-				Round:  new(big.Int).SetUint64(r),
-				Height: new(big.Int).SetUint64(h),
-			}
-			log.Info("fake message", "address", node.addr, "msg", ori.Code, "view", view)
-			return data, false
-		}
-		return data, true
-	}
-
-	for _, node := range sys.nodes {
-		node.setHook(hook)
-	}
-	sys.Close(10)
-}
-
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase4
-// net scale is 4, one of them send fake message of newView with wrong height. err should be "failed to verify prepareQC"
-func TestMockNewViewCase4(t *testing.T) {
-	H, R, fH, fN := uint64(4), uint64(0), uint64(5), 1
-	fakeNodes := make(map[common.Address]struct{})
-
-	sys := makeSystem(4)
-	sys.Start()
-	time.Sleep(2 * time.Second)
-
-	hook := func(node *Geth, data []byte) ([]byte, bool) {
-		if h, r := node.api.CurrentSequence(); h == H && r == R {
-			if node.IsProposer() {
-				return data, true
-			}
-			if _, ok := fakeNodes[node.addr]; ok {
-				return data, true
-			}
-			if len(fakeNodes) >= fN {
-				return data, true
-			}
-			var ori core.Message
-			if err := rlp.DecodeBytes(data, &ori); err != nil {
-				log.Error("failed to decode message", "err", err)
-				return data, true
-			}
-			if ori.Code != core.MsgTypeNewView {
-				return data, true
-			}
-			msg := ori.Copy()
-			var qc QuorumCert
-			if err := rlp.DecodeBytes(msg.Msg, &qc); err != nil {
+			} else if err := rlp.DecodeBytes(raw, &qc); err != nil {
 				log.Error("failed to decode prepareQC", "err", err)
 				return data, true
 			}
 			qc.View.Height = new(big.Int).SetUint64(fH)
-			raw, err := rlp.EncodeToBytes(qc)
-			if err != nil {
-				log.Error("encode prepareQC failed", "err", err)
-				return data, true
+			var newSub = struct {
+				Node *core.Node
+				QC   *QuorumCert
+			}{
+				sub.Node,
+				&qc,
 			}
-			msg.Msg = raw
+			if raw, err := rlp.EncodeToBytes(newSub); err != nil {
+				log.Error("failed to encode new subject", "err", err)
+				return data, true
+			} else {
+				msg.Msg = raw
+			}
+
 			payload, err := node.resignMsg(msg)
 			if err != nil {
 				log.Error("failed to resign message")
@@ -271,10 +215,10 @@ func TestMockNewViewCase4(t *testing.T) {
 	sys.Close(10)
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase5
-// net scale is 4, one of them send fake message of newView with wrong round. err should be "failed to verify prepareQC"
-func TestMockNewViewCase5(t *testing.T) {
-	H, R, fR, fN := uint64(4), uint64(0), uint64(1), 1
+// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareCase4
+// net scale is 4, leader send fake message of newView with wrong qc.view.round, repos change view.
+func TestMockPrepareCase4(t *testing.T) {
+	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int(1)
 	fakeNodes := make(map[common.Address]struct{})
 
 	sys := makeSystem(4)
@@ -283,7 +227,7 @@ func TestMockNewViewCase5(t *testing.T) {
 
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
 		if h, r := node.api.CurrentSequence(); h == H && r == R {
-			if node.IsProposer() {
+			if !node.IsProposer() {
 				return data, true
 			}
 			if _, ok := fakeNodes[node.addr]; ok {
@@ -297,22 +241,38 @@ func TestMockNewViewCase5(t *testing.T) {
 				log.Error("failed to decode message", "err", err)
 				return data, true
 			}
-			if ori.Code != core.MsgTypeNewView {
+			if ori.Code != core.MsgTypePrepare {
 				return data, true
 			}
 			msg := ori.Copy()
+			var sub core.Subject
+			if err := rlp.DecodeBytes(msg.Msg, &sub); err != nil {
+				log.Error("failed to decode subject", "err", err)
+				return data, true
+			}
 			var qc QuorumCert
-			if err := rlp.DecodeBytes(msg.Msg, &qc); err != nil {
+			if raw, err := rlp.EncodeToBytes(sub.QC); err != nil {
+				log.Error("failed to encode prepareQC", "err", err)
+				return data, true
+			} else if err := rlp.DecodeBytes(raw, &qc); err != nil {
 				log.Error("failed to decode prepareQC", "err", err)
 				return data, true
 			}
 			qc.View.Round = new(big.Int).SetUint64(fR)
-			raw, err := rlp.EncodeToBytes(qc)
-			if err != nil {
-				log.Error("encode prepareQC failed", "err", err)
-				return data, true
+			var newSub = struct {
+				Node *core.Node
+				QC   *QuorumCert
+			}{
+				sub.Node,
+				&qc,
 			}
-			msg.Msg = raw
+			if raw, err := rlp.EncodeToBytes(newSub); err != nil {
+				log.Error("failed to encode new subject", "err", err)
+				return data, true
+			} else {
+				msg.Msg = raw
+			}
+
 			payload, err := node.resignMsg(msg)
 			if err != nil {
 				log.Error("failed to resign message")
@@ -335,10 +295,10 @@ func TestMockNewViewCase5(t *testing.T) {
 	sys.Close(10)
 }
 
-// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase6
-// net scale is 4, one of them send fake message of newView without enough signatures. err should be "failed to verify prepareQC"
-func TestMockNewViewCase6(t *testing.T) {
-	H, R, fN := uint64(4), uint64(0), 1
+// go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareCase5
+// net scale is 4, leader send fake message of newView with wrong qc.hash, repos change view.
+func TestMockPrepareCase5(t *testing.T) {
+	H, R, fN := uint64(4), uint64(0), int(1)
 	fakeNodes := make(map[common.Address]struct{})
 
 	sys := makeSystem(4)
@@ -347,7 +307,7 @@ func TestMockNewViewCase6(t *testing.T) {
 
 	hook := func(node *Geth, data []byte) ([]byte, bool) {
 		if h, r := node.api.CurrentSequence(); h == H && r == R {
-			if node.IsProposer() {
+			if !node.IsProposer() {
 				return data, true
 			}
 			if _, ok := fakeNodes[node.addr]; ok {
@@ -361,22 +321,38 @@ func TestMockNewViewCase6(t *testing.T) {
 				log.Error("failed to decode message", "err", err)
 				return data, true
 			}
-			if ori.Code != core.MsgTypeNewView {
+			if ori.Code != core.MsgTypePrepare {
 				return data, true
 			}
 			msg := ori.Copy()
+			var sub core.Subject
+			if err := rlp.DecodeBytes(msg.Msg, &sub); err != nil {
+				log.Error("failed to decode subject", "err", err)
+				return data, true
+			}
 			var qc QuorumCert
-			if err := rlp.DecodeBytes(msg.Msg, &qc); err != nil {
+			if raw, err := rlp.EncodeToBytes(sub.QC); err != nil {
+				log.Error("failed to encode prepareQC", "err", err)
+				return data, true
+			} else if err := rlp.DecodeBytes(raw, &qc); err != nil {
 				log.Error("failed to decode prepareQC", "err", err)
 				return data, true
 			}
-			qc.CommittedSeal = qc.CommittedSeal[:len(qc.CommittedSeal)-1]
-			raw, err := rlp.EncodeToBytes(qc)
-			if err != nil {
-				log.Error("encode prepareQC failed", "err", err)
-				return data, true
+			qc.Node = common.HexToHash("0x124")
+			var newSub = struct {
+				Node *core.Node
+				QC   *QuorumCert
+			}{
+				sub.Node,
+				&qc,
 			}
-			msg.Msg = raw
+			if raw, err := rlp.EncodeToBytes(newSub); err != nil {
+				log.Error("failed to encode new subject", "err", err)
+				return data, true
+			} else {
+				msg.Msg = raw
+			}
+
 			payload, err := node.resignMsg(msg)
 			if err != nil {
 				log.Error("failed to resign message")
@@ -387,7 +363,7 @@ func TestMockNewViewCase6(t *testing.T) {
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg, "qc.length", len(qc.CommittedSeal))
+			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
 		return data, true
