@@ -47,7 +47,7 @@ type Geth struct {
 	api         *backend.API
 	broadcaster *broadcaster
 	signer      hotstuff.Signer
-	hook        func(node *Geth, raw []byte) []byte
+	hook        func(node *Geth, raw []byte) ([]byte, bool)
 }
 
 func MakeGeth(privateKey *ecdsa.PrivateKey, vals []common.Address) *Geth {
@@ -136,7 +136,7 @@ func (g *Geth) handleBlock(msg p2p.Msg) {
 	}
 }
 
-func (g *Geth) setHook(hook func(node *Geth, data []byte) []byte) {
+func (g *Geth) setHook(hook func(node *Geth, data []byte) ([]byte, bool)) {
 	g.hook = hook
 }
 
