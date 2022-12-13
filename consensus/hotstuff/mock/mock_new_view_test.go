@@ -59,10 +59,6 @@ func TestMockNewViewCase1(t *testing.T) {
 				mu.Unlock()
 				return data, true
 			}
-			if len(fakeNodes) >= fN {
-				mu.Unlock()
-				return data, true
-			}
 			mu.Unlock()
 
 			var ori core.Message
@@ -83,6 +79,10 @@ func TestMockNewViewCase1(t *testing.T) {
 
 			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			if len(fakeNodes) > fN {
+				mu.Unlock()
+				return data, true
+			}
 			mu.Unlock()
 
 			view := &core.View{
@@ -123,10 +123,6 @@ func TestMockNewViewCase2(t *testing.T) {
 				mu.Unlock()
 				return data, true
 			}
-			if len(fakeNodes) >= fN {
-				mu.Unlock()
-				return data, true
-			}
 			mu.Unlock()
 
 			var ori core.Message
@@ -158,6 +154,10 @@ func TestMockNewViewCase2(t *testing.T) {
 
 			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			if len(fakeNodes) > fN {
+				mu.Unlock()
+				return data, true
+			}
 			mu.Unlock()
 
 			view := &core.View{
@@ -198,10 +198,6 @@ func TestMockNewViewCase3(t *testing.T) {
 				mu.Unlock()
 				return data, true
 			}
-			if len(fakeNodes) >= fN {
-				mu.Unlock()
-				return data, true
-			}
 			mu.Unlock()
 
 			var ori core.Message
@@ -222,6 +218,10 @@ func TestMockNewViewCase3(t *testing.T) {
 
 			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			if len(fakeNodes) > fN {
+				mu.Unlock()
+				return data, true
+			}
 			mu.Unlock()
 
 			view := &core.View{
@@ -262,10 +262,6 @@ func TestMockNewViewCase4(t *testing.T) {
 				mu.Unlock()
 				return data, true
 			}
-			if len(fakeNodes) >= fN {
-				mu.Unlock()
-				return data, true
-			}
 			mu.Unlock()
 
 			var ori core.Message
@@ -297,6 +293,10 @@ func TestMockNewViewCase4(t *testing.T) {
 
 			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			if len(fakeNodes) > fN {
+				mu.Unlock()
+				return data, true
+			}
 			mu.Unlock()
 
 			view := &core.View{
@@ -336,10 +336,6 @@ func TestMockNewViewCase5(t *testing.T) {
 				mu.Unlock()
 				return data, true
 			}
-			if len(fakeNodes) >= fN {
-				mu.Unlock()
-				return data, true
-			}
 			mu.Unlock()
 
 			var ori core.Message
@@ -371,6 +367,10 @@ func TestMockNewViewCase5(t *testing.T) {
 
 			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			if len(fakeNodes) > fN {
+				mu.Unlock()
+				return data, true
+			}
 			mu.Unlock()
 
 			view := &core.View{
@@ -411,10 +411,6 @@ func TestMockNewViewCase6(t *testing.T) {
 				mu.Unlock()
 				return data, true
 			}
-			if len(fakeNodes) >= fN {
-				mu.Unlock()
-				return data, true
-			}
 			mu.Unlock()
 
 			var ori core.Message
@@ -446,6 +442,10 @@ func TestMockNewViewCase6(t *testing.T) {
 
 			mu.Lock()
 			fakeNodes[node.addr] = struct{}{}
+			if len(fakeNodes) > fN {
+				mu.Unlock()
+				return data, true
+			}
 			mu.Unlock()
 
 			view := &core.View{
