@@ -227,11 +227,7 @@ func (s *SignerImpl) VerifyCommittedSeal(valset hotstuff.ValidatorSet, hash comm
 }
 
 func (s *SignerImpl) checkQuorum(valset hotstuff.ValidatorSet, hash common.Hash, seals [][]byte) error {
-	var (
-		addrs  []common.Address
-		quorum = valset.Q()
-		vals   = valset.Copy()
-	)
+	var addrs  []common.Address
 
 	for _, seal := range seals {
 		addr, err := getSignatureAddress(hash, seal)
@@ -241,19 +237,7 @@ func (s *SignerImpl) checkQuorum(valset hotstuff.ValidatorSet, hash common.Hash,
 		addrs = append(addrs, addr)
 	}
 
-	validSeal := 0
-	for _, addr := range addrs {
-		if vals.RemoveValidator(addr) {
-			validSeal++
-			continue
-		}
-	}
-
-	// The length of validSeal should be larger than number of faulty node + 1
-	if validSeal < quorum {
-		return fmt.Errorf("validSeal %v less than minimum quorum number %v", validSeal, quorum)
-	}
-	return nil
+	return valset.CheckQuorum(addrs)
 }
 
 // getSignatureAddress gets the address address from the signature
