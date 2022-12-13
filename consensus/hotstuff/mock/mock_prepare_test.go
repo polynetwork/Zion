@@ -111,7 +111,7 @@ func TestMockPrepareCase2(t *testing.T) {
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
+			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
 		return data, true
@@ -185,7 +185,7 @@ func TestMockPrepareCase3(t *testing.T) {
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
+			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
 		return data, true
@@ -259,7 +259,7 @@ func TestMockPrepareCase4(t *testing.T) {
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
+			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
 		return data, true
@@ -333,7 +333,7 @@ func TestMockPrepareCase5(t *testing.T) {
 				Round:  new(big.Int).SetUint64(r),
 				Height: new(big.Int).SetUint64(h),
 			}
-			log.Info("fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
+			log.Info("-----fake message", "address", node.addr, "msg", msg.Code, "view", view, "msg", msg)
 			return payload, true
 		}
 		return data, true

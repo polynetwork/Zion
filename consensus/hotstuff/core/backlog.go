@@ -38,7 +38,7 @@ func (c *core) storeBacklog(msg *Message) {
 		return
 	}
 
-	logger.Trace("Retrieving backlog queue", "for", src, "backlogs_size", c.backlogs.Size(src))
+	logger.Trace("Retrieving backlog queue", "msg", msg.Code, "src", src, "backlogs_size", c.backlogs.Size(src))
 
 	c.backlogs.Push(msg)
 }

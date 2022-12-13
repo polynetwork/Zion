@@ -251,7 +251,7 @@ func (s *SignerImpl) checkQuorum(valset hotstuff.ValidatorSet, hash common.Hash,
 
 	// The length of validSeal should be larger than number of faulty node + 1
 	if validSeal < quorum {
-		return fmt.Errorf("validSeal %v not enough", validSeal)
+		return fmt.Errorf("validSeal %v less than minimum quorum number %v", validSeal, quorum)
 	}
 	return nil
 }
