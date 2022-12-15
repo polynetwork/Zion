@@ -17,8 +17,6 @@
 package vm
 
 import (
-	"bytes"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/params"
@@ -511,19 +509,15 @@ func opSload(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]by
 	loc := scope.Stack.peek()
 	hash := common.Hash(loc.Bytes32())
 	val := interpreter.evm.StateDB.GetState(scope.Contract.Address(), hash)
-	if bytes.Equal(val, nil) {
-		val = common.Hash{}.Bytes()
-	}
-	loc.SetBytes(val)
+	loc.SetBytes(val.Bytes())
 	return nil, nil
 }
 
 func opSstore(pc *uint64, interpreter *EVMInterpreter, scope *ScopeContext) ([]byte, error) {
 	loc := scope.Stack.pop()
 	val := scope.Stack.pop()
-	v32 := val.Bytes32()
 	interpreter.evm.StateDB.SetState(scope.Contract.Address(),
-		loc.Bytes32(), v32[:])
+		loc.Bytes32(), val.Bytes32())
 	return nil, nil
 }
 
