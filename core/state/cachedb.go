@@ -18,11 +18,111 @@
 package state
 
 import (
+	"errors"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+var (
+	ErrKeyLen = errors.New("cacheDB should only be used for native contract storage")
+	ErrBigLen = errors.New("big int length out of range")
+)
+
 type CacheDB StateDB
+
+// support storage for type of `Address`
+func (c *CacheDB) SetAddress(key []byte, value common.Address) error {
+	hash := common.BytesToHash(value.Bytes())
+	return c.customSet(key, hash)
+}
+
+func (c *CacheDB) GetAddress(key []byte) (common.Address, error) {
+	hash, err := c.customGet(key)
+	if err != nil {
+		return common.Address{}, err
+	}
+	return common.BytesToAddress(hash.Bytes()), nil
+}
+
+func (c *CacheDB) DelAddress(key []byte) error {
+	return c.customDel(key)
+}
+
+// support storage for type of `Hash`
+func (c *CacheDB) SetHash(key []byte, value common.Hash) error {
+	return c.customSet(key, value)
+}
+
+func (c *CacheDB) GetHash(key []byte) (common.Hash, error) {
+	return c.customGet(key)
+}
+
+func (c *CacheDB) DelHash(key []byte) error {
+	return c.customDel(key)
+}
+
+// support storage for type of `big`
+func (c *CacheDB) SetBigInt(key []byte, value *big.Int) error {
+	if len(value.Bytes()) > common.HashLength {
+		return ErrBigLen
+	}
+	hash := common.BytesToHash(value.Bytes())
+	return c.customSet(key, hash)
+}
+
+func (c *CacheDB) GetBigInt(key []byte) (*big.Int, error) {
+	raw, err := c.customGet(key)
+	if err != nil {
+		return nil, err
+	}
+	return new(big.Int).SetBytes(raw[:]), nil
+}
+
+func (c *CacheDB) DelBigInt(key []byte) error {
+	return c.customDel(key)
+}
+
+// custom functions
+func (c *CacheDB) customSet(key []byte, value common.Hash) error {
+	addr, slot, err := parseKey(key)
+	if err != nil {
+		return err
+	}
+
+	s := (*StateDB)(c)
+	s.SetState(addr, slot, value)
+	return nil
+}
+
+func (c *CacheDB) customGet(key []byte) (common.Hash, error) {
+	addr, slot, err := parseKey(key)
+	if err != nil {
+		return common.Hash{}, err
+	}
+	s := (*StateDB)(c)
+	return s.GetState(addr, slot), nil
+}
+
+func (c *CacheDB) customDel(key []byte) error {
+	addr, slot, err := parseKey(key)
+	if err != nil {
+		return err
+	}
+	s := (*StateDB)(c)
+	s.SetState(addr, slot, common.Hash{})
+	return nil
+}
+
+func parseKey(key []byte) (addr common.Address, slot common.Hash, err error) {
+	if len(key) <= common.AddressLength {
+		return common.Address{}, common.Hash{}, ErrKeyLen
+	}
+	addr = common.BytesToAddress(key[:common.AddressLength])
+	slot = Key2Slot(key[common.AddressLength:])
+	return
+}
 
 func (c *CacheDB) Put(key []byte, value []byte) {
 	if len(key) <= common.AddressLength {
