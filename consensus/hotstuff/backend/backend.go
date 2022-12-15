@@ -20,6 +20,7 @@ package backend
 
 import (
 	"crypto/ecdsa"
+	"fmt"
 	"math/big"
 	"sync"
 	"time"
@@ -37,46 +38,39 @@ import (
 	lru "github.com/hashicorp/golang-lru"
 )
 
-const (
-	// fetcherID is the ID indicates the block is from HotStuff engine
-	fetcherID = "hotstuff"
-)
-
 // HotStuff is the scalable hotstuff consensus engine
 type backend struct {
-	config         *hotstuff.Config
-	db             ethdb.Database // Database to store and retrieve necessary information
-	core           hotstuff.CoreEngine
-	signer         hotstuff.Signer
-	chain          consensus.ChainReader
-	currentBlock   func() *types.Block
-	getBlockByHash func(hash common.Hash) *types.Block
-	hasBadBlock    func(db ethdb.Reader, hash common.Hash) bool
-	logger         log.Logger
+	db     ethdb.Database // Database to store and retrieve necessary information
+	logger log.Logger
+	config *hotstuff.Config
+	core   hotstuff.CoreEngine
+	signer hotstuff.Signer
+	chain  consensus.ChainReader
+	vals   hotstuff.ValidatorSet // consensus participant collection
 
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	recentMessages *lru.ARCCache // the cache of peer's messages
 	knownMessages  *lru.ARCCache // the cache of self messages
 
-	//snaps *snapshots // store snaps in desc order according to epoch start height
-	vals hotstuff.ValidatorSet
-
-	// The channels for hotstuff engine notifications
-	sealMu            sync.Mutex
-	commitCh          chan *types.Block
-	proposedBlockHash common.Hash
-	coreStarted       bool
-	sigMu             sync.RWMutex // Protects the address fields
-	consenMu          sync.Mutex   // Ensure a round can only start after the last one has finished
-	coreMu            sync.RWMutex
+	// signal for engine running status
+	coreStarted bool
+	coreMu      sync.RWMutex
 
 	broadcaster consensus.Broadcaster // event subscription for ChainHeadEvent event
 	nodesFeed   event.Feed            // event subscription for static nodes listen
-	eventMux    *event.TypeMux
-	point       int32 // check point mutex
+	executeFeed event.Feed            // event subscription for executed state
+	eventMux    *event.TypeMux        // message sender for engine
+
+	epochMu int32 // check point mutex
+
+	// closure for help
+	currentBlock   func() *types.Block
+	getBlockByHash func(hash common.Hash) *types.Block
+	hasBadBlock    func(db ethdb.Reader, hash common.Hash) bool
+	systemTxHook   SystemTxFn
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database) *backend {
+func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, mock bool) *backend {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
@@ -86,7 +80,6 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		config:         config,
 		db:             db,
 		logger:         log.New(),
-		commitCh:       make(chan *types.Block, 1),
 		coreStarted:    false,
 		eventMux:       new(event.TypeMux),
 		signer:         signer,
@@ -95,7 +88,13 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 		recents:        recents,
 	}
 
-	backend.core = core.New(backend, config, signer)
+	if mock {
+		backend.systemTxHook = nil
+		backend.core = core.New(backend, config, signer, db, nil)
+	} else {
+		backend.systemTxHook = backend.executeSystemTxs
+		backend.core = core.New(backend, config, signer, db, backend.CheckPoint)
+	}
 
 	return backend
 }
@@ -118,6 +117,7 @@ func (s *backend) Broadcast(valSet hotstuff.ValidatorSet, payload []byte) error 
 	}
 	// send to self
 	msg := hotstuff.MessageEvent{
+		Src:     s.Address(),
 		Payload: payload,
 	}
 	go s.EventMux().Post(msg)
@@ -160,7 +160,7 @@ func (s *backend) Gossip(valSet hotstuff.ValidatorSet, payload []byte) error {
 
 // Unicast implements hotstuff.Backend.Unicast
 func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
-	msg := hotstuff.MessageEvent{Payload: payload}
+	msg := hotstuff.MessageEvent{Src: s.Address(), Payload: payload}
 	leader := valSet.GetProposer()
 	target := leader.Address()
 	hash := hotstuff.RLPHash(payload)
@@ -197,64 +197,47 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 	return nil
 }
 
-// PreCommit implements hotstuff.Backend.PreCommit
-func (s *backend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
-	// Check if the proposal is a valid block
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
+// SealBlock fullfill multi signatures into block header
+func (s *backend) SealBlock(block *types.Block, seals [][]byte) (*types.Block, error) {
+
+	// check proposal
+	if block.Header() == nil {
+		s.logger.Error("Invalid proposal precommit")
 		return nil, errInvalidProposal
 	}
 
+	// check seals
+	if len(seals) == 0 {
+		return nil, errInvalidCommittedSeals
+	}
+	for _, seal := range seals {
+		if len(seal) != types.HotstuffExtraSeal {
+			return nil, errInvalidCommittedSeals
+		}
+	}
+
+	// Append seals into extra-data and update block's header
 	h := block.Header()
-	// Append seals into extra-data
-	if err := s.signer.SealAfterCommit(h, seals); err != nil {
+	if err := h.SetCommittedSeal(seals); err != nil {
 		return nil, err
 	}
-
-	// update block's header
-	block = block.WithSeal(h)
-
-	return block, nil
+	return block.WithSeal(h), nil
 }
 
-func (s *backend) Commit(proposal hotstuff.Proposal) error {
-	// Check if the proposal is a valid block
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Committed to miner worker", "proposal", "not block")
-		return errInvalidProposal
+// Commit for most pos and pow chain, the local block should be write in state database directly,
+// and the remote block only need to broadcast to other nodes. in hotstuff consensus,
+// sent the finalized block to miner.worker although it may be an remote block.
+func (s *backend) Commit(executed *consensus.ExecutedBlock) error {
+	if executed == nil || executed.Block == nil {
+		return fmt.Errorf("invalid executed block")
 	}
-
-	s.logger.Info("Committed", "address", s.Address(), "hash", proposal.Hash(), "number", proposal.Number().Uint64())
-	// - if the proposed and committed blocks are the same, send the proposed hash
-	//   to commit channel, which is being watched inside the engine.Seal() function.
-	// - otherwise, we try to insert the block.
-	// -- if success, the ChainHeadEvent event will be broadcasted, try to build
-	//    the next block and the previous Seal() will be stopped.
-	// -- otherwise, a error will be returned and a round change event will be fired.
-	if s.proposedBlockHash == block.Hash() {
-		// feed block hash to Seal() and wait the Seal() result
-		s.commitCh <- block
-		return nil
-	}
-
-	if s.broadcaster != nil {
-		s.broadcaster.Enqueue(fetcherID, block)
-	}
+	s.executeFeed.Send(*executed)
+	s.logger.Info("Committed", "address", s.Address(), "hash", executed.Block.Hash(), "number", executed.Block.Number())
 	return nil
 }
 
 // Verify implements hotstuff.Backend.Verify
-func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
-	// Check if the proposal is a valid block
-	block := &types.Block{}
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
-		return 0, errInvalidProposal
-	}
-
+func (s *backend) Verify(block *types.Block, seal bool) (time.Duration, error) {
 	// check bad block
 	if s.HasBadProposal(block.Hash()) {
 		return 0, errBADProposal
@@ -271,7 +254,7 @@ func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 	}
 
 	// verify the header of proposed block
-	err := s.VerifyHeader(s.chain, block.Header(), false)
+	err := s.VerifyHeader(s.chain, block.Header(), seal)
 	if err == nil {
 		return 0, nil
 	} else if err == consensus.ErrFutureBlock {
@@ -280,46 +263,15 @@ func (s *backend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
 	return 0, err
 }
 
-func (s *backend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
-	// Check if the proposal is a valid block
-	block, ok := proposal.(*types.Block)
-	if !ok {
-		s.logger.Error("Invalid proposal, %v", proposal)
-		return 0, errInvalidProposal
-	}
+func (s *backend) LastProposal() (*types.Block, common.Address) {
+	var (
+		proposer common.Address
+		err      error
+	)
 
-	// check bad block
-	if s.HasBadProposal(block.Hash()) {
-		return 0, errBADProposal
-	}
-
-	// check block body
-	txnHash := types.DeriveSha(block.Transactions(), trie.NewStackTrie(nil))
-	uncleHash := types.CalcUncleHash(block.Uncles())
-	if txnHash != block.Header().TxHash {
-		return 0, errMismatchTxhashes
-	}
-	if uncleHash != nilUncleHash {
-		return 0, errInvalidUncleHash
-	}
-
-	// verify the header of proposed block
-	if err := s.VerifyHeader(s.chain, block.Header(), false); err == nil {
-		return 0, nil
-	} else if err == consensus.ErrFutureBlock {
-		return time.Unix(int64(block.Header().Time), 0).Sub(now()), consensus.ErrFutureBlock
-	} else {
-		return 0, err
-	}
-}
-
-func (s *backend) LastProposal() (hotstuff.Proposal, common.Address) {
 	block := s.chain.CurrentBlock()
-	var proposer common.Address
 	if block.Number().Cmp(common.Big0) > 0 {
-		var err error
-		proposer, err = s.Author(block.Header())
-		if err != nil {
+		if proposer, err = s.Author(block.Header()); err != nil {
 			s.logger.Error("Failed to get block proposer", "err", err)
 			return nil, common.Address{}
 		}
@@ -354,6 +306,15 @@ func (s *backend) HasBadProposal(hash common.Hash) bool {
 	return s.hasBadBlock(s.db, hash)
 }
 
-func (s *backend) SendValidatorsChange(list []common.Address) {
-	s.nodesFeed.Send(consensus.StaticNodesEvent{Validators: list})
+func (s *backend) ExecuteBlock(block *types.Block) (*consensus.ExecutedBlock, error) {
+	state, receipts, allLogs, err := s.chain.ExecuteBlock(block)
+	if err != nil {
+		return nil, err
+	}
+	return &consensus.ExecutedBlock{
+		State:    state,
+		Block:    block,
+		Receipts: receipts,
+		Logs:     allLogs,
+	}, nil
 }

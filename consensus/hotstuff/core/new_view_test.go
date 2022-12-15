@@ -28,11 +28,7 @@ import (
 
 func newTestNewViewMsg(sender common.Address, h, r int, prepareQC *QuorumCert) *Message {
 	view := makeView(h, r)
-	newViewMsg := &MsgNewView{
-		View:      view,
-		PrepareQC: prepareQC,
-	}
-	payload, err := Encode(newViewMsg)
+	payload, err := Encode(prepareQC)
 	if err != nil {
 		panic(err)
 	}
@@ -40,7 +36,7 @@ func newTestNewViewMsg(sender common.Address, h, r int, prepareQC *QuorumCert) *
 		View:    view,
 		Code:    MsgTypeNewView,
 		Msg:     payload,
-		Address: sender,
+		address: sender,
 	}
 	return msg
 }
@@ -88,8 +84,7 @@ func TestHandleNewView(t *testing.T) {
 
 	leader := sys.getLeader()
 	for _, msg := range msgList {
-		val := validator.New(msg.Address)
-		assert.NoError(t, leader.handleNewView(msg, val))
+		assert.NoError(t, leader.handleNewView(msg))
 	}
 
 	highQC, err := leader.getHighQC()
@@ -105,36 +100,37 @@ func TestHandleNewViewFailed(t *testing.T) {
 	leader := sys.getLeader()
 	repo := sys.getRepos()[0]
 	val := validator.New(repo.Address())
+	node := common.HexToHash("0x23abf12")
 
 	// decode failed
-	err := leader.handleNewView(&Message{Msg: []byte("123456")}, val)
+	err := leader.handleNewView(&Message{Msg: []byte("123456"), address: val.Address()})
 	assert.Equal(t, errFailedDecodeNewView, err)
 
 	// too old message
-	qc := newTestQCWithExtra(t, sys, H-2)
+	qc := newTestQCWithExtra(t, sys, node, MsgTypePrepareVote, H-2, R)
 	msg := newTestNewViewMsg(repo.Address(), H-1, 0, qc)
-	err = leader.handleNewView(msg, val)
+	err = leader.handleNewView(msg)
 	assert.Equal(t, errOldMessage, err)
 
-	qc = newTestQCWithExtra(t, sys, H-1)
+	qc = newTestQCWithExtra(t, sys, node, MsgTypePrepareVote, H-1, R)
 	msg = newTestNewViewMsg(repo.Address(), H, R-1, qc)
-	err = leader.handleNewView(msg, val)
+	err = leader.handleNewView(msg)
 	assert.Equal(t, errOldMessage, err)
 
 	// future message
-	qc = newTestQCWithExtra(t, sys, H-1)
+	qc = newTestQCWithExtra(t, sys, node, MsgTypePrepareVote, H-1, R)
 	msg = newTestNewViewMsg(repo.Address(), H, R+1, qc)
-	err = leader.handleNewView(msg, val)
+	err = leader.handleNewView(msg)
 	assert.Equal(t, errFutureMessage, err)
 
-	qc = newTestQCWithExtra(t, sys, H)
+	qc = newTestQCWithExtra(t, sys, node, MsgTypePrepareVote, H, R)
 	msg = newTestNewViewMsg(repo.Address(), H+1, 0, qc)
-	err = leader.handleNewView(msg, val)
+	err = leader.handleNewView(msg)
 	assert.Equal(t, errFutureMessage, err)
 
 	// error leader
-	qc = newTestQCWithExtra(t, sys, H-1)
+	qc = newTestQCWithExtra(t, sys, node, MsgTypePrepareVote, H-1, R)
 	msg = newTestNewViewMsg(repo.Address(), H, R, qc)
-	err = repo.handleNewView(msg, val)
+	err = repo.handleNewView(msg)
 	assert.Equal(t, errNotToProposer, err)
 }

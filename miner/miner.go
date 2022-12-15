@@ -148,7 +148,7 @@ func (miner *Miner) update() {
 			shouldStart = true
 		case <-miner.stopCh:
 			shouldStart = false
-			miner.worker.Start()
+			miner.worker.Stop()
 		case <-miner.exitCh:
 			miner.worker.Close()
 			return

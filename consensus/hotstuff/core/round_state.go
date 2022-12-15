@@ -19,10 +19,16 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
-	"sync"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/rlp"
 )
 
 func (c *core) currentView() *View {
@@ -40,16 +46,26 @@ func (c *core) currentProposer() hotstuff.Validator {
 	return c.valSet.GetProposer()
 }
 
+type roundNode struct {
+	temp *Node // cache node before `prepared`
+	node *Node
+}
+
 type roundState struct {
-	vs hotstuff.ValidatorSet
+	db     ethdb.Database
+	logger log.Logger
+	vs     hotstuff.ValidatorSet
 
 	round  *big.Int
 	height *big.Int
 	state  State
 
-	pendingRequest *Request
-	proposal       hotstuff.Proposal // validator's prepare proposal
-	proposalLocked bool
+	lastChainedBlock *types.Block
+	pendingRequest   *Request
+	node             *roundNode
+	lockedBlock      *types.Block // validator's prepare proposal
+	executed         *consensus.ExecutedBlock
+	proposalLocked   bool
 
 	// o(4n)
 	newViews       *MessageSet // data set for newView message
@@ -59,190 +75,217 @@ type roundState struct {
 
 	highQC      *QuorumCert // leader highQC
 	prepareQC   *QuorumCert // prepareQC for repo and leader
-	lockedQC    *QuorumCert // lockedQC for repo and pre-committedQC for leader
+	lockQC      *QuorumCert // lockQC for repo and leader
 	committedQC *QuorumCert // committedQC for repo and leader
-
-	mu *sync.RWMutex // mutex for fields except message set.
 }
 
 // newRoundState creates a new roundState instance with the given view and validatorSet
-func newRoundState(view *View, validatorSet hotstuff.ValidatorSet, prepareQC *QuorumCert) *roundState {
+func newRoundState(db ethdb.Database, logger log.Logger, validatorSet hotstuff.ValidatorSet, lastChainedBlock *types.Block, view *View) *roundState {
 	rs := &roundState{
-		vs:             validatorSet,
-		round:          view.Round,
-		height:         view.Height,
-		state:          StateAcceptRequest,
-		newViews:       NewMessageSet(validatorSet),
-		prepareVotes:   NewMessageSet(validatorSet),
-		preCommitVotes: NewMessageSet(validatorSet),
-		commitVotes:    NewMessageSet(validatorSet),
-		mu:             new(sync.RWMutex),
-	}
-	if prepareQC != nil {
-		rs.prepareQC = prepareQC.Copy()
-		rs.lockedQC = prepareQC.Copy()
-		rs.committedQC = prepareQC.Copy()
+		db:               db,
+		logger:           logger,
+		vs:               validatorSet.Copy(),
+		round:            view.Round,
+		height:           view.Height,
+		state:            StateAcceptRequest,
+		node:             new(roundNode),
+		lastChainedBlock: lastChainedBlock,
+		newViews:         NewMessageSet(validatorSet),
+		prepareVotes:     NewMessageSet(validatorSet),
+		preCommitVotes:   NewMessageSet(validatorSet),
+		commitVotes:      NewMessageSet(validatorSet),
 	}
 	return rs
 }
 
-func (s *roundState) Height() *big.Int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
+// clean all votes message set for new round
+func (s *roundState) update(vs hotstuff.ValidatorSet, lastChainedBlock *types.Block, view *View) *roundState {
+	s.vs = vs.Copy()
+	s.height = view.Height
+	s.round = view.Round
+	s.lastChainedBlock = lastChainedBlock
+	s.newViews = NewMessageSet(vs)
+	s.prepareVotes = NewMessageSet(vs)
+	s.preCommitVotes = NewMessageSet(vs)
+	s.commitVotes = NewMessageSet(vs)
 
-	return s.height
-}
-
-func (s *roundState) HeightU64() uint64 {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.height.Uint64()
-}
-
-func (s *roundState) Round() *big.Int {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.round
+	return s
 }
 
 func (s *roundState) View() *View {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return &View{
 		Round:  s.round,
 		Height: s.height,
 	}
 }
 
-func (s *roundState) SetState(state State) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
+func (s *roundState) Height() *big.Int {
+	return s.height
+}
 
+func (s *roundState) HeightU64() uint64 {
+	return s.height.Uint64()
+}
+
+func (s *roundState) Round() *big.Int {
+	return s.round
+}
+
+func (s *roundState) RoundU64() uint64 {
+	return s.round.Uint64()
+}
+
+func (s *roundState) SetState(state State) {
 	s.state = state
 }
 
 func (s *roundState) State() State {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return s.state
 }
 
-func (s *roundState) SetProposal(proposal hotstuff.Proposal) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.proposal = proposal
-	s.proposalLocked = false
+func (s *roundState) LastChainedBlock() *types.Block {
+	return s.lastChainedBlock
 }
 
-func (s *roundState) Proposal() hotstuff.Proposal {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.proposal
-}
-
-func (s *roundState) LockProposal() {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	if s.proposal != nil && !s.proposalLocked {
-		s.proposalLocked = true
-	}
-}
-
+// accept pending request from miner only for once.
 func (s *roundState) SetPendingRequest(req *Request) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.pendingRequest = req
+	if s.pendingRequest == nil {
+		s.pendingRequest = req
+	}
 }
 
 func (s *roundState) PendingRequest() *Request {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return s.pendingRequest
 }
 
-func (s *roundState) Vote() *Vote {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	if s.proposal == nil || s.proposal.Hash() == EmptyHash {
-		return nil
+func (s *roundState) SetNode(node *Node) error {
+	if node == nil || node.Block == nil {
+		return errInvalidNode
 	}
 
-	return &Vote{
-		View: &View{
-			Round:  new(big.Int).Set(s.round),
-			Height: new(big.Int).Set(s.height),
-		},
-		Digest: s.proposal.Hash(),
+	if temp := s.node.temp; temp == nil {
+		s.node.temp = node
+		return nil
+	} else {
+		if err := s.storeNode(node); err != nil {
+			return err
+		}
+		s.node.node = node
+		s.node.temp = nil
+	}
+	return nil
+}
+
+func (s *roundState) Node() *Node {
+	if temp := s.node.temp; temp != nil {
+		return temp
+	} else {
+		return s.node.node
+	}
+}
+
+func (s *roundState) Lock(qc *QuorumCert) error {
+	if s.node == nil || s.node.node == nil {
+		return errInvalidNode
+	}
+
+	if err := s.storeLockQC(qc); err != nil {
+		return err
+	}
+	if err := s.storeNode(s.node.node); err != nil {
+		return err
+	}
+
+	s.lockQC = qc
+	s.lockedBlock = s.node.node.Block
+	s.proposalLocked = true
+	return nil
+}
+
+func (s *roundState) LockQC() *QuorumCert {
+	return s.lockQC
+}
+
+// Unlock it's happened at the start of new round, new state is `StateAcceptRequest`, and `lockQC` keep to judge safety rule
+func (s *roundState) Unlock() error {
+	s.pendingRequest = nil
+	s.proposalLocked = false
+	s.lockedBlock = nil
+	s.node.temp = nil
+	s.executed = nil
+	return nil
+}
+
+func (s *roundState) LockedBlock() *types.Block {
+	if s.proposalLocked && s.lockedBlock != nil {
+		return s.lockedBlock
+	}
+	return nil
+}
+
+func (s *roundState) SetSealedBlock(block *types.Block) error {
+	if s.node.node == nil || s.node.node.Block == nil {
+		return fmt.Errorf("locked block is nil")
+	}
+	if s.node.node.Block.Hash() != block.Hash() {
+		return fmt.Errorf("node block not equal to multi-seal block")
+	}
+	s.node.node.Block = block
+	if err := s.storeNode(s.node.node); err != nil {
+		return err
+	}
+	s.lockedBlock = block
+	if s.executed != nil && s.executed.Block != nil && s.executed.Block.Hash() == block.Hash() {
+		s.executed.Block = block
+	}
+	return nil
+}
+
+func (s *roundState) Vote() common.Hash {
+	if node := s.Node(); node == nil {
+		return common.EmptyHash
+	} else {
+		return node.Hash()
 	}
 }
 
 func (s *roundState) SetHighQC(qc *QuorumCert) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
 	s.highQC = qc
 }
 
 func (s *roundState) HighQC() *QuorumCert {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return s.highQC
 }
 
-func (s *roundState) SetPrepareQC(qc *QuorumCert) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+func (s *roundState) SetPrepareQC(qc *QuorumCert) error {
+	if err := s.storePrepareQC(qc); err != nil {
+		return err
+	}
 	s.prepareQC = qc
+	return nil
 }
 
 func (s *roundState) PrepareQC() *QuorumCert {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return s.prepareQC
 }
 
-func (s *roundState) SetPreCommittedQC(qc *QuorumCert) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
-	s.lockedQC = qc
-}
-
-func (s *roundState) PreCommittedQC() *QuorumCert {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
-	return s.lockedQC
-}
-
-func (s *roundState) SetCommittedQC(qc *QuorumCert) {
-	s.mu.Lock()
-	defer s.mu.Unlock()
-
+func (s *roundState) SetCommittedQC(qc *QuorumCert) error {
+	if err := s.storeCommitQC(qc); err != nil {
+		return err
+	}
 	s.committedQC = qc
+	return nil
 }
 
 func (s *roundState) CommittedQC() *QuorumCert {
-	s.mu.RLock()
-	defer s.mu.RUnlock()
-
 	return s.committedQC
 }
 
-// message set has it's own mutex, do not lock or unlock with roundState mutex.
+// -----------------------------------------------------------------------
+//
+// leader collect votes
+//
+// -----------------------------------------------------------------------
 func (s *roundState) AddNewViews(msg *Message) error {
 	return s.newViews.Add(msg)
 }
@@ -271,6 +314,10 @@ func (s *roundState) AddPreCommitVote(msg *Message) error {
 	return s.preCommitVotes.Add(msg)
 }
 
+func (s *roundState) PreCommitVotes() []*Message {
+	return s.preCommitVotes.Values()
+}
+
 func (s *roundState) PreCommitVoteSize() int {
 	return s.preCommitVotes.Size()
 }
@@ -279,6 +326,238 @@ func (s *roundState) AddCommitVote(msg *Message) error {
 	return s.commitVotes.Add(msg)
 }
 
+func (s *roundState) CommitVotes() []*Message {
+	return s.commitVotes.Values()
+}
+
 func (s *roundState) CommitVoteSize() int {
 	return s.commitVotes.Size()
+}
+
+func (s *roundState) GetCommittedSeals(n int) [][]byte {
+	seals := make([][]byte, n)
+	for i, data := range s.commitVotes.Values() {
+		if i < n {
+			seals[i] = data.CommittedSeal
+		}
+	}
+	return seals
+}
+
+// -----------------------------------------------------------------------
+//
+// store round state as snapshot
+//
+// -----------------------------------------------------------------------
+
+const (
+	dbRoundStatePrefix = "round-state-"
+	viewSuffix         = "view"
+	prepareQCSuffix    = "prepareQC"
+	lockQCSuffix       = "lockQC"
+	commitQCSuffix     = "commitQC"
+	nodeSuffix         = "node"
+	blockSuffix        = "block"
+)
+
+// todo(fuk): add comments
+func (s *roundState) reload(view *View) {
+	var (
+		err      error
+		printErr = s.logger != nil && s.height.Uint64() > 1
+	)
+
+	if err = s.loadView(view); err != nil && printErr {
+		s.logger.Warn("Load view failed", "err", err)
+	}
+	if err = s.loadPrepareQC(); err != nil && printErr {
+		s.logger.Warn("Load prepareQC failed", "err", err)
+	}
+	if err = s.loadLockQC(); err != nil && printErr {
+		s.logger.Warn("Load lockQC failed", "err", err)
+	}
+	if err = s.loadCommitQC(); err != nil && printErr {
+		s.logger.Warn("Load commitQC failed", "err", err)
+	}
+	if err = s.loadNode(); err != nil && printErr {
+		s.logger.Warn("Load node failed", "err", err)
+	}
+
+	// reset locked node
+	if s.lockQC != nil && s.node.node != nil && s.node.node.Block != nil && s.lockQC.node == s.node.node.Hash() {
+		s.lockedBlock = s.node.node.Block
+		s.proposalLocked = true
+	}
+}
+
+func (s *roundState) storeView(view *View) error {
+	if s.db == nil {
+		return nil
+	}
+
+	raw, err := Encode(view)
+	if err != nil {
+		return err
+	}
+	return s.db.Put(viewKey(), raw)
+}
+
+func (s *roundState) loadView(cur *View) error {
+	if s.db == nil {
+		return nil
+	}
+
+	view := new(View)
+	raw, err := s.db.Get(viewKey())
+	if err != nil {
+		return err
+	}
+	if err = rlp.DecodeBytes(raw, view); err != nil {
+		return err
+	}
+	if view.Cmp(cur) > 0 {
+		s.height = view.Height
+		s.round = view.Round
+	}
+	return nil
+}
+
+func (s *roundState) storePrepareQC(qc *QuorumCert) error {
+	if s.db == nil {
+		return nil
+	}
+
+	raw, err := Encode(qc)
+	if err != nil {
+		return err
+	}
+	return s.db.Put(prepareQCKey(), raw)
+}
+
+func (s *roundState) loadPrepareQC() error {
+	if s.db == nil {
+		return nil
+	}
+
+	data := new(QuorumCert)
+	raw, err := s.db.Get(prepareQCKey())
+	if err != nil {
+		return err
+	}
+	if err = rlp.DecodeBytes(raw, data); err != nil {
+		return err
+	}
+	s.prepareQC = data
+	return nil
+}
+
+func (s *roundState) storeLockQC(qc *QuorumCert) error {
+	if s.db == nil {
+		return nil
+	}
+
+	raw, err := Encode(qc)
+	if err != nil {
+		return err
+	}
+	return s.db.Put(lockQCKey(), raw)
+}
+
+func (s *roundState) loadLockQC() error {
+	if s.db == nil {
+		return nil
+	}
+
+	data := new(QuorumCert)
+	raw, err := s.db.Get(lockQCKey())
+	if err != nil {
+		return err
+	}
+	if err = rlp.DecodeBytes(raw, data); err != nil {
+		return err
+	}
+	s.lockQC = data
+	return nil
+}
+
+func (s *roundState) storeCommitQC(qc *QuorumCert) error {
+	if s.db == nil {
+		return nil
+	}
+
+	raw, err := Encode(qc)
+	if err != nil {
+		return err
+	}
+	return s.db.Put(commitQCKey(), raw)
+}
+
+func (s *roundState) loadCommitQC() error {
+	if s.db == nil {
+		return nil
+	}
+
+	data := new(QuorumCert)
+	raw, err := s.db.Get(commitQCKey())
+	if err != nil {
+		return err
+	}
+	if err = rlp.DecodeBytes(raw, data); err != nil {
+		return err
+	}
+	s.committedQC = data
+	return nil
+}
+
+func (s *roundState) storeNode(node *Node) error {
+	if s.db == nil {
+		return nil
+	}
+
+	raw, err := Encode(node)
+	if err != nil {
+		return err
+	}
+	return s.db.Put(nodeKey(), raw)
+}
+
+func (s *roundState) loadNode() error {
+	if s.db == nil {
+		return nil
+	}
+
+	data := new(Node)
+	raw, err := s.db.Get(nodeKey())
+	if err != nil {
+		return err
+	}
+	if err = rlp.DecodeBytes(raw, data); err != nil {
+		return err
+	}
+	s.node.node = data
+	return nil
+}
+
+func viewKey() []byte {
+	return append([]byte(dbRoundStatePrefix), []byte(viewSuffix)...)
+}
+
+func prepareQCKey() []byte {
+	return append([]byte(dbRoundStatePrefix), []byte(prepareQCSuffix)...)
+}
+
+func lockQCKey() []byte {
+	return append([]byte(dbRoundStatePrefix), []byte(lockQCSuffix)...)
+}
+
+func commitQCKey() []byte {
+	return append([]byte(dbRoundStatePrefix), []byte(commitQCSuffix)...)
+}
+
+func nodeKey() []byte {
+	return append([]byte(dbRoundStatePrefix), []byte(nodeSuffix)...)
+}
+
+func blockKey() []byte {
+	return append([]byte(dbRoundStatePrefix), []byte(blockSuffix)...)
 }

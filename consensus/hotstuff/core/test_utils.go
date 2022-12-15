@@ -28,6 +28,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
@@ -38,6 +39,7 @@ import (
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
 	elog "github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/trie"
 )
 
 type Keys []*ecdsa.PrivateKey
@@ -79,11 +81,10 @@ func makeBlock(number int) *types.Block {
 		GasUsed:    0,
 		Time:       0,
 	}
-	block := &types.Block{}
-	return block.WithSeal(header)
+	return types.NewBlock(header, nil, nil, nil, trie.NewStackTrie(nil))
 }
 
-func newTestProposal() hotstuff.Proposal {
+func newTestProposal() *types.Block {
 	return makeBlock(1)
 }
 
@@ -95,7 +96,7 @@ func makeBlockWithParentHash(number int, parentHash common.Hash) *types.Block {
 		GasUsed:    0,
 		Time:       0,
 	}
-	if parentHash != EmptyHash {
+	if parentHash != common.EmptyHash {
 		header.ParentHash = parentHash
 	}
 	block := &types.Block{}
@@ -126,7 +127,7 @@ type testSystemBackend struct {
 }
 
 type testCommittedMsgs struct {
-	commitProposal hotstuff.Proposal
+	commitProposal *types.Block
 	committedSeals [][]byte
 }
 
@@ -135,7 +136,7 @@ func (ts *testSystemBackend) Address() common.Address {
 }
 
 // Peers returns all connected peers
-func (ts *testSystemBackend) Validators(hash common.Hash, mining bool) hotstuff.ValidatorSet {
+func (ts *testSystemBackend) Validators(height uint64, mining bool) hotstuff.ValidatorSet {
 	return ts.peers
 }
 
@@ -155,13 +156,11 @@ func (ts *testSystemBackend) Broadcast(valSet hotstuff.ValidatorSet, message []b
 }
 
 func (ts *testSystemBackend) Gossip(valSet hotstuff.ValidatorSet, message []byte) error {
-	return nil
 	testLogger.Warn("not sign any data")
 	return nil
 }
 
 func (ts *testSystemBackend) Unicast(valSet hotstuff.ValidatorSet, message []byte) error {
-	return nil
 	testLogger.Info("enqueuing a message...", "address", ts.Address())
 	ts.sentMsgs = append(ts.sentMsgs, message)
 	ts.sys.queuedMessage <- hotstuff.MessageEvent{
@@ -171,15 +170,15 @@ func (ts *testSystemBackend) Unicast(valSet hotstuff.ValidatorSet, message []byt
 	return nil
 }
 
-func (ts *testSystemBackend) PreCommit(proposal hotstuff.Proposal, seals [][]byte) (hotstuff.Proposal, error) {
-	// todo:
-	return nil, nil
+func (ts *testSystemBackend) SealBlock(proposal *types.Block, seals [][]byte) (*types.Block, error) {
+	return proposal, nil
 }
 
-func (ts *testSystemBackend) Commit(proposal hotstuff.Proposal) error {
+func (ts *testSystemBackend) Commit(executed *consensus.ExecutedBlock) error {
+	block := executed.Block
 	testLogger.Info("commit message", "address", ts.Address())
 	ts.committedMsgs = append(ts.committedMsgs, testCommittedMsgs{
-		commitProposal: proposal,
+		commitProposal: block,
 		//committedSeals: seals,
 	})
 
@@ -188,18 +187,14 @@ func (ts *testSystemBackend) Commit(proposal hotstuff.Proposal) error {
 	return nil
 }
 
-func (ts *testSystemBackend) Verify(proposal hotstuff.Proposal) (time.Duration, error) {
+func (ts *testSystemBackend) Verify(block *types.Block, seal bool) (time.Duration, error) {
 	return 0, nil
 }
-
-func (ts *testSystemBackend) VerifyUnsealedProposal(proposal hotstuff.Proposal) (time.Duration, error) {
-	return 0, nil
+func (ts *testSystemBackend) ExecuteBlock(block *types.Block) (*consensus.ExecutedBlock, error) {
+	return nil, nil
 }
-
-func (ts *testSystemBackend) ValidateBlock(block *types.Block) error { return nil }
-func (ts *testSystemBackend) HasBadProposal(hash common.Hash) bool   { return false }
-
-func (ts *testSystemBackend) LastProposal() (hotstuff.Proposal, common.Address) {
+func (ts *testSystemBackend) HasBadProposal(hash common.Hash) bool { return false }
+func (ts *testSystemBackend) LastProposal() (*types.Block, common.Address) {
 	l := len(ts.committedMsgs)
 	if l > 0 {
 		return ts.committedMsgs[l-1].commitProposal, common.Address{}
@@ -212,9 +207,9 @@ func (ts *testSystemBackend) HasPropsal(hash common.Hash, number *big.Int) bool 
 	return number.Cmp(big.NewInt(5)) == 0
 }
 
-func (ts *testSystemBackend) Close() error                  { return nil }
-func (ts *testSystemBackend) ReStart()                      {}
-func (ts *testSystemBackend) CheckPoint(height uint64) bool { return false }
+func (ts *testSystemBackend) Close() error                            { return nil }
+func (ts *testSystemBackend) ReStart()                                {}
+func (ts *testSystemBackend) CheckPoint(height uint64) (uint64, bool) { return 0, false }
 
 // ==============================================
 //
@@ -257,8 +252,8 @@ func NewTestSystemWithBackend(n, h, r int) *testSystem {
 		backend.peers = vset
 		backend.address = vset.GetByIndex(uint64(i)).Address()
 
-		core := New(backend, config, signer.NewSigner(keys[i]))
-		core.current = newRoundState(makeView(h, r), vset, nil)
+		core := New(backend, config, signer.NewSigner(keys[i]), nil, nil)
+		core.current = newRoundState(nil, nil, vset, nil, makeView(h, r))
 		core.valSet = vset
 		core.logger = testLogger
 		core.validateFn = nil
@@ -369,8 +364,9 @@ func (ts *testSigner) SealAfterCommit(h *types.Header, committedSeals [][]byte) 
 func (ts *testSigner) VerifyHeader(header *types.Header, valSet hotstuff.ValidatorSet, seal bool) (*types.HotstuffExtra, error) {
 	return nil, nil
 }
-func (ts *testSigner) VerifyQC(qc hotstuff.QC, valSet hotstuff.ValidatorSet) error    { return nil }
-func (ts *testSigner) CheckQCParticipant(qc hotstuff.QC, signer common.Address) error { return nil }
+func (ts *testSigner) VerifyQC(qc hotstuff.QC, valSet hotstuff.ValidatorSet, epoch bool) error {
+	return nil
+}
 func (ts *testSigner) CheckSignature(valSet hotstuff.ValidatorSet, data []byte, signature []byte) (common.Address, error) {
 	return common.EmptyAddress, nil
 }
@@ -399,10 +395,10 @@ func singerTestCore(t *testing.T, n int, height, round int64) (*core, hotstuff.V
 	c := &core{
 		logger: log.New("backend", "test", "id", 0),
 		valSet: vals,
-		current: newRoundState(&View{
+		current: newRoundState(nil, nil, vals, nil, &View{
 			Height: big.NewInt(height),
 			Round:  big.NewInt(round),
-		}, vals, nil),
+		}),
 		signer:   signer.NewSigner(keys[0]),
 		backlogs: newBackLog(),
 	}
@@ -429,37 +425,34 @@ func newTestQCWithoutExtra(c *core, h, r int) *QuorumCert {
 	coinbase := c.valSet.GetByIndex(uint64(h % N))
 	return &QuorumCert{
 		view:     view,
-		hash:     block.Hash(),
+		node:     block.Hash(),
 		proposer: coinbase.Address(),
 	}
 }
 
-func newTestQCWithExtra(t *testing.T, s *testSystem, h int) *QuorumCert {
-	view := makeView(h, 0)
-	block := makeBlock(h)
-	hash := block.Hash()
+func newTestQCWithExtra(t *testing.T, s *testSystem, node common.Hash, code MsgType, h, r int) *QuorumCert {
+	view := makeView(h, r)
 	vset := s.backends[0].engine.valSet
 	N := vset.Size()
-	coinbase := vset.GetByIndex(uint64(h % N))
 
 	leader := s.getLeader()
-	seal, _ := leader.signer.SignHash(hash)
+	qc := &QuorumCert{
+		view:     view,
+		node:     node,
+		code:     code,
+		proposer: leader.Address(),
+	}
+	sealhash := qc.SealHash()
+	seal, _ := leader.signer.SignHash(sealhash)
+	qc.seal = seal
 	committedSeal := make([][]byte, N-1)
 	for i, v := range s.getRepos() {
-		sig, err := v.signer.SignHash(hash)
+		sig, err := v.signer.SignHash(sealhash)
 		if err != nil {
 			t.Errorf("sign block hash failed, err: %v", err)
 		}
 		committedSeal[i] = sig
 	}
-	extra, err := types.GenerateExtraWithSignature(0, 1000000000, vset.AddressList(), seal, committedSeal)
-	if err != nil {
-		t.Errorf("generate extra with signatures failed, err: %v", err)
-	}
-	return &QuorumCert{
-		view:     view,
-		hash:     hash,
-		proposer: coinbase.Address(),
-		extra:    extra,
-	}
+	qc.committedSeal = committedSeal
+	return qc
 }

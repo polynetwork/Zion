@@ -20,7 +20,7 @@ package validator
 
 import (
 	"errors"
-	"math"
+	"fmt"
 	"reflect"
 	"sort"
 	"sync"
@@ -245,8 +245,14 @@ func (valSet *defaultSet) ParticipantsNumber(list []common.Address) int {
 }
 
 func (valSet *defaultSet) CheckQuorum(committers []common.Address) error {
-	validators := valSet.Copy()
+	if committers == nil {
+		return ErrInvalidParticipant
+	}
+
+	quorum := valSet.Q()
 	validSeal := 0
+	validators := valSet.Copy()
+
 	for _, addr := range committers {
 		if validators.RemoveValidator(addr) {
 			validSeal++
@@ -254,14 +260,14 @@ func (valSet *defaultSet) CheckQuorum(committers []common.Address) error {
 		}
 	}
 
-	// The length of validSeal should be larger than number of faulty node + 1
-	if validSeal <= validators.Q() {
-		return ErrInvalidParticipant
+	// The length of validSeal should not be smaller than number of `n - f`
+	if validSeal < quorum {
+		return fmt.Errorf("valid seal number %v < quorum number %v", validSeal, quorum)
 	}
 	return nil
 }
 
-func (valSet *defaultSet) F() int { return int(math.Ceil(float64(valSet.Size())/3)) - 1 }
+func (valSet *defaultSet) F() int { return (valSet.Size() - 1) / 3 }
 
 func (valSet *defaultSet) Q() int { return valSet.Size() - valSet.F() }
 

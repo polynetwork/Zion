@@ -2514,19 +2514,21 @@ func (bc *BlockChain) SubscribeBlockProcessingEvent(ch chan<- bool) event.Subscr
 	return bc.scope.Track(bc.blockProcFeed.Subscribe(ch))
 }
 
-func (bc *BlockChain) PreExecuteBlock(block *types.Block) error {
+// ExecuteBlock executing and validate block for hotstuff consensus `prepare` step.
+func (bc *BlockChain) ExecuteBlock(block *types.Block) (*state.StateDB, types.Receipts, []*types.Log, error) {
 	parent := bc.GetBlockByHash(block.ParentHash())
 	statedb, err := bc.StateAt(parent.Root())
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 
-	receipts, _, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
+	receipts, allLogs, usedGas, err := bc.processor.Process(block, statedb, bc.vmConfig)
 	if err != nil {
-		return err
+		return nil, nil, nil, err
 	}
 	if err := bc.validator.ValidateState(block, statedb, receipts, usedGas); err != nil {
-		return err
+		return nil, nil, nil, err
 	}
-	return nil
+
+	return statedb, receipts, allLogs, nil
 }

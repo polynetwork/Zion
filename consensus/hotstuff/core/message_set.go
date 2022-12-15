@@ -59,11 +59,11 @@ func (s *MessageSet) Add(msg *Message) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 
-	if index, v := s.vs.GetByAddress(msg.Address); index < 0 || v == nil {
+	if index, v := s.vs.GetByAddress(msg.address); index < 0 || v == nil {
 		return fmt.Errorf("unauthorized address")
 	}
 
-	s.msgs[msg.Address] = msg
+	s.msgs[msg.address] = msg
 	return nil
 }
 
@@ -97,7 +97,7 @@ func (s *MessageSet) String() string {
 
 	addresses := make([]string, 0, len(s.msgs))
 	for _, v := range s.msgs {
-		addresses = append(addresses, v.Address.Hex())
+		addresses = append(addresses, v.address.Hex())
 	}
 	return fmt.Sprintf("[%v]", strings.Join(addresses, ", "))
 }

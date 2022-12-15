@@ -100,14 +100,17 @@ func (p *StateProcessor) Process(block *types.Block, statedb *state.StateDB, cfg
 		commonTxs = append(commonTxs, tx)
 		receipts = append(receipts, receipt)
 	}
+
 	// the number of system transaction in range of [1, 2] except genesis block.
 	// each system transaction can only be executed once in a single block.
-	if length := len(systemTxs); (block.NumberU64() > 0 && length < 1) || length > 2 {
-		return nil, nil, 0, fmt.Errorf("system txs list length %d invalid", length)
-	}
-	for id, cnt := range systemTxIds {
-		if cnt > 1 {
-			return nil, nil, 0, fmt.Errorf("system tx %s dumplicated %d ", id, cnt)
+	if isHotstuff && engine.HasSystemTxHook() {
+		if length := len(systemTxs); (block.NumberU64() > 0 && length < 1) || length > 2 {
+			return nil, nil, 0, fmt.Errorf("system txs list length %d invalid", length)
+		}
+		for id, cnt := range systemTxIds {
+			if cnt > 1 {
+				return nil, nil, 0, fmt.Errorf("system tx %s dumplicated %d ", id, cnt)
+			}
 		}
 	}
 

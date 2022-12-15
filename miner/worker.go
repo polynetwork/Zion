@@ -72,6 +72,9 @@ const (
 
 	// staleThreshold is the maximum depth of the acceptable stale block.
 	staleThreshold = 7
+
+	// executedBlockCap is the capacity to receive pending remote block.
+	executedBlockCap = 7
 )
 
 // environment is the worker's current environment and holds all of the current state information.
@@ -150,8 +153,13 @@ type worker struct {
 	coinbase common.Address
 	extra    []byte
 
+	wg sync.WaitGroup
+
 	pendingMu    sync.RWMutex
 	pendingTasks map[common.Hash]*task
+
+	executedBlockCh  chan consensus.ExecutedBlock // channel for listening `executedBlock`
+	executedBlockSub event.Subscription           // subscribe consensus `executedBlock`
 
 	snapshotMu    sync.RWMutex // The lock used to protect the block snapshot and state snapshot
 	snapshotBlock *types.Block
@@ -196,12 +204,19 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	worker.txsSub = eth.TxPool().SubscribeNewTxsEvent(worker.txsCh)
 	worker.chainHeadSub = eth.BlockChain().SubscribeChainHeadEvent(worker.chainHeadCh)
 
+	// Subscribe remote pending task
+	if handler, ok := worker.engine.(consensus.Handler); ok {
+		worker.executedBlockCh = make(chan consensus.ExecutedBlock, executedBlockCap)
+		worker.executedBlockSub = handler.SubscribeBlock(worker.executedBlockCh)
+	}
+
 	recommit := worker.config.Recommit
 	if recommit < minRecommitInterval {
 		log.Warn("Sanitizing miner recommit interval", "provided", recommit, "updated", minRecommitInterval)
 		recommit = minRecommitInterval
 	}
 
+	worker.wg.Add(4)
 	go worker.mainLoop()
 	go worker.newWorkLoop(recommit)
 	go worker.resultLoop()
@@ -301,10 +316,12 @@ func (w *worker) Close() {
 	}
 	atomic.StoreInt32(&w.running, 0)
 	close(w.exitCh)
+	w.wg.Wait()
 }
 
 // newWorkLoop is a standalone goroutine to submit new mining work upon received events.
 func (w *worker) newWorkLoop(recommit time.Duration) {
+	defer w.wg.Done()
 	var (
 		interrupt   *int32
 		minRecommit = recommit // minimal resubmit interval specified by user.
@@ -402,8 +419,14 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 
 // mainLoop is a standalone goroutine to regenerate the sealing task based on the received event.
 func (w *worker) mainLoop() {
+	defer w.wg.Done()
 	defer w.txsSub.Unsubscribe()
 	defer w.chainHeadSub.Unsubscribe()
+	defer func() {
+		if w.executedBlockSub != nil {
+			w.executedBlockSub.Unsubscribe()
+		}
+	}()
 
 	for {
 		select {
@@ -462,6 +485,7 @@ func (w *worker) mainLoop() {
 // taskLoop is a standalone goroutine to fetch sealing task from the generator and
 // push them to consensus engine.
 func (w *worker) taskLoop() {
+	w.wg.Done()
 	var (
 		stopCh chan struct{}
 		prev   common.Hash
@@ -509,6 +533,7 @@ func (w *worker) taskLoop() {
 // resultLoop is a standalone goroutine to handle sealing result submitting
 // and flush relative data to the database.
 func (w *worker) resultLoop() {
+	w.wg.Done()
 	for {
 		select {
 		case block := <-w.resultCh:
@@ -566,6 +591,75 @@ func (w *worker) resultLoop() {
 			// Insert the block into the set of pending ones to resultLoop for confirmations
 			w.unconfirmed.Insert(block.NumberU64(), block.Hash())
 
+		case data := <-w.executedBlockCh: // only used for hotstuff
+			block := data.Block
+			if block == nil {
+				log.Warn("Executed block is nil")
+				continue
+			}
+			if w.chain.HasBlock(block.Hash(), block.NumberU64()) {
+				log.Debug("Block already exist", block.Number(), block.Hash())
+				continue
+			}
+
+			var (
+				sealhash = w.engine.SealHash(block.Header())
+				hash     = block.Hash()
+				receipts []*types.Receipt
+				logs     []*types.Log
+				statedb  *state.StateDB
+				task     *task
+				exist    bool
+			)
+
+			// Different block could share same sealhash, deep copy here to prevent write-write conflict. Use executed state if exist.
+			if data.State != nil {
+				receipts = data.Receipts
+				logs = data.Logs
+				statedb = data.State
+			} else {
+				w.pendingMu.RLock()
+				task, exist = w.pendingTasks[sealhash]
+				w.pendingMu.RUnlock()
+				if !exist {
+					log.Error("Failed to find local task", "hash", block.Hash())
+					continue
+				}
+
+				receipts = make([]*types.Receipt, len(task.receipts))
+				statedb = task.state
+				for i, receipt := range task.receipts {
+					// add block location fields
+					receipt.BlockHash = hash
+					receipt.BlockNumber = block.Number()
+					receipt.TransactionIndex = uint(i)
+
+					receipts[i] = new(types.Receipt)
+					*receipts[i] = *receipt
+					// Update the block hash in all logs since it is now available and not when the
+					// receipt/log of individual transactions were created.
+					for _, log := range receipt.Logs {
+						log.BlockHash = hash
+					}
+					logs = append(logs, receipt.Logs...)
+				}
+			}
+
+			// Commit block and state to database.
+			_, err := w.chain.WriteBlockWithState(block, receipts, logs, statedb, true)
+			if err != nil {
+				log.Error("Failed writing block to chain", "err", err)
+				continue
+			}
+			log.Info("Successfully sealed new block", "number", block.Number(), "sealhash", sealhash, "hash", hash)
+
+			// Broadcast the block and announce chain insertion event
+			w.mux.Post(core.NewMinedBlockEvent{Block: block})
+
+			// Insert the block into the set of pending ones to resultLoop for confirmations
+			if exist {
+				w.unconfirmed.Insert(block.NumberU64(), block.Hash())
+			}
 		case <-w.exitCh:
 			return
 		}
@@ -768,12 +862,12 @@ func (w *worker) commitNewWork(interrupt *int32, timestamp int64) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
+	// just use current time as block timestamp
 	tstart := time.Now()
 	parent := w.chain.CurrentBlock()
-	if parent.Time() >= uint64(timestamp) {
-		timestamp = int64(parent.Time() + 3)
-	}
+	timestamp = tstart.Unix()
 	num := parent.Number()
+
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),

@@ -19,127 +19,132 @@
 package core
 
 import (
-	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/common"
 )
 
-func (c *core) handlePreCommitVote(data *Message, src hotstuff.Validator) error {
-	logger := c.newLogger()
-
+// handlePreCommitVote implement description as follow:
+// ```
+//  leader wait for (n n f) votes: V ← {v | matchingMsg(v, pre-commit, curView)}
+//	precommitQC ← QC(V )
+//	broadcast Msg(commit, ⊥, precommitQC )
+// ```
+func (c *core) handlePreCommitVote(data *Message) error {
 	var (
-		vote   *Vote
-		msgTyp = MsgTypePreCommitVote
+		logger = c.newLogger()
+		code   = data.Code
+		src    = data.address
+		vote   = common.BytesToHash(data.Msg)
 	)
-	if err := data.Decode(&vote); err != nil {
-		logger.Trace("Failed to decode", "type", msgTyp, "src", src.Address(), "err", err)
-		return errFailedDecodePreCommitVote
-	}
-	if err := c.checkView(msgTyp, vote.View); err != nil {
-		logger.Trace("Failed to check view", "type", msgTyp, "src", src.Address(), "err", err)
+
+	// check message
+	if err := c.checkView(data.View); err != nil {
+		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkVote(vote); err != nil {
-		logger.Trace("Failed to check vote", "type", msgTyp, "src", src.Address(), "err", err)
+	if err := c.checkVote(data, vote); err != nil {
+		logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkProposal(vote.Digest); err != nil {
-		logger.Trace("Failed to check hash", "type", msgTyp, "src", src.Address(), "expect vote", vote.Digest)
-		return errInvalidDigest
-	}
-	if err := c.checkMsgToProposer(); err != nil {
-		logger.Trace("Failed to check proposal", "type", msgTyp, "src", src.Address(), "err", err)
+	if err := c.checkMsgDest(); err != nil {
+		logger.Trace("Failed to check proposal", "msg", code, "src", src, "err", err)
 		return err
 	}
 
+	// queued vote into messageSet to ensure that at least 2/3 validator vote on the same step
 	if err := c.current.AddPreCommitVote(data); err != nil {
-		logger.Trace("Failed to add vote", "type", msgTyp, "src", src.Address(), "err", err)
+		logger.Trace("Failed to add vote", "msg", code, "src", src, "err", err)
 		return errAddPreCommitVote
 	}
 
-	logger.Trace("handlePreCommitVote", "msg", msgTyp, "src", src.Address(), "hash", vote.Digest)
+	logger.Trace("handlePreCommitVote", "msg", code, "src", src, "hash", vote)
 
-	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StatePreCommitted {
-		c.lockQCAndProposal(c.current.PrepareQC())
-		logger.Trace("acceptPreCommitted", "msg", msgTyp, "msgSize", size)
-		c.sendCommit()
+	if size := c.current.PreCommitVoteSize(); size >= c.Q() && c.currentState() < StateLocked {
+		lockQC, err := c.messages2qc(code)
+		if err != nil {
+			logger.Trace("Failed to assemble lockQC", "msg", code, "err", err)
+			return err
+		}
+		if err := c.acceptLockQC(lockQC); err != nil {
+			logger.Trace("Failed to accept lockQC", "msg", code, "err", err)
+			return err
+		}
+		logger.Trace("acceptLockQC", "msg", code, "msgSize", size)
+
+		c.sendCommit(lockQC)
 	}
 	return nil
 }
 
-func (c *core) sendCommit() {
+func (c *core) sendCommit(lockQC *QuorumCert) {
 	logger := c.newLogger()
 
-	msgTyp := MsgTypeCommit
-	sub := c.current.PreCommittedQC()
-	payload, err := Encode(sub)
+	code := MsgTypeCommit
+	payload, err := Encode(lockQC)
 	if err != nil {
-		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
+		logger.Error("Failed to encode", "msg", code, "err", err)
 		return
 	}
-	c.broadcast(&Message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendCommit", "msg", msgTyp, "proposal", sub.hash)
+	c.broadcast(code, payload)
+	logger.Trace("sendCommit", "msg", code, "node", lockQC.node)
 }
 
-func (c *core) handleCommit(data *Message, src hotstuff.Validator) error {
-	logger := c.newLogger()
-
+// handleCommit implement description as follow:
+// ```
+// repo wait for message m : matchingQC(m.justify, pre-commit, curView) from leader(curView)
+//	lockedQC ← m.justify
+//	send voteMsg(commit, m.justify.node, ⊥) to leader(curView)
+// ```
+func (c *core) handleCommit(data *Message) error {
 	var (
-		msg    *QuorumCert
-		msgTyp = MsgTypeCommit
+		logger = c.newLogger()
+		code   = data.Code
+		src    = data.address
+		lockQC *QuorumCert
 	)
-	if err := data.Decode(&msg); err != nil {
-		logger.Trace("Failed to decode", "msg", msgTyp, "src", src.Address(), "err", err)
+
+	// check message
+	if err := data.Decode(&lockQC); err != nil {
+		logger.Trace("Failed to decode", "msg", code, "src", src, "err", err)
 		return errFailedDecodeCommit
 	}
-	if err := c.checkView(MsgTypeCommit, msg.view); err != nil {
-		logger.Trace("Failed to check view", "msg", msgTyp, "src", src.Address(), "err", err)
+	if err := c.checkView(lockQC.view); err != nil {
+		logger.Trace("Failed to check view", "msg", code, "src", src, "err", err)
 		return err
 	}
-	if err := c.checkMsgFromProposer(src); err != nil {
-		logger.Trace("Failed to check proposer", "msg", msgTyp, "src", src.Address(), "err", err)
-		return err
-	}
-	if err := c.checkPrepareQC(msg); err != nil {
-		logger.Trace("Failed to check prepareQC", "msg", msgTyp, "src", src.Address(), "err", err)
-		return err
-	}
-	if err := c.signer.VerifyQC(msg, c.valSet); err != nil {
-		logger.Trace("Failed to check verify qc", "msg", msgTyp, "src", src.Address(), "err", err)
+	if err := c.checkMsgSource(src); err != nil {
+		logger.Trace("Failed to check proposer", "msg", code, "src", src, "err", err)
 		return err
 	}
 
-	logger.Trace("handleCommit", "msg", msgTyp, "src", src.Address(), "proposal", msg.hash)
+	// ensure `lockQC` is legal
+	if err := c.verifyQC(data, lockQC); err != nil {
+		logger.Trace("Failed to check verify qc", "msg", code, "src", src, "err", err)
+		return err
+	}
 
+	logger.Trace("handleCommit", "msg", code, "src", src, "lockQC", lockQC.node)
+
+	// accept lockQC
 	if c.IsProposer() && c.currentState() < StateCommitted {
-		c.sendCommitVote()
+		c.sendVote(MsgTypeCommitVote)
 	}
-	if !c.IsProposer() && c.currentState() < StatePreCommitted {
-		c.lockQCAndProposal(msg)
-		logger.Trace("acceptPreCommitted", "msg", msgTyp, "lockQC", msg.hash)
-		c.sendCommitVote()
+	if !c.IsProposer() && c.currentState() < StateLocked {
+		if err := c.acceptLockQC(lockQC); err != nil {
+			logger.Trace("Failed to accept lockQC", "msg", code, "err", err)
+			return err
+		}
+		logger.Trace("acceptLockQC", "msg", code, "lockQC", lockQC.node)
+
+		c.sendVote(MsgTypeCommitVote)
 	}
+
 	return nil
 }
 
-func (c *core) lockQCAndProposal(qc *QuorumCert) {
-	c.current.SetPreCommittedQC(qc)
-	c.current.SetState(StatePreCommitted)
-	c.current.LockProposal()
-}
-
-func (c *core) sendCommitVote() {
-	logger := c.newLogger()
-
-	msgTyp := MsgTypeCommitVote
-	vote := c.current.Vote()
-	if vote == nil {
-		logger.Error("Failed to send vote", "msg", msgTyp, "err", "current vote is nil")
-		return
+func (c *core) acceptLockQC(qc *QuorumCert) error {
+	if err := c.current.Lock(qc); err != nil {
+		return err
 	}
-	payload, err := Encode(vote)
-	if err != nil {
-		logger.Error("Failed to encode", "msg", msgTyp, "err", err)
-		return
-	}
-	c.broadcast(&Message{Code: msgTyp, Msg: payload})
-	logger.Trace("sendCommitVote", "msg", msgTyp, "hash", vote.Digest)
+	c.current.SetState(StateLocked)
+	return nil
 }

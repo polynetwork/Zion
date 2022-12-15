@@ -33,7 +33,7 @@ type Backend interface {
 	Address() common.Address
 
 	// Validators returns current epoch participants
-	Validators(hash common.Hash, inConsensus bool) ValidatorSet
+	Validators(height uint64, inConsensus bool) ValidatorSet
 
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux
@@ -47,31 +47,28 @@ type Backend interface {
 	// Unicast send a message to single peer
 	Unicast(valSet ValidatorSet, payload []byte) error
 
-	// PreCommit write seal to header and assemble new qc
-	PreCommit(proposal Proposal, seals [][]byte) (Proposal, error)
+	// SealBlock write seal to header and assemble new qc
+	SealBlock(block *types.Block, seals [][]byte) (*types.Block, error)
 
 	// Commit delivers an approved proposal to backend.
 	// The delivered proposal will be put into blockchain.
-	Commit(proposal Proposal) error
+	Commit(executedBlock *consensus.ExecutedBlock) error
 
 	// Verify verifies the proposal. If a consensus.ErrFutureBlock error is returned,
 	// the time difference of the proposal and current time is also returned.
-	Verify(Proposal) (time.Duration, error)
-
-	// Verify verifies the proposal. If a consensus.ErrFutureBlock error is returned,
-	// the time difference of the proposal and current time is also returned.
-	VerifyUnsealedProposal(Proposal) (time.Duration, error)
+	Verify(block *types.Block, seal bool) (time.Duration, error)
 
 	// LastProposal retrieves latest committed proposal and the address of proposer
-	LastProposal() (Proposal, common.Address)
+	LastProposal() (*types.Block, common.Address)
 
 	// HasBadBlock returns whether the block with the hash is a bad block
 	HasBadProposal(hash common.Hash) bool
 
-	// ValidateBlock execute block which contained in prepare message, and validate block state
-	ValidateBlock(block *types.Block) error
+	// ExecuteBlock execute block which contained in prepare message, and validate block state
+	ExecuteBlock(block *types.Block) (*consensus.ExecutedBlock, error)
 
-	CheckPoint(height uint64) bool
+	// CheckPoint retrieve the flag of epoch change and new epoch start height
+	CheckPoint(height uint64) (uint64, bool)
 
 	ReStart()
 
@@ -85,6 +82,9 @@ type CoreEngine interface {
 
 	// IsProposer return true if self address equal leader/proposer address in current round/height
 	IsProposer() bool
+
+	// CurrentSequence return current proposal height and consensus round
+	CurrentSequence() (uint64, uint64)
 
 	// verify if a hash is the same as the proposed block in the current pending request
 	//

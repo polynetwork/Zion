@@ -20,7 +20,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"io"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -46,35 +45,6 @@ type HotstuffExtra struct {
 	Seal          []byte           // proposer signature
 	CommittedSeal [][]byte         // consensus participants signatures and it's size should be greater than 2/3 of validators
 	Salt          []byte           // omit empty
-}
-
-// EncodeRLP serializes ist into the Ethereum RLP format.
-func (ist *HotstuffExtra) EncodeRLP(w io.Writer) error {
-	return rlp.Encode(w, []interface{}{
-		ist.StartHeight,
-		ist.EndHeight,
-		ist.Validators,
-		ist.Seal,
-		ist.CommittedSeal,
-		ist.Salt,
-	})
-}
-
-// DecodeRLP implements rlp.Decoder, and load the istanbul fields from a RLP stream.
-func (ist *HotstuffExtra) DecodeRLP(s *rlp.Stream) error {
-	var extra struct {
-		StartHeight   uint64
-		EndHeight     uint64
-		Validators    []common.Address
-		Seal          []byte
-		CommittedSeal [][]byte
-		Salt          []byte
-	}
-	if err := s.Decode(&extra); err != nil {
-		return err
-	}
-	ist.StartHeight, ist.EndHeight, ist.Validators, ist.Seal, ist.CommittedSeal, ist.Salt = extra.StartHeight, extra.EndHeight, extra.Validators, extra.Seal, extra.CommittedSeal, extra.Salt
-	return nil
 }
 
 // Dump only used for debug or test
@@ -159,6 +129,38 @@ func HotstuffHeaderFillWithValidators(header *Header, vals []common.Address, epo
 		return err
 	}
 	header.Extra = append(buf.Bytes(), payload...)
+	return nil
+}
+
+func (h *Header) SetSeal(seal []byte) error {
+	extra, err := ExtractHotstuffExtra(h)
+	if err != nil {
+		return err
+	}
+	extra.Seal = seal
+	payload, err := rlp.EncodeToBytes(&extra)
+	if err != nil {
+		return err
+	}
+	h.Extra = append(h.Extra[:HotstuffExtraVanity], payload...)
+	return nil
+}
+
+func (h *Header) SetCommittedSeal(committedSeals [][]byte) error {
+	extra, err := ExtractHotstuffExtra(h)
+	if err != nil {
+		return err
+	}
+
+	extra.CommittedSeal = make([][]byte, len(committedSeals))
+	copy(extra.CommittedSeal, committedSeals)
+
+	payload, err := rlp.EncodeToBytes(&extra)
+	if err != nil {
+		return err
+	}
+
+	h.Extra = append(h.Extra[:HotstuffExtraVanity], payload...)
 	return nil
 }
 

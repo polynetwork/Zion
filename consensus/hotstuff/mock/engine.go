@@ -16,27 +16,24 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hotstuff
+package mock
 
 import (
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"crypto/ecdsa"
+
+	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
+	"github.com/ethereum/go-ethereum/ethdb"
 )
 
-// RequestEvent is posted to propose a proposal (posting the incoming block to
-// the main hotstuff engine anyway regardless of being the speaker or delegators)
-type RequestEvent struct {
-	Block *types.Block
-}
+type Engine consensus.Engine
 
-// MessageEvent is posted for HotStuff engine communication (posting the incoming
-// communication messages to the main hotstuff engine anyway)
-type MessageEvent struct {
-	Src     common.Address
-	Payload []byte
-}
-
-// FinalCommittedEvent is posted when a proposal is committed
-type FinalCommittedEvent struct {
-	Header *types.Header
+// backend is engine but also hotstuff engine and consensus handler.
+func makeEngine(privateKey *ecdsa.PrivateKey, db ethdb.Database) Engine {
+	config := hotstuff.DefaultBasicConfig
+	engine := backend.New(config, privateKey, db, true)
+	broadcaster := makeBroadcaster(engine.Address(), engine)
+	engine.SetBroadcaster(broadcaster)
+	return engine
 }

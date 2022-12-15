@@ -30,11 +30,11 @@ func (c *core) handleRequest(request *Request) error {
 		} else if err == errFutureMessage {
 			c.storeRequestMsg(request)
 		} else {
-			logger.Warn("unexpected request", "err", err, "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
+			logger.Warn("unexpected request", "err", err, "number", request.block.Number(), "hash", request.block.Hash())
 		}
 		return err
 	}
-	logger.Trace("handleRequest", "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
+	logger.Trace("handleRequest", "number", request.block.Number(), "hash", request.block.Hash())
 
 	switch c.currentState() {
 	case StateAcceptRequest:
@@ -43,9 +43,12 @@ func (c *core) handleRequest(request *Request) error {
 
 	case StateHighQC:
 		// consensus step is blocked for proposal is not ready
-		if c.current.PendingRequest() == nil {
+		if c.current.PendingRequest() == nil ||
+			c.current.PendingRequest().block.NumberU64() < c.current.HeightU64() {
 			c.current.SetPendingRequest(request)
 			c.sendPrepare()
+		} else {
+			logger.Trace("PendingRequest exist")
 		}
 
 	default:
@@ -63,11 +66,11 @@ func (c *core) handleRequest(request *Request) error {
 // return errFutureMessage if the sequence of proposal is larger than current sequence
 // return errOldMessage if the sequence of proposal is smaller than current sequence
 func (c *core) checkRequestMsg(request *Request) error {
-	if request == nil || request.Proposal == nil {
+	if request == nil || request.block == nil {
 		return errInvalidMessage
 	}
 
-	if c := c.current.Height().Cmp(request.Proposal.Number()); c > 0 {
+	if c := c.current.Height().Cmp(request.block.Number()); c > 0 {
 		return errOldMessage
 	} else if c < 0 {
 		return errFutureMessage
@@ -79,12 +82,12 @@ func (c *core) checkRequestMsg(request *Request) error {
 func (c *core) storeRequestMsg(request *Request) {
 	logger := c.newLogger()
 
-	logger.Trace("Store future request", "number", request.Proposal.Number(), "hash", request.Proposal.Hash())
+	logger.Trace("Store future request", "number", request.block.Number(), "hash", request.block.Hash())
 
 	c.pendingRequestsMu.Lock()
 	defer c.pendingRequestsMu.Unlock()
 
-	c.pendingRequests.Push(request, -request.Proposal.Number().Int64())
+	c.pendingRequests.Push(request, -request.block.Number().Int64())
 }
 
 func (c *core) processPendingRequests() {
@@ -101,16 +104,16 @@ func (c *core) processPendingRequests() {
 		// Push back if it's a future message
 		if err := c.checkRequestMsg(r); err != nil {
 			if err == errFutureMessage {
-				c.logger.Trace("Stop processing request", "number", r.Proposal.Number(), "hash", r.Proposal.Hash())
+				c.logger.Trace("Stop processing request", "number", r.block.Number(), "hash", r.block.Hash())
 				c.pendingRequests.Push(m, prio)
 				break
 			}
-			c.logger.Trace("Skip the pending request", "number", r.Proposal.Number(), "hash", r.Proposal.Hash(), "err", err)
+			c.logger.Trace("Skip the pending request", "number", r.block.Number(), "hash", r.block.Hash(), "err", err)
 			continue
 		} else {
-			c.logger.Trace("Post pending request", "number", r.Proposal.Number(), "hash", r.Proposal.Hash())
+			c.logger.Trace("Post pending request", "number", r.block.Number(), "hash", r.block.Hash())
 			go c.sendEvent(hotstuff.RequestEvent{
-				Proposal: r.Proposal,
+				Block: r.block,
 			})
 		}
 	}

@@ -54,19 +54,20 @@ type ChainHeaderReader interface {
 type ChainReader interface {
 	ChainHeaderReader
 
+	// State returns a new mutable state based on the current HEAD block.
+	State() (*state.StateDB, error)
+
+	// CurrentBlock retrieve latest chained block
+	CurrentBlock() *types.Block
+
 	// GetBlock retrieves a block from the database by hash and number.
 	GetBlock(hash common.Hash, number uint64) *types.Block
 
 	// GetBlockByHash retrieves a block from the database by hash
 	GetBlockByHash(hash common.Hash) *types.Block
 
-	// PreExecuteBlock pre-execute block transactions and validate states
-	PreExecuteBlock(block *types.Block) error
-
-	CurrentBlock() *types.Block
-
-	// State returns a new mutable state based on the current HEAD block.
-	State() (*state.StateDB, error)
+	// ExecuteBlock pre-execute block transactions and validate states
+	ExecuteBlock(block *types.Block) (*state.StateDB, types.Receipts, []*types.Log, error)
 }
 
 // Engine is an algorithm agnostic consensus engine.
@@ -135,13 +136,15 @@ type Engine interface {
 // Broadcaster defines the interface to enqueue blocks to fetcher and find peer
 type Broadcaster interface {
 	// Enqueue add a block into fetcher queue
-	Enqueue(id string, block *types.Block)
+	// Enqueue(id string, block *types.Block)
 	// FindPeers retrives peers by addresses
 	FindPeers(map[common.Address]bool) map[common.Address]Peer
 	// FindPeer find peer by address
 	FindPeer(target common.Address) Peer
 	// PeerCount return peers number
-	PeerCount() int
+	// PeerCount() int
+
+	Stop()
 }
 
 // Peer defines the interface to communicate with peer
@@ -165,6 +168,9 @@ type HotStuff interface {
 
 	// IsSystemCall return method id and true if the tx is an system transaction
 	IsSystemTransaction(tx *types.Transaction, header *types.Header) (string, bool)
+
+	// HasSystemTxHook return true if systemTxHook is not nil
+	HasSystemTxHook() bool
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message
@@ -178,8 +184,13 @@ type Handler interface {
 	// SetBroadcaster sets the broadcaster to send message to peers
 	SetBroadcaster(Broadcaster)
 
+	GetBroadcaster() Broadcaster
+
 	// SubscribeNodes event subscribe for listening static nodes in eth handler
 	SubscribeNodes(ch chan<- StaticNodesEvent) event.Subscription
+
+	// SubscribeBlock subscribe for listening executedBlock in miner.worker
+	SubscribeBlock(ch chan<- ExecutedBlock) event.Subscription
 }
 
 // PoW is a consensus engine based on proof-of-work.
@@ -192,3 +203,10 @@ type PoW interface {
 
 // StaticNodesEvent notify the eth.backend to handle `changeEpoch`
 type StaticNodesEvent struct{ Validators []common.Address }
+
+type ExecutedBlock struct {
+	State    *state.StateDB
+	Block    *types.Block
+	Receipts types.Receipts
+	Logs     []*types.Log
+}

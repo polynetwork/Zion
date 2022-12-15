@@ -210,6 +210,7 @@ func testStickyProposer(t *testing.T) {
 	}
 }
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/validator -run TestFAndQ
 func TestFAndQ(t *testing.T) {
 	n := 13
 

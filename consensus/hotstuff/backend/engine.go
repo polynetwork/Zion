@@ -111,9 +111,12 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
 	uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
 
-	if err := s.executeSystemTxs(chain, header, state, txs, receipts, systemTxs, usedGas, false); err != nil {
-		return err
+	if s.HasSystemTxHook() {
+		if err := s.executeSystemTxs(chain, header, state, txs, receipts, systemTxs, usedGas, false); err != nil {
+			return err
+		}
 	}
+
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 	return nil
@@ -130,12 +133,21 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 		receipts = make([]*types.Receipt, 0)
 	}
 
-	if err := s.executeSystemTxs(chain, header, state, &txs, &receipts, nil, &header.GasUsed, true); err != nil {
-		return nil, nil, err
+	if s.HasSystemTxHook() {
+		if err := s.executeSystemTxs(chain, header, state, &txs, &receipts, nil, &header.GasUsed, true); err != nil {
+			return nil, nil, err
+		}
 	}
+
 	// Assemble and return the final block for sealing
 	block := packBlock(state, chain, header, txs, receipts)
 	return block, receipts, nil
+}
+
+type SystemTxFn func(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64, mining bool) error
+
+func (s *backend) HasSystemTxHook() bool {
+	return s.systemTxHook != nil
 }
 
 // executeSystemTxs governance tx execution do not allow failure, the consensus will halt if tx failed and return error.
@@ -173,52 +185,24 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	header := block.Header()
 
 	// sign the sig hash and fill extra seal
-	if err = s.signer.SealBeforeCommit(header); err != nil {
+	seal, err := s.signer.SignHash(block.Hash())
+	if err != nil {
+		return err
+	}
+	if err := header.SetSeal(seal); err != nil {
 		return err
 	}
 	block = block.WithSeal(header)
 
-	go func() {
-		// get the proposed block hash and clear it if the seal() is completed.
-		s.sealMu.Lock()
-		s.proposedBlockHash = block.Hash()
-		s.logger.Trace("WorkerSealNewBlock", "hash", block.Hash(), "number", block.Number())
+	go s.EventMux().Post(hotstuff.RequestEvent{Block: block})
 
-		defer func() {
-			s.proposedBlockHash = common.EmptyHash
-			s.sealMu.Unlock()
-		}()
-
-		// post block into Istanbul engine
-		go s.EventMux().Post(hotstuff.RequestEvent{
-			Proposal: block,
-		})
-
-		for {
-			select {
-			case result := <-s.commitCh:
-				// if the block hash and the hash from channel are the same,
-				// return the result. Otherwise, keep waiting the next hash.
-				if result != nil && block.Hash() == result.Hash() {
-					results <- result
-					return
-				}
-			case <-stop:
-				s.logger.Trace("Stop seal block", "check miner status!", block.NumberU64())
-				results <- nil
-				return
-			}
-		}
-	}()
+	s.logger.Trace("WorkerSealNewBlock", "address", s.Address(), "hash", block.Hash(), "number", block.Number())
 	return nil
 }
 
-func (s *backend) SealHash(header *types.Header) common.Hash {
-	return s.signer.SigHash(header)
-}
-
-func (s *backend) ValidateBlock(block *types.Block) error {
-	return s.chain.PreExecuteBlock(block)
+func (s *backend) SealHash(header *types.Header) (hash common.Hash) {
+	cleanHeader := types.HotstuffFilteredHeader(header)
+	return hotstuff.RLPHash(cleanHeader)
 }
 
 // useless
@@ -244,12 +228,6 @@ func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(db ethdb.R
 		return ErrStartedEngine
 	}
 
-	// clear previous data
-	if s.commitCh != nil {
-		close(s.commitCh)
-	}
-	s.commitCh = make(chan *types.Block, 1)
-
 	s.chain = chain
 	s.hasBadBlock = hasBadBlock
 
@@ -260,8 +238,8 @@ func (s *backend) Start(chain consensus.ChainReader, hasBadBlock func(db ethdb.R
 		s.vals = next.Copy()
 	}
 
-	// waiting for p2p connected
-	s.SendValidatorsChange(s.vals.AddressList())
+	// p2p module connect nodes directly
+	s.nodesFeed.Send(consensus.StaticNodesEvent{Validators: s.vals.AddressList()})
 
 	// MUST start in single goroutine because that the core.startNewRound need to request proposal in async mode.
 	s.core.Start(chain)
@@ -337,7 +315,7 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 		return nil
 	}
 
-	// Ensure that the block's timestamp isn't too close to it's parent
+	// Ensure that the block's timestamp isn't less than it's parent
 	var (
 		parent *types.Header
 	)
@@ -349,8 +327,11 @@ func (s *backend) verifyHeader(chain consensus.ChainHeaderReader, header *types.
 	if parent == nil || parent.Number.Uint64() != number-1 || parent.Hash() != header.ParentHash {
 		return consensus.ErrUnknownAncestor
 	}
-	if (header.Time < parent.Time+s.config.BlockPeriod) || (header.Time > uint64(now().Unix())) {
+	if header.Time < parent.Time {
 		return errInvalidTimestamp
+	}
+	if header.Time > uint64(now().Unix()) {
+		return consensus.ErrFutureBlock
 	}
 
 	// Get validator set

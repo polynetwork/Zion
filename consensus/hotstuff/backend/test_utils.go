@@ -54,7 +54,7 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultBasicConfig
 	// Use the first key as private key
-	backend := New(config, nodeKeys[0], memDB)
+	backend := New(config, nodeKeys[0], memDB, true)
 	genesis.MustCommit(memDB)
 
 	txLookUpLimit := uint64(100)
@@ -150,7 +150,7 @@ func postAndWait(backend *backend, block *types.Block, t *testing.T) {
 	}
 	go eventLoop()
 	if err := backend.EventMux().Post(hotstuff.RequestEvent{
-		Proposal: block,
+		Block: block,
 	}); err != nil {
 		t.Fatalf("%s", err)
 	}

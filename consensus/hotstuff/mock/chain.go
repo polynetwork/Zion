@@ -16,27 +16,22 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package hotstuff
+package mock
 
 import (
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/core"
+	"github.com/ethereum/go-ethereum/core/vm"
+	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/log"
 )
 
-// RequestEvent is posted to propose a proposal (posting the incoming block to
-// the main hotstuff engine anyway regardless of being the speaker or delegators)
-type RequestEvent struct {
-	Block *types.Block
-}
+func makeChain(db ethdb.Database, engine consensus.Engine, validators []common.Address) *core.BlockChain {
+	genesis := makeGenesis(validators)
+	block := genesis.MustCommit(db)
+	log.Info("Make chain with genesis block", "hash", block.Hash())
 
-// MessageEvent is posted for HotStuff engine communication (posting the incoming
-// communication messages to the main hotstuff engine anyway)
-type MessageEvent struct {
-	Src     common.Address
-	Payload []byte
-}
-
-// FinalCommittedEvent is posted when a proposal is committed
-type FinalCommittedEvent struct {
-	Header *types.Header
+	blockchain, _ := core.NewBlockChain(db, nil, genesis.Config, engine, vm.Config{}, nil, nil)
+	return blockchain
 }

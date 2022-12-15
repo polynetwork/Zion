@@ -41,36 +41,26 @@ func TestCheckRequestMsg(t *testing.T) {
 	if err != errInvalidMessage {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidMessage)
 	}
-	r := &Request{Proposal: nil}
-	err = c.checkRequestMsg(r)
-	if err != errInvalidMessage {
+	r := &Request{block: nil}
+	if err = c.checkRequestMsg(r); err != errInvalidMessage {
 		t.Errorf("error mismatch: have %v, want %v", err, errInvalidMessage)
 	}
 
 	// old request
-	r = &Request{
-		Proposal: makeBlock(0),
-	}
-	err = c.checkRequestMsg(r)
-	if err != errOldMessage {
+	r = &Request{block: makeBlock(0)}
+	if err := c.checkRequestMsg(r); err != errOldMessage {
 		t.Errorf("error mismatch: have %v, want %v", err, errOldMessage)
 	}
 
 	// future request
-	r = &Request{
-		Proposal: makeBlock(2),
-	}
-	err = c.checkRequestMsg(r)
-	if err != errFutureMessage {
+	r = &Request{block: makeBlock(2)}
+	if err := c.checkRequestMsg(r); err != errFutureMessage {
 		t.Errorf("error mismatch: have %v, want %v", err, errFutureMessage)
 	}
 
 	// current request
-	r = &Request{
-		Proposal: makeBlock(1),
-	}
-	err = c.checkRequestMsg(r)
-	if err != nil {
+	r = &Request{block: makeBlock(1)}
+	if err := c.checkRequestMsg(r); err != nil {
 		t.Errorf("error mismatch: have %v, want nil", err)
 	}
 }
@@ -86,13 +76,13 @@ func TestStoreRequestMsg(t *testing.T) {
 
 	requests := []*Request{
 		{
-			Proposal: makeBlock(1),
+			block: makeBlock(1),
 		},
 		{
-			Proposal: makeBlock(2),
+			block: makeBlock(2),
 		},
 		{
-			Proposal: makeBlock(3),
+			block: makeBlock(3),
 		},
 	}
 
@@ -114,8 +104,8 @@ func TestStoreRequestMsg(t *testing.T) {
 		if !ok {
 			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
 		}
-		if e.Proposal.Number().Cmp(requests[2].Proposal.Number()) != 0 {
-			t.Errorf("the number of proposal mismatch: have %v, want %v", e.Proposal.Number(), requests[2].Proposal.Number())
+		if e.Block.Number().Cmp(requests[2].block.Number()) != 0 {
+			t.Errorf("the number of proposal mismatch: have %v, want %v", e.Block.Number(), requests[2].block.Number())
 		}
 	case <-timeout.C:
 		t.Error("unexpected timeout occurs")

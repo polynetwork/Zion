@@ -28,6 +28,20 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/tool -run TestIDAndPubkey
+func TestIDAndPubkey(t *testing.T) {
+	pk, _ := crypto.GenerateKey()
+	addr := crypto.PubkeyToAddress(pk.PublicKey)
+	id := PubkeyID(&pk.PublicKey)
+	t.Logf("origin address %s, node %s", addr.Hex(), id)
+
+	pubKey := ID2PubKey(id[:])
+	got := crypto.PubkeyToAddress(*pubKey)
+	t.Logf("recover address %v", got.Hex())
+
+	assert.Equal(t, addr, got)
+}
+
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/tool -run TestGenesisExtra
 func TestGenesisExtra(t *testing.T) {
 	validators := []common.Address{

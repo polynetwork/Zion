@@ -19,7 +19,6 @@
 package core
 
 import (
-	"math/big"
 	"reflect"
 	"testing"
 	"time"
@@ -34,61 +33,57 @@ func TestStoreBacklog(t *testing.T) {
 	sender := vals.GetByIndex(1)
 
 	// push new view msg
-	view := &View{
-		Round:  big.NewInt(10),
-		Height: big.NewInt(10),
-	}
-	newView := &MsgNewView{View: view}
-	newViewPayload, _ := Encode(newView)
+	view := makeView(10, 10)
+	newViewPayload := []byte{'a', 'b', 'c'}
 	m := &Message{
+		address: sender.Address(),
 		View:    view,
-		Address: sender.Address(),
 		Code:    MsgTypeNewView,
 		Msg:     newViewPayload,
 	}
-
-	c.storeBacklog(m, sender)
+	c.storeBacklog(m)
 	msg, _ := c.backlogs.Pop(sender.Address())
 	if !reflect.DeepEqual(msg, m) {
 		t.Errorf("message mismatch: have %v, want %v", msg, m)
 	}
 
 	// push prepare msg
-	prepare := &MsgPrepare{View: view}
-	subject, _ := Encode(prepare)
+	preparePayload := []byte{'b', '1', 'c', 'x'}
 	m = &Message{
 		View:    view,
-		Address: sender.Address(),
+		address: sender.Address(),
 		Code:    MsgTypePrepare,
-		Msg:     subject,
+		Msg:     preparePayload,
 	}
-	c.storeBacklog(m, sender)
+	c.storeBacklog(m)
 	msg, _ = c.backlogs.Pop(sender.Address())
 	if !reflect.DeepEqual(msg, m) {
 		t.Errorf("message mismatch: have %v, want %v", msg, m)
 	}
 
 	// push pre-commit msg
+	preCommitPayload := []byte{'3', '5', '2', 'd'}
 	m = &Message{
+		address: sender.Address(),
 		View:    view,
-		Address: sender.Address(),
 		Code:    MsgTypePreCommit,
-		Msg:     subject,
+		Msg:     preCommitPayload,
 	}
-	c.storeBacklog(m, sender)
+	c.storeBacklog(m)
 	msg, _ = c.backlogs.Pop(sender.Address())
 	if !reflect.DeepEqual(msg, m) {
 		t.Errorf("message mismatch: have %v, want %v", msg, m)
 	}
 
 	// push commit msg
+	commitPayload := []byte{'c', 'm', 't', 'p', 'l', 'd'}
 	m = &Message{
+		address: sender.Address(),
 		View:    view,
-		Address: sender.Address(),
 		Code:    MsgTypeCommit,
-		Msg:     subject,
+		Msg:     commitPayload,
 	}
-	c.storeBacklog(m, sender)
+	c.storeBacklog(m)
 	msg, _ = c.backlogs.Pop(sender.Address())
 	if !reflect.DeepEqual(msg, m) {
 		t.Errorf("message mismatch: have %v, want %v", msg, m)
@@ -103,22 +98,16 @@ func TestProcessFutureBacklog(t *testing.T) {
 	c.subscribeEvents()
 	defer c.unsubscribeEvents()
 
-	v := &View{
-		Round:  big.NewInt(10),
-		Height: big.NewInt(10),
-	}
 	// push a future msg
-	subject := &MsgPreCommit{
-		View: v,
-	}
+	subject := []byte{'c', 'm', 't', 'p', 'l', 'd'}
 	subjectPayload, _ := Encode(subject)
 	m := &Message{
-		View:    v,
-		Address: sender.Address(),
+		address: sender.Address(),
+		View:    makeView(10, 10),
 		Code:    MsgTypeCommit,
 		Msg:     subjectPayload,
 	}
-	c.storeBacklog(m, sender)
+	c.storeBacklog(m)
 	c.processBacklog()
 
 	const timeoutDura = 2 * time.Second
@@ -130,28 +119,16 @@ func TestProcessFutureBacklog(t *testing.T) {
 		}
 		t.Errorf("unexpected events comes: %v", e)
 	case <-timeout.C:
-		// success
+		t.Log("timeout")
 	}
 }
 
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestProcessBacklog
 func TestProcessBacklog(t *testing.T) {
-	view := &View{
-		Height: big.NewInt(1),
-		Round:  big.NewInt(0),
-	}
-	prepare := &MsgPrepare{
-		View:     view,
-		Proposal: makeBlock(1),
-	}
-	prepreparePayload, _ := Encode(prepare)
-
-	subject := &Vote{
-		View:   view,
-		Digest: common.HexToHash("0x1234567890"),
-	}
-	subjectPayload, _ := Encode(subject)
-
+	view := makeView(1, 0)
+	prepreparePayload := []byte{'p', 'p', 'd'}
+	vote := common.HexToHash("0x1234567890")
+	subjectPayload := vote.Bytes()
 	msgs := []*Message{
 		{
 			View: view,
@@ -186,9 +163,9 @@ func testProcessBacklog(t *testing.T, msg *Message) {
 	defer c.unsubscribeEvents()
 
 	sender := vals.GetByIndex(1)
-	msg.Address = sender.Address()
+	msg.address = sender.Address()
 
-	c.storeBacklog(msg, sender)
+	c.storeBacklog(msg)
 	c.processBacklog()
 
 	const timeoutDura = 2 * time.Second

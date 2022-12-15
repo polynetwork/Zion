@@ -59,13 +59,18 @@ func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
 	if c.current == nil {
 		return false
 	}
-	if proposal := c.current.Proposal(); proposal != nil && proposal.Hash() == blockHash {
+	if node := c.current.Node(); node != nil && node.Block != nil && node.Block.Hash() == blockHash {
 		return true
 	}
-	if req := c.current.PendingRequest(); req != nil && req.Proposal != nil && req.Proposal.Hash() == blockHash {
+	if req := c.current.PendingRequest(); req != nil && req.block != nil && req.block.Hash() == blockHash {
 		return true
 	}
 	return false
+}
+
+func (c *core) CurrentSequence() (uint64, uint64) {
+	view := c.currentView()
+	return view.HeightU64(), view.RoundU64()
 }
 
 // ----------------------------------------------------------------------------
@@ -107,13 +112,13 @@ func (c *core) handleEvents() {
 			// A real Event arrived, process interesting content
 			switch ev := event.Data.(type) {
 			case hotstuff.RequestEvent:
-				c.handleRequest(&Request{Proposal: ev.Proposal})
+				c.handleRequest(&Request{block: ev.Block})
 
 			case hotstuff.MessageEvent:
-				c.handleMsg(ev.Payload)
+				c.handleMsg(ev.Src, ev.Payload)
 
 			case backlogEvent:
-				c.handleCheckedMsg(ev.msg, ev.src)
+				c.handleCheckedMsg(ev.msg)
 			}
 
 		case _, ok := <-c.timeoutSub.Chan():
@@ -141,31 +146,28 @@ func (c *core) sendEvent(ev interface{}) {
 	c.backend.EventMux().Post(ev)
 }
 
-func (c *core) handleMsg(payload []byte) error {
+func (c *core) handleMsg(val common.Address, payload []byte) error {
 	logger := c.logger.New()
 
 	// Decode Message and check its signature
 	msg := new(Message)
-	if err := msg.FromPayload(payload, c.validateFn); err != nil {
+	if err := msg.FromPayload(val, payload, c.validateFn); err != nil {
 		logger.Error("Failed to decode Message from payload", "err", err)
 		return errFailedDecodeMessage
 	}
 
 	// Only accept message if the src is consensus participant
-	index, src := c.valSet.GetByAddress(msg.Address)
+	index, src := c.valSet.GetByAddress(val)
 	if index < 0 || src == nil {
 		logger.Error("Invalid address in Message", "msg", msg)
 		return errInvalidSigner
 	}
 
 	// handle checked Message
-	if err := c.handleCheckedMsg(msg, src); err != nil {
-		return err
-	}
-	return nil
+	return c.handleCheckedMsg(msg)
 }
 
-func (c *core) handleCheckedMsg(msg *Message, src hotstuff.Validator) (err error) {
+func (c *core) handleCheckedMsg(msg *Message) (err error) {
 	if c.current == nil {
 		c.logger.Error("engine state not prepared...")
 		return
@@ -173,28 +175,28 @@ func (c *core) handleCheckedMsg(msg *Message, src hotstuff.Validator) (err error
 
 	switch msg.Code {
 	case MsgTypeNewView:
-		err = c.handleNewView(msg, src)
+		err = c.handleNewView(msg)
 	case MsgTypePrepare:
-		err = c.handlePrepare(msg, src)
+		err = c.handlePrepare(msg)
 	case MsgTypePrepareVote:
-		err = c.handlePrepareVote(msg, src)
+		err = c.handlePrepareVote(msg)
 	case MsgTypePreCommit:
-		err = c.handlePreCommit(msg, src)
+		err = c.handlePreCommit(msg)
 	case MsgTypePreCommitVote:
-		err = c.handlePreCommitVote(msg, src)
+		err = c.handlePreCommitVote(msg)
 	case MsgTypeCommit:
-		err = c.handleCommit(msg, src)
+		err = c.handleCommit(msg)
 	case MsgTypeCommitVote:
-		err = c.handleCommitVote(msg, src)
+		err = c.handleCommitVote(msg)
 	case MsgTypeDecide:
-		err = c.handleDecide(msg, src)
+		err = c.handleDecide(msg)
 	default:
 		err = errInvalidMessage
 		c.logger.Error("msg type invalid", "unknown type", msg.Code)
 	}
 
 	if err == errFutureMessage {
-		c.storeBacklog(msg, src)
+		c.storeBacklog(msg)
 	}
 	return
 }
@@ -203,4 +205,65 @@ func (c *core) handleTimeoutMsg() {
 	c.logger.Trace("handleTimeout", "state", c.currentState(), "view", c.currentView())
 	round := new(big.Int).Add(c.current.Round(), common.Big1)
 	c.startNewRound(round)
+}
+
+func (c *core) broadcast(code MsgType, payload []byte) {
+	logger := c.logger.New("state", c.currentState())
+
+	// forbid unConsensus nodes send message to leader
+	if index, _ := c.valSet.GetByAddress(c.Address()); index < 0 {
+		return
+	}
+
+	msg := NewCleanMessage(c.currentView(), code, payload)
+	payload, err := c.finalizeMessage(msg)
+	if err != nil {
+		logger.Error("Failed to finalize Message", "msg", msg, "err", err)
+		return
+	}
+
+	// leader set source for message and add it in set directly if msg.code is kind of vote.
+	// the self voting happened before qc assembling to ensure the field of qc.seal WONT miss.
+	switch msg.Code {
+	case MsgTypeNewView, MsgTypePrepareVote, MsgTypePreCommitVote, MsgTypeCommitVote:
+		if err = c.backend.Unicast(c.valSet, payload); err != nil {
+			logger.Error("Failed to unicast Message", "msg", msg, "err", err)
+		}
+
+	case MsgTypePrepare, MsgTypePreCommit, MsgTypeCommit, MsgTypeDecide:
+		if err = c.backend.Broadcast(c.valSet, payload); err != nil {
+			logger.Error("Failed to broadcast Message", "msg", msg, "err", err)
+		}
+	default:
+		logger.Error("invalid msg type", "msg", msg)
+	}
+}
+
+func (c *core) finalizeMessage(msg *Message) ([]byte, error) {
+	var (
+		seal, sig []byte
+		err       error
+	)
+
+	// Add proof of consensus
+	node := c.current.Node()
+	if msg.Code == MsgTypeCommitVote && node != nil && node.Block != nil {
+		if seal, err = c.signer.SignHash(node.Block.Hash()); err != nil {
+			return nil, err
+		}
+		msg.CommittedSeal = seal
+	}
+
+	// Sign Message
+	if _, err = msg.PayloadNoSig(); err != nil {
+		return nil, err
+	}
+	if sig, err = c.signer.SignHash(msg.hash); err != nil {
+		return nil, err
+	} else {
+		msg.Signature = sig
+	}
+
+	// Convert to payload
+	return msg.Payload()
 }

@@ -54,6 +54,8 @@ var (
 	// ErrInvalidValset is returned if the validator set is nil
 	ErrInvalidValset = errors.New("valset is nil")
 
+	ErrNilQC = errors.New("qc is nil")
+
 	// ErrInvalidQC is returned if the quorum cert is nil
-	ErrInvalidQC = errors.New("qc is nil")
+	ErrInvalidQC = errors.New("qc is invalid")
 )
