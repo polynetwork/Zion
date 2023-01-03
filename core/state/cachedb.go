@@ -26,8 +26,10 @@ import (
 )
 
 var (
-	ErrKeyLen = errors.New("cacheDB should only be used for native contract storage")
-	ErrBigLen = errors.New("big int length out of range")
+	ErrKeyLen       = errors.New("cacheDB should only be used for native contract storage")
+	ErrBigLen       = errors.New("big int length out of range")
+	ErrNotExist     = errors.New("key not exist")
+	ErrInvalidBytes = errors.New("invalid bytes")
 )
 
 type CacheDB StateDB
@@ -35,11 +37,12 @@ type CacheDB StateDB
 // support storage for type of `Address`
 func (c *CacheDB) SetAddress(key []byte, value common.Address) error {
 	hash := common.BytesToHash(value.Bytes())
-	return c.customSet(key, hash)
+	_, _, err := c.customSet(key, hash)
+	return err
 }
 
 func (c *CacheDB) GetAddress(key []byte) (common.Address, error) {
-	hash, err := c.customGet(key)
+	_, _, hash, err := c.customGet(key)
 	if err != nil {
 		return common.Address{}, err
 	}
@@ -47,20 +50,24 @@ func (c *CacheDB) GetAddress(key []byte) (common.Address, error) {
 }
 
 func (c *CacheDB) DelAddress(key []byte) error {
-	return c.customDel(key)
+	_, _, err := c.customDel(key)
+	return err
 }
 
 // support storage for type of `Hash`
 func (c *CacheDB) SetHash(key []byte, value common.Hash) error {
-	return c.customSet(key, value)
+	_, _, err := c.customSet(key, value)
+	return err
 }
 
 func (c *CacheDB) GetHash(key []byte) (common.Hash, error) {
-	return c.customGet(key)
+	_, _, value, err := c.customGet(key)
+	return value, err
 }
 
 func (c *CacheDB) DelHash(key []byte) error {
-	return c.customDel(key)
+	_, _, err := c.customDel(key)
+	return err
 }
 
 // support storage for type of `big`
@@ -69,11 +76,12 @@ func (c *CacheDB) SetBigInt(key []byte, value *big.Int) error {
 		return ErrBigLen
 	}
 	hash := common.BytesToHash(value.Bytes())
-	return c.customSet(key, hash)
+	_, _, err := c.customSet(key, hash)
+	return err
 }
 
 func (c *CacheDB) GetBigInt(key []byte) (*big.Int, error) {
-	raw, err := c.customGet(key)
+	_, _, raw, err := c.customGet(key)
 	if err != nil {
 		return nil, err
 	}
@@ -81,38 +89,49 @@ func (c *CacheDB) GetBigInt(key []byte) (*big.Int, error) {
 }
 
 func (c *CacheDB) DelBigInt(key []byte) error {
-	return c.customDel(key)
+	_, _, err := c.customDel(key)
+	return err
+}
+
+func (c *CacheDB) SetBytes(key []byte, value []byte) error {
+	c.Put(key, value)
+	return nil
+}
+
+func (c *CacheDB) GetBytes(key []byte) ([]byte, error) {
+	return c.Get(key)
 }
 
 // custom functions
-func (c *CacheDB) customSet(key []byte, value common.Hash) error {
-	addr, slot, err := parseKey(key)
+func (c *CacheDB) customSet(key []byte, value common.Hash) (addr common.Address, slot common.Hash, err error) {
+	addr, slot, err = parseKey(key)
 	if err != nil {
-		return err
+		return
 	}
 
 	s := (*StateDB)(c)
 	s.SetState(addr, slot, value)
-	return nil
+	return
 }
 
-func (c *CacheDB) customGet(key []byte) (common.Hash, error) {
-	addr, slot, err := parseKey(key)
+func (c *CacheDB) customGet(key []byte) (addr common.Address, slot, value common.Hash, err error) {
+	addr, slot, err = parseKey(key)
 	if err != nil {
-		return common.Hash{}, err
+		return
 	}
 	s := (*StateDB)(c)
-	return s.GetState(addr, slot), nil
+	value = s.GetState(addr, slot)
+	return
 }
 
-func (c *CacheDB) customDel(key []byte) error {
-	addr, slot, err := parseKey(key)
+func (c *CacheDB) customDel(key []byte) (addr common.Address, slot common.Hash, err error) {
+	addr, slot, err = parseKey(key)
 	if err != nil {
-		return err
+		return
 	}
 	s := (*StateDB)(c)
 	s.SetState(addr, slot, common.Hash{})
-	return nil
+	return
 }
 
 func parseKey(key []byte) (addr common.Address, slot common.Hash, err error) {
