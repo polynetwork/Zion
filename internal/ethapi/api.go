@@ -752,6 +752,25 @@ func (s *PublicBlockChainAPI) GetStorageAt(ctx context.Context, address common.A
 	return res[:], state.Error()
 }
 
+func (s *PublicBlockChainAPI) GetHashAtCacheDB(ctx context.Context, address common.Address, hexKey string, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
+	stateDB, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
+	if stateDB == nil || err != nil {
+		return nil, err
+	}
+
+	key, err := hex.DecodeString(hexKey)
+	if err != nil {
+		return nil, err
+	}
+
+	concatKey := append(address[:], key[:]...)
+	value, err := (*state.CacheDB)(stateDB).GetHash(concatKey)
+	if err != nil {
+		return nil, err
+	}
+	return value.Bytes(), nil
+}
+
 func (s *PublicBlockChainAPI) GetStorageAtCacheDB(ctx context.Context, address common.Address, hexKey string, blockNrOrHash rpc.BlockNumberOrHash) (hexutil.Bytes, error) {
 	stateDB, _, err := s.b.StateAndHeaderByNumberOrHash(ctx, blockNrOrHash)
 	if stateDB == nil || err != nil {
@@ -764,7 +783,7 @@ func (s *PublicBlockChainAPI) GetStorageAtCacheDB(ctx context.Context, address c
 	}
 
 	concatKey := append(address[:], key[:]...)
-	value, err := (*state.CacheDB)(stateDB).Get(concatKey)
+	value, err := (*state.CacheDB)(stateDB).GetBytes(concatKey)
 	if err != nil {
 		return nil, err
 	}
