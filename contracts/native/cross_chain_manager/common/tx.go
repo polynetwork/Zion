@@ -21,10 +21,10 @@ package common
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/ethereum/go-ethereum/core/state"
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -55,9 +55,8 @@ func MakeTransaction(service *native.NativeContract, params *MakeTxParam, fromCh
 }
 
 func PutRequest(native *native.NativeContract, txHash []byte, chainID uint64, request []byte) error {
-	hash := crypto.Keccak256(request)
+	hash := crypto.Keccak256Hash(request)
 	contract := utils.CrossChainManagerContractAddress
 	chainIDBytes := utils.GetUint64Bytes(chainID)
-	native.GetCacheDB().Put(utils.ConcatKey(contract, []byte(REQUEST), chainIDBytes, txHash), hash)
-	return nil
+	return native.GetCacheDB().SetHash(utils.ConcatKey(contract, []byte(REQUEST), chainIDBytes, txHash), hash)
 }
