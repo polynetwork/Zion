@@ -35,7 +35,7 @@ interface ISideChainManager {
     
     function approveQuitSideChain(uint64 chainID) external returns (bool success);
 
-    function updateFee(uint64 chainID, uint64 viewNum, int fee) external returns (bool success);
+    function updateFee(uint64 chainID, uint64 viewNum, int fee, bytes calldata signature) external returns (bool success);
 
     function registerAsset(uint64 chainID, uint64[] calldata AssetMapKey, bytes[] calldata AssetMapValue, uint64[] calldata LockProxyMapKey, bytes[] calldata LockProxyMapValue) external returns (bool success);
 
