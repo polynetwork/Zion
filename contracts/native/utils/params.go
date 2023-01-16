@@ -41,8 +41,6 @@ var (
 
 	NO_PROOF_ROUTER   = uint64(1)
 	ETH_COMMON_ROUTER = uint64(2)
-	COSMOS_ROUTER     = uint64(3)
-	ZILLIQA_ROUTER    = uint64(4)
 
-	RIPPLE_HANDLER    = uint64(6)
+	RIPPLE_ROUTER    = uint64(6)
 )

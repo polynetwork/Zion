@@ -22,11 +22,9 @@ import (
 	"fmt"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/cosmos"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/eth_common"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/no_proof"
 	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/ripple"
-	"github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/zilliqa"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
@@ -77,11 +75,7 @@ func GetChainHandler(router uint64) (scom.ChainHandler, error) {
 		return no_proof.NewNoProofHandler(), nil
 	case utils.ETH_COMMON_ROUTER:
 		return eth_common.NewHandler(), nil
-	case utils.COSMOS_ROUTER:
-		return cosmos.NewCosmosHandler(), nil
-	case utils.ZILLIQA_ROUTER:
-		return zilliqa.NewHandler(), nil
-	case utils.RIPPLE_HANDLER:
+	case utils.RIPPLE_ROUTER:
 		return ripple.NewRippleHandler(), nil
 	default:
 		return nil, fmt.Errorf("not a supported router:%d", router)
@@ -163,6 +157,14 @@ func ImportOuterTransfer(s *native.NativeContract) ([]byte, error) {
 	}
 	if dstChain == nil {
 		return nil, fmt.Errorf("ImportExTransfer, side chain %d is not registered", dstChainID)
+	}
+
+	if dstChain.Router == utils.RIPPLE_ROUTER {
+		err := ripple.NewRippleHandler().MakeTransaction(s, txParam, srcChainID)
+		if err != nil {
+			return utils.BYTE_FALSE, err
+		}
+		return utils.BYTE_TRUE, nil
 	}
 
 	//NOTE, you need to store the tx in this
