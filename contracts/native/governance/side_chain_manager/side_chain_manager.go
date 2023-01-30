@@ -44,7 +44,7 @@ const (
 	FEE_INFO                  = "feeInfo"
 	ASSET_BIND                = "assetBind"
 
-	UPDATE_FEE_TIMEOUT = 300
+	UPDATE_FEE_TIMEOUT = 100
 )
 
 var (
@@ -386,7 +386,7 @@ func RegisterAsset(s *native.NativeContract) ([]byte, error) {
 
 func UpdateFee(s *native.NativeContract) ([]byte, error) {
 	ctx := s.ContractRef().CurrentContext()
-	blockTime := s.ContractRef().BlockTime().Uint64()
+	blockHeight := s.ContractRef().BlockHeight().Uint64()
 	params := &UpdateFeeParam{}
 	if err := utils.UnpackMethod(ABI, side_chain_manager_abi.MethodUpdateFee, params, ctx.Payload); err != nil {
 		return nil, err
@@ -407,17 +407,17 @@ func UpdateFee(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("UpdateFee, GetFeeInfo error: %v", err)
 	}
-	if feeInfo.StartTime == 0 {
-		feeInfo.StartTime = blockTime
-	} else if blockTime-feeInfo.StartTime > UPDATE_FEE_TIMEOUT {
+	if feeInfo.StartHeight == 0 {
+		feeInfo.StartHeight = blockHeight
+	} else if blockHeight-feeInfo.StartHeight > UPDATE_FEE_TIMEOUT {
 		// if time out view + 1
 		fee.View = fee.View + 1
 		if err := PutFee(s, params.ChainID, fee); err != nil {
 			return nil, fmt.Errorf("UpdateFee, PutFee error: %v", err)
 		}
 		feeInfo = &FeeInfo{
-			StartTime: blockTime,
-			FeeInfo:   make(map[common.Address]*big.Int),
+			StartHeight: blockHeight,
+			FeeInfo:     make(map[common.Address]*big.Int),
 		}
 	}
 	feeInfo.FeeInfo[ctx.Caller] = params.Fee

@@ -42,8 +42,8 @@ type Fee struct {
 }
 
 type FeeInfo struct {
-	StartTime uint64
-	FeeInfo   map[common.Address]*big.Int
+	StartHeight uint64
+	FeeInfo     map[common.Address]*big.Int
 }
 
 type FeeVote struct {
@@ -59,19 +59,19 @@ func (this *FeeInfo) EncodeRLP(w io.Writer) error {
 	sort.SliceStable(feeVote, func(i, j int) bool {
 		return feeVote[i].Fee.Cmp(feeVote[j].Fee) == 1
 	})
-	return rlp.Encode(w, []interface{}{this.StartTime, feeVote})
+	return rlp.Encode(w, []interface{}{this.StartHeight, feeVote})
 }
 
 func (this *FeeInfo) DecodeRLP(s *rlp.Stream) error {
 	var data struct {
-		StartTime uint64
-		FeeVote   []*FeeVote
+		StartHeight uint64
+		FeeVote     []*FeeVote
 	}
 
 	if err := s.Decode(&data); err != nil {
 		return err
 	}
-	this.StartTime = data.StartTime
+	this.StartHeight = data.StartHeight
 
 	feeInfo := make(map[common.Address]*big.Int, len(data.FeeVote))
 	for _, v := range data.FeeVote {

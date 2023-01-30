@@ -140,17 +140,18 @@ func DecodeRippleTxArgs(data []byte) (param *RippleTxArgs, err error) {
 	IntTy, _ := abi.NewType("int", "", nil)
 	// StringTy, _ := abi.NewType("string", "", nil)
 
-	RippleTxArgs := abi.Arguments{
+	Args := abi.Arguments{
 		{Type: BytesTy, Name: "toAddress"},
 		{Type: IntTy, Name: "amount"},
 	}
 
-	args, err := RippleTxArgs.Unpack(data)
+	args, err := Args.Unpack(data)
 	if err != nil {
 		return
 	}
 
-	err = RippleTxArgs.Copy(param, args)
+	param = new(RippleTxArgs)
+	err = Args.Copy(param, args)
 	if err != nil {
 		return nil, err
 	}
@@ -161,11 +162,11 @@ func EncodeRippleTxArgs(args *RippleTxArgs) (data []byte, err error) {
 	BytesTy, _ := abi.NewType("bytes", "", nil)
 	IntTy, _ := abi.NewType("int", "", nil)
 
-	RippleTxArgs := abi.Arguments{
+	Args := abi.Arguments{
 		{Type: BytesTy, Name: "toAddress"},
 		{Type: IntTy, Name: "amount"},
 	}
 
-	data, err = RippleTxArgs.Pack(args.ToAddress, args.Amount)
+	data, err = Args.Pack(args.ToAddress, args.Amount)
 	return
 }
