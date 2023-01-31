@@ -47,6 +47,8 @@ var (
 		scom.MethodWhiteChain:          152250,
 		scom.MethodCheckDone:           57750,
 		scom.MethodReplenish:           100000,
+		scom.MethodMultiSignRipple:     100000,
+		scom.MethodReconstructRippleTx: 300000,
 	}
 )
 
