@@ -30,11 +30,11 @@ interface INodeManager {
     function getOutstandingRewards() external view returns (bytes memory);
     function getStakeRewards(address consensusAddress, address stakeAddress) external view returns (bytes memory);
 
-    event CreateValidator(string consensusAddress);
+    event CreateValidator(string consensusAddress, string caller, string amount);
     event UpdateValidator(string consensusAddress);
     event UpdateCommission(string consensusAddress);
-    event Stake(string consensusAddress, string amount);
-    event UnStake(string consensusAddress, string amount);
+    event Stake(string consensusAddress, string caller, string amount);
+    event UnStake(string consensusAddress, string caller, string amount);
     event Withdraw(string caller, string amount);
     event CancelValidator(string consensusAddress);
     event WithdrawValidator(string consensusAddress, string selfStake);
