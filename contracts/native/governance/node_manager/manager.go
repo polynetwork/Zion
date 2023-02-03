@@ -226,7 +226,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("CreateValidator, deposit error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{CREATE_VALIDATOR_EVENT}, params.ConsensusAddress.Hex())
+	err = s.AddNotify(ABI, []string{CREATE_VALIDATOR_EVENT}, params.ConsensusAddress.Hex(), caller.Hex(), initStake.String())
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, AddNotify error: %v", err)
 	}
@@ -410,7 +410,7 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("Stake, setValidator error: %v", err)
 	}
 
-	err = s.AddNotify(ABI, []string{STAKE_EVENT}, params.ConsensusAddress.Hex(), value.String())
+	err = s.AddNotify(ABI, []string{STAKE_EVENT}, params.ConsensusAddress.Hex(), caller, value.String())
 	if err != nil {
 		return nil, fmt.Errorf("Stake, AddNotify error: %v", err)
 	}
@@ -467,7 +467,7 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 		}
 	}
 
-	err = s.AddNotify(ABI, []string{UNSTAKE_EVENT}, params.ConsensusAddress.Hex(), params.Amount.String())
+	err = s.AddNotify(ABI, []string{UNSTAKE_EVENT}, params.ConsensusAddress.Hex(), caller, params.Amount.String())
 	if err != nil {
 		return nil, fmt.Errorf("UnStake, AddNotify error: %v", err)
 	}
