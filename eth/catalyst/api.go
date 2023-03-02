@@ -125,7 +125,7 @@ func (api *consensusAPI) AssembleBlock(params assembleBlockParams) (*executableD
 		time.Sleep(wait)
 	}
 
-	pending, err := pool.Pending()
+	pending, err := pool.Pending(true)
 	if err != nil {
 		return nil, err
 	}

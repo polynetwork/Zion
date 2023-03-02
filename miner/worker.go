@@ -914,7 +914,7 @@ func (w *worker) commitNewWork(interrupt *int32, timestamp int64) {
 	}
 
 	// Fill the block with all available pending transactions.
-	pending, _ := w.eth.TxPool().Pending()
+	pending, _ := w.eth.TxPool().Pending(true)
 
 	// Split the pending transactions into locals and remotes
 	localTxs, remoteTxs := make(map[common.Address]types.Transactions), pending
