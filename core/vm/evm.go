@@ -95,6 +95,7 @@ type BlockContext struct {
 	BlockNumber *big.Int       // Provides information for NUMBER
 	Time        *big.Int       // Provides information for TIME
 	Difficulty  *big.Int       // Provides information for DIFFICULTY
+	BaseFee     *big.Int       // Provides information for BASEFEE
 }
 
 // TxContext provides the EVM with information about a transaction.
@@ -217,7 +218,6 @@ func (evm *EVM) Interpreter() Interpreter {
 // . `staticCall`, used in scope of `pure` and `view`
 // . `callCode`, modify the caller's storage but not the callee's storage.
 // are forbidden for safety!
-//
 func (evm *EVM) Call(caller ContractRef, addr common.Address, input []byte, gas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	if evm.vmConfig.NoRecursion && evm.depth > 0 {
 		return nil, gas, nil
@@ -432,7 +432,6 @@ func (evm *EVM) StaticCall(caller ContractRef, addr common.Address, input []byte
 // the entire stateDB, and there is no need to find the safe caller's memory storage in calling operation.
 //
 // In addition, the gas of native call temporarily uses a fixed value
-//
 func (evm *EVM) nativeCall(caller, toContract common.Address, input []byte, suppliedGas uint64, value *big.Int) (ret []byte, leftOverGas uint64, err error) {
 	sdb := evm.StateDB.(*state.StateDB)
 	blockNumber := evm.Context.BlockNumber

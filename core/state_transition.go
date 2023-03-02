@@ -40,8 +40,10 @@ The state transitioning model does all the necessary work to work out a valid ne
 3) Create a new state object if the recipient is \0*32
 4) Value transfer
 == If contract creation ==
-  4a) Attempt to run transaction data
-  4b) If valid, use result as code for the new state object
+
+	4a) Attempt to run transaction data
+	4b) If valid, use result as code for the new state object
+
 == end ==
 5) Run Script section
 6) Derive new state root
@@ -51,6 +53,8 @@ type StateTransition struct {
 	msg        Message
 	gas        uint64
 	gasPrice   *big.Int
+	feeCap     *big.Int
+	tip        *big.Int
 	initialGas uint64
 	value      *big.Int
 	data       []byte
@@ -64,6 +68,8 @@ type Message interface {
 	To() *common.Address
 
 	GasPrice() *big.Int
+	FeeCap() *big.Int
+	Tip() *big.Int
 	Gas() uint64
 	Value() *big.Int
 
@@ -157,6 +163,8 @@ func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition 
 		evm:      evm,
 		msg:      msg,
 		gasPrice: msg.GasPrice(),
+		feeCap:   msg.FeeCap(),
+		tip:      msg.Tip(),
 		value:    msg.Value(),
 		data:     msg.Data(),
 		state:    evm.StateDB,
@@ -183,8 +191,14 @@ func (st *StateTransition) to() common.Address {
 }
 
 func (st *StateTransition) buyGas() error {
-	mgval := new(big.Int).Mul(new(big.Int).SetUint64(st.msg.Gas()), st.gasPrice)
-	if have, want := st.state.GetBalance(st.msg.From()), mgval; have.Cmp(want) < 0 {
+	mgval := new(big.Int).SetUint64(st.msg.Gas())
+	mgval = mgval.Mul(mgval, st.gasPrice)
+	balanceCheck := mgval
+	if st.feeCap != nil {
+		balanceCheck = new(big.Int).SetUint64(st.msg.Gas())
+		balanceCheck = balanceCheck.Mul(balanceCheck, st.feeCap)
+	}
+	if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
 		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
 	}
 	if err := st.gp.SubGas(st.msg.Gas()); err != nil {
@@ -209,19 +223,40 @@ func (st *StateTransition) preCheck() error {
 				st.msg.From().Hex(), msgNonce, stNonce)
 		}
 	}
+	// Make sure that transaction feeCap is greater than the baseFee (post london)
+	if st.evm.ChainConfig().IsLondon(st.evm.Context.BlockNumber) {
+		if l := st.feeCap.BitLen(); l > 256 {
+			return fmt.Errorf("%w: address %v, feeCap bit length: %d", ErrFeeCapVeryHigh,
+				st.msg.From().Hex(), l)
+		}
+		if l := st.tip.BitLen(); l > 256 {
+			return fmt.Errorf("%w: address %v, tip bit length: %d", ErrTipVeryHigh,
+				st.msg.From().Hex(), l)
+		}
+		if st.feeCap.Cmp(st.tip) < 0 {
+			return fmt.Errorf("%w: address %v, tip: %s, feeCap: %s", ErrTipAboveFeeCap,
+				st.msg.From().Hex(), st.feeCap, st.tip)
+		}
+		// This will panic if baseFee is nil, but basefee presence is verified
+		// as part of header validation.
+		if st.feeCap.Cmp(st.evm.Context.BaseFee) < 0 {
+			return fmt.Errorf("%w: address %v, feeCap: %s baseFee: %s", ErrFeeCapTooLow,
+				st.msg.From().Hex(), st.feeCap, st.evm.Context.BaseFee)
+		}
+	}
 	return st.buyGas()
 }
 
 // TransitionDb will transition the state by applying the current message and
 // returning the evm execution result with following fields.
 //
-// - used gas:
-//      total gas used (including gas being refunded)
-// - returndata:
-//      the returned data from evm
-// - concrete execution error:
-//      various **EVM** error which aborts the execution,
-//      e.g. ErrOutOfGas, ErrExecutionReverted
+//   - used gas:
+//     total gas used (including gas being refunded)
+//   - returndata:
+//     the returned data from evm
+//   - concrete execution error:
+//     various **EVM** error which aborts the execution,
+//     e.g. ErrOutOfGas, ErrExecutionReverted
 //
 // However if any consensus issue encountered, return the error directly with
 // nil evm execution result.

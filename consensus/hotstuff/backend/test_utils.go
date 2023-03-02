@@ -84,7 +84,7 @@ func makeHeader(parent *types.Block) *types.Header {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     blockNumber,
-		GasLimit:   core.CalcGasLimit(parent, GasFloor, GasCeil),
+		GasLimit:   core.CalcGasLimit(parent.GasUsed(), parent.GasLimit(), GasFloor, GasCeil),
 		GasUsed:    0,
 		Time:       parent.Time() + hotstuff.DefaultBasicConfig.BlockPeriod,
 		Difficulty: defaultDifficulty,
