@@ -314,7 +314,6 @@ func InspectDatabase(db ethdb.Database, keyPrefix, keyStart []byte) error {
 		// Meta- and unaccounted data
 		metadata     stat
 		unaccounted  stat
-		shutdownInfo stat
 
 		// Totals
 		total common.StorageSize

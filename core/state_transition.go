@@ -53,8 +53,8 @@ type StateTransition struct {
 	msg        Message
 	gas        uint64
 	gasPrice   *big.Int
-	feeCap     *big.Int
-	tip        *big.Int
+	gasFeeCap  *big.Int
+	gasTipCap  *big.Int
 	initialGas uint64
 	value      *big.Int
 	data       []byte
@@ -68,8 +68,8 @@ type Message interface {
 	To() *common.Address
 
 	GasPrice() *big.Int
-	FeeCap() *big.Int
-	Tip() *big.Int
+	GasFeeCap() *big.Int
+	GasTipCap() *big.Int
 	Gas() uint64
 	Value() *big.Int
 
@@ -159,15 +159,15 @@ func IntrinsicGas(data []byte, accessList types.AccessList, isContractCreation b
 // NewStateTransition initialises and returns a new state transition object.
 func NewStateTransition(evm *vm.EVM, msg Message, gp *GasPool) *StateTransition {
 	return &StateTransition{
-		gp:       gp,
-		evm:      evm,
-		msg:      msg,
-		gasPrice: msg.GasPrice(),
-		feeCap:   msg.FeeCap(),
-		tip:      msg.Tip(),
-		value:    msg.Value(),
-		data:     msg.Data(),
-		state:    evm.StateDB,
+		gp:        gp,
+		evm:       evm,
+		msg:       msg,
+		gasPrice:  msg.GasPrice(),
+		gasFeeCap: msg.GasFeeCap(),
+		gasTipCap: msg.GasTipCap(),
+		value:     msg.Value(),
+		data:      msg.Data(),
+		state:     evm.StateDB,
 	}
 }
 
@@ -194,9 +194,9 @@ func (st *StateTransition) buyGas() error {
 	mgval := new(big.Int).SetUint64(st.msg.Gas())
 	mgval = mgval.Mul(mgval, st.gasPrice)
 	balanceCheck := mgval
-	if st.feeCap != nil {
+	if st.gasFeeCap != nil {
 		balanceCheck = new(big.Int).SetUint64(st.msg.Gas())
-		balanceCheck = balanceCheck.Mul(balanceCheck, st.feeCap)
+		balanceCheck = balanceCheck.Mul(balanceCheck, st.gasFeeCap)
 	}
 	if have, want := st.state.GetBalance(st.msg.From()), balanceCheck; have.Cmp(want) < 0 {
 		return fmt.Errorf("%w: address %v have %v want %v", ErrInsufficientFunds, st.msg.From().Hex(), have, want)
@@ -223,25 +223,25 @@ func (st *StateTransition) preCheck() error {
 				st.msg.From().Hex(), msgNonce, stNonce)
 		}
 	}
-	// Make sure that transaction feeCap is greater than the baseFee (post london)
-	if st.evm.ChainConfig().IsLondon(st.evm.Context.BlockNumber) {
-		if l := st.feeCap.BitLen(); l > 256 {
-			return fmt.Errorf("%w: address %v, feeCap bit length: %d", ErrFeeCapVeryHigh,
+	// Skip the checks if gas fields are zero and baseFee was explicitly disabled (eth_call)
+	if !st.evm.Config.NoBaseFee || st.gasFeeCap.BitLen() > 0 || st.gasTipCap.BitLen() > 0 {
+		if l := st.gasFeeCap.BitLen(); l > 256 {
+			return fmt.Errorf("%w: address %v, maxFeePerGas bit length: %d", ErrFeeCapVeryHigh,
 				st.msg.From().Hex(), l)
 		}
-		if l := st.tip.BitLen(); l > 256 {
-			return fmt.Errorf("%w: address %v, tip bit length: %d", ErrTipVeryHigh,
+		if l := st.gasTipCap.BitLen(); l > 256 {
+			return fmt.Errorf("%w: address %v, maxPriorityFeePerGas bit length: %d", ErrTipVeryHigh,
 				st.msg.From().Hex(), l)
 		}
-		if st.feeCap.Cmp(st.tip) < 0 {
-			return fmt.Errorf("%w: address %v, tip: %s, feeCap: %s", ErrTipAboveFeeCap,
-				st.msg.From().Hex(), st.feeCap, st.tip)
+		if st.gasFeeCap.Cmp(st.gasTipCap) < 0 {
+			return fmt.Errorf("%w: address %v, maxPriorityFeePerGas: %s, maxFeePerGas: %s", ErrTipAboveFeeCap,
+				st.msg.From().Hex(), st.gasTipCap, st.gasFeeCap)
 		}
 		// This will panic if baseFee is nil, but basefee presence is verified
 		// as part of header validation.
-		if st.feeCap.Cmp(st.evm.Context.BaseFee) < 0 {
-			return fmt.Errorf("%w: address %v, feeCap: %s baseFee: %s", ErrFeeCapTooLow,
-				st.msg.From().Hex(), st.feeCap, st.evm.Context.BaseFee)
+		if st.gasFeeCap.Cmp(st.evm.Context.BaseFee) < 0 {
+			return fmt.Errorf("%w: address %v, maxFeePerGas: %s baseFee: %s", ErrFeeCapTooLow,
+				st.msg.From().Hex(), st.gasFeeCap, st.evm.Context.BaseFee)
 		}
 	}
 	return st.buyGas()
@@ -312,7 +312,7 @@ func (st *StateTransition) TransitionDb() (*ExecutionResult, error) {
 		st.state.SetNonce(msg.From(), st.state.GetNonce(sender.Address())+1)
 		ret, st.gas, vmerr = st.evm.Call(sender, st.to(), st.data, st.gas, st.value)
 	}
-	//if !eip3529 {
+	//if !st.evm.ChainConfig().IsLondon(st.evm.Context.BlockNumber) {
 	//	// Before EIP-3529: refunds were capped to gasUsed / 2
 	//	st.refundGas(params.RefundQuotient)
 	//} else {

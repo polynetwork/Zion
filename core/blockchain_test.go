@@ -2709,10 +2709,10 @@ func TestDeleteRecreateAccount(t *testing.T) {
 	statedb, _ := chain.State()
 
 	// If all is correct, then both slots are zero
-	if got, exp := statedb.GetState(aa, common.HexToHash("01")), (common.Hash{}); common.BytesToHash(got) != exp {
+	if got, exp := statedb.GetState(aa, common.HexToHash("01")), (common.Hash{}); got != exp {
 		t.Errorf("got %x exp %x", got, exp)
 	}
-	if got, exp := statedb.GetState(aa, common.HexToHash("02")), (common.Hash{}); common.BytesToHash(got) != exp {
+	if got, exp := statedb.GetState(aa, common.HexToHash("02")), (common.Hash{}); got != exp {
 		t.Errorf("got %x exp %x", got, exp)
 	}
 }
