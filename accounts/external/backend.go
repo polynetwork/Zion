@@ -222,8 +222,6 @@ func (api *ExternalSigner) SignTx(account accounts.Account, tx *types.Transactio
 	if chainID != nil {
 		args.ChainID = (*hexutil.Big)(chainID)
 	}
-	// However, if the user asked for a particular chain id, then we should
-	// use that instead.
 	if tx.Type() != types.LegacyTxType {
 		// However, if the user asked for a particular chain id, then we should
 		// use that instead.

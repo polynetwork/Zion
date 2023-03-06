@@ -67,7 +67,7 @@ func NewTx(inner TxData) *Transaction {
 
 // TxData is the underlying data of a transaction.
 //
-// This is implemented by LegacyTx and AccessListTx.
+// This is implemented by DynamicFeeTx, LegacyTx and AccessListTx.
 type TxData interface {
 	txType() byte // returns the type ID
 	copy() TxData // creates a deep copy and initializes all fields
@@ -77,9 +77,9 @@ type TxData interface {
 	data() []byte
 	gas() uint64
 	gasPrice() *big.Int
-	value() *big.Int
 	gasTipCap() *big.Int
 	gasFeeCap() *big.Int
+	value() *big.Int
 	nonce() uint64
 	to() *common.Address
 
@@ -530,9 +530,10 @@ func NewTransactionsByPriceAndNonce(signer Signer, txs map[common.Address]Transa
 
 	// Assemble and return the transaction set
 	return &TransactionsByPriceAndNonce{
-		txs:    txs,
-		heads:  heads,
-		signer: signer,
+		txs:     txs,
+		heads:   heads,
+		signer:  signer,
+		baseFee: baseFee,
 	}
 }
 

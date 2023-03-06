@@ -272,8 +272,7 @@ func makeHeader(chain consensus.ChainReader, parent *types.Block, state *state.S
 		Number:   new(big.Int).Add(parent.Number(), common.Big1),
 		Time:     time,
 	}
-
-	if chain.Config().IsLondon(parent.Number()) {
+	if chain.Config().IsLondon(header.Number) {
 		header.BaseFee = misc.CalcBaseFee(chain.Config(), parent.Header())
 		parentGasLimit := parent.GasLimit()
 		if !chain.Config().IsLondon(parent.Number()) {
