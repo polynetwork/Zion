@@ -19,12 +19,12 @@ package core
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/ethereum/go-ethereum/internal/ethapi"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/internal/ethapi"
 )
 
 type ValidationInfo struct {
@@ -66,6 +66,8 @@ func (v *ValidationMessages) getWarnings() error {
 }
 
 // SendTxArgs represents the arguments to submit a transaction
+// This struct is identical to ethapi.TransactionArgs, except for the usage of
+// common.MixedcaseAddress in From and To
 type SendTxArgs struct {
 	From                 common.MixedcaseAddress  `json:"from"`
 	To                   *common.MixedcaseAddress `json:"to"`
