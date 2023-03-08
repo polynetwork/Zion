@@ -444,6 +444,12 @@ web3._extend({
 			inputFormatter: [null, null]
 		}),
 		new web3._extend.Method({
+			name: 'traceJsTransaction',
+			call: 'debug_traceJsTransaction',
+			params: 2,
+			inputFormatter: [null, null]
+		}),
+		new web3._extend.Method({
 			name: 'traceCall',
 			call: 'debug_traceCall',
 			params: 3,
