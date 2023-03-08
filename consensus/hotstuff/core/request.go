@@ -30,11 +30,11 @@ func (c *core) handleRequest(request *Request) error {
 		} else if err == errFutureMessage {
 			c.storeRequestMsg(request)
 		} else {
-			logger.Warn("unexpected request", "err", err, "number", request.block.Number(), "hash", request.block.Hash())
+			logger.Warn("unexpected request", "err", err, "number", request.block.Number(), "hash", request.block.SealHash())
 		}
 		return err
 	}
-	logger.Trace("handleRequest", "number", request.block.Number(), "hash", request.block.Hash())
+	logger.Trace("handleRequest", "number", request.block.Number(), "hash", request.block.SealHash())
 
 	switch c.currentState() {
 	case StateAcceptRequest:
@@ -82,7 +82,7 @@ func (c *core) checkRequestMsg(request *Request) error {
 func (c *core) storeRequestMsg(request *Request) {
 	logger := c.newLogger()
 
-	logger.Trace("Store future request", "number", request.block.Number(), "hash", request.block.Hash())
+	logger.Trace("Store future request", "number", request.block.Number(), "hash", request.block.SealHash())
 
 	c.pendingRequestsMu.Lock()
 	defer c.pendingRequestsMu.Unlock()
@@ -104,14 +104,14 @@ func (c *core) processPendingRequests() {
 		// Push back if it's a future message
 		if err := c.checkRequestMsg(r); err != nil {
 			if err == errFutureMessage {
-				c.logger.Trace("Stop processing request", "number", r.block.Number(), "hash", r.block.Hash())
+				c.logger.Trace("Stop processing request", "number", r.block.Number(), "hash", r.block.SealHash())
 				c.pendingRequests.Push(m, prio)
 				break
 			}
-			c.logger.Trace("Skip the pending request", "number", r.block.Number(), "hash", r.block.Hash(), "err", err)
+			c.logger.Trace("Skip the pending request", "number", r.block.Number(), "hash", r.block.SealHash(), "err", err)
 			continue
 		} else {
-			c.logger.Trace("Post pending request", "number", r.block.Number(), "hash", r.block.Hash())
+			c.logger.Trace("Post pending request", "number", r.block.Number(), "hash", r.block.SealHash())
 			go c.sendEvent(hotstuff.RequestEvent{
 				Block: r.block,
 			})

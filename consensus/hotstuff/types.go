@@ -39,6 +39,8 @@ type Proposal interface {
 	// Hash retrieves the hash of this proposal.
 	Hash() common.Hash
 
+	SealHash() common.Hash
+
 	ParentHash() common.Hash
 
 	Coinbase() common.Address

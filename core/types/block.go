@@ -26,6 +26,8 @@ import (
 	"sync/atomic"
 	"time"
 
+	"golang.org/x/crypto/sha3"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/rlp"
@@ -102,14 +104,38 @@ type headerMarshaling struct {
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
-	// If the mix digest is equivalent to the predefined Hotstuff digest, use Hotstuff specific hash calculation.
-	if h.MixDigest == HotstuffDigest {
-		// Seal is reserved in extra-data. To prove block is signed by the proposer.
-		if hotstuffHeader := HotstuffFilteredHeader(h); hotstuffHeader != nil {
-			return rlpHash(hotstuffHeader)
-		}
-	}
 	return rlpHash(h)
+}
+
+// SealHash returns the hash of a block prior to it being sealed.
+func SealHash(header *Header) (hash common.Hash) {
+	// If the mix digest is equivalent to the predefined Hotstuff digest, use Hotstuff specific hash calculation.
+	if header.MixDigest == HotstuffDigest {
+		header = HotstuffFilteredHeader(header)
+	}
+
+	hasher := sha3.NewLegacyKeccak256()
+	enc := []interface{}{
+		header.ParentHash,
+		header.UncleHash,
+		header.Coinbase,
+		header.Root,
+		header.TxHash,
+		header.ReceiptHash,
+		header.Bloom,
+		header.Difficulty,
+		header.Number,
+		header.GasLimit,
+		header.GasUsed,
+		header.Time,
+		header.Extra,
+	}
+	if header.BaseFee != nil {
+		enc = append(enc, header.BaseFee)
+	}
+	rlp.Encode(hasher, enc)
+	hasher.Sum(hash[:0])
+	return hash
 }
 
 var headerSize = common.StorageSize(reflect.TypeOf(Header{}).Size())
@@ -177,8 +203,9 @@ type Block struct {
 	transactions Transactions
 
 	// caches
-	hash atomic.Value
-	size atomic.Value
+	hash     atomic.Value
+	sealHash atomic.Value
+	size     atomic.Value
 
 	// Td is used by package core to store the total difficulty
 	// of the chain up to and including the block.
@@ -409,6 +436,15 @@ func (b *Block) Hash() common.Hash {
 	}
 	v := b.header.Hash()
 	b.hash.Store(v)
+	return v
+}
+
+func (b *Block) SealHash() common.Hash {
+	if hash := b.sealHash.Load(); hash != nil {
+		return hash.(common.Hash)
+	}
+	v := SealHash(b.header)
+	b.sealHash.Store(v)
 	return v
 }
 

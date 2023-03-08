@@ -227,7 +227,7 @@ func (s *roundState) SetSealedBlock(block *types.Block) error {
 	if s.node.node == nil || s.node.node.Block == nil {
 		return fmt.Errorf("locked block is nil")
 	}
-	if s.node.node.Block.Hash() != block.Hash() {
+	if s.node.node.Block.SealHash() != block.SealHash() {
 		return fmt.Errorf("node block not equal to multi-seal block")
 	}
 	s.node.node.Block = block
@@ -235,7 +235,7 @@ func (s *roundState) SetSealedBlock(block *types.Block) error {
 		return err
 	}
 	s.lockedBlock = block
-	if s.executed != nil && s.executed.Block != nil && s.executed.Block.Hash() == block.Hash() {
+	if s.executed != nil && s.executed.Block != nil && s.executed.Block.SealHash() == block.SealHash() {
 		s.executed.Block = block
 	}
 	return nil

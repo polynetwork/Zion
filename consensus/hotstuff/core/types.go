@@ -199,13 +199,13 @@ func (n *Node) DecodeRLP(s *rlp.Stream) error {
 
 func (n *Node) Hash() common.Hash {
 	if n.hash == common.EmptyHash {
-		n.hash = hotstuff.RLPHash([]common.Hash{n.Parent, n.Block.Hash()})
+		n.hash = hotstuff.RLPHash([]common.Hash{n.Parent, n.Block.SealHash()})
 	}
 	return n.hash
 }
 
 func (n *Node) String() string {
-	return fmt.Sprintf("{Node: %v, parent: %v, block: %v}", n.Hash(), n.Parent, n.Block.Hash())
+	return fmt.Sprintf("{Node: %v, parent: %v, block: %v}", n.Hash(), n.Parent, n.Block.SealHash())
 }
 
 type QuorumCert struct {
@@ -314,12 +314,12 @@ func NewSubject(node *Node, qc *QuorumCert) *Subject {
 }
 
 func (m *Subject) String() string {
-	return fmt.Sprintf("{Node: %s, Block: %v, Parent: %v, QC: %v}", m.Node.Hash(), m.Node.Block.Hash(), m.Node.Parent, m.QC.node)
+	return fmt.Sprintf("{Node: %s, Block: %v, Parent: %v, QC: %v}", m.Node.Hash(), m.Node.Block.SealHash(), m.Node.Parent, m.QC.node)
 }
 
 type Diploma struct {
 	CommitQC       *QuorumCert
-	BlockHash      common.Hash
+	BlockHash      common.Hash // block.sealHash
 	CommittedSeals [][]byte
 }
 

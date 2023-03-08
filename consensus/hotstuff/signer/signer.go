@@ -108,7 +108,7 @@ func (s *SignerImpl) Recover(header *types.Header) (common.Address, *types.Hotst
 		return common.EmptyAddress, nil, ErrInvalidHeader
 	}
 
-	hash := header.Hash()
+	hash := types.SealHash(header)
 	if hash == common.EmptyHash {
 		return common.EmptyAddress, nil, ErrInvalidHeader
 	}
@@ -172,7 +172,8 @@ func (s *SignerImpl) VerifyHeader(header *types.Header, valSet hotstuff.Validato
 	}
 
 	if seal {
-		if err := s.VerifyCommittedSeal(valSet, header.Hash(), extra.CommittedSeal); err != nil {
+		sealHash := types.SealHash(header)
+		if err := s.VerifyCommittedSeal(valSet, sealHash, extra.CommittedSeal); err != nil {
 			return extra, err
 		}
 	}
@@ -227,7 +228,7 @@ func (s *SignerImpl) VerifyCommittedSeal(valset hotstuff.ValidatorSet, hash comm
 }
 
 func (s *SignerImpl) checkQuorum(valset hotstuff.ValidatorSet, hash common.Hash, seals [][]byte) error {
-	var addrs  []common.Address
+	var addrs []common.Address
 
 	for _, seal := range seals {
 		addr, err := getSignatureAddress(hash, seal)

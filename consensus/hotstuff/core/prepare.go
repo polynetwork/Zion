@@ -48,7 +48,7 @@ func (c *core) sendPrepare() {
 			return
 		}
 		block = lockedBlock
-		logger.Trace("Reuse lock block", "msg", code, "hash", block.Hash(), "number", block.NumberU64())
+		logger.Trace("Reuse lock block", "msg", code, "hash", block.SealHash(), "number", block.NumberU64())
 	} else {
 		request := c.current.PendingRequest()
 		if request == nil || request.block == nil || request.block.NumberU64() != c.HeightU64() {
@@ -56,7 +56,7 @@ func (c *core) sendPrepare() {
 			return
 		} else {
 			block = c.current.PendingRequest().block
-			logger.Trace("Use pending request", "msg", code, "hash", block.Hash(), "number", block.NumberU64())
+			logger.Trace("Use pending request", "msg", code, "hash", block.SealHash(), "number", block.NumberU64())
 		}
 	}
 
@@ -86,7 +86,7 @@ func (c *core) sendPrepare() {
 	}
 
 	c.broadcast(code, payload)
-	logger.Trace("sendPrepare", "msg", code, "node", node.Hash(), "block", block.Hash())
+	logger.Trace("sendPrepare", "msg", code, "node", node.Hash(), "block", block.SealHash())
 }
 
 // handlePrepare implement description as follow:
@@ -155,7 +155,7 @@ func (c *core) handlePrepare(data *Message) error {
 		return errSafeNode
 	}
 
-	logger.Trace("handlePrepare", "msg", code, "src", src, "node", node.Hash(), "block", block.Hash())
+	logger.Trace("handlePrepare", "msg", code, "src", src, "node", node.Hash(), "block", block.SealHash())
 
 	// accept msg info, DONT persist node before accept `prepareQC`
 	if c.IsProposer() && c.currentState() == StateHighQC {
