@@ -19,9 +19,10 @@ package params
 import "math/big"
 
 const (
-	GasLimitBoundDivisor uint64 = 16//1024    // The bound divisor of the gas limit, used in update calculations.
-	MinGasLimit          uint64 = 40000000//5000    // Minimum the gas limit may ever be.
-	GenesisGasLimit      uint64 = 40000000//4712388 // Gas limit of the Genesis block.
+	GasLimitBoundDivisor uint64 = 16       //1024    // The bound divisor of the gas limit, used in update calculations.
+	// TODO(fuk): `MinGasLimit` settled as 40000000 for high throughput
+	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
+	GenesisGasLimit      uint64 = 40000000 //4712388 // Gas limit of the Genesis block.
 
 	MaximumExtraDataSize  uint64 = 32    // Maximum size extra data may be after Genesis.
 	ExpByteGas            uint64 = 10    // Times ceil(log256(exponent)) for the EXP instruction.
@@ -117,6 +118,10 @@ const (
 	// not exist. This logic is similar to call.
 	// Introduced in Tangerine Whistle (Eip 150)
 	CreateBySelfdestructGas uint64 = 25000
+
+	BaseFeeChangeDenominator = 8          // Bounds the amount the base fee can change between blocks.
+	ElasticityMultiplier     = 2          // Bounds the maximum gas limit an EIP-1559 block may have.
+	InitialBaseFee           = 1000000000 // Initial base fee for EIP-1559 blocks.
 
 	MaxCodeSize = 24576 // Maximum bytecode to permit for a contract
 

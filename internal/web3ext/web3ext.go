@@ -108,6 +108,12 @@ web3._extend({
 			call: 'clique_status',
 			params: 0
 		}),
+		new web3._extend.Method({
+			name: 'getSigner',
+			call: 'clique_getSigner',
+			params: 1,
+			inputFormatter: [null]
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -581,6 +587,12 @@ web3._extend({
 			params: 2,
 			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter],
 		}),
+		new web3._extend.Method({
+			name: 'feeHistory',
+			call: 'eth_feeHistory',
+			params: 3,
+			inputFormatter: [null, web3._extend.formatters.inputBlockNumberFormatter, null]
+		}),
 	],
 	properties: [
 		new web3._extend.Property({
@@ -594,6 +606,11 @@ web3._extend({
 				}
 				return formatted;
 			}
+		}),
+		new web3._extend.Property({
+			name: 'maxPriorityFeePerGas',
+			getter: 'eth_maxPriorityFeePerGas',
+			outputFormatter: web3._extend.utils.toBigNumber
 		}),
 	]
 });
@@ -627,6 +644,12 @@ web3._extend({
 		new web3._extend.Method({
 			name: 'setGasPrice',
 			call: 'miner_setGasPrice',
+			params: 1,
+			inputFormatter: [web3._extend.utils.fromDecimal]
+		}),
+		new web3._extend.Method({
+			name: 'setGasLimit',
+			call: 'miner_setGasLimit',
 			params: 1,
 			inputFormatter: [web3._extend.utils.fromDecimal]
 		}),
