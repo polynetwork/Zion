@@ -91,8 +91,8 @@ func (c *core) checkBlock(block *types.Block) error {
 		if block.NumberU64() != lockedBlock.NumberU64() {
 			return fmt.Errorf("expect locked block number %v, got %v", lockedBlock.NumberU64(), block.NumberU64())
 		}
-		if block.Hash() != lockedBlock.Hash() {
-			return fmt.Errorf("expect locked block hash %v, got %v", lockedBlock.Hash(), block.Hash())
+		if block.SealHash() != lockedBlock.SealHash() {
+			return fmt.Errorf("expect locked block hash %v, got %v", lockedBlock.SealHash(), block.SealHash())
 		}
 	}
 
@@ -117,8 +117,8 @@ func (c *core) checkNode(node *Node, compare bool) error {
 	if local.Hash() != node.Hash() {
 		return fmt.Errorf("expect node %v but got %v", local.Hash(), node.Hash())
 	}
-	if local.Block.Hash() != node.Block.Hash() {
-		return fmt.Errorf("expect block %v but got %v", local.Block.Hash(), node.Block.Hash())
+	if local.Block.SealHash() != node.Block.SealHash() {
+		return fmt.Errorf("expect block %v but got %v", local.Block.SealHash(), node.Block.SealHash())
 	}
 	return nil
 }
@@ -346,7 +346,7 @@ func epochStartQC(lastBlock *types.Block) (*QuorumCert, error) {
 		qc.node = common.HexToHash("0x12345")
 	} else {
 		qc.proposer = lastBlock.Coinbase()
-		qc.node = lastBlock.Hash()
+		qc.node = lastBlock.SealHash()
 	}
 
 	extra, err := types.ExtractHotstuffExtra(lastBlock.Header())

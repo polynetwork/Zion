@@ -191,8 +191,8 @@ func (c *core) updateRoundState(lastProposal *types.Block, newView *View) error 
 	}
 
 	prepareQC := c.current.PrepareQC()
-	if prepareQC != nil && prepareQC.node == lastProposal.Hash() {
-		c.logger.Trace("EpochStartPrepareQC already exist!", "newView", newView, "last block height", lastProposal.NumberU64(), "last block hash", lastProposal.Hash(), "qc.node", prepareQC.node, "qc.view", prepareQC.view, "qc.proposer", prepareQC.proposer)
+	if prepareQC != nil && prepareQC.node == lastProposal.SealHash() {
+		c.logger.Trace("EpochStartPrepareQC already exist!", "newView", newView, "last block height", lastProposal.NumberU64(), "last block hash", lastProposal.SealHash(), "qc.node", prepareQC.node, "qc.view", prepareQC.view, "qc.proposer", prepareQC.proposer)
 		return nil
 	}
 

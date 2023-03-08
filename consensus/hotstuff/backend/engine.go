@@ -186,7 +186,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 	header := block.Header()
 
 	// sign the sig hash and fill extra seal
-	seal, err := s.signer.SignHash(block.Hash())
+	seal, err := s.signer.SignHash(s.SealHash(header))
 	if err != nil {
 		return err
 	}
@@ -202,8 +202,7 @@ func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, re
 }
 
 func (s *backend) SealHash(header *types.Header) (hash common.Hash) {
-	cleanHeader := types.HotstuffFilteredHeader(header)
-	return hotstuff.RLPHash(cleanHeader)
+	return types.SealHash(header)
 }
 
 // useless

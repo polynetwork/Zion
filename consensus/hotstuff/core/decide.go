@@ -62,7 +62,7 @@ func (c *core) handleCommitVote(data *Message) error {
 	}
 	// validateFn used to check block hash signature, it is an closure function which can be nil in unit test.
 	if c.validateFn != nil {
-		if addr, err := c.validateFn(lockedBlock.Hash(), data.CommittedSeal); err != nil {
+		if addr, err := c.validateFn(lockedBlock.SealHash(), data.CommittedSeal); err != nil {
 			logger.Trace("Failed to check vote", "msg", code, "src", src, "err", err, "expect", src, "got", addr)
 			return err
 		}
@@ -94,7 +94,7 @@ func (c *core) handleCommitVote(data *Message) error {
 		}
 		logger.Trace("acceptCommit", "msg", code, "msgSize", size)
 
-		c.sendDecide(sealedBlock.Hash(), commitQC, seals)
+		c.sendDecide(sealedBlock.SealHash(), commitQC, seals)
 	}
 
 	return nil
@@ -155,8 +155,8 @@ func (c *core) handleDecide(data *Message) error {
 	if lockedBlock == nil {
 		logger.Trace("Locked block is nil", "msg", code, "src", src)
 		return errInvalidBlock
-	} else if blockHash == common.EmptyHash || lockedBlock.Hash() != blockHash {
-		logger.Trace("Failed to check block hash", "msg", code, "src", src, "expect block", lockedBlock.Hash(), "got", blockHash)
+	} else if blockHash == common.EmptyHash || lockedBlock.SealHash() != blockHash {
+		logger.Trace("Failed to check block hash", "msg", code, "src", src, "expect block", lockedBlock.SealHash(), "got", blockHash)
 		return errInvalidBlock
 	}
 
@@ -166,8 +166,8 @@ func (c *core) handleDecide(data *Message) error {
 	} else if curNode.Hash() != commitQC.node {
 		logger.Trace("Failed to check commitQC", "expect node", curNode.Hash(), "got", commitQC.node)
 		return errInvalidQC
-	} else if curNode.Block.Hash() != blockHash {
-		logger.Trace("Failed to check node", "expect node block hash", curNode.Block.Hash(), "got", blockHash)
+	} else if curNode.Block.SealHash() != blockHash {
+		logger.Trace("Failed to check node", "expect node block hash", curNode.Block.SealHash(), "got", blockHash)
 		return errInvalidBlock
 	}
 
@@ -218,17 +218,17 @@ func (c *core) acceptCommitQC(sealedBlock *types.Block, commitQC *QuorumCert) er
 func (c *core) commit(sealedBlock *types.Block) error {
 	if lockedBlock := c.current.LockedBlock(); lockedBlock == nil {
 		return fmt.Errorf("locked block is nil")
-	} else if lockedBlock.Hash() != sealedBlock.Hash() {
-		return fmt.Errorf("expect locked block %v, got %v", lockedBlock.Hash(), sealedBlock.Hash())
+	} else if lockedBlock.SealHash() != sealedBlock.SealHash() {
+		return fmt.Errorf("expect locked block %v, got %v", lockedBlock.SealHash(), sealedBlock.SealHash())
 	}
 
-	if c.current.executed == nil || c.current.executed.Block == nil || c.current.executed.Block.Hash() != sealedBlock.Hash() {
+	if c.current.executed == nil || c.current.executed.Block == nil || c.current.executed.Block.SealHash() != sealedBlock.SealHash() {
 		if c.IsProposer() {
 			c.current.executed = &consensus.ExecutedBlock{Block: sealedBlock}
 		} else {
 			executed, err := c.backend.ExecuteBlock(sealedBlock)
 			if err != nil {
-				return fmt.Errorf("failed to execute block %v, err: %v", sealedBlock.Hash(), err)
+				return fmt.Errorf("failed to execute block %v, err: %v", sealedBlock.SealHash(), err)
 			}
 			executed.Block = sealedBlock
 			c.current.executed = executed

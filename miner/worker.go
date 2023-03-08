@@ -623,7 +623,7 @@ func (w *worker) resultLoop() {
 				task, exist = w.pendingTasks[sealhash]
 				w.pendingMu.RUnlock()
 				if !exist {
-					log.Error("Failed to find local task", "hash", block.Hash())
+					log.Error("Failed to find local task", "hash", sealhash)
 					continue
 				}
 

@@ -55,14 +55,14 @@ func (c *core) IsProposer() bool {
 	return c.valSet.IsProposer(c.backend.Address())
 }
 
-func (c *core) IsCurrentProposal(blockHash common.Hash) bool {
+func (c *core) IsCurrentProposal(sealhash common.Hash) bool {
 	if c.current == nil {
 		return false
 	}
-	if node := c.current.Node(); node != nil && node.Block != nil && node.Block.Hash() == blockHash {
+	if node := c.current.Node(); node != nil && node.Block != nil && node.Block.SealHash() == sealhash {
 		return true
 	}
-	if req := c.current.PendingRequest(); req != nil && req.block != nil && req.block.Hash() == blockHash {
+	if req := c.current.PendingRequest(); req != nil && req.block != nil && req.block.SealHash() == sealhash {
 		return true
 	}
 	return false
@@ -248,7 +248,7 @@ func (c *core) finalizeMessage(msg *Message) ([]byte, error) {
 	// Add proof of consensus
 	node := c.current.Node()
 	if msg.Code == MsgTypeCommitVote && node != nil && node.Block != nil {
-		if seal, err = c.signer.SignHash(node.Block.Hash()); err != nil {
+		if seal, err = c.signer.SignHash(node.Block.SealHash()); err != nil {
 			return nil, err
 		}
 		msg.CommittedSeal = seal
