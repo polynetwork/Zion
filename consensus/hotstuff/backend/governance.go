@@ -125,7 +125,17 @@ func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Heade
 	if _, exist := specMethod[id]; !exist {
 		return id, false
 	}
-	return id, true
+
+	signer := types.MakeSigner(s.chain.Config(), header.Number)
+	addr, err := signer.Sender(tx)
+	if err != nil {
+		return id, false
+	}
+	if header.Coinbase != addr {
+		return id, false
+	} else {
+		return id, true
+	}
 }
 
 // header height in front of state height
