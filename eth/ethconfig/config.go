@@ -216,7 +216,7 @@ func CreateConsensusEngine(stack *node.Node, chainConfig *params.ChainConfig, co
 	if chainConfig.HotStuff != nil {
 		config := hotstuff.DefaultBasicConfig
 		nodeKey := stack.Config().NodeKey()
-		return hsb.New(config, nodeKey, db, false)
+		return hsb.New(chainConfig, config, nodeKey, db, false)
 	}
 	// Otherwise assume proof-of-work
 	switch config.PowMode {

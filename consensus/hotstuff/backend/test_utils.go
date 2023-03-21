@@ -37,6 +37,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	elog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/p2p"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
 )
 
@@ -53,8 +54,9 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	genesis, nodeKeys, _ := tu.GenesisAndKeys(1)
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultBasicConfig
+	chainConfig := &params.ChainConfig{ChainID: big.NewInt(60801)}
 	// Use the first key as private key
-	backend := New(config, nodeKeys[0], memDB, true)
+	backend := New(chainConfig, config, nodeKeys[0], memDB, true)
 	genesis.MustCommit(memDB)
 
 	txLookUpLimit := uint64(100)

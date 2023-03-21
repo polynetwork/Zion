@@ -34,19 +34,21 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
+	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/trie"
 	lru "github.com/hashicorp/golang-lru"
 )
 
 // HotStuff is the scalable hotstuff consensus engine
 type backend struct {
-	db     ethdb.Database // Database to store and retrieve necessary information
-	logger log.Logger
-	config *hotstuff.Config
-	core   hotstuff.CoreEngine
-	signer hotstuff.Signer
-	chain  consensus.ChainReader
-	vals   hotstuff.ValidatorSet // consensus participant collection
+	db          ethdb.Database // Database to store and retrieve necessary information
+	logger      log.Logger
+	config      *hotstuff.Config
+	chainConfig *params.ChainConfig
+	core        hotstuff.CoreEngine
+	signer      hotstuff.Signer
+	chain       consensus.ChainReader
+	vals        hotstuff.ValidatorSet // consensus participant collection
 
 	recents        *lru.ARCCache // Snapshots for recent block to speed up reorgs
 	recentMessages *lru.ARCCache // the cache of peer's messages
@@ -70,7 +72,7 @@ type backend struct {
 	systemTxHook   SystemTxFn
 }
 
-func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, mock bool) *backend {
+func New(chainConfig *params.ChainConfig, config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, mock bool) *backend {
 	recents, _ := lru.NewARC(inmemorySnapshots)
 	recentMessages, _ := lru.NewARC(inmemoryPeers)
 	knownMessages, _ := lru.NewARC(inmemoryMessages)
@@ -78,6 +80,7 @@ func New(config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Databas
 	signer := snr.NewSigner(privateKey)
 	backend := &backend{
 		config:         config,
+		chainConfig:    chainConfig,
 		db:             db,
 		logger:         log.New(),
 		coreStarted:    false,
