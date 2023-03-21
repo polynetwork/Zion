@@ -20,11 +20,13 @@ package mock
 
 import (
 	"crypto/ecdsa"
+	"math/big"
 
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
 	"github.com/ethereum/go-ethereum/ethdb"
+	"github.com/ethereum/go-ethereum/params"
 )
 
 type Engine consensus.Engine
@@ -32,7 +34,8 @@ type Engine consensus.Engine
 // backend is engine but also hotstuff engine and consensus handler.
 func makeEngine(privateKey *ecdsa.PrivateKey, db ethdb.Database) Engine {
 	config := hotstuff.DefaultBasicConfig
-	engine := backend.New(config, privateKey, db, true)
+	chainConfig := &params.ChainConfig{ChainID: big.NewInt(60801)}
+	engine := backend.New(chainConfig, config, privateKey, db, true)
 	broadcaster := makeBroadcaster(engine.Address(), engine)
 	engine.SetBroadcaster(broadcaster)
 	return engine

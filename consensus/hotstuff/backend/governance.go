@@ -126,7 +126,7 @@ func (s *backend) IsSystemTransaction(tx *types.Transaction, header *types.Heade
 		return id, false
 	}
 
-	signer := types.MakeSigner(s.chain.Config(), header.Number)
+	signer := types.MakeSigner(s.chainConfig, header.Number)
 	addr, err := signer.Sender(tx)
 	if err != nil {
 		return id, false
