@@ -303,7 +303,7 @@ func (this *RippleHandler) MakeTransaction(service *native.NativeContract, param
 	err = service.AddNotify(scom.ABI, []string{cross_chain_manager_abi.EventRippleTx}, fromChainID, param.ToChainID,
 		hex.EncodeToString(param.TxHash), hex.EncodeToString(raw), payment.Sequence)
 	if err != nil {
-		return fmt.Errorf("MultiSign, AddNotify error: %v", err)
+		return fmt.Errorf("ripple MakeTransaction, AddNotify error: %v", err)
 	}
 
 	//sequence + 1
@@ -359,12 +359,12 @@ func (this *RippleHandler) ReconstructTx(service *native.NativeContract) error {
 	}
 
 	payment.Fee = *fee
-	txJsonStr, err := json.Marshal(payment)
+	_, newRaw, err := data.Raw(payment)
 	if err != nil {
-		return fmt.Errorf("ReconstructTx, json.Marshal tx json error: %v", err)
+		return fmt.Errorf("ReconstructTx, data.Raw error: %s", err)
 	}
 	err = service.AddNotify(scom.ABI, []string{cross_chain_manager_abi.EventRippleTx}, params.FromChainId, params.ToChainId,
-		hex.EncodeToString(params.TxHash), string(txJsonStr), payment.Sequence)
+		hex.EncodeToString(params.TxHash), hex.EncodeToString(newRaw), payment.Sequence)
 	if err != nil {
 		return fmt.Errorf("ReconstructTx, AddNotify error: %v", err)
 	}
