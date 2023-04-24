@@ -21,6 +21,8 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/contracts/native"
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/cross_chain_manager_abi"
@@ -31,7 +33,6 @@ import (
 	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/polynetwork/ripple-sdk/types"
 	"github.com/rubblelabs/ripple/data"
-	"math/big"
 )
 
 type RippleHandler struct {
@@ -363,7 +364,7 @@ func (this *RippleHandler) ReconstructTx(service *native.NativeContract) error {
 		return fmt.Errorf("ReconstructTx, json.Marshal tx json error: %v", err)
 	}
 	err = service.AddNotify(scom.ABI, []string{cross_chain_manager_abi.EventRippleTx}, params.FromChainId, params.ToChainId,
-		hex.EncodeToString(params.TxHash), txJsonStr, payment.Sequence)
+		hex.EncodeToString(params.TxHash), string(txJsonStr), payment.Sequence)
 	if err != nil {
 		return fmt.Errorf("ReconstructTx, AddNotify error: %v", err)
 	}
