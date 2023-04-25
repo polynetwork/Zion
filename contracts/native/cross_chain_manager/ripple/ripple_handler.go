@@ -363,6 +363,10 @@ func (this *RippleHandler) ReconstructTx(service *native.NativeContract) error {
 	if err != nil {
 		return fmt.Errorf("ReconstructTx, data.Raw error: %s", err)
 	}
+
+	//store txJson info
+	PutTxJsonInfo(service, params.FromChainId, params.TxHash, hex.EncodeToString(newRaw))
+
 	err = service.AddNotify(scom.ABI, []string{cross_chain_manager_abi.EventRippleTx}, params.FromChainId, params.ToChainId,
 		hex.EncodeToString(params.TxHash), hex.EncodeToString(newRaw), payment.Sequence)
 	if err != nil {
