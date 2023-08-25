@@ -576,6 +576,7 @@ func (c *Clique) Finalize(chain consensus.ChainHeaderReader, header *types.Heade
 }
 
 // Filter out system transactions from common transactions
+// returns common transactions, system transactions and system transaction message provider
 func (c *Clique) BlockTransactions(block *types.Block, state *state.StateDB) (types.Transactions, types.Transactions,
 	func(*types.Transaction, *big.Int) types.Message, error) {
 	return block.Transactions(), nil, nil, nil

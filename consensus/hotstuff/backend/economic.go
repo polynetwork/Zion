@@ -54,7 +54,7 @@ func (s *backend) reward(state *state.StateDB, height *big.Int) error {
 
 // prepare for slashing...
 // todo(fuk): slash for governance
-func (s *backend) slash(ctx *systemTxContext) error {
+func (s *backend) slash() error {
 	return nil
 }
 

@@ -114,6 +114,7 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 }
 
 // Filter out system transactions from common transactions
+// returns common transactions, system transactions and system transaction message provider
 func (s *backend) BlockTransactions(block *types.Block, state *state.StateDB) (types.Transactions, types.Transactions,
 	func(*types.Transaction, *big.Int) types.Message, error) {
 	systemTransactions, err := s.blockEndSystemTransactions(state, block.NumberU64())
@@ -130,7 +131,7 @@ func (s *backend) BlockTransactions(block *types.Block, state *state.StateDB) (t
 	for i, tx := range systemTransactions {
 		includedTx := allTransactions[commonTransactionCount + i]
 		if includedTx.Hash() != tx.Hash() {
-			return nil, nil, nil, fmt.Errorf("unexpected system tx hash detected", "index", commonTransactionCount + i, "hash", includedTx.Hash(), "expected", tx.Hash())
+			return nil, nil, nil, fmt.Errorf("unexpected system tx hash detected, tx index %v, hash %s, expected: %s", commonTransactionCount + i, includedTx.Hash(), tx.Hash())
 		}
 		from, err := signer.Sender(includedTx)
 		if err != nil {

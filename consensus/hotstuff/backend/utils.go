@@ -22,34 +22,18 @@ import (
 	"math"
 	"math/big"
 
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
 // ===========================     utility function        ==========================
-
-// callmsg implements core.Message to allow passing it as a transaction simulator.
-type callmsg struct {
-	ethereum.CallMsg
-}
-
-func (m callmsg) From() common.Address { return m.CallMsg.From }
-func (m callmsg) Nonce() uint64        { return 0 }
-func (m callmsg) CheckNonce() bool     { return false }
-func (m callmsg) To() *common.Address  { return m.CallMsg.To }
-func (m callmsg) GasPrice() *big.Int   { return m.CallMsg.GasPrice }
-func (m callmsg) Gas() uint64          { return m.CallMsg.Gas }
-func (m callmsg) Value() *big.Int      { return m.CallMsg.Value }
-func (m callmsg) Data() []byte         { return m.CallMsg.Data }
 
 // chain context
 type chainContext struct {
@@ -71,20 +55,6 @@ const (
 	systemGasPrice = int64(0)           // consensus txs do not need to participate in gas price bidding
 )
 
-// getSystemMessage assemble system calling fields
-func (s *backend) getSystemMessage(toAddress common.Address, data []byte, value *big.Int) callmsg {
-	return callmsg{
-		ethereum.CallMsg{
-			From:     utils.SystemTxSender,
-			Gas:      systemGas,
-			GasPrice: big.NewInt(systemGasPrice),
-			Value:    value,
-			To:       &toAddress,
-			Data:     data,
-		},
-	}
-}
-
 // getSystemCaller use fixed systemCaller as contract caller, and tx hash is useless in contract call.
 func (s *backend) getSystemCaller(state *state.StateDB, height *big.Int) *native.ContractRef {
 	caller := utils.SystemTxSender
@@ -102,18 +72,6 @@ func packBlock(state *state.StateDB, chain consensus.ChainHeaderReader,
 
 	block.SetRoot(root)
 	return block
-}
-
-type systemTxContext struct {
-	chain    consensus.ChainHeaderReader
-	state    *state.StateDB
-	header   *types.Header
-	chainCtx core.ChainContext
-	txs      *[]*types.Transaction
-	sysTxs   *[]*types.Transaction
-	receipts *[]*types.Receipt
-	usedGas  *uint64
-	mining   bool
 }
 
 func NewDefaultValSet(list []common.Address) hotstuff.ValidatorSet {
