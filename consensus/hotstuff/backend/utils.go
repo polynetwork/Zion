@@ -19,15 +19,10 @@
 package backend
 
 import (
-	"math"
-	"math/big"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
-	"github.com/ethereum/go-ethereum/contracts/native"
-	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/trie"
@@ -48,18 +43,6 @@ func (c chainContext) Engine() consensus.Engine {
 // GetHeader blockContext need this function
 func (c chainContext) GetHeader(hash common.Hash, number uint64) *types.Header {
 	return c.Chain.GetHeader(hash, number)
-}
-
-const (
-	systemGas      = math.MaxUint64 / 2 // system tx will be executed in evm, and gas calculating is needed.
-	systemGasPrice = int64(0)           // consensus txs do not need to participate in gas price bidding
-)
-
-// getSystemCaller use fixed systemCaller as contract caller, and tx hash is useless in contract call.
-func (s *backend) getSystemCaller(state *state.StateDB, height *big.Int) *native.ContractRef {
-	caller := utils.SystemTxSender
-	hash := common.EmptyHash
-	return native.NewContractRef(state, caller, caller, height, hash, systemGas, nil)
 }
 
 func packBlock(state *state.StateDB, chain consensus.ChainHeaderReader,

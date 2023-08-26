@@ -26,7 +26,9 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
+	"github.com/ethereum/go-ethereum/contracts/native/economic"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
 )
@@ -188,12 +190,12 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 		ConsensusAddress: params.ConsensusAddress,
 		SignerAddress:    params.SignerAddress,
 		ProposalAddress:  params.ProposalAddress,
-		Commission:       &Commission{Rate: NewDecFromBigInt(params.Commission), UpdateHeight: height},
+		Commission:       &Commission{Rate: utils.NewDecFromBigInt(params.Commission), UpdateHeight: height},
 		Status:           Unlock,
 		Jailed:           false,
 		UnlockHeight:     new(big.Int),
-		TotalStake:       NewDecFromBigInt(initStake),
-		SelfStake:        NewDecFromBigInt(initStake),
+		TotalStake:       utils.NewDecFromBigInt(initStake),
+		SelfStake:        utils.NewDecFromBigInt(initStake),
 		Desc:             params.Desc,
 	}
 	err = setValidator(s, validator)
@@ -221,7 +223,7 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 	}
 
 	// deposit native token
-	err = deposit(s, caller, NewDecFromBigInt(initStake), validator)
+	err = deposit(s, caller, utils.NewDecFromBigInt(initStake), validator)
 	if err != nil {
 		return nil, fmt.Errorf("CreateValidator, deposit error: %v", err)
 	}
@@ -331,7 +333,7 @@ func UpdateCommission(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("UpdateCommission, commission can not changed in one epoch twice")
 	}
 
-	validator.Commission = &Commission{Rate: NewDecFromBigInt(params.Commission), UpdateHeight: height}
+	validator.Commission = &Commission{Rate: utils.NewDecFromBigInt(params.Commission), UpdateHeight: height}
 
 	err = setValidator(s, validator)
 	if err != nil {
@@ -365,7 +367,7 @@ func Stake(s *native.NativeContract) ([]byte, error) {
 	if value.Sign() <= 0 {
 		return nil, fmt.Errorf("Stake, amount must be positive")
 	}
-	amount := NewDecFromBigInt(value)
+	amount := utils.NewDecFromBigInt(value)
 
 	// check to see if the pubkey has been registered
 	validator, found, err := getValidator(s, params.ConsensusAddress)
@@ -428,7 +430,7 @@ func UnStake(s *native.NativeContract) ([]byte, error) {
 	if params.Amount.Sign() <= 0 {
 		return nil, fmt.Errorf("UnStake, amount must be positive")
 	}
-	amount := NewDecFromBigInt(params.Amount)
+	amount := utils.NewDecFromBigInt(params.Amount)
 
 	// check to see if the pubkey has been registered
 	validator, found, err := getValidator(s, params.ConsensusAddress)
@@ -600,7 +602,7 @@ func WithdrawValidator(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawValidator, validator.TotalStake.Sub error: %v", err)
 	}
-	validator.SelfStake = NewDecFromBigInt(new(big.Int))
+	validator.SelfStake = utils.NewDecFromBigInt(new(big.Int))
 	if validator.TotalStake.IsZero() {
 		delValidator(s, params.ConsensusAddress)
 		err = AfterValidatorRemoved(s, validator)
@@ -795,7 +797,7 @@ func WithdrawCommission(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, withdrawCommission error: %v", err)
 	}
-	err = setAccumulatedCommission(s, params.ConsensusAddress, &AccumulatedCommission{NewDecFromBigInt(new(big.Int))})
+	err = setAccumulatedCommission(s, params.ConsensusAddress, &AccumulatedCommission{utils.NewDecFromBigInt(new(big.Int))})
 	if err != nil {
 		return nil, fmt.Errorf("WithdrawCommission, setAccumulatedCommission error: %v", err)
 	}
@@ -813,8 +815,12 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("SystemTx authority failed")
 	}
 
+	if err := economic.GenerateBlockReward(s); err != nil {
+		return nil, err
+	}
+
 	// contract balance = totalpool + outstanding + reward
-	balance := NewDecFromBigInt(s.StateDB().GetBalance(this))
+	balance := utils.NewDecFromBigInt(s.StateDB().GetBalance(this))
 
 	totalPool, err := getTotalPool(s)
 	if err != nil {
@@ -843,7 +849,7 @@ func EndBlock(s *native.NativeContract) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("EndBlock, newRewards.DivUint64 error: %v", err)
 	}
-	allocateSum := NewDecFromBigInt(new(big.Int))
+	allocateSum := utils.NewDecFromBigInt(new(big.Int))
 	for _, v := range epochInfo.Validators {
 		validator, found, err := getValidator(s, v)
 		if err != nil {
@@ -888,7 +894,7 @@ func GetGlobalConfig(s *native.NativeContract) ([]byte, error) {
 }
 
 func GetCommunityInfo(s *native.NativeContract) ([]byte, error) {
-	communityInfo, err := GetCommunityInfoImpl(s)
+	communityInfo, err := community.GetCommunityInfoImpl(s)
 	if err != nil {
 		return nil, fmt.Errorf("GetCommunityInfo, GetCommunityInfoImpl error: %v", err)
 	}
@@ -1189,6 +1195,18 @@ func GetStakeRewards(s *native.NativeContract) ([]byte, error) {
 	}
 
 	return utils.PackOutputs(ABI, MethodGetStakeRewards, enc)
+}
+
+func decodeCommunityInfo(payload []byte) (*community.CommunityInfo, error) {
+	m := new(community.CommunityInfo)
+	var data struct {
+		CommunityInfo []byte
+	}
+	if err := utils.UnpackOutputs(ABI, MethodGetCommunityInfo, &data, payload); err != nil {
+		return nil, err
+	}
+	err := rlp.DecodeBytes(data.CommunityInfo, m)
+	return m, err
 }
 
 // GetSpecMethodID for consensus use

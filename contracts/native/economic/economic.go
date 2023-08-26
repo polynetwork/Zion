@@ -24,8 +24,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/economic_abi"
-	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
 )
 
@@ -70,17 +70,18 @@ func TotalSupply(s *native.NativeContract) ([]byte, error) {
 	return utils.PackOutputs(ABI, MethodTotalSupply, supply)
 }
 
-func Reward(s *native.NativeContract) ([]byte, error) {
-
-	community, err := nm.GetCommunityInfoFromDB(s.StateDB())
+func getBlockRewardList(s *native.NativeContract) ([]*RewardAmount, error) {
+	return nil, nil
+	/*
+	community, err := community.GetCommunityInfoFromDB(s.StateDB())
 	if err != nil {
 		return nil, fmt.Errorf("GetCommunityInfo failed, err: %v", err)
 	}
 
 	// allow empty address as reward pool
 	poolAddr := community.CommunityAddress
-	rewardPerBlock := nm.NewDecFromBigInt(RewardPerBlock)
-	rewardFactor := nm.NewDecFromBigInt(community.CommunityRate)
+	rewardPerBlock := utils.NewDecFromBigInt(RewardPerBlock)
+	rewardFactor := utils.NewDecFromBigInt(community.CommunityRate)
 	poolRwdAmt, err := rewardPerBlock.MulWithPercentDecimal(rewardFactor)
 	if err != nil {
 		return nil, fmt.Errorf("Calculate pool reward amount failed, err: %v ", err)
@@ -99,7 +100,40 @@ func Reward(s *native.NativeContract) ([]byte, error) {
 		Amount:  stakingRwdAmt.BigInt(),
 	}
 
+	return []*RewardAmount{poolRwd, stakingRwd}, nil
+	*/
+}
+
+func Reward(s *native.NativeContract) ([]byte, error) {
+	list, err := getBlockRewardList(s)
+	if err != nil {
+		return nil, err
+	}
 	output := new(MethodRewardOutput)
-	output.List = []*RewardAmount{poolRwd, stakingRwd}
+	output.List = list
 	return output.Encode()
+}
+
+func GenerateBlockReward(s *native.NativeContract) error {
+	height := s.ContractRef().BlockHeight()
+	// genesis block do not need to distribute reward
+	if height.Uint64() == 0 {
+		return nil
+	}
+
+	// get reward info list from native contract of `economic`
+	list, err := getBlockRewardList(s)
+	if err != nil {
+		return err
+	}
+
+	// add balance to related addresses
+	var sRwd string
+	for _, v := range list {
+		s.StateDB().AddBalance(v.Address, v.Amount)
+		sRwd += fmt.Sprintf("address: %s, amount %v;", v.Address.Hex(), v.Amount)
+	}
+	log.Debug("reward", "num", height, "list", sRwd)
+
+	return nil
 }

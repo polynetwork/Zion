@@ -22,6 +22,8 @@ import (
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/params"
@@ -40,7 +42,7 @@ var (
 	MaxDescLength    int = 2000
 	MaxValidatorNum  int = 300
 	MaxUnlockingNum  int = 100
-	MaxStakeRate     Dec = NewDecFromBigInt(new(big.Int).SetUint64(6)) // user stake can not more than 5 times of self stake
+	MaxStakeRate     utils.Dec = utils.NewDecFromBigInt(new(big.Int).SetUint64(6)) // user stake can not more than 5 times of self stake
 	MinBlockPerEpoch     = new(big.Int).SetUint64(10000)
 )
 
@@ -57,7 +59,7 @@ func SetupGenesis(db *state.StateDB, genesis *core.Genesis) error {
 		peers = append(peers, v.Validator)
 		signers = append(signers, v.Signer)
 	}
-	if _, err := StoreCommunityInfo(db, genesis.CommunityRate, genesis.CommunityAddress); err != nil {
+	if _, err := community.StoreCommunityInfo(db, genesis.CommunityRate, genesis.CommunityAddress); err != nil {
 		return err
 	}
 	if _, err := StoreGenesisEpoch(db, peers, signers); err != nil {
@@ -68,18 +70,6 @@ func SetupGenesis(db *state.StateDB, genesis *core.Genesis) error {
 	}
 
 	return nil
-}
-
-func StoreCommunityInfo(s *state.StateDB, communityRate *big.Int, communityAddress common.Address) (*CommunityInfo, error) {
-	cache := (*state.CacheDB)(s)
-	communityInfo := &CommunityInfo{
-		CommunityRate:    communityRate,
-		CommunityAddress: communityAddress,
-	}
-	if err := setGenesisCommunityInfo(cache, communityInfo); err != nil {
-		return nil, err
-	}
-	return communityInfo, nil
 }
 
 func StoreGenesisEpoch(s *state.StateDB, peers []common.Address, signers []common.Address) (*EpochInfo, error) {

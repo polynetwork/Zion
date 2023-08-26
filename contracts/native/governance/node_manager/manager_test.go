@@ -21,9 +21,11 @@ package node_manager
 import (
 	"crypto/ecdsa"
 	"fmt"
-	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	"math/big"
 	"testing"
+
+	"github.com/ethereum/go-ethereum/contracts/native/contract"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
@@ -49,7 +51,7 @@ func Init() {
 	InitNodeManager()
 	sdb = native.NewTestStateDB()
 	testGenesisPeers, _ = native.GenerateTestPeers(testGenesisNum)
-	StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
+	community.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 	StoreGenesisGlobalConfig(sdb)
 }
@@ -74,7 +76,7 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Equal(t, globalConfig.VoterValidatorNum, GenesisVoterValidatorNum)
 	assert.Equal(t, globalConfig.ConsensusValidatorNum, GenesisConsensusValidatorNum)
 
-	communityInfo, err := GetCommunityInfoImpl(contract)
+	communityInfo, err := community.GetCommunityInfoImpl(contract)
 	assert.Nil(t, err)
 	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(2000))
 	assert.Equal(t, communityInfo.CommunityAddress, common.EmptyAddress)
@@ -104,8 +106,7 @@ func TestCheckGenesis(t *testing.T) {
 	assert.Nil(t, err)
 	ret, _, err = contractRef.NativeCall(common.EmptyAddress, utils.NodeManagerContractAddress, input)
 	assert.Nil(t, err)
-	communityInfo2 := new(CommunityInfo)
-	err = communityInfo2.Decode(ret)
+	communityInfo2, err := decodeCommunityInfo(ret)
 	assert.Nil(t, err)
 	assert.Equal(t, communityInfo2.CommunityRate, big.NewInt(2000))
 	assert.Equal(t, communityInfo2.CommunityAddress, common.EmptyAddress)

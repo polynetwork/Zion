@@ -20,13 +20,15 @@ package node_manager
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
-	"math/big"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
-func deposit(s *native.NativeContract, from common.Address, amount Dec, validator *Validator) error {
+func deposit(s *native.NativeContract, from common.Address, amount utils.Dec, validator *Validator) error {
 	// get deposit info
 	stakeInfo, found, err := getStakeInfo(s, from, validator.ConsensusAddress)
 	if err != nil {
@@ -70,7 +72,7 @@ func deposit(s *native.NativeContract, from common.Address, amount Dec, validato
 	return nil
 }
 
-func unStake(s *native.NativeContract, from common.Address, amount Dec, validator *Validator) error {
+func unStake(s *native.NativeContract, from common.Address, amount utils.Dec, validator *Validator) error {
 	height := s.ContractRef().BlockHeight()
 	globalConfig, err := GetGlobalConfigImpl(s)
 	if err != nil {

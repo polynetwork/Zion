@@ -20,33 +20,36 @@ package node_manager
 
 import (
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
-	"math/big"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
 )
 
 func AfterValidatorCreated(s *native.NativeContract, validator *Validator) error {
 	// set initial historical rewards (period 0) with reference count of 1
-	err := setValidatorSnapshotRewards(s, validator.ConsensusAddress, 0, &ValidatorSnapshotRewards{NewDecFromBigInt(new(big.Int)), 1})
+	err := setValidatorSnapshotRewards(s, validator.ConsensusAddress, 0, &ValidatorSnapshotRewards{utils.NewDecFromBigInt(new(big.Int)), 1})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorSnapshotRewards error: %v", err)
 	}
 
 	// set accumulate rewards (starting at period 1)
-	err = setValidatorAccumulatedRewards(s, validator.ConsensusAddress, &ValidatorAccumulatedRewards{NewDecFromBigInt(new(big.Int)), 1})
+	err = setValidatorAccumulatedRewards(s, validator.ConsensusAddress, &ValidatorAccumulatedRewards{utils.NewDecFromBigInt(new(big.Int)), 1})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorAccumulatedRewards error: %v", err)
 	}
 
 	// set accumulated commission
-	err = setAccumulatedCommission(s, validator.ConsensusAddress, &AccumulatedCommission{NewDecFromBigInt(new(big.Int))})
+	err = setAccumulatedCommission(s, validator.ConsensusAddress, &AccumulatedCommission{utils.NewDecFromBigInt(new(big.Int))})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setAccumulatedCommission error: %v", err)
 	}
 
 	// set outstanding rewards
-	err = setValidatorOutstandingRewards(s, validator.ConsensusAddress, &ValidatorOutstandingRewards{Rewards: NewDecFromBigInt(new(big.Int))})
+	err = setValidatorOutstandingRewards(s, validator.ConsensusAddress, &ValidatorOutstandingRewards{Rewards: utils.NewDecFromBigInt(new(big.Int))})
 	if err != nil {
 		return fmt.Errorf("AfterValidatorCreated, setValidatorOutstandingRewards error: %v", err)
 	}
@@ -59,7 +62,7 @@ func AfterValidatorRemoved(s *native.NativeContract, validator *Validator) error
 	if err != nil {
 		return fmt.Errorf("AfterValidatorRemoved, getValidatorOutstandingRewards error: %v", err)
 	}
-	communityInfo, err := GetCommunityInfoImpl(s)
+	communityInfo, err := community.GetCommunityInfoImpl(s)
 	if err != nil {
 		return fmt.Errorf("AfterValidatorRemoved, GetCommunityInfoImpl error: %v", err)
 	}

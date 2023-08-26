@@ -31,6 +31,7 @@ import (
 	scom "github.com/ethereum/go-ethereum/contracts/native/cross_chain_manager/common"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/cross_chain_manager_abi"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/side_chain_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/info_sync"
@@ -58,7 +59,7 @@ func init() {
 	InitCrossChainManager()
 	info_sync.InitInfoSync()
 
-	node_manager.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
+	community.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	node_manager.StoreGenesisEpoch(sdb, signers, signers)
 	node_manager.StoreGenesisGlobalConfig(sdb)
 

@@ -21,9 +21,7 @@ package backend
 import (
 	"fmt"
 	"sync/atomic"
-	"math/big"
 
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -42,7 +40,7 @@ var (
 // * governance epoch changed on chain, use the new validators for an new epoch start header.
 // * governance epoch not changed, only set the old epoch start height in header.
 func (s *backend) FillHeader(state *state.StateDB, header *types.Header) error {
-	epoch, err := s.getGovernanceInfo(state)
+	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
 	if err != nil {
 		return err
 	}
@@ -74,7 +72,7 @@ func (s *backend) CheckPoint(height uint64) (uint64, bool) {
 		log.Warn("CheckPoint", "get state failed", err)
 		return 0, false
 	}
-	epoch, err := s.getGovernanceInfo(state)
+	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
 	if err != nil {
 		log.Warn("CheckPoint", "get current epoch info, height", height, "err", err)
 		return 0, false
@@ -111,54 +109,6 @@ func (s *backend) Validators(height uint64, mining bool) hotstuff.ValidatorSet {
 		return nil
 	}
 	return vals
-}
-
-func (s *backend) blockEndSystemTransactions(state *state.StateDB, height uint64) (types.Transactions, error) {
-	// Genesis block has no system transaction?
-	if height == 0 {
-		return nil, nil
-	}
-
-	var txs types.Transactions
-	systemSenderNonce := state.GetNonce(utils.SystemTxSender)
-	// SystemTransaction: NodeManager.EndBlock
-	{
-		payload, err := new(nm.EndBlockParam).Encode()
-		if err != nil {
-			return nil, err
-		}
-		txs = append(txs, types.NewTransaction(systemSenderNonce, utils.NodeManagerContractAddress, common.Big0, systemGas, big.NewInt(systemGasPrice), payload))
-	}
-
-	// SystemTransaction: NodeManager.ChangeEpoch
-	{
-		epoch, err := s.getGovernanceInfo(state)
-		if err != nil {
-			return nil, err
-		}
-
-		if epoch == nil || epoch.EndHeight == nil {
-			return nil, fmt.Errorf("unexpected epoch or epoch end height missing")
-		}
-
-		if height + 1 == epoch.EndHeight.Uint64() {
-			payload, err := new(nm.ChangeEpochParam).Encode()
-			if err != nil {
-				return nil, err
-			}
-			txs = append(txs, types.NewTransaction(systemSenderNonce + 1, utils.NodeManagerContractAddress, common.Big0, systemGas, big.NewInt(systemGasPrice), payload))
-		}
-	}
-	return txs, nil
-}
-
-// getGovernanceInfo call governance contract method and retrieve related info.
-func (s *backend) getGovernanceInfo(state *state.StateDB) (*nm.EpochInfo, error) {
-	epoch, err := nm.GetCurrentEpochInfoFromDB(state)
-	if err != nil {
-		return nil, err
-	}
-	return epoch, nil
 }
 
 // getValidatorsByHeader check if current header height is an new epoch start and retrieve the validators.

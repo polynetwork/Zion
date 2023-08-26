@@ -28,6 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/contracts/native/governance"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
@@ -117,7 +118,7 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 // returns common transactions, system transactions and system transaction message provider
 func (s *backend) BlockTransactions(block *types.Block, state *state.StateDB) (types.Transactions, types.Transactions,
 	func(*types.Transaction, *big.Int) types.Message, error) {
-	systemTransactions, err := s.blockEndSystemTransactions(state, block.NumberU64())
+	systemTransactions, err := governance.AssembleSystemTransactions(state, block.NumberU64())
 	if err != nil {
 		return nil, nil, nil, err
 	}
@@ -171,7 +172,7 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 		receipts = make([]*types.Receipt, 0)
 	}
 
-	systemTransantions, err := s.blockEndSystemTransactions(state, header.Number.Uint64())
+	systemTransantions, err := governance.AssembleSystemTransactions(state, header.Number.Uint64())
 	if err != nil {
 		return nil, nil, err
 	}
@@ -184,6 +185,11 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 		}
 		state.Prepare(tx.Hash(), common.Hash{}, len(txs))
 		receipt, err := core.ApplyTransactionWithCustomMessageProvider(s.asSystemMessage, s.chainConfig, chainContext, nil, gp, state, header, tx, &header.GasUsed, vm.Config{})
+		if err != nil {
+			return nil, nil, err
+		}
+		signer := types.MakeSigner(s.chainConfig, header.Number)
+		tx, err = s.signer.SignTx(tx, signer)
 		if err != nil {
 			return nil, nil, err
 		}
