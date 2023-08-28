@@ -188,6 +188,9 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 		if err != nil {
 			return nil, nil, err
 		}
+		if receipt.Status != types.ReceiptStatusSuccessful {
+			return nil, nil, fmt.Errorf("unexpected reverted system transactions tx %d [%s], status %v", len(txs), tx.Hash(), receipt.Status)
+		}
 		signer := types.MakeSigner(s.chainConfig, header.Number)
 		tx, err = s.signer.SignTx(tx, signer)
 		if err != nil {
