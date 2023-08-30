@@ -24,6 +24,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/economic_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/params"
@@ -71,8 +72,6 @@ func TotalSupply(s *native.NativeContract) ([]byte, error) {
 }
 
 func getBlockRewardList(s *native.NativeContract) ([]*RewardAmount, error) {
-	return nil, nil
-	/*
 	community, err := community.GetCommunityInfoFromDB(s.StateDB())
 	if err != nil {
 		return nil, fmt.Errorf("GetCommunityInfo failed, err: %v", err)
@@ -84,11 +83,11 @@ func getBlockRewardList(s *native.NativeContract) ([]*RewardAmount, error) {
 	rewardFactor := utils.NewDecFromBigInt(community.CommunityRate)
 	poolRwdAmt, err := rewardPerBlock.MulWithPercentDecimal(rewardFactor)
 	if err != nil {
-		return nil, fmt.Errorf("Calculate pool reward amount failed, err: %v ", err)
+		return nil, fmt.Errorf("calculate pool reward amount failed, err: %v ", err)
 	}
 	stakingRwdAmt, err := rewardPerBlock.Sub(poolRwdAmt)
 	if err != nil {
-		return nil, fmt.Errorf("Calculate staking reward amount, failed, err: %v ", err)
+		return nil, fmt.Errorf("calculate staking reward amount, failed, err: %v ", err)
 	}
 
 	poolRwd := &RewardAmount{
@@ -101,7 +100,6 @@ func getBlockRewardList(s *native.NativeContract) ([]*RewardAmount, error) {
 	}
 
 	return []*RewardAmount{poolRwd, stakingRwd}, nil
-	*/
 }
 
 func Reward(s *native.NativeContract) ([]byte, error) {
