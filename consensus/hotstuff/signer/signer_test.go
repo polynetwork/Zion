@@ -19,17 +19,14 @@
 package signer
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"sort"
 	"strings"
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/validator"
-	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/assert"
 )
@@ -38,11 +35,11 @@ import (
 func TestSign(t *testing.T) {
 	s := newTestSigner()
 	data := []byte("Here is a string....")
-	sig, err := s.Sign(data)
+	hashData := crypto.Keccak256(data)
+	sig, err := s.SignHash(common.BytesToHash(hashData))
 	assert.NoError(t, err, "error mismatch: have %v, want nil", err)
 
 	//Check signature recover
-	hashData := crypto.Keccak256(data)
 	pubkey, _ := crypto.Ecrecover(hashData, sig)
 	var signer common.Address
 	copy(signer[:], crypto.Keccak256(pubkey[1:])[12:])
@@ -63,7 +60,7 @@ func TestCheckValidatorSignature(t *testing.T) {
 
 		// CheckValidatorSignature should succeed
 		signer := NewSigner(k)
-		addr, err := signer.CheckSignature(vset, data, sig)
+		addr, err := signer.CheckSignature(vset, common.BytesToHash(hashData), sig)
 		assert.NoError(t, err, "error mismatch: have %v, want nil", err)
 
 		val := vset.GetByIndex(uint64(i))
@@ -80,42 +77,11 @@ func TestCheckValidatorSignature(t *testing.T) {
 
 	// CheckValidatorSignature should return ErrUnauthorizedAddress
 	signer := NewSigner(key)
-	addr, err := signer.CheckSignature(vset, data, sig)
+	addr, err := signer.CheckSignature(vset, common.BytesToHash(hashData), sig)
 	assert.Equal(t, err, ErrUnauthorizedAddress, "error mismatch: have %v, want %v", err, ErrUnauthorizedAddress)
 
 	emptyAddr := common.Address{}
 	assert.Equal(t, emptyAddr, common.Address{}, "address mismatch: have %v, want %v", addr, emptyAddr)
-}
-
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/signer -run TestFillExtraAfterCommit
-func TestFillExtraAfterCommit(t *testing.T) {
-	istRawData := hexutil.MustDecode("0x0000000000000000000000000000000000000000000000000000000000000000f89d801ef85494258af48e28e4a6846e931ddff8e1cdf8579821e5946a708455c8777630aac9d1e7702d13f7a865b27c948c09d936a1b408d6e0afaa537ba4e06c4504a0ae94ad3bf5ed640cc72f37bd21d64a65c3c756e9c88cb8410000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c080")
-	extra, _ := types.ExtractHotstuffExtraPayload(istRawData)
-
-	expectedCommittedSeal := append([]byte{1, 2, 3}, bytes.Repeat([]byte{0x00}, types.HotstuffExtraSeal-3)...)
-	expectedIstExtra := &types.HotstuffExtra{
-		StartHeight:   0,
-		EndHeight:     30,
-		Validators:    extra.Validators,
-		Seal:          extra.Seal,
-		CommittedSeal: [][]byte{expectedCommittedSeal},
-		Salt:          extra.Salt,
-	}
-	h := &types.Header{
-		Extra: istRawData,
-	}
-
-	// normal case
-	assert.NoError(t, emptySigner.SealAfterCommit(h, [][]byte{expectedCommittedSeal}))
-
-	// verify istanbul extra-data
-	istExtra, err := types.ExtractHotstuffExtra(h)
-	assert.NoError(t, err)
-	assert.Equal(t, expectedIstExtra, istExtra)
-
-	// invalid seal
-	unexpectedCommittedSeal := append(expectedCommittedSeal, make([]byte, 1)...)
-	assert.Equal(t, ErrInvalidCommittedSeals, emptySigner.SealAfterCommit(h, [][]byte{unexpectedCommittedSeal}))
 }
 
 var emptySigner = &SignerImpl{}

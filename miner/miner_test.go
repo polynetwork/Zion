@@ -54,6 +54,10 @@ func (m *mockBackend) TxPool() *core.TxPool {
 	return m.txPool
 }
 
+func (m *mockBackend) PeerCount() int {
+	return 0
+}
+
 type testBlockChain struct {
 	statedb       *state.StateDB
 	gasLimit      uint64

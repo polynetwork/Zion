@@ -110,7 +110,7 @@ func TestNoAuthSyncRootInfo(t *testing.T) {
 
 	caller := crypto.PubkeyToAddress(*pub)
 	extra := uint64(21000000000000)
-	_, err = native.TestNativeCall(t, utils.InfoSyncContractAddress, "SyncRootInfo", input, caller, caller, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.InfoSyncContractAddress, "SyncRootInfo", input, common.Big0, caller, caller, extra, sdb)
 	assert.NotNil(t, err)
 }
 
@@ -138,7 +138,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 
 		input, err := param.Encode()
 		assert.Nil(t, err)
-		ret, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "SyncRootInfo", input, caller, caller, extra, sdb)
+		ret, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "SyncRootInfo", input, common.Big0, caller, caller, extra, sdb)
 		assert.Nil(t, err)
 		result, err := utils.PackOutputs(ABI, MethodSyncRootInfo, true)
 		assert.Nil(t, err)
@@ -151,7 +151,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 	input, err := q1.Encode()
 	assert.Nil(t, err)
 	extra := uint64(21000000000000)
-	ret1, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "GetInfo", input, extra, sdb)
+	ret1, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "GetInfo", input, common.Big0, extra, sdb)
 	rootInfo := new(GetInfoOutput)
 	err = rootInfo.Decode(ret1)
 	assert.Nil(t, err)
@@ -162,7 +162,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 	}
 	input, err = q2.Encode()
 	assert.Nil(t, err)
-	ret2, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "GetInfo", input, extra, sdb)
+	ret2, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "GetInfo", input, common.Big0, extra, sdb)
 	rootInfo = new(GetInfoOutput)
 	err = rootInfo.Decode(ret2)
 	assert.Nil(t, err)
@@ -170,7 +170,7 @@ func TestNormalSyncRootInfo(t *testing.T) {
 	q3 := &GetInfoHeightParam{CHAIN_ID}
 	input, err = q3.Encode()
 	assert.Nil(t, err)
-	ret3, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "GetInfoHeight", input, extra, sdb)
+	ret3, err := native.TestNativeCall(t, utils.InfoSyncContractAddress, "GetInfoHeight", input, common.Big0, extra, sdb)
 	height := new(GetInfoHeightOutput)
 	err = height.Decode(ret3)
 	assert.Nil(t, err)
@@ -186,6 +186,6 @@ func TestReplenish(t *testing.T) {
 	extra := uint64(21000000000000)
 	input, err := param.Encode()
 	assert.Nil(t, err)
-	_, err = native.TestNativeCall(t, utils.InfoSyncContractAddress, "Replenish", input, extra, sdb)
+	_, err = native.TestNativeCall(t, utils.InfoSyncContractAddress, "Replenish", input, common.Big0, extra, sdb)
 	assert.Nil(t, err)
 }

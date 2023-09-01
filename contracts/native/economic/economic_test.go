@@ -48,7 +48,7 @@ func TestName(t *testing.T) {
 	payload, err := new(MethodContractNameInput).Encode()
 	assert.NoError(t, err)
 
-	raw, err := native.TestNativeCall(t, this, name, payload)
+	raw, err := native.TestNativeCall(t, this, name, payload, common.Big0)
 	assert.NoError(t, err)
 	var got string
 	assert.NoError(t, utils.UnpackOutputs(ABI, name, &got, raw))
@@ -78,7 +78,7 @@ func TestTotalSupply(t *testing.T) {
 		var supply *big.Int
 
 		payload, _ := new(MethodTotalSupplyInput).Encode()
-		raw, err := native.TestNativeCall(t, this, name, payload, tc.height)
+		raw, err := native.TestNativeCall(t, this, name, payload, common.Big0, tc.height)
 		assert.NoError(t, err)
 
 		if tc.testABI {
@@ -118,7 +118,7 @@ func TestReward(t *testing.T) {
 		got := new(MethodRewardOutput)
 
 		payload, _ := new(MethodRewardInput).Encode()
-		raw, err := native.TestNativeCall(t, this, name, payload, tc.height, func(state *state.StateDB) {
+		raw, err := native.TestNativeCall(t, this, name, payload, common.Big0, tc.height, func(state *state.StateDB) {
 			community.StoreCommunityInfo(state, big.NewInt(int64(tc.rate)), tc.pool)
 		})
 		if tc.err == nil {
@@ -146,7 +146,7 @@ func TestTransfer(t *testing.T) {
 	state := native.NewTestStateDB()
 	state.AddBalance(from, amount)
 
-	_, ctx := native.GenerateTestContext(t, state)
+	_, ctx := native.GenerateTestContext(t, common.Big0, to, state)
 	if state.GetBalance(from).Cmp(amount) < 0 {
 		t.Error("balance not enough")
 	}

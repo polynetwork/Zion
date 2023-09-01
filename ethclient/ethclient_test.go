@@ -652,7 +652,7 @@ func TestUnmarshalHeader(t *testing.T) {
 
 	var (
 		blockNum uint64 = 1099
-		epochID uint64 = 5
+		epochID  uint64 = 5
 	)
 	block, err := cli.BlockByNumber(context.Background(), new(big.Int).SetUint64(blockNum))
 	if err != nil {
@@ -680,8 +680,7 @@ func TestUnmarshalHeader(t *testing.T) {
 
 	// cache db slot
 	contractAddr := utils.NodeManagerContractAddress
-	proofHash := node_manager.EpochProofHash(epochID)
-	cacheKey := utils.ConcatKey(contractAddr, []byte("st_proof"), proofHash.Bytes())
+	cacheKey := utils.ConcatKey(contractAddr, []byte(node_manager.SKP_EPOCH_INFO), big.NewInt(int64(epochID)).Bytes())
 	slot := state.Key2Slot(cacheKey[common.AddressLength:])
 	t.Logf("slot hex before keccak: %s", slot.Hex())
 
@@ -699,5 +698,4 @@ func TestUnmarshalHeader(t *testing.T) {
 		t.Fatal(err)
 	}
 	t.Logf("proof result: %s", string(enc))
-	return
 }

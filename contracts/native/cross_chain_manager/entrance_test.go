@@ -64,7 +64,6 @@ func init() {
 	node_manager.StoreGenesisGlobalConfig(sdb)
 
 	param := new(side_chain_manager.RegisterSideChainParam)
-	param.BlocksToWait = 4
 	param.ChainID = 8
 	param.Name = "mychain"
 
