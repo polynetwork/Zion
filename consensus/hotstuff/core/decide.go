@@ -29,8 +29,10 @@ import (
 // handleCommitVote implement description as follow:
 // ```
 // leader wait for (n n f) votes: V ← {v | matchingMsg(v, commit, curView)}
+//
 //	commitQC ← QC(V )
 //	broadcast Msg(decide, ⊥, commitQC )
+//
 // ```
 func (c *core) handleCommitVote(data *Message) error {
 	var (
@@ -199,6 +201,9 @@ func (c *core) handleDecide(data *Message) error {
 			return err
 		}
 	}
+
+	//prepare for new round
+	c.current.Unlock()
 
 	c.startNewRound(common.Big0)
 	return nil

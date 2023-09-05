@@ -132,9 +132,8 @@ func (c *core) startNewRound(round *big.Int) {
 	if changeView {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
-	} else if c.checkPoint(newView) {
-		logger.Trace("Stop engine after check point.")
-		return
+	} else {
+		c.checkPoint(newView)
 	}
 
 	// calculate validator set
@@ -150,12 +149,6 @@ func (c *core) startNewRound(round *big.Int) {
 		logger.Error("Update round state failed", "state", c.currentState(), "newView", newView, "err", err)
 		return
 	}
-	if !changeView {
-		if err := c.current.Unlock(); err != nil {
-			logger.Error("Unlock node failed", "newView", newView, "err", err)
-			return
-		}
-	}
 
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
@@ -169,21 +162,17 @@ func (c *core) startNewRound(round *big.Int) {
 }
 
 // check point and return true if the engine is stopped, return false if the validators not changed
-func (c *core) checkPoint(view *View) bool {
+func (c *core) checkPoint(view *View) {
 	if c.checkPointFn == nil {
-		return false
+		return
 	}
 
 	if epochStart, ok := c.checkPointFn(view.HeightU64()); ok {
 		c.point = epochStart
 		c.lastVals = c.valSet.Copy()
 		c.logger.Trace("CheckPoint done", "view", view, "point", c.point)
-		c.backend.ReStart()
+		c.backend.Reset()
 	}
-	if !c.isRunning {
-		return true
-	}
-	return false
 }
 
 func (c *core) updateRoundState(lastProposal *types.Block, newView *View) error {

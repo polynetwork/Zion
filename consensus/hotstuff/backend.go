@@ -70,7 +70,7 @@ type Backend interface {
 	// CheckPoint retrieve the flag of epoch change and new epoch start height
 	CheckPoint(height uint64) (uint64, bool)
 
-	ReStart()
+	Reset()
 
 	Close() error
 }

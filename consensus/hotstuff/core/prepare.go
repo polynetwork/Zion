@@ -129,7 +129,7 @@ func (c *core) handlePrepare(data *Message) error {
 
 	// ensure remote block is legal.
 	block := node.Block
-	if c.current.executed.Block.SealHash() != block.SealHash() {
+	if c.current.executed == nil || c.current.executed.Block != nil || c.current.executed.Block.SealHash() != block.SealHash() {
 		if err := c.checkBlock(block); err != nil {
 			logger.Trace("Failed to check block", "msg", code, "src", src, "err", err)
 			return err
