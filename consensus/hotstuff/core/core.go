@@ -58,6 +58,9 @@ type core struct {
 	validateFn   func(common.Hash, []byte) (common.Address, error)
 	checkPointFn func(uint64) (uint64, bool)
 	isRunning    bool
+
+	wg     sync.WaitGroup
+	quitCh chan struct{}
 }
 
 // New creates an HotStuff consensus core
@@ -71,6 +74,7 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 		backlogs:          newBackLog(),
 		pendingRequests:   prque.New(nil),
 		pendingRequestsMu: new(sync.Mutex),
+		quitCh:            make(chan struct{}),
 	}
 	c.validateFn = c.checkValidatorSignature
 	c.checkPointFn = checkPointFn
@@ -134,7 +138,11 @@ func (c *core) startNewRound(round *big.Int) {
 	}
 
 	// calculate validator set
-	c.valSet = c.backend.Validators(newView.HeightU64(), true)
+	var err error
+	if c.valSet, err = c.backend.Validators(newView.HeightU64(), true); err != nil {
+		logger.Error("get validator set failed", "err", err)
+		return
+	}
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 
 	// update smr and try to unlock at the round0
