@@ -299,6 +299,8 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 			g.createNativeContract(statedb, v)
 		}
 		RegGenesis(statedb, g)
+	} else {
+		g.mintNativeToken(statedb)
 	}
 
 	root := statedb.IntermediateRoot(false)
@@ -390,14 +392,14 @@ func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
 		if total.Cmp(params.GenesisSupply) != 0 {
 			panic("alloc amount should be equal to genesis supply")
 		}
+	}
 
-		for addr, account := range g.Alloc {
-			statedb.AddBalance(addr, account.Balance)
-			statedb.SetCode(addr, account.Code)
-			statedb.SetNonce(addr, account.Nonce)
-			for key, value := range account.Storage {
-				statedb.SetState(addr, key, value)
-			}
+	for addr, account := range g.Alloc {
+		statedb.AddBalance(addr, account.Balance)
+		statedb.SetCode(addr, account.Code)
+		statedb.SetNonce(addr, account.Nonce)
+		for key, value := range account.Storage {
+			statedb.SetState(addr, key, value)
 		}
 	}
 }
