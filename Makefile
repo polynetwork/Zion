@@ -35,7 +35,7 @@ zion: zion-clean
 
 zion-local: zion-clean
 	@echo "Building zion binary in container with local source files"
-	docker build --no-cache --build-arg commit=$(COMMIT) -t go-zion-build .
+	docker build --no-cache --build-arg commit=$(COMMIT) -t go-zion-build -f ./Dockerfile.build_local .
 	docker container create --name go-zion-temp go-zion-build
 	docker container cp go-zion-temp:/workspace/build/bin/geth .
 	sha256sum geth
