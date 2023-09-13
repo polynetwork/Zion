@@ -21,13 +21,13 @@ geth:
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
 
 zion-clean:
-    @echo "Cleaning build artifacts"
-    rm -rf geth
+	@echo "Cleaning build artifacts"
+	rm -rf geth
 	docker container rm -f go-zion-temp
 	docker rmi -f go-zion-build
 
 zion: zion-clean
-    @echo "Building geth binary in container"
+	@echo "Building geth binary in container"
 	docker build --no-cache --build-arg commit=$(COMMIT) -t go-zion-build -f ./Dockerfile.build .
 	docker container create --name go-zion-temp go-zion-build
 	docker container cp go-zion-temp:/workspace/zion/build/bin/geth .
