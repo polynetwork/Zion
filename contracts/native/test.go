@@ -103,7 +103,7 @@ func GenerateTestContext(t *testing.T, value *big.Int, address common.Address, p
 	}
 
 	blockHeight := new(big.Int).SetInt64(int64(block))
-	contractRef := NewContractRef(sdb, sender, caller, blockHeight, hash, supplyGas, nil)
+	contractRef := NewContractRef(sdb, sender, caller, blockHeight, hash, supplyGas + 21000, nil)
 	contractRef.SetValue(value)
 	contractRef.SetTo(address)
 	ctx := NewNativeContract(sdb, contractRef)

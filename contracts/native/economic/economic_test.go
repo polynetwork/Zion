@@ -48,7 +48,7 @@ func TestName(t *testing.T) {
 	payload, err := new(MethodContractNameInput).Encode()
 	assert.NoError(t, err)
 
-	raw, err := native.TestNativeCall(t, this, name, payload, common.Big0)
+	raw, err := native.TestNativeCall(t, this, name, payload, common.Big0, gasTable[MethodName])
 	assert.NoError(t, err)
 	var got string
 	assert.NoError(t, utils.UnpackOutputs(ABI, name, &got, raw))
@@ -78,7 +78,7 @@ func TestTotalSupply(t *testing.T) {
 		var supply *big.Int
 
 		payload, _ := new(MethodTotalSupplyInput).Encode()
-		raw, err := native.TestNativeCall(t, this, name, payload, common.Big0, tc.height)
+		raw, err := native.TestNativeCall(t, this, name, payload, common.Big0, tc.height, gasTable[MethodTotalSupply])
 		assert.NoError(t, err)
 
 		if tc.testABI {
@@ -120,7 +120,7 @@ func TestReward(t *testing.T) {
 		payload, _ := new(MethodRewardInput).Encode()
 		raw, err := native.TestNativeCall(t, this, name, payload, common.Big0, tc.height, func(state *state.StateDB) {
 			community.StoreCommunityInfo(state, big.NewInt(int64(tc.rate)), tc.pool)
-		})
+		}, gasTable[MethodReward])
 		if tc.err == nil {
 			assert.NoError(t, err)
 			assert.NoError(t, got.Decode(raw))

@@ -66,29 +66,31 @@ func init() {
 	param := new(side_chain_manager.RegisterSideChainParam)
 	param.ChainID = 8
 	param.Name = "mychain"
+	param.Router = 1
 
 	param1 := new(side_chain_manager.RegisterSideChainParam)
-	param1.ChainID = 9
+	param1.ChainID = 79
 	param1.Name = strings.Repeat("1", 100)
 	param1.ExtraInfo = make([]byte, 1000000)
 	param1.CCMCAddress = make([]byte, 1000)
+	param1.Router = 1
 
 	ccd := common.HexToAddress("0xdedace1809079e241234d546e44517f31b57ab8f")
 	param2 := new(side_chain_manager.RegisterSideChainParam)
 	param2.ChainID = 10
-	param2.Router = 15
+	param2.Router = 2
 	param2.Name = "chain10"
 	param2.CCMCAddress = ccd.Bytes()
 
 	param3 := new(side_chain_manager.RegisterSideChainParam)
 	param3.ChainID = 11
-	param3.Router = 15
+	param3.Router = 2
 	param3.Name = strings.Repeat("1", 100)
 	param3.ExtraInfo = make([]byte, 1000000)
 	param3.CCMCAddress = ccd.Bytes()
 
 	param4 := *param3
-	param4.ChainID = 79
+	param4.ChainID = 2
 
 	for _, param := range []*side_chain_manager.RegisterSideChainParam{param, param1, param2, param3, &param4} {
 		input, err := utils.PackMethodWithStruct(side_chain_manager.ABI, side_chain_manager_abi.MethodRegisterSideChain, param)
@@ -171,7 +173,7 @@ func TestImportOuterTransfer(t *testing.T) {
 	param.Extra = event
 
 	param1 := new(scom.EntranceParam)
-	param1.SourceChainID = 9
+	param1.SourceChainID = 79
 	param1.Extra = event
 
 	param2 := new(scom.EntranceParam)
@@ -204,7 +206,7 @@ func TestImportOuterTransfer(t *testing.T) {
 			assert.Nil(t, err)
 
 			blockNumber := big.NewInt(1)
-			extra := uint64(10)
+			extra := uint64(21000)
 			caller := common.Address{}
 			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodImportOuterTransfer]+extra, nil)
 			tr.Start()
@@ -214,7 +216,7 @@ func TestImportOuterTransfer(t *testing.T) {
 			result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodImportOuterTransfer, true)
 			assert.Nil(t, err)
 			assert.Equal(t, ret, result)
-			assert.Equal(t, leftOverGas, extra)
+			assert.Equal(t, leftOverGas, uint64(0))
 		}
 	}
 
@@ -223,7 +225,7 @@ func TestImportOuterTransfer(t *testing.T) {
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
-		extra := uint64(10)
+		extra := uint64(21000)
 		caller := common.Address{}
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodImportOuterTransfer]+extra, nil)
 		tr.Start()
@@ -233,7 +235,7 @@ func TestImportOuterTransfer(t *testing.T) {
 		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodImportOuterTransfer, true)
 		assert.Nil(t, err)
 		assert.Equal(t, ret, result)
-		assert.Equal(t, leftOverGas, extra)
+		assert.Equal(t, leftOverGas, uint64(0))
 	}
 	tr.Dump()
 }
@@ -255,7 +257,7 @@ func TestReplenish(t *testing.T) {
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
-		extra := uint64(10)
+		extra := uint64(21000)
 		caller := common.Address{}
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodReplenish]+extra, nil)
 		tr.Start()
@@ -265,7 +267,7 @@ func TestReplenish(t *testing.T) {
 		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodReplenish, true)
 		assert.Nil(t, err)
 		assert.Equal(t, ret, result)
-		assert.Equal(t, leftOverGas, extra)
+		assert.Equal(t, leftOverGas, uint64(0))
 	}
 	tr.Dump()
 }
@@ -283,7 +285,7 @@ func TestCheckDone(t *testing.T) {
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
-		extra := uint64(10)
+		extra := uint64(21000)
 		caller := common.Address{}
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodCheckDone]+extra, nil)
 		tr.Start()
@@ -293,7 +295,7 @@ func TestCheckDone(t *testing.T) {
 		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodCheckDone, false)
 		assert.Nil(t, err)
 		assert.Equal(t, ret, result)
-		assert.Equal(t, leftOverGas, extra)
+		assert.Equal(t, leftOverGas, uint64(0))
 	}
 	tr.Dump()
 }
@@ -311,7 +313,7 @@ func TestWhiteChain(t *testing.T) {
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
-		extra := uint64(10)
+		extra := uint64(21000)
 		caller := signers[0]
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodWhiteChain]+extra, nil)
 		tr.Start()
@@ -321,7 +323,7 @@ func TestWhiteChain(t *testing.T) {
 		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodWhiteChain, true)
 		assert.Nil(t, err)
 		assert.Equal(t, ret, result)
-		assert.Equal(t, leftOverGas, extra)
+		assert.Equal(t, leftOverGas, uint64(0))
 	}
 	tr.Dump()
 }
@@ -339,7 +341,7 @@ func TestBlackChain(t *testing.T) {
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
-		extra := uint64(10)
+		extra := uint64(21000)
 		caller := signers[0]
 		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodBlackChain]+extra, nil)
 		tr.Start()
@@ -349,7 +351,7 @@ func TestBlackChain(t *testing.T) {
 		result, err := utils.PackOutputs(scom.ABI, cross_chain_manager_abi.MethodBlackChain, true)
 		assert.Nil(t, err)
 		assert.Equal(t, ret, result)
-		assert.Equal(t, leftOverGas, extra)
+		assert.Equal(t, leftOverGas, uint64(0))
 	}
 	tr.Dump()
 }
