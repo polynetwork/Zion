@@ -18,8 +18,6 @@
 package utils
 
 import (
-	"math"
-
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -47,9 +45,4 @@ var (
 	ETH_COMMON_ROUTER = uint64(2)
 
 	RIPPLE_ROUTER    = uint64(6)
-)
-
-const (
-	SystemGas      = math.MaxUint64 / 2 // system tx will be executed in evm, and gas calculating is needed.
-	SystemGasPrice = int64(0)           // consensus txs do not need to participate in gas price bidding
 )
