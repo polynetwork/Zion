@@ -57,7 +57,7 @@ const (
 
 	// minRecommitInterval is the minimal time interval to recreate the mining block with
 	// any newly arrived transactions.
-	minRecommitInterval = 20 * time.Second
+	minRecommitInterval = 3 * time.Second
 
 	// maxRecommitInterval is the maximum time interval to recreate the mining block with
 	// any newly arrived transactions.
@@ -223,7 +223,10 @@ func newWorker(config *Config, chainConfig *params.ChainConfig, engine consensus
 	go worker.resultLoop()
 	go worker.taskLoop()
 
-	worker.startCh <- struct{}{}
+	// Submit first work to initialize pending state.
+	if init {
+		worker.startCh <- struct{}{}
+	}
 
 	return worker
 }
@@ -378,6 +381,7 @@ func (w *worker) newWorkLoop(recommit time.Duration) {
 			// If mining is running resubmit a new work cycle periodically to pull in
 			// higher priced transactions. Disable this overhead for pending blocks.
 			if w.IsRunning() && (w.chainConfig.HotStuff != nil && w.chainConfig.HotStuff.Protocol != "") {
+				timestamp = time.Now().Unix()
 				log.Debug("Miner resubmit work", "timestamp", timestamp, "from", minRecommit)
 				commit(commitInterruptResubmit)
 			}
@@ -864,10 +868,8 @@ func (w *worker) commitNewWork(interrupt *int32, timestamp int64) {
 	w.mu.RLock()
 	defer w.mu.RUnlock()
 
-	// just use current time as block timestamp
 	tstart := time.Now()
 	parent := w.chain.CurrentBlock()
-	timestamp = tstart.Unix()
 	num := parent.Number()
 
 	header := &types.Header{
