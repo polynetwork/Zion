@@ -21,13 +21,14 @@ package proposal_manager
 import (
 	"errors"
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
-	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
 )
 
 var ErrEof = errors.New("EOF")
@@ -108,7 +109,7 @@ func removeFromProposalList(s *native.NativeContract, ID *big.Int) error {
 }
 
 func removeExpiredFromProposalList(s *native.NativeContract) error {
-	communityInfo, err := node_manager.GetCommunityInfoImpl(s)
+	communityInfo, err := community.GetCommunityInfoImpl(s)
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromProposalList, node_manager.GetCommunityInfoImpl error: %v", err)
 	}
@@ -183,7 +184,7 @@ func cleanConfigProposalList(s *native.NativeContract) error {
 }
 
 func removeExpiredFromConfigProposalList(s *native.NativeContract) error {
-	communityInfo, err := node_manager.GetCommunityInfoImpl(s)
+	communityInfo, err := community.GetCommunityInfoImpl(s)
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromConfigProposalList, node_manager.GetCommunityInfoImpl error: %v", err)
 	}
@@ -258,7 +259,7 @@ func cleanCommunityProposalList(s *native.NativeContract) error {
 }
 
 func removeExpiredFromCommunityProposalList(s *native.NativeContract) error {
-	communityInfo, err := node_manager.GetCommunityInfoImpl(s)
+	communityInfo, err := community.GetCommunityInfoImpl(s)
 	if err != nil {
 		return fmt.Errorf("removeExpiredFromCommunityProposalList, node_manager.GetCommunityInfoImpl error: %v", err)
 	}

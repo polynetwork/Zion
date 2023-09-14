@@ -21,14 +21,16 @@ package proposal_manager
 import (
 	"encoding/hex"
 	"fmt"
+	"math/big"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/proposal_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
 )
 
 const (
@@ -271,7 +273,7 @@ func ProposeCommunity(s *native.NativeContract) ([]byte, error) {
 		return nil, fmt.Errorf("ProposeCommunity, content is more than max length")
 	}
 
-	info := new(node_manager.CommunityInfo)
+	info := new(community.CommunityInfo)
 	err = rlp.DecodeBytes(params.Content, info)
 	if err != nil {
 		return nil, fmt.Errorf("ProposeCommunity, deserialize community info error: %v", err)
@@ -366,7 +368,7 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			return nil, fmt.Errorf("Propose, utils.NativeTransfer error: %v", err)
 		}
 
-		communityInfo, err := node_manager.GetCommunityInfoImpl(s)
+		communityInfo, err := community.GetCommunityInfoImpl(s)
 		if err != nil {
 			return nil, fmt.Errorf("VoteProposal, node_manager.GetCommunityInfoImpl error: %v", err)
 		}
@@ -440,7 +442,7 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 				return nil, fmt.Errorf("VoteProposal, cleanConfigProposalList error: %v", err)
 			}
 		case UpdateCommunityInfo:
-			info := new(node_manager.CommunityInfo)
+			info := new(community.CommunityInfo)
 			err := rlp.DecodeBytes(proposal.Content, info)
 			if err != nil {
 				return nil, fmt.Errorf("VoteProposal, deserialize community info error: %v", err)
@@ -451,7 +453,7 @@ func VoteProposal(s *native.NativeContract) ([]byte, error) {
 			if info.CommunityRate.Sign() > 0 {
 				communityInfo.CommunityRate = info.CommunityRate
 			}
-			err = node_manager.SetCommunityInfo(s, communityInfo)
+			err = community.SetCommunityInfo(s, communityInfo)
 			if err != nil {
 				return nil, fmt.Errorf("VoteProposal, node_manager.SetCommunityInfo error: %v", err)
 			}

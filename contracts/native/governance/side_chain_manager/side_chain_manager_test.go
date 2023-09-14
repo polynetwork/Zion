@@ -26,6 +26,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/side_chain_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -49,7 +50,7 @@ func init() {
 	node_manager.InitNodeManager()
 	sdb = native.NewTestStateDB()
 	signers, _ = native.GenerateTestPeers(2)
-	node_manager.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
+	community.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	node_manager.StoreGenesisEpoch(sdb, signers, signers)
 	node_manager.StoreGenesisGlobalConfig(sdb)
 }

@@ -568,12 +568,18 @@ func (c *Clique) Prepare(chain consensus.ChainHeaderReader, header *types.Header
 
 // Finalize implements consensus.Engine, ensuring no uncles are set, nor block
 // rewards given.
-func (c *Clique) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
-	uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
+func (c *Clique) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, uncles []*types.Header) error {
 	// No block rewards in PoA, so the state remains as is and uncles are dropped
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = types.CalcUncleHash(nil)
 	return nil
+}
+
+// Filter out system transactions from common transactions
+// returns common transactions, system transactions and system transaction message provider
+func (c *Clique) BlockTransactions(block *types.Block, state *state.StateDB) (types.Transactions, types.Transactions,
+	func(*types.Transaction, *big.Int) types.Message, error) {
+	return block.Transactions(), nil, nil, nil
 }
 
 // FinalizeAndAssemble implements consensus.Engine, ensuring no uncles are set,

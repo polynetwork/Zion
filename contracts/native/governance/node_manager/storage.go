@@ -55,7 +55,6 @@ const (
 	SKP_STAKE_STARTING_INFO           = "st_stake_starting_info"
 	SKP_SIGN                          = "st_sign"
 	SKP_SIGNER                        = "st_signer"
-	SKP_COMMUNITY_INFO                = "st_community_info"
 )
 
 func setAccumulatedCommission(s *native.NativeContract, consensusAddr common.Address, accumulatedCommission *AccumulatedCommission) error {
@@ -154,7 +153,7 @@ func setOutstandingRewards(s *native.NativeContract, outstandingRewards *Outstan
 
 func getOutstandingRewards(s *native.NativeContract) (*OutstandingRewards, error) {
 	outstandingRewards := &OutstandingRewards{
-		Rewards: NewDecFromBigInt(new(big.Int)),
+		Rewards: utils.NewDecFromBigInt(new(big.Int)),
 	}
 	key := outstandingRewardsKey()
 	store, err := get(s, key)
@@ -441,7 +440,7 @@ func getAllValidators(s *native.NativeContract) (*AllValidators, error) {
 	return allValidators, nil
 }
 
-func depositTotalPool(s *native.NativeContract, amount Dec) error {
+func depositTotalPool(s *native.NativeContract, amount utils.Dec) error {
 	totalPool, err := getTotalPool(s)
 	if err != nil {
 		return fmt.Errorf("depositTotalPool, get total pool error: %v", err)
@@ -457,7 +456,7 @@ func depositTotalPool(s *native.NativeContract, amount Dec) error {
 	return nil
 }
 
-func withdrawTotalPool(s *native.NativeContract, amount Dec) error {
+func withdrawTotalPool(s *native.NativeContract, amount utils.Dec) error {
 	totalPool, err := getTotalPool(s)
 	if err != nil {
 		return fmt.Errorf("withdrawTotalPool, get total pool error: %v", err)
@@ -484,7 +483,7 @@ func setTotalPool(s *native.NativeContract, totalPool *TotalPool) error {
 }
 
 func getTotalPool(s *native.NativeContract) (*TotalPool, error) {
-	totalPool := &TotalPool{NewDecFromBigInt(new(big.Int))}
+	totalPool := &TotalPool{utils.NewDecFromBigInt(new(big.Int))}
 	key := totalPoolKey()
 	store, err := get(s, key)
 	if err == ErrEof {
@@ -518,7 +517,7 @@ func getStakeInfo(s *native.NativeContract, stakeAddress common.Address, consens
 	stakeInfo := &StakeInfo{
 		StakeAddress:  stakeAddress,
 		ConsensusAddr: consensusAddr,
-		Amount:        NewDecFromBigInt(new(big.Int)),
+		Amount:        utils.NewDecFromBigInt(new(big.Int)),
 	}
 	key := stakeInfoKey(stakeAddress, consensusAddr)
 	store, err := get(s, key)
@@ -550,14 +549,14 @@ func addUnlockingInfo(s *native.NativeContract, stakeAddress common.Address, unl
 	return nil
 }
 
-func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (Dec, error) {
+func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Address) (utils.Dec, error) {
 	height := s.ContractRef().BlockHeight()
 	unlockingInfo, err := getUnlockingInfo(s, stakeAddress)
 	if err != nil {
-		return Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, GetUnlockingInfo error: %v", err)
+		return utils.Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, GetUnlockingInfo error: %v", err)
 	}
 	j := 0
-	expiredSum := NewDecFromBigInt(new(big.Int))
+	expiredSum := utils.NewDecFromBigInt(new(big.Int))
 	for _, unlockingStake := range unlockingInfo.UnlockingStake {
 		if unlockingStake.CompleteHeight.Cmp(height) == 1 {
 			unlockingInfo.UnlockingStake[j] = unlockingStake
@@ -565,7 +564,7 @@ func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Ad
 		} else {
 			expiredSum, err = expiredSum.Add(unlockingStake.Amount)
 			if err != nil {
-				return Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, expiredSum.Add error: %v", err)
+				return utils.Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, expiredSum.Add error: %v", err)
 			}
 		}
 	}
@@ -575,7 +574,7 @@ func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Ad
 	} else {
 		err = setUnlockingInfo(s, unlockingInfo)
 		if err != nil {
-			return Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, setUnlockingInfo error: %v", err)
+			return utils.Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, setUnlockingInfo error: %v", err)
 		}
 	}
 	return expiredSum, nil
@@ -723,59 +722,6 @@ func GetEpochInfoFromDB(s *state.StateDB, ID *big.Int) (*EpochInfo, error) {
 		return nil, fmt.Errorf("GetEpochInfoFromDB, deserialize epoch info error: %v", err)
 	}
 	return epochInfo, nil
-}
-
-func setGenesisCommunityInfo(s *state.CacheDB, communityInfo *CommunityInfo) error {
-	if communityInfo.CommunityRate.Cmp(PercentDecimal) > 0 {
-		return fmt.Errorf("setGenesisCommunityInfo, CommunityRate over size")
-	}
-	key := communityInfoKey()
-	store, err := rlp.EncodeToBytes(communityInfo)
-	if err != nil {
-		return fmt.Errorf("setCommunityInfo, serialize community info error: %v", err)
-	}
-	customSet(s, key, store)
-	return nil
-}
-
-func SetCommunityInfo(s *native.NativeContract, communityInfo *CommunityInfo) error {
-	if communityInfo.CommunityRate.Cmp(PercentDecimal) > 0 {
-		return fmt.Errorf("setCommunityInfo, CommunityRate over size")
-	}
-	key := communityInfoKey()
-	store, err := rlp.EncodeToBytes(communityInfo)
-	if err != nil {
-		return fmt.Errorf("setCommunityInfo, serialize community info error: %v", err)
-	}
-	set(s, key, store)
-	return nil
-}
-
-func GetCommunityInfoImpl(s *native.NativeContract) (*CommunityInfo, error) {
-	communityInfo := new(CommunityInfo)
-	key := communityInfoKey()
-	store, err := get(s, key)
-	if err != nil {
-		return nil, fmt.Errorf("GetCommunityInfoImpl, get store error: %v", err)
-	}
-	if err := rlp.DecodeBytes(store, communityInfo); err != nil {
-		return nil, fmt.Errorf("GetCommunityInfoImpl, deserialize community info error: %v", err)
-	}
-	return communityInfo, nil
-}
-
-func GetCommunityInfoFromDB(s *state.StateDB) (*CommunityInfo, error) {
-	cache := (*state.CacheDB)(s)
-	communityInfo := new(CommunityInfo)
-	key := communityInfoKey()
-	store, err := customGet(cache, key)
-	if err != nil {
-		return nil, fmt.Errorf("GetCommunityInfoFromDB, get store error: %v", err)
-	}
-	if err := rlp.DecodeBytes(store, communityInfo); err != nil {
-		return nil, fmt.Errorf("GetCommunityInfoFromDB, deserialize community info error: %v", err)
-	}
-	return communityInfo, nil
 }
 
 // ====================================================================
@@ -986,8 +932,4 @@ func signKey(hash common.Hash) []byte {
 
 func signerKey(hash common.Hash) []byte {
 	return utils.ConcatKey(this, []byte(SKP_SIGNER), hash.Bytes())
-}
-
-func communityInfoKey() []byte {
-	return utils.ConcatKey(this, []byte(SKP_COMMUNITY_INFO))
 }
