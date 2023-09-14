@@ -24,9 +24,17 @@ import (
 
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/core/rawdb"
+	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/stretchr/testify/assert"
 )
+
+func NewTestStateDB() *state.StateDB {
+	memdb := rawdb.NewMemoryDatabase()
+	db := state.NewDatabase(memdb)
+	stateDB, _ := state.New(common.Hash{}, db, nil)
+	return stateDB
+}
 
 func TestEventEmitter(t *testing.T) {
 	name := "propose"
@@ -39,7 +47,7 @@ func TestEventEmitter(t *testing.T) {
 
 	contract := common.HexToAddress("0x05")
 	blockNo := uint64(36)
-	stateDB := native.NewTestStateDB()
+	stateDB := NewTestStateDB()
 	emmitter := NewEventEmitter(contract, blockNo, stateDB)
 
 	proposer := common.HexToAddress("0x12")

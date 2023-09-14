@@ -203,7 +203,7 @@ func TestEth2NewBlock(t *testing.T) {
 		if err != nil || !success.Valid {
 			t.Fatalf("Failed to insert forked block #%d: %v", i, err)
 		}
-		lastBlock, err = insertBlockParamsToBlock(p)
+		lastBlock, err = insertBlockParamsToBlock(ethservice.APIBackend.ChainConfig(), lastBlock.Header(), p)
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -72,7 +72,7 @@ func TestAddSignature(t *testing.T) {
 		payload := append(methodID, args...)
 		supplyGas := gasTable[name]
 
-		_, err = native.TestNativeCall(t, this, name, payload, supplyGas)
+		_, err = native.TestNativeCall(t, this, name, payload, common.Big0, supplyGas)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "abi", "marshal")
 	}
@@ -83,7 +83,7 @@ func TestAddSignature(t *testing.T) {
 		assert.NoError(t, err)
 		supplyGas := gasTable[name] - 1
 
-		_, err = native.TestNativeCall(t, this, name, payload, supplyGas)
+		_, err = native.TestNativeCall(t, this, name, payload, common.Big0, supplyGas)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "gas", "supply", "left")
 	}
@@ -98,7 +98,7 @@ func TestAddSignature(t *testing.T) {
 		payload, err := utils.PackMethod(ABI, name, addr, big.NewInt(2), []byte{'a'}, []byte{'1'})
 		assert.NoError(t, err)
 
-		_, err = native.TestNativeCall(t, this, name, payload, sender, supplyGas)
+		_, err = native.TestNativeCall(t, this, name, payload, common.Big0, sender, supplyGas)
 		assert.NotNil(t, err)
 		assert.Contains(t, err.Error(), "checkWitness", "authentication")
 	}
@@ -118,7 +118,7 @@ func TestAddSignature(t *testing.T) {
 		payload, err := utils.PackMethod(ABI, name, sender, chainID, subject, errSig)
 		assert.NoError(t, err)
 
-		_, err = native.TestNativeCall(t, this, name, payload, sender, supplyGas, func(state *state.StateDB) {
+		_, err = native.TestNativeCall(t, this, name, payload, common.Big0, sender, supplyGas, func(state *state.StateDB) {
 			nm.StoreGenesisEpoch(state, peers, peers)
 		})
 		t.Error(err)
