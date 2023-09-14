@@ -46,7 +46,7 @@ func AssembleSystemTransactions(state *state.StateDB, height uint64) (types.Tran
 		if err != nil {
 			return nil, err
 		}
-		gas += nm.GasTable[node_manager_abi.MethodEndBlock] + 21000
+		gas += nm.GasTable[node_manager_abi.MethodEndBlock]
 		txs = append(txs, types.NewTransaction(systemSenderNonce, utils.NodeManagerContractAddress, common.Big0, gas, common.Big0, payload))
 	}
 
@@ -70,7 +70,7 @@ func AssembleSystemTransactions(state *state.StateDB, height uint64) (types.Tran
 			if err != nil {
 				return nil, err
 			}
-			gas += nm.GasTable[node_manager_abi.MethodChangeEpoch] + 21000
+			gas += nm.GasTable[node_manager_abi.MethodChangeEpoch]
 			txs = append(txs, types.NewTransaction(systemSenderNonce + 1, utils.NodeManagerContractAddress, common.Big0, gas, common.Big0, payload))
 		}
 	}
