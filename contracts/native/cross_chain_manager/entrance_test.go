@@ -206,9 +206,8 @@ func TestImportOuterTransfer(t *testing.T) {
 			assert.Nil(t, err)
 
 			blockNumber := big.NewInt(1)
-			extra := uint64(21000)
 			caller := common.Address{}
-			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodImportOuterTransfer]+extra, nil)
+			contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodImportOuterTransfer], nil)
 			tr.Start()
 			ret, leftOverGas, err := contractRef.NativeCall(caller, utils.CrossChainManagerContractAddress, input)
 			tr.Stop()
@@ -225,9 +224,8 @@ func TestImportOuterTransfer(t *testing.T) {
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
-		extra := uint64(21000)
 		caller := common.Address{}
-		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodImportOuterTransfer]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodImportOuterTransfer], nil)
 		tr.Start()
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.CrossChainManagerContractAddress, input)
 		tr.Stop()
@@ -257,9 +255,8 @@ func TestReplenish(t *testing.T) {
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
-		extra := uint64(21000)
 		caller := common.Address{}
-		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodReplenish]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodReplenish], nil)
 		tr.Start()
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.CrossChainManagerContractAddress, input)
 		tr.Stop()
@@ -285,9 +282,8 @@ func TestCheckDone(t *testing.T) {
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
-		extra := uint64(21000)
 		caller := common.Address{}
-		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodCheckDone]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodCheckDone], nil)
 		tr.Start()
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.CrossChainManagerContractAddress, input)
 		tr.Stop()
@@ -313,9 +309,8 @@ func TestWhiteChain(t *testing.T) {
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
-		extra := uint64(21000)
 		caller := signers[0]
-		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodWhiteChain]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodWhiteChain], nil)
 		tr.Start()
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.CrossChainManagerContractAddress, input)
 		tr.Stop()
@@ -341,9 +336,8 @@ func TestBlackChain(t *testing.T) {
 		assert.Nil(t, err)
 
 		blockNumber := big.NewInt(1)
-		extra := uint64(21000)
 		caller := signers[0]
-		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodBlackChain]+extra, nil)
+		contractRef := native.NewContractRef(sdb, caller, caller, blockNumber, common.Hash{}, gasTable[cross_chain_manager_abi.MethodBlackChain], nil)
 		tr.Start()
 		ret, leftOverGas, err := contractRef.NativeCall(caller, utils.CrossChainManagerContractAddress, input)
 		tr.Stop()
