@@ -131,8 +131,8 @@ func (s *backend) BlockTransactions(block *types.Block, state *state.StateDB) (t
 	signer := types.MakeSigner(s.chainConfig, block.Number())
 	for i, tx := range systemTransactions {
 		includedTx := allTransactions[commonTransactionCount + i]
-		if includedTx.Hash() != tx.Hash() {
-			return nil, nil, nil, fmt.Errorf("unexpected system tx hash detected, tx index %v, hash %s, expected: %s", commonTransactionCount + i, includedTx.Hash(), tx.Hash())
+		if signer.Hash(includedTx) != signer.Hash(tx) {
+			return nil, nil, nil, fmt.Errorf("unexpected system tx hash detected, tx index %v, hash %s, expected: %s", commonTransactionCount + i, signer.Hash(includedTx), signer.Hash(tx))
 		}
 		from, err := signer.Sender(includedTx)
 		if err != nil {
