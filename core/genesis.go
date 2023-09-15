@@ -370,34 +370,30 @@ func (g *Genesis) checkGovernance() {
 }
 
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
-	if params.CheckZionChain(g.Config.ChainID.Uint64()) {
-		db.CreateAccount(addr)
-		db.SetCode(addr, addr[:])
-		initBlockNumber := big.NewInt(0)
-		if g.Config.IsEIP158(initBlockNumber) {
-			db.SetNonce(addr, 1)
-		}
+	db.CreateAccount(addr)
+	db.SetCode(addr, addr[:])
+	initBlockNumber := big.NewInt(0)
+	if g.Config.IsEIP158(initBlockNumber) {
+		db.SetNonce(addr, 1)
 	}
 }
 
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
-	if params.CheckZionChain(g.Config.ChainID.Uint64()) {
-		// check total balance
-		total := new(big.Int)
-		for _, account := range g.Alloc {
-			total = new(big.Int).Add(total, account.Balance)
-		}
-		if total.Cmp(params.GenesisSupply) != 0 {
-			panic("alloc amount should be equal to genesis supply")
-		}
+	// check total balance
+	total := new(big.Int)
+	for _, account := range g.Alloc {
+		total = new(big.Int).Add(total, account.Balance)
+	}
+	if total.Cmp(params.GenesisSupply) != 0 {
+		panic("alloc amount should be equal to genesis supply")
+	}
 
-		for addr, account := range g.Alloc {
-			statedb.AddBalance(addr, account.Balance)
-			statedb.SetCode(addr, account.Code)
-			statedb.SetNonce(addr, account.Nonce)
-			for key, value := range account.Storage {
-				statedb.SetState(addr, key, value)
-			}
+	for addr, account := range g.Alloc {
+		statedb.AddBalance(addr, account.Balance)
+		statedb.SetCode(addr, account.Code)
+		statedb.SetNonce(addr, account.Nonce)
+		for key, value := range account.Storage {
+			statedb.SetState(addr, key, value)
 		}
 	}
 }
