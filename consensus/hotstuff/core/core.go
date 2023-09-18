@@ -59,8 +59,7 @@ type core struct {
 	checkPointFn func(uint64) (uint64, bool)
 	isRunning    bool
 
-	wg     sync.WaitGroup
-	quitCh chan struct{}
+	wg sync.WaitGroup
 }
 
 // New creates an HotStuff consensus core
@@ -74,7 +73,6 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 		backlogs:          newBackLog(),
 		pendingRequests:   prque.New(nil),
 		pendingRequestsMu: new(sync.Mutex),
-		quitCh:            make(chan struct{}),
 	}
 	c.validateFn = c.checkValidatorSignature
 	c.checkPointFn = checkPointFn
@@ -129,11 +127,12 @@ func (c *core) startNewRound(round *big.Int) {
 		Height: new(big.Int).Add(lastProposal.Number(), common.Big1),
 		Round:  new(big.Int),
 	}
+	var changeEpoch bool
 	if changeView {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
 	} else {
-		c.checkPoint(newView)
+		changeEpoch = c.checkPoint(newView)
 	}
 
 	// calculate validator set
@@ -149,7 +148,9 @@ func (c *core) startNewRound(round *big.Int) {
 		logger.Error("Update round state failed", "state", c.currentState(), "newView", newView, "err", err)
 		return
 	}
-
+	if changeEpoch {
+		c.current.Unlock()
+	}
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
 	// stop last timer and regenerate new timer
@@ -162,9 +163,9 @@ func (c *core) startNewRound(round *big.Int) {
 }
 
 // check point and return true if the engine is stopped, return false if the validators not changed
-func (c *core) checkPoint(view *View) {
+func (c *core) checkPoint(view *View) bool {
 	if c.checkPointFn == nil {
-		return
+		return false
 	}
 
 	if epochStart, ok := c.checkPointFn(view.HeightU64()); ok {
@@ -172,7 +173,9 @@ func (c *core) checkPoint(view *View) {
 		c.lastVals = c.valSet.Copy()
 		c.logger.Trace("CheckPoint done", "view", view, "point", c.point)
 		c.backend.Reset()
+		return true
 	}
+	return false
 }
 
 func (c *core) updateRoundState(lastProposal *types.Block, newView *View) error {

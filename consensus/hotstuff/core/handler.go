@@ -43,7 +43,6 @@ func (c *core) Start(chain consensus.ChainReader) {
 func (c *core) Stop() {
 	c.stopTimer()
 	c.unsubscribeEvents()
-	close(c.quitCh)
 	c.isRunning = false
 	c.wg.Wait()
 }
@@ -141,8 +140,6 @@ func (c *core) handleEvents() {
 			case hotstuff.FinalCommittedEvent:
 				c.handleFinalCommitted(ev.Header)
 			}
-		case <-c.quitCh:
-			return
 		}
 	}
 }

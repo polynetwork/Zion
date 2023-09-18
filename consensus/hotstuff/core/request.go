@@ -46,6 +46,7 @@ func (c *core) handleRequest(request *Request) error {
 		if c.current.PendingRequest() == nil ||
 			c.current.PendingRequest().block.NumberU64() < c.current.HeightU64() {
 			c.current.SetPendingRequest(request)
+			logger.Trace("Set PendingRequest", "number", request.block.NumberU64(), "hash", request.block.SealHash())
 			c.sendPrepare()
 		} else {
 			logger.Trace("PendingRequest exist")

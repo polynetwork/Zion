@@ -149,9 +149,7 @@ func (s *roundState) LastChainedBlock() *types.Block {
 
 // accept pending request from miner only for once.
 func (s *roundState) SetPendingRequest(req *Request) {
-	if s.pendingRequest == nil {
-		s.pendingRequest = req
-	}
+	s.pendingRequest = req
 }
 
 func (s *roundState) PendingRequest() *Request {
