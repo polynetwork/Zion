@@ -53,6 +53,10 @@ func (c *core) sendPrepare() {
 		request := c.current.PendingRequest()
 		if request == nil || request.block == nil || request.block.NumberU64() != c.HeightU64() {
 			logger.Trace("Pending request invalid", "msg", code)
+			if request != nil && request.block != nil {
+				logger.Trace("Pending request invalid", "msg", code, "request.block.Number", request.block.NumberU64(),
+					"c.Height", c.HeightU64(), "request.block.hash", request.block.SealHash())
+			}
 			return
 		} else {
 			block = c.current.PendingRequest().block
