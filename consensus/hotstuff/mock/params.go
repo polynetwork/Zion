@@ -71,6 +71,7 @@ func makeGenesis(vals []common.Address) *core.Genesis {
 		Mixhash:          common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		ParentHash:       common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		Timestamp:        0,
+		Alloc:            make(map[common.Address]core.GenesisAccount, len(vals)),
 	}
 
 	govAccs := make([]core.GovernanceAccount, len(vals))
@@ -79,6 +80,7 @@ func makeGenesis(vals []common.Address) *core.Genesis {
 			Validator: vals[i],
 			Signer:    common.EmptyAddress,
 		}
+		genesis.Alloc[vals[i]] = core.GenesisAccount{Balance: new(big.Int).Div(params.GenesisSupply, big.NewInt(int64(len(vals))))}
 	}
 	genesis.Governance = govAccs
 

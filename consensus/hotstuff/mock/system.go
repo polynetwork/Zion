@@ -20,6 +20,7 @@ package mock
 
 import (
 	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"math/big"
 	"time"
 
@@ -53,7 +54,15 @@ type Geth struct {
 func MakeGeth(privateKey *ecdsa.PrivateKey, vals []common.Address) *Geth {
 	db := rawdb.NewMemoryDatabase()
 	engine := makeEngine(privateKey, db)
-	chain := makeChain(db, engine, vals)
+	chain, genesis := makeChain(db, engine, vals)
+	stateDb, err := changeDb(db)
+	if err != nil {
+		panic("changeDb err" + err.Error())
+	}
+	err = node_manager.SetupGenesis(stateDb, genesis)
+	if err != nil {
+		panic("SetupGenesis err" + err.Error())
+	}
 	hotstuffEngine := engine.(consensus.HotStuff)
 	broadcaster := engine.(consensus.Handler).GetBroadcaster().(*broadcaster)
 	api := engine.APIs(chain)[0].Service.(*backend.API)

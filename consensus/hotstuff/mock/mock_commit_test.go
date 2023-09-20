@@ -19,6 +19,7 @@
 package mock
 
 import (
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"math/big"
 	"sync/atomic"
 	"testing"
@@ -33,6 +34,7 @@ import (
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitCase1
 // net scale is 4, leader send fake message of commit with wrong height, repos change view.
 func TestMockCommitCase1(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fH := uint64(4), uint64(0), uint64(5)
 
 	sys := makeSystem(4)
@@ -79,6 +81,7 @@ func TestMockCommitCase1(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitCase2
 // net scale is 4, leader send fake message of commit with wrong round, repos change view.
 func TestMockCommitCase2(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fR := uint64(4), uint64(0), uint64(1)
 
 	sys := makeSystem(4)
@@ -125,6 +128,7 @@ func TestMockCommitCase2(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitCase3
 // net scale is 4, leader send fake message of commit with wrong qc.height, repos change view.
 func TestMockCommitCase3(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fH := uint64(4), uint64(0), uint64(3)
 
 	sys := makeSystem(4)
@@ -185,6 +189,7 @@ func TestMockCommitCase3(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitCase4
 // net scale is 4, leader send fake message of commit with wrong qc.round, repos change view.
 func TestMockCommitCase4(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fR := uint64(4), uint64(0), uint64(1)
 
 	sys := makeSystem(4)
@@ -245,6 +250,7 @@ func TestMockCommitCase4(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitCase5
 // net scale is 4, leader send fake message of commit with wrong qc.digest, repos change view.
 func TestMockCommitCase5(t *testing.T) {
+	node_manager.InitABI()
 	H, R := uint64(4), uint64(0)
 
 	sys := makeSystem(4)
@@ -305,6 +311,7 @@ func TestMockCommitCase5(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitCase6
 // net scale is 4, leader send fake message of commit without enough qc.committedSeal, repos change view.
 func TestMockCommitCase6(t *testing.T) {
+	node_manager.InitABI()
 	H, R := uint64(4), uint64(0)
 
 	sys := makeSystem(4)
@@ -365,6 +372,7 @@ func TestMockCommitCase6(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitCase7
 // net scale is 4, leader send fake message of commit to some one repo, repos WONT change view.
 func TestMockCommitCase7(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fN := uint64(4), uint64(0), int32(1)
 
 	var locked int32
@@ -433,6 +441,7 @@ func TestMockCommitCase7(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitVoteCase1
 // net scale is 4, leader send fake message of commitVote with wrong height. repos wont change view
 func TestMockCommitVoteCase1(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fH, fN := uint64(4), uint64(0), uint64(5), int32(1)
 
 	var locked int32
@@ -489,6 +498,7 @@ func TestMockCommitVoteCase1(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitVoteCase2
 // net scale is 4, leader send fake message of commitVote with wrong height. repos change view
 func TestMockCommitVoteCase2(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fH, fN := uint64(4), uint64(0), uint64(5), int32(2)
 
 	var locked int32
@@ -545,6 +555,7 @@ func TestMockCommitVoteCase2(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitVoteCase3
 // net scale is 4, leader send fake message of commitVote with wrong round. repos WONT change view
 func TestMockCommitVoteCase3(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int32(1)
 
 	var locked int32
@@ -601,6 +612,7 @@ func TestMockCommitVoteCase3(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitVoteCase4
 // net scale is 4, leader send fake message of commitVote with wrong round. repos change view
 func TestMockCommitVoteCase4(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int32(2)
 
 	var locked int32
@@ -657,6 +669,7 @@ func TestMockCommitVoteCase4(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitVoteCase5
 // net scale is 4, leader send fake message of commitVote with wrong digest. repos WONT change view
 func TestMockCommitVoteCase5(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fN := uint64(4), uint64(0), int32(1)
 
 	var locked int32
@@ -713,6 +726,7 @@ func TestMockCommitVoteCase5(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockCommitVoteCase6
 // net scale is 4, leader send fake message of commitVote with wrong digest. repos change view
 func TestMockCommitVoteCase6(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fN := uint64(4), uint64(0), int32(2)
 
 	var locked int32
