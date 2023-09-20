@@ -19,6 +19,7 @@
 package mock
 
 import (
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"math/big"
 	"sync"
 	"testing"
@@ -33,6 +34,7 @@ import (
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareCase1
 // net scale is 4, leader send fake message of prepare with wrong height, repos change view.
 func TestMockPrepareCase1(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fH := uint64(4), uint64(0), uint64(5)
 
 	sys := makeSystem(4)
@@ -79,6 +81,7 @@ func TestMockPrepareCase1(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareCase2
 // net scale is 4, leader send fake message of prepare with wrong height, repos change view.
 func TestMockPrepareCase2(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fR := uint64(4), uint64(0), uint64(1)
 
 	sys := makeSystem(4)
@@ -126,6 +129,7 @@ func TestMockPrepareCase2(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareCase3
 // net scale is 4, leader send fake message of prepare with wrong qc.view.height, repos change view.
 func TestMockPrepareCase3(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fH := uint64(4), uint64(0), uint64(4)
 
 	sys := makeSystem(4)
@@ -200,6 +204,7 @@ func TestMockPrepareCase3(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareCase4
 // net scale is 4, leader send fake message of prepare with wrong qc.view.round, repos change view.
 func TestMockPrepareCase4(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fR := uint64(4), uint64(0), uint64(1)
 
 	sys := makeSystem(4)
@@ -274,6 +279,7 @@ func TestMockPrepareCase4(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareCase5
 // net scale is 4, leader send fake message of prepare with wrong qc.hash, repos change view.
 func TestMockPrepareCase5(t *testing.T) {
+	node_manager.InitABI()
 	H, R := uint64(4), uint64(0)
 
 	sys := makeSystem(4)
@@ -348,6 +354,7 @@ func TestMockPrepareCase5(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareVoteCase1
 // net scale is 4, leader send fake message of prepareVote with wrong height.
 func TestMockPrepareVoteCase1(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fH, fN := uint64(4), uint64(0), uint64(5), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -413,6 +420,7 @@ func TestMockPrepareVoteCase1(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareVoteCase2
 // net scale is 4, leader send fake message of prepareVote with wrong round.
 func TestMockPrepareVoteCase2(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -478,6 +486,7 @@ func TestMockPrepareVoteCase2(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockPrepareVoteCase3
 // net scale is 4, leader send fake message of prepareVote with wrong digest.
 func TestMockPrepareVoteCase3(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fN := uint64(4), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)

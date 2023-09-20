@@ -19,22 +19,20 @@
 package backend
 
 import (
-	"math/big"
-	"os"
-	"reflect"
-	"testing"
-	"time"
-
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	tu "github.com/ethereum/go-ethereum/consensus/hotstuff/testutils"
 	"github.com/ethereum/go-ethereum/contracts/native/boot"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
+	"math/big"
+	"os"
+	"reflect"
+	"testing"
+	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -68,39 +66,6 @@ func TestPrepare(t *testing.T) {
 
 	header.ParentHash = common.HexToHash("0x1234567890")
 	assert.Error(t, engine.Prepare(chain, header), consensus.ErrUnknownAncestor)
-}
-
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestSealStopChannel
-// TestSealStopChannel stop seal and result channel should be empty
-func TestSealStopChannel(t *testing.T) {
-	chain, engine := singleNodeChain()
-	defer engine.Stop()
-
-	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	stop := make(chan struct{}, 1)
-	eventSub := engine.EventMux().Subscribe(hotstuff.RequestEvent{})
-	blockSub := engine.SubscribeBlock(make(chan consensus.ExecutedBlock))
-	eventLoop := func() {
-		ev := <-eventSub.Chan()
-		if _, ok := ev.Data.(hotstuff.RequestEvent); !ok {
-			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
-		}
-		stop <- struct{}{}
-		eventSub.Unsubscribe()
-		blockSub.Unsubscribe()
-	}
-	resultCh := make(chan *types.Block, 10)
-	go func() {
-		if err := engine.Seal(chain, block, resultCh, stop); err != nil {
-			t.Errorf("error mismatch: have error %v, want nil", err)
-		}
-	}()
-	go eventLoop()
-
-	finalBlock := <-resultCh
-	if finalBlock != nil {
-		t.Errorf("block mismatch: have final block %v, want nil", finalBlock)
-	}
 }
 
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestSealOtherHash
@@ -171,14 +136,20 @@ func TestSealCommitted(t *testing.T) {
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	expectedBlock := updateTestBlock(block, engine.Address())
 
-	resultCh := make(chan *types.Block, 10)
 	go func() {
-		if err := engine.Seal(chain, block, resultCh, make(chan struct{})); err != nil {
+		if err := engine.Seal(chain, block, make(chan *types.Block), make(chan struct{})); err != nil {
 			t.Errorf("error mismatch: have %v, want %v", err, expectedBlock)
 		}
 	}()
 
-	finalBlock := <-resultCh
+	eventSub := engine.EventMux().Subscribe(hotstuff.RequestEvent{})
+	ev := <-eventSub.Chan()
+	if _, ok := ev.Data.(hotstuff.RequestEvent); !ok {
+		t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
+	}
+	eventSub.Unsubscribe()
+	finalBlock := ev.Data.(hotstuff.RequestEvent).Block
+
 	if finalBlock.Hash() != expectedBlock.Hash() {
 		t.Errorf("hash mismatch: have %v, want %v", finalBlock.Hash(), expectedBlock.Hash())
 	}

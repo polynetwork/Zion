@@ -19,6 +19,7 @@
 package mock
 
 import (
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"math/big"
 	"sync"
 	"testing"
@@ -32,6 +33,7 @@ import (
 
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestSimple
 func TestSimple(t *testing.T) {
+	node_manager.InitABI()
 	sys := makeSystem(7)
 	sys.Start()
 	sys.Close(10)
@@ -40,6 +42,7 @@ func TestSimple(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase1
 // net scale is 7, 2 of them send fake message of newView with wrong height.
 func TestMockNewViewCase1(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), int(1)
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -104,6 +107,7 @@ func TestMockNewViewCase1(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase2
 // net scale is 4, one of them send fake message of newView with wrong node. err should be "failed to verify prepareQC"
 func TestMockNewViewCase2(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fN := uint64(4), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -179,6 +183,7 @@ func TestMockNewViewCase2(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase3
 // net scale is 4, one of them send message of newView to wrong leader
 func TestMockNewViewCase3(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fN := uint64(4), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -243,6 +248,7 @@ func TestMockNewViewCase3(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase4
 // net scale is 4, one of them send fake message of newView with wrong height. err should be "failed to verify prepareQC"
 func TestMockNewViewCase4(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fH, fN := uint64(4), uint64(0), uint64(5), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -318,6 +324,7 @@ func TestMockNewViewCase4(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase5
 // net scale is 4, one of them send fake message of newView with wrong round. err should be "failed to verify prepareQC"
 func TestMockNewViewCase5(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fR, fN := uint64(4), uint64(0), uint64(1), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
@@ -392,6 +399,7 @@ func TestMockNewViewCase5(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockNewViewCase6
 // net scale is 4, one of them send fake message of newView without enough signatures. err should be "failed to verify prepareQC"
 func TestMockNewViewCase6(t *testing.T) {
+	node_manager.InitABI()
 	H, R, fN := uint64(4), uint64(0), 1
 	fakeNodes := make(map[common.Address]struct{})
 	mu := new(sync.Mutex)
