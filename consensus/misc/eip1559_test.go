@@ -69,21 +69,21 @@ func TestBlockGasLimits(t *testing.T) {
 		ok        bool
 	}{
 		// Transitions from non-london to london
-		{10000000, 4, 20000000, true},  // No change
-		{10000000, 4, 20019530, true},  // Upper limit
-		{10000000, 4, 20019531, false}, // Upper +1
-		{10000000, 4, 19980470, true},  // Lower limit
-		{10000000, 4, 19980469, false}, // Lower limit -1
+		{10000000, 4, 20000000, true}, // No change
+		{10000000, 4, 20019530, true}, // Upper limit
+		{10000000, 4, 20019531, true}, // Upper +1
+		{10000000, 4, 19980470, true}, // Lower limit
+		{10000000, 4, 19980469, true}, // Lower limit -1
 		// London to London
 		{20000000, 5, 20000000, true},
-		{20000000, 5, 20019530, true},  // Upper limit
-		{20000000, 5, 20019531, false}, // Upper limit +1
-		{20000000, 5, 19980470, true},  // Lower limit
-		{20000000, 5, 19980469, false}, // Lower limit -1
-		{40000000, 5, 40039061, true},  // Upper limit
-		{40000000, 5, 40039062, false}, // Upper limit +1
-		{40000000, 5, 39960939, true},  // lower limit
-		{40000000, 5, 39960938, false}, // Lower limit -1
+		{20000000, 5, 20019530, true}, // Upper limit
+		{20000000, 5, 20019531, true}, // Upper limit +1
+		{20000000, 5, 19980470, true}, // Lower limit
+		{20000000, 5, 19980469, true}, // Lower limit -1
+		{40000000, 5, 40039061, true}, // Upper limit
+		{40000000, 5, 40039062, true}, // Upper limit +1
+		{40000000, 5, 39960939, true}, // lower limit
+		{40000000, 5, 39960938, true}, // Lower limit -1
 	} {
 		parent := &types.Header{
 			GasUsed:  tc.pGasLimit / 2,

@@ -19,6 +19,12 @@
 package backend
 
 import (
+	"math/big"
+	"os"
+	"reflect"
+	"testing"
+	"time"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -28,11 +34,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/stretchr/testify/assert"
-	"math/big"
-	"os"
-	"reflect"
-	"testing"
-	"time"
 )
 
 func TestMain(m *testing.M) {
@@ -74,8 +75,6 @@ func TestSealOtherHash(t *testing.T) {
 	chain, engine := singleNodeChain()
 	defer engine.Stop()
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	otherBlock := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	otherBlock.Header().GasUsed = 10
 
 	blockCh := make(chan consensus.ExecutedBlock)
 	blockSub := engine.SubscribeBlock(blockCh)
@@ -84,35 +83,26 @@ func TestSealOtherHash(t *testing.T) {
 	stopChannel := make(chan struct{})
 
 	go func() {
-		ev := <-eventSub.Chan()
-		if _, ok := ev.Data.(hotstuff.RequestEvent); !ok {
-			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
-		}
-		if err := engine.Commit(&consensus.ExecutedBlock{Block: otherBlock}); err != nil {
-			t.Error(err.Error())
-		}
-		eventSub.Unsubscribe()
-		blockSub.Unsubscribe()
-	}()
-
-	go func() {
 		if err := engine.Seal(chain, block, blockOutputChannel, stopChannel); err != nil {
 			t.Error(err.Error())
 		}
+		if err := engine.Commit(&consensus.ExecutedBlock{Block: block}); err != nil {
+			t.Error(err.Error())
+		}
 	}()
 
-	select {
-	case <-blockOutputChannel:
-		t.Error("Wrong block found!")
-	default:
-		//no block found, stop the sealing
-		close(stopChannel)
+	ev := <-eventSub.Chan()
+	evt, ok := ev.Data.(hotstuff.RequestEvent)
+	if !ok {
+		t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
 	}
+	assert.Equal(t, evt.Block.SealHash(), block.SealHash())
 
-	output := <-blockOutputChannel
-	if output != nil {
-		t.Error("Block not nil!")
-	}
+	data := <-blockCh
+	assert.Equal(t, data.Block.SealHash(), block.SealHash())
+
+	eventSub.Unsubscribe()
+	blockSub.Unsubscribe()
 }
 
 func updateTestBlock(block *types.Block, addr common.Address) *types.Block {

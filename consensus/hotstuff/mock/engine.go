@@ -34,7 +34,20 @@ type Engine consensus.Engine
 // backend is engine but also hotstuff engine and consensus handler.
 func makeEngine(privateKey *ecdsa.PrivateKey, db ethdb.Database) Engine {
 	config := hotstuff.DefaultBasicConfig
-	chainConfig := &params.ChainConfig{ChainID: big.NewInt(60801)}
+	chainConfig := &params.ChainConfig{
+		ChainID:             big.NewInt(60801),
+		HomesteadBlock:      big.NewInt(0),
+		EIP150Block:         big.NewInt(0),
+		EIP155Block:         big.NewInt(0),
+		EIP158Block:         big.NewInt(0),
+		ByzantiumBlock:      big.NewInt(0),
+		ConstantinopleBlock: big.NewInt(0),
+		PetersburgBlock:     big.NewInt(0),
+		IstanbulBlock:       big.NewInt(0),
+		BerlinBlock:         big.NewInt(0),
+		LondonBlock:         big.NewInt(0),
+		HotStuff:            &params.HotStuffConfig{Protocol: "basic"},
+	}
 	engine := backend.New(chainConfig, config, privateKey, db, true)
 	broadcaster := makeBroadcaster(engine.Address(), engine)
 	engine.SetBroadcaster(broadcaster)

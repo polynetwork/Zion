@@ -22,30 +22,16 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/core"
-	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 )
 
-func makeChain(db ethdb.Database, engine consensus.Engine, validators []common.Address) (*core.BlockChain, *core.Genesis) {
+func makeChain(db ethdb.Database, engine consensus.Engine, validators []common.Address) *core.BlockChain {
 	genesis := makeGenesis(validators)
 	block := genesis.MustCommit(db)
 	log.Info("Make chain with genesis block", "hash", block.Hash())
 
 	blockchain, _ := core.NewBlockChain(db, nil, genesis.Config, engine, vm.Config{}, nil, nil)
-	return blockchain, genesis
-}
-
-func changeDb(db ethdb.Database) (*state.StateDB, error) {
-	if db == nil {
-		db = rawdb.NewMemoryDatabase()
-	}
-
-	statedb, err := state.New(common.Hash{}, state.NewDatabase(db), nil)
-	if err != nil {
-		panic(err)
-	}
-	return statedb, err
+	return blockchain
 }

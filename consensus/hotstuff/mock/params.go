@@ -45,8 +45,6 @@ func init() {
 }
 
 func makeGenesis(vals []common.Address) *core.Genesis {
-	core.RegGenesis = nil
-
 	genesis := &core.Genesis{
 		Config: &params.ChainConfig{
 			ChainID:             big.NewInt(60801),
@@ -78,7 +76,7 @@ func makeGenesis(vals []common.Address) *core.Genesis {
 	for i := 0; i < len(vals); i++ {
 		govAccs[i] = core.GovernanceAccount{
 			Validator: vals[i],
-			Signer:    common.EmptyAddress,
+			Signer:    vals[i],
 		}
 		genesis.Alloc[vals[i]] = core.GenesisAccount{Balance: new(big.Int).Div(params.GenesisSupply, big.NewInt(int64(len(vals))))}
 	}
