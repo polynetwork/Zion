@@ -38,12 +38,14 @@ var (
 	// testAddr is the Ethereum address of the tester account.
 	testAddr = crypto.PubkeyToAddress(testKey.PublicKey)
 
-	testBalance = big.NewInt(2e10)
+	testBalance = big.NewInt(2e18)
 )
 
 func generateTestChain() (*core.Genesis, []*types.Block) {
+	core.RegGenesis = nil
 	db := rawdb.NewMemoryDatabase()
 	config := params.AllEthashProtocolChanges
+	params.GenesisSupply = testBalance
 	genesis := &core.Genesis{
 		Config:    config,
 		Alloc:     core.GenesisAlloc{testAddr: {Balance: testBalance}},
@@ -110,11 +112,13 @@ func TestEth2AssembleBlock(t *testing.T) {
 
 	api := newConsensusAPI(ethservice)
 	signer := types.NewEIP155Signer(ethservice.BlockChain().Config().ChainID)
-	tx, err := types.SignTx(types.NewTransaction(0, blocks[8].Coinbase(), big.NewInt(1000), params.TxGas, nil, nil), signer, testKey)
+	tx, err := types.SignTx(types.NewTransaction(0, blocks[8].Coinbase(), big.NewInt(1000), params.TxGas, big.NewInt(params.InitialBaseFee), nil), signer, testKey)
 	if err != nil {
 		t.Fatalf("error signing transaction, err=%v", err)
 	}
-	ethservice.TxPool().AddLocal(tx)
+	if err := ethservice.TxPool().AddLocal(tx); err != nil {
+		t.Fatalf("failed to add local tx, err=%v", err)
+	}
 	blockParams := assembleBlockParams{
 		ParentHash: blocks[8].ParentHash(),
 		Timestamp:  blocks[8].Time(),

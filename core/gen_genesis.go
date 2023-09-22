@@ -72,7 +72,7 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 		Mixhash          *common.Hash                                `json:"mixHash"`
 		Coinbase         *common.Address                             `json:"coinbase"`
 		Alloc            map[common.UnprefixedAddress]GenesisAccount `json:"alloc"      gencodec:"required"`
-		Governance       *GenesisGovernance                          `json:"governance" gencodec:"required"`
+		Governance       *GenesisGovernance                          `json:"governance"`
 		CommunityRate    *big.Int                                    `json:"community_rate" gencodec:"required"`
 		CommunityAddress *common.Address                             `json:"community_address" gencodec:"required"`
 		Number           *math.HexOrDecimal64                        `json:"number"`
@@ -117,18 +117,16 @@ func (g *Genesis) UnmarshalJSON(input []byte) error {
 	for k, v := range dec.Alloc {
 		g.Alloc[common.Address(k)] = v
 	}
-	if dec.Governance == nil {
-		return errors.New("missing required field 'governance' for Genesis")
+	if dec.Governance != nil {
+		g.Governance = *dec.Governance
 	}
-	g.Governance = *dec.Governance
-	if dec.CommunityRate == nil {
-		return errors.New("missing required field 'community_rate' for Genesis")
+	if dec.CommunityRate != nil {
+		g.CommunityRate = dec.CommunityRate
 	}
 	g.CommunityRate = dec.CommunityRate
-	if dec.CommunityAddress == nil {
-		return errors.New("missing required field 'community_address' for Genesis")
+	if dec.CommunityAddress != nil {
+		g.CommunityAddress = *dec.CommunityAddress
 	}
-	g.CommunityAddress = *dec.CommunityAddress
 	if dec.Number != nil {
 		g.Number = uint64(*dec.Number)
 	}

@@ -164,12 +164,17 @@ func (b *testBackend) ServiceFilter(ctx context.Context, session *bloombits.Matc
 // - one that is created after the second cutoff moment (blockHashes[cutoff2:])
 func TestBlockSubscription(t *testing.T) {
 	t.Parallel()
+	core.RegGenesis = nil
+	core.CheckAllocWithTotalSupply = false
+	gspec := &core.Genesis{
+		BaseFee: big.NewInt(params.InitialBaseFee),
+	}
 
 	var (
 		db          = rawdb.NewMemoryDatabase()
 		backend     = &testBackend{db: db}
 		api         = NewPublicFilterAPI(backend, false, deadline)
-		genesis     = new(core.Genesis).MustCommit(db)
+		genesis     = gspec.MustCommit(db)
 		chain, _    = core.GenerateChain(params.TestChainConfig, genesis, ethash.NewFaker(), db, 10, func(i int, gen *core.BlockGen) {})
 		chainEvents = []core.ChainEvent{}
 	)

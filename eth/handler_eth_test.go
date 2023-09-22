@@ -55,7 +55,7 @@ func (h *testEthHandler) TxPool() eth.TxPool                   { panic("no backi
 func (h *testEthHandler) AcceptTxs() bool                      { return true }
 func (h *testEthHandler) RunPeer(*eth.Peer, eth.Handler) error { panic("not used in tests") }
 func (h *testEthHandler) PeerInfo(enode.ID) interface{}        { panic("not used in tests") }
-func (h *testEthHandler) Engine() consensus.Engine             { panic("not used in tests") }
+func (h *testEthHandler) Engine() consensus.Engine             { return nil }
 
 func (h *testEthHandler) Handle(peer *eth.Peer, packet eth.Packet) error {
 	switch packet := packet.(type) {
@@ -86,6 +86,8 @@ func TestForkIDSplit65(t *testing.T) { testForkIDSplit(t, eth.ETH65) }
 func TestForkIDSplit66(t *testing.T) { testForkIDSplit(t, eth.ETH66) }
 
 func testForkIDSplit(t *testing.T, protocol uint) {
+	core.RegGenesis = nil
+	core.CheckAllocWithTotalSupply = false
 	t.Parallel()
 
 	var (
@@ -456,6 +458,7 @@ func testTransactionPropagation(t *testing.T, protocol uint) {
 // challenge to validate each other's chains. Hash mismatches, or missing ones
 // during a fast sync should lead to the peer getting dropped.
 func TestCheckpointChallenge(t *testing.T) {
+	core.RegGenesis = nil
 	tests := []struct {
 		syncmode   downloader.SyncMode
 		checkpoint bool

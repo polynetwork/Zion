@@ -58,10 +58,10 @@ type Genesis struct {
 	Mixhash    common.Hash         `json:"mixHash"`
 	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
-	Governance GenesisGovernance   `json:"governance" gencodec:"required"`
+	Governance GenesisGovernance   `json:"governance"`
 	// config of community pool
-	CommunityRate    *big.Int       `json:"community_rate" gencodec:"required"`
-	CommunityAddress common.Address `json:"community_address" gencodec:"required"`
+	CommunityRate    *big.Int       `json:"community_rate"`
+	CommunityAddress common.Address `json:"community_address"`
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
@@ -318,7 +318,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		Coinbase:   g.Coinbase,
 		Root:       root,
 	}
-	if g.Config.HotStuff != nil {
+	if g.Config != nil && g.Config.HotStuff != nil {
 		head.MixDigest = types.HotstuffDigest
 	}
 	if g.GasLimit == 0 {
@@ -380,14 +380,15 @@ func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 	}
 }
 
+var CheckAllocWithTotalSupply bool = true
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
 	// check total balance
 	total := new(big.Int)
 	for _, account := range g.Alloc {
 		total = new(big.Int).Add(total, account.Balance)
 	}
-	if total.Cmp(params.GenesisSupply) != 0 {
-		panic("alloc amount should be equal to genesis supply")
+	if CheckAllocWithTotalSupply && total.Cmp(params.GenesisSupply) != 0 {
+		panic(fmt.Sprintf("alloc amount %s should be equal to genesis supply %s", total, params.GenesisSupply))
 	}
 
 	for addr, account := range g.Alloc {
@@ -437,6 +438,7 @@ func (g *Genesis) MustCommit(db ethdb.Database) *types.Block {
 
 // GenesisBlockForTesting creates and writes a block in which addr has the given wei balance.
 func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big.Int) *types.Block {
+	CheckAllocWithTotalSupply = false
 	RegGenesis = func(db *state.StateDB, genesis *Genesis) error {
 		return nil
 	}
@@ -448,6 +450,7 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 		ChainID:  new(big.Int).SetUint64(params.MainnetChainID),
 		HotStuff: &params.HotStuffConfig{},
 	}
+	g.ExtraData, _ = types.GenerateExtraWithSignature(0, 1, nil, []byte{}, [][]byte{})
 	return g.MustCommit(db)
 }
 
