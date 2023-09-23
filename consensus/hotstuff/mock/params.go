@@ -44,7 +44,7 @@ func init() {
 	log.Root().SetHandler(glogger)
 }
 
-func makeGenesis(vals []common.Address) *core.Genesis {
+func MakeGenesis(vals []common.Address) *core.Genesis {
 	genesis := &core.Genesis{
 		Config: &params.ChainConfig{
 			ChainID:             big.NewInt(60801),

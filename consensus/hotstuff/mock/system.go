@@ -161,7 +161,7 @@ type System struct {
 }
 
 func makeSystem(n int) *System {
-	pks, addrs := newAccountLists(n)
+	pks, addrs := NewAccountLists(n)
 	nodes := make([]*Geth, n)
 
 	for i := 0; i < n; i++ {
@@ -220,7 +220,7 @@ func (s *System) Leader() *Geth {
 	return nil
 }
 
-func newAccountLists(n int) ([]*ecdsa.PrivateKey, []common.Address) {
+func NewAccountLists(n int) ([]*ecdsa.PrivateKey, []common.Address) {
 	pks := make([]*ecdsa.PrivateKey, n)
 	addrs := make([]common.Address, n)
 	for i := 0; i < n; i++ {
