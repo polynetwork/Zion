@@ -21,6 +21,7 @@ import (
 	"strconv"
 	"testing"
 
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth/protocols/eth"
 	"github.com/ethereum/go-ethereum/p2p"
 	"github.com/stretchr/testify/assert"
@@ -124,6 +125,7 @@ func TestEthProtocolNegotiation(t *testing.T) {
 // TestChain_GetHeaders tests whether the test suite can correctly
 // respond to a GetBlockHeaders request from a node.
 func TestChain_GetHeaders(t *testing.T) {
+	core.CheckAllocWithTotalSupply = false
 	chainFile, err := filepath.Abs("./testdata/chain.rlp")
 	if err != nil {
 		t.Fatal(err)

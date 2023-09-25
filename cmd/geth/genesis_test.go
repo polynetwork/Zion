@@ -31,10 +31,12 @@ var customGenesisTests = []struct {
 	// Genesis file with an empty chain configuration (ensure missing fields work)
 	{
 		genesis: `{
-			"alloc"      : {},
+			"alloc"      : { "0x0000000000000000000000000000000000000001": { "balance": "0x52b7d2dcc80cd2e4000000" }},
+			"extraData"  : "0x0000000000000000000000000000000000000000000000000000000000000000c68001c080c080",
+			"community_rate": 2000,
+    		"community_address": "0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D",
 			"coinbase"   : "0x0000000000000000000000000000000000000000",
 			"difficulty" : "0x20000",
-			"extraData"  : "",
 			"gasLimit"   : "0x2fefd8",
 			"nonce"      : "0x0000000000001338",
 			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
@@ -48,10 +50,12 @@ var customGenesisTests = []struct {
 	// Genesis file with specific chain configurations
 	{
 		genesis: `{
-			"alloc"      : {},
+			"alloc"      : { "0x0000000000000000000000000000000000000001": { "balance": "0x52b7d2dcc80cd2e4000000" }},
+			"extraData"  : "0x0000000000000000000000000000000000000000000000000000000000000000c68001c080c080",
+			"community_rate": 2000,
+    		"community_address": "0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D",
 			"coinbase"   : "0x0000000000000000000000000000000000000000",
 			"difficulty" : "0x20000",
-			"extraData"  : "",
 			"gasLimit"   : "0x2fefd8",
 			"nonce"      : "0x0000000000001339",
 			"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",

@@ -8,6 +8,8 @@
         "byzantiumBlock": 0,
         "ethash": {}
     },
+    "community_rate": 2000,
+    "community_address": "0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D",
     "nonce": "0xdeadbeefdeadbeef",
     "timestamp": "0x0",
     "extraData": "0x0000000000000000000000000000000000000000000000000000000000000000",

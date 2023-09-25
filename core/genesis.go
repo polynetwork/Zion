@@ -342,9 +342,10 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 
 // checkExtra validators should be sorted and do not allow dump validators.
 func (g *Genesis) checkExtra() {
+	if g.Config == nil || g.Config.HotStuff == nil { return }
 	extra, err := types.ExtractHotstuffExtraPayload(g.ExtraData)
 	if err != nil {
-		panic("extra invalid")
+		panic(err)
 	}
 
 	vs := extra.Validators
@@ -463,6 +464,8 @@ func DefaultGenesisBlock() *Genesis {
 		GasLimit:   5000,
 		Difficulty: big.NewInt(17179869184),
 		Alloc:      decodePrealloc(mainnetAllocData),
+		CommunityRate:    big.NewInt(2000),
+		CommunityAddress: common.HexToAddress("0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D"),
 	}
 }
 
@@ -488,6 +491,7 @@ func DefaultRopstenGenesisBlock() *Genesis {
 		GasLimit:   16777216,
 		Difficulty: big.NewInt(1048576),
 		Alloc:      decodePrealloc(ropstenAllocData),
+		CommunityRate: big.NewInt(10),
 	}
 }
 
@@ -540,6 +544,8 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 		GasLimit:   11500000,
 		BaseFee:    big.NewInt(params.InitialBaseFee),
 		Difficulty: big.NewInt(1),
+		CommunityRate: big.NewInt(20),
+		CommunityAddress: common.BytesToAddress([]byte{1}),
 		Alloc: map[common.Address]GenesisAccount{
 			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // Recover
 			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256

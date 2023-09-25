@@ -1765,7 +1765,7 @@ func (bc *BlockChain) insertChain(chain types.Blocks, verifySeals bool) (int, er
 	case err != nil:
 		bc.futureBlocks.Remove(block.Hash())
 		stats.ignored += len(it.chain)
-		bc.reportBlock(block, nil, err)
+		bc.reportBlock(block, nil, err)	
 		return it.index, err
 	}
 	// No validation errors for the first block (or chain prefix skipped)
