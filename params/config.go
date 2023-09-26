@@ -68,10 +68,10 @@ var (
 
 func CheckZionChain(chainID uint64) bool {
 	switch chainID {
-	case MainnetChainID, TestnetChainID, DevnetChainID:
-		return true
-	default:
+	case TestChainConfig.ChainID.Uint64():
 		return false
+	default:
+		return true
 	}
 }
 

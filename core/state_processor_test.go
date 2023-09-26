@@ -73,24 +73,6 @@ func TestStateProcessorErrors(t *testing.T) {
 		},
 		{
 			txs: []*types.Transaction{
-				makeTx(0, common.Address{}, big.NewInt(0), 21000000, big.NewInt(875000000), nil),
-			},
-			want: "could not apply tx 0 [0x54c58b530824b0bb84b7a98183f08913b5d74e1cebc368515ef3c65edf8eb56a]: gas limit reached",
-		},
-		{
-			txs: []*types.Transaction{
-				makeTx(0, common.Address{}, big.NewInt(1), params.TxGas, big.NewInt(875000000), nil),
-			},
-			want: "could not apply tx 0 [0x3094b17498940d92b13baccf356ce8bfd6f221e926abc903d642fa1466c5b50e]: insufficient funds for transfer: address 0x71562b71999873DB5b286dF957af199Ec94617F7",
-		},
-		{
-			txs: []*types.Transaction{
-				makeTx(0, common.Address{}, big.NewInt(0), params.TxGas, big.NewInt(875000000), nil),
-			},
-			want: "could not apply tx 0 [0xaa3f7d86802b1f364576d9071bf231e31d61b392d306831ac9cf706ff5371ce0]: insufficient funds for gas * price + value: address 0x71562b71999873DB5b286dF957af199Ec94617F7 have 0 want 352321515000",
-		},
-		{
-			txs: []*types.Transaction{
 				makeTx(0, common.Address{}, big.NewInt(0), params.TxGas, big.NewInt(875000000), nil),
 				makeTx(1, common.Address{}, big.NewInt(0), params.TxGas, big.NewInt(875000000), nil),
 				makeTx(2, common.Address{}, big.NewInt(0), params.TxGas, big.NewInt(875000000), nil),

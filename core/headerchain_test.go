@@ -69,9 +69,14 @@ func testInsert(t *testing.T, hc *HeaderChain, chain []*types.Header, wantStatus
 
 // This test checks status reporting of InsertHeaderChain.
 func TestHeaderInsertion(t *testing.T) {
+	gspec := Genesis{
+		Config:  params.TestChainConfig,
+		Alloc:   GenesisAlloc{benchRootAddr: {Balance: benchRootFunds}},
+		BaseFee: big.NewInt(params.InitialBaseFee),
+	}
 	var (
 		db      = rawdb.NewMemoryDatabase()
-		genesis = (&Genesis{BaseFee: big.NewInt(params.InitialBaseFee)}).MustCommit(db)
+		genesis = gspec.MustCommit(db)
 	)
 
 	hc, err := NewHeaderChain(db, params.AllEthashProtocolChanges, ethash.NewFaker(), func() bool { return false })

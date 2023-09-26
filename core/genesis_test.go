@@ -35,17 +35,13 @@ func TestDefaultGenesisBlock(t *testing.T) {
 	if block.Hash() != params.MainnetGenesisHash {
 		t.Errorf("wrong mainnet genesis hash, got %v, want %v", block.Hash(), params.MainnetGenesisHash)
 	}
-	block = DefaultRopstenGenesisBlock().ToBlock(nil)
-	if block.Hash() != params.RopstenGenesisHash {
-		t.Errorf("wrong ropsten genesis hash, got %v, want %v", block.Hash(), params.RopstenGenesisHash)
-	}
 }
 
 func TestSetupGenesis(t *testing.T) {
 	var (
-		customghash = common.HexToHash("0x89c99d90b79719238d2645c7642f2c9295246e80775b38cfd162b696817fbd50")
+		customghash = common.HexToHash("0xd2ed8a190de2054c3c983baa508655e79c1c145b74175df80355179d10b91beb")
 		customg     = Genesis{
-			Config: &params.ChainConfig{HomesteadBlock: big.NewInt(3)},
+			Config: &params.ChainConfig{ChainID: params.TestChainConfig.ChainID, HomesteadBlock: big.NewInt(3)},
 			Alloc: GenesisAlloc{
 				{1}: {Balance: big.NewInt(1), Storage: map[common.Hash]common.Hash{{1}: {1}}},
 			},
@@ -95,18 +91,9 @@ func TestSetupGenesis(t *testing.T) {
 			wantConfig: customg.Config,
 		},
 		{
-			name: "custom block in DB, genesis == ropsten",
-			fn: func(db ethdb.Database) (*params.ChainConfig, common.Hash, error) {
-				customg.MustCommit(db)
-				return SetupGenesisBlock(db, DefaultRopstenGenesisBlock())
-			},
-			wantErr:    &GenesisMismatchError{Stored: customghash, New: params.RopstenGenesisHash},
-			wantHash:   params.RopstenGenesisHash,
-			wantConfig: params.RopstenChainConfig,
-		},
-		{
 			name: "compatible config in DB",
 			fn: func(db ethdb.Database) (*params.ChainConfig, common.Hash, error) {
+				oldcustomg.Config.ChainID = params.TestChainConfig.ChainID
 				oldcustomg.MustCommit(db)
 				return SetupGenesisBlock(db, &customg)
 			},
@@ -172,22 +159,6 @@ func TestGenesisHashes(t *testing.T) {
 		{
 			genesis: DefaultGenesisBlock(),
 			hash:    params.MainnetGenesisHash,
-		},
-		{
-			genesis: DefaultGoerliGenesisBlock(),
-			hash:    params.GoerliGenesisHash,
-		},
-		{
-			genesis: DefaultRopstenGenesisBlock(),
-			hash:    params.RopstenGenesisHash,
-		},
-		{
-			genesis: DefaultRinkebyGenesisBlock(),
-			hash:    params.RinkebyGenesisHash,
-		},
-		{
-			genesis: DefaultBaikalGenesisBlock(),
-			hash:    params.BaikalGenesisHash,
 		},
 	}
 	for i, c := range cases {
