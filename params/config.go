@@ -60,7 +60,7 @@ var (
 	DevnetChainID  uint64 = 60803
 
 	// zion token alias, decimal is 18
-	ZNT1, _        = new(big.Int).SetString("1000000000000000000", 10)
+	ZNT1, _ = new(big.Int).SetString("1000000000000000000", 10)
 
 	uGenesisSupply = new(big.Int).SetUint64(1e8)
 	GenesisSupply  = new(big.Int).Mul(ZNT1, uGenesisSupply)
