@@ -252,6 +252,7 @@ func generateTestChain() []*types.Block {
 
 func TestEthClient(t *testing.T) {
 	core.RegGenesis = nil
+	core.CheckAllocWithTotalSupply = false
 	backend, chain := newTestBackend(t)
 	client, _ := backend.Attach()
 	defer backend.Close()

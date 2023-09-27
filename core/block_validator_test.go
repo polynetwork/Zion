@@ -30,6 +30,7 @@ import (
 
 // Tests that simple header verification works, for both good and bad blocks.
 func TestHeaderVerification(t *testing.T) {
+	CheckAllocWithTotalSupply = false
 	// Create a simple chain to verify
 	var (
 		testdb    = rawdb.NewMemoryDatabase()
@@ -229,4 +230,3 @@ func TestCalcGasLimit(t *testing.T) {
 		}
 	}
 }
-

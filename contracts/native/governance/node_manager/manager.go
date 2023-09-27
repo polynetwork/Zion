@@ -643,8 +643,8 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 
 	// anyone can call this if height reaches
 	if startHeight.Cmp(currentEpochInfo.EndHeight) != 0 {
-		return nil, fmt.Errorf("ChangeEpoch, block height does not reach, current epoch end at %s",
-			currentEpochInfo.EndHeight.String())
+		return nil, fmt.Errorf("ChangeEpoch, block height does not reach, current epoch end at %s, pending block %s",
+			currentEpochInfo.EndHeight.String(), startHeight.String())
 	}
 
 	epochInfo := &EpochInfo{

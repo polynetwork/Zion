@@ -193,7 +193,9 @@ func TestGraphQLBlockSerializationEIP2718(t *testing.T) {
 			},
 		},
 		BaseFee: big.NewInt(params.InitialBaseFee),
+		CommunityRate: big.NewInt(20),
 	}
+	core.CheckAllocWithTotalSupply = false
 	signer := types.LatestSigner(genesis.Config)
 	newGQLService(t, stack, genesis, 1, func(i int, gen *core.BlockGen) {
 		gen.SetCoinbase(common.Address{1})

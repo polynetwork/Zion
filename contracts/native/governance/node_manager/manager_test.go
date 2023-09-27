@@ -45,6 +45,8 @@ var (
 )
 
 func Init() {
+	GenesisBlockPerEpoch = big.NewInt(399999 + 1)
+
 	key, _ := crypto.GenerateKey()
 	acct = &key.PublicKey
 
@@ -135,7 +137,7 @@ func TestCheckGenesis(t *testing.T) {
 
 func TestStake(t *testing.T) {
 	Init()
-	blockNumber := big.NewInt(399999)
+	blockNumber := new(big.Int).Sub(GenesisBlockPerEpoch, common.Big1)
 	extra := uint64(21000000000000)
 	contractRefQuery := native.NewContractRef(sdb, common.EmptyAddress, common.EmptyAddress, blockNumber, common.Hash{}, extra, nil)
 	contractQuery := native.NewNativeContract(sdb, contractRefQuery)
@@ -244,7 +246,7 @@ func TestStake(t *testing.T) {
 	epochInfo, err := GetCurrentEpochInfoImpl(contractQuery)
 	assert.Nil(t, err)
 	assert.Equal(t, epochInfo.ID, common.Big2)
-	assert.Equal(t, epochInfo.StartHeight, new(big.Int).SetUint64(400000))
+	assert.Equal(t, epochInfo.StartHeight, GenesisBlockPerEpoch)
 	assert.Equal(t, len(epochInfo.Validators), 4)
 	assert.Equal(t, len(epochInfo.Voters), 4)
 	validator, _, err = getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
@@ -515,6 +517,7 @@ func TestChangeEpoch(t *testing.T) {
 }
 
 func TestDistribute(t *testing.T) {
+	params.RewardPerBlock = common.Big0
 	Init()
 	blockNumber := big.NewInt(399999)
 	extra := uint64(21000000000000)

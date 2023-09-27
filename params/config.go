@@ -64,6 +64,7 @@ var (
 
 	uGenesisSupply = new(big.Int).SetUint64(1e8)
 	GenesisSupply  = new(big.Int).Mul(ZNT1, uGenesisSupply)
+	RewardPerBlock = new(big.Int).Set(ZNT1)
 )
 
 var (
