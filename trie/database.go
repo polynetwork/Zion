@@ -762,9 +762,10 @@ func (db *Database) Commit(node common.Hash, report bool, callback func(common.H
 func (db *Database) commit(hash common.Hash, batch ethdb.Batch, uncacher *cleaner, callback func(common.Hash)) error {
 	// If the node does not exist, it's a previously committed node
 	node, ok := db.dirties[hash]
-	if !ok {
+	if !ok || node.node == nil {
 		return nil
 	}
+
 	var err error
 	node.forChilds(func(child common.Hash) {
 		if err == nil {
