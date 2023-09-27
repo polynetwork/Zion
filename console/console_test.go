@@ -28,8 +28,8 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/ethash"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/mock"
 	"github.com/ethereum/go-ethereum/console/prompt"
-	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/eth"
 	"github.com/ethereum/go-ethereum/eth/ethconfig"
 	"github.com/ethereum/go-ethereum/internal/jsre"
@@ -98,8 +98,9 @@ func newTester(t *testing.T, confOverride func(*ethconfig.Config)) *tester {
 	if err != nil {
 		t.Fatalf("failed to create node: %v", err)
 	}
+	_, addrs := mock.NewAccountLists(4)
 	ethConf := &ethconfig.Config{
-		Genesis: core.DeveloperGenesisBlock(15, common.Address{}),
+		Genesis: mock.MakeGenesis(addrs),
 		Miner: miner.Config{
 			Etherbase: common.HexToAddress(testAddress),
 		},

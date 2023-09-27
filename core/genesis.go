@@ -358,16 +358,22 @@ func (g *Genesis) checkExtra() {
 
 // checkGovernance governance address and signer address can't be repeated
 func (g *Genesis) checkGovernance() {
-	data := make(map[common.Address]int)
+	validator := make(map[common.Address]int)
+	signer := make(map[common.Address]int)
 
 	for _, v := range g.Governance {
-		data[v.Validator] += 1
-		data[v.Signer] += 1
+		validator[v.Validator] += 1
+		signer[v.Signer] += 1
 	}
 
-	for addr, cnt := range data {
+	for addr, cnt := range validator {
 		if cnt > 1 {
-			panic(fmt.Sprintf("address %s repeated %d", addr.String(), cnt))
+			panic(fmt.Sprintf("validator address %s repeated %d", addr.String(), cnt))
+		}
+	}
+	for addr, cnt := range signer {
+		if cnt > 1 {
+			panic(fmt.Sprintf("signer address %s repeated %d", addr.String(), cnt))
 		}
 	}
 }

@@ -54,7 +54,23 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	genesis, nodeKeys, _ := tu.GenesisAndKeys(1)
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultBasicConfig
-	chainConfig := &params.ChainConfig{ChainID: big.NewInt(60801)}
+	chainConfig := &params.ChainConfig{
+		ChainID:             big.NewInt(60801),
+		HomesteadBlock:      new(big.Int),
+		DAOForkBlock:        new(big.Int),
+		DAOForkSupport:      false,
+		EIP150Block:         new(big.Int),
+		EIP150Hash:          common.Hash{},
+		EIP155Block:         new(big.Int),
+		EIP158Block:         new(big.Int),
+		ByzantiumBlock:      new(big.Int),
+		ConstantinopleBlock: new(big.Int),
+		PetersburgBlock:     new(big.Int),
+		IstanbulBlock:       new(big.Int),
+		MuirGlacierBlock:    new(big.Int),
+		BerlinBlock:         new(big.Int),
+		LondonBlock:         nil,
+	}
 	// Use the first key as private key
 	backend := New(chainConfig, config, nodeKeys[0], memDB, true)
 	genesis.MustCommit(memDB)

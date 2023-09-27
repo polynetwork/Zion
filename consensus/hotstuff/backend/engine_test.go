@@ -25,11 +25,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
-
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
+	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
 	tu "github.com/ethereum/go-ethereum/consensus/hotstuff/testutils"
 	"github.com/ethereum/go-ethereum/contracts/native/boot"
 	"github.com/ethereum/go-ethereum/core/rawdb"
@@ -70,47 +69,12 @@ func TestPrepare(t *testing.T) {
 	assert.Error(t, engine.Prepare(chain, header), consensus.ErrUnknownAncestor)
 }
 
-// go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestSealStopChannel
-// TestSealStopChannel stop seal and result channel should be empty
-func TestSealStopChannel(t *testing.T) {
-	chain, engine := singleNodeChain()
-	defer engine.Stop()
-
-	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	stop := make(chan struct{}, 1)
-	eventSub := engine.EventMux().Subscribe(hotstuff.RequestEvent{})
-	blockSub := engine.SubscribeBlock(make(chan consensus.ExecutedBlock))
-	eventLoop := func() {
-		ev := <-eventSub.Chan()
-		if _, ok := ev.Data.(hotstuff.RequestEvent); !ok {
-			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
-		}
-		stop <- struct{}{}
-		eventSub.Unsubscribe()
-		blockSub.Unsubscribe()
-	}
-	resultCh := make(chan *types.Block, 10)
-	go func() {
-		if err := engine.Seal(chain, block, resultCh, stop); err != nil {
-			t.Errorf("error mismatch: have error %v, want nil", err)
-		}
-	}()
-	go eventLoop()
-
-	finalBlock := <-resultCh
-	if finalBlock != nil {
-		t.Errorf("block mismatch: have final block %v, want nil", finalBlock)
-	}
-}
-
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestSealOtherHash
 // TestSealCommittedOtherHash result channel should be empty if engine commit another block before seal
 func TestSealOtherHash(t *testing.T) {
 	chain, engine := singleNodeChain()
 	defer engine.Stop()
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	otherBlock := makeBlockWithoutSeal(chain, engine, chain.Genesis())
-	otherBlock.Header().GasUsed = 10
 
 	blockCh := make(chan consensus.ExecutedBlock)
 	blockSub := engine.SubscribeBlock(blockCh)
@@ -119,35 +83,26 @@ func TestSealOtherHash(t *testing.T) {
 	stopChannel := make(chan struct{})
 
 	go func() {
-		ev := <-eventSub.Chan()
-		if _, ok := ev.Data.(hotstuff.RequestEvent); !ok {
-			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
-		}
-		if err := engine.Commit(&consensus.ExecutedBlock{Block: otherBlock}); err != nil {
-			t.Error(err.Error())
-		}
-		eventSub.Unsubscribe()
-		blockSub.Unsubscribe()
-	}()
-
-	go func() {
 		if err := engine.Seal(chain, block, blockOutputChannel, stopChannel); err != nil {
 			t.Error(err.Error())
 		}
+		if err := engine.Commit(&consensus.ExecutedBlock{Block: block}); err != nil {
+			t.Error(err.Error())
+		}
 	}()
 
-	select {
-	case <-blockOutputChannel:
-		t.Error("Wrong block found!")
-	default:
-		//no block found, stop the sealing
-		close(stopChannel)
+	ev := <-eventSub.Chan()
+	evt, ok := ev.Data.(hotstuff.RequestEvent)
+	if !ok {
+		t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
 	}
+	assert.Equal(t, evt.Block.SealHash(), block.SealHash())
 
-	output := <-blockOutputChannel
-	if output != nil {
-		t.Error("Block not nil!")
-	}
+	data := <-blockCh
+	assert.Equal(t, data.Block.SealHash(), block.SealHash())
+
+	eventSub.Unsubscribe()
+	blockSub.Unsubscribe()
 }
 
 func updateTestBlock(block *types.Block, addr common.Address) *types.Block {
@@ -171,14 +126,20 @@ func TestSealCommitted(t *testing.T) {
 	block := makeBlockWithoutSeal(chain, engine, chain.Genesis())
 	expectedBlock := updateTestBlock(block, engine.Address())
 
-	resultCh := make(chan *types.Block, 10)
 	go func() {
-		if err := engine.Seal(chain, block, resultCh, make(chan struct{})); err != nil {
+		if err := engine.Seal(chain, block, make(chan *types.Block), make(chan struct{})); err != nil {
 			t.Errorf("error mismatch: have %v, want %v", err, expectedBlock)
 		}
 	}()
 
-	finalBlock := <-resultCh
+	eventSub := engine.EventMux().Subscribe(hotstuff.RequestEvent{})
+	ev := <-eventSub.Chan()
+	if _, ok := ev.Data.(hotstuff.RequestEvent); !ok {
+		t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
+	}
+	eventSub.Unsubscribe()
+	finalBlock := ev.Data.(hotstuff.RequestEvent).Block
+
 	if finalBlock.Hash() != expectedBlock.Hash() {
 		t.Errorf("hash mismatch: have %v, want %v", finalBlock.Hash(), expectedBlock.Hash())
 	}

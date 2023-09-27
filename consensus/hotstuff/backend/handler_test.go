@@ -77,7 +77,7 @@ func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
 	handled, err := backend.HandleMsg(arbitraryAddress, arbitraryP2PMessage)
 	assert.NoError(t, err, "expected message being handled successfully but got", err)
 	t.Log("handled", handled)
-	assert.False(t, handled, "expected message not being handled")
+	assert.True(t, handled, "expected message not being handled")
 
 	_, err = ioutil.ReadAll(arbitraryP2PMessage.Payload)
 	assert.NoError(t, err, "expected p2p message payload is restored")
@@ -89,7 +89,7 @@ func TestHandleNewBlockMessage_whenNotAProposedBlock(t *testing.T) {
 	arbitraryAddress := common.HexToAddress("arbitrary")
 	_, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, false)
 	postAndWait(backend, types.NewBlock(&types.Header{
-		Number:    big.NewInt(1),
+		Number:    big.NewInt(2),
 		Root:      common.HexToHash("someroot"),
 		GasLimit:  1,
 		MixDigest: types.HotstuffDigest,

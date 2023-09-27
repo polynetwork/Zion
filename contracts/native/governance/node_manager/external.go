@@ -39,11 +39,11 @@ var (
 	GenesisVoterValidatorNum      uint64 = 4
 
 	// const
-	MaxDescLength    int = 2000
-	MaxValidatorNum  int = 300
-	MaxUnlockingNum  int = 100
+	MaxDescLength    int       = 2000
+	MaxValidatorNum  int       = 300
+	MaxUnlockingNum  int       = 100
 	MaxStakeRate     utils.Dec = utils.NewDecFromBigInt(new(big.Int).SetUint64(6)) // user stake can not more than 5 times of self stake
-	MinBlockPerEpoch     = new(big.Int).SetUint64(10000)
+	MinBlockPerEpoch           = new(big.Int).SetUint64(10000)
 )
 
 func init() {

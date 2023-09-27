@@ -143,13 +143,13 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 
 	// check consensus address
 	if params.ConsensusAddress == common.EmptyAddress {
-		return nil, fmt.Errorf("CreateValidator， invalid consensus address")
+		return nil, fmt.Errorf("CreateValidator, invalid consensus address")
 	}
 	if params.SignerAddress == common.EmptyAddress {
-		return nil, fmt.Errorf("CreateValidator， invalid signer address")
+		return nil, fmt.Errorf("CreateValidator, invalid signer address")
 	}
 	if params.ProposalAddress == common.EmptyAddress {
-		return nil, fmt.Errorf("CreateValidator， invalid proposalAddress")
+		return nil, fmt.Errorf("CreateValidator, invalid proposalAddress")
 	}
 
 	// check commission

@@ -1769,8 +1769,11 @@ func testRepair(t *testing.T, tt *rewindTest, snapshots bool) {
 	defer db.Close() // Might double close, should be fine
 
 	// Initialize a fresh chain
+	gspec := &Genesis{
+		Config: params.TestChainConfig,
+	}
 	var (
-		genesis = new(Genesis).MustCommit(db)
+		genesis = gspec.MustCommit(db)
 		engine  = ethash.NewFullFaker()
 		config  = &CacheConfig{
 			TrieCleanLimit: 256,

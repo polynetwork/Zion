@@ -44,9 +44,7 @@ func init() {
 	log.Root().SetHandler(glogger)
 }
 
-func makeGenesis(vals []common.Address) *core.Genesis {
-	core.RegGenesis = nil
-
+func MakeGenesis(vals []common.Address) *core.Genesis {
 	genesis := &core.Genesis{
 		Config: &params.ChainConfig{
 			ChainID:             big.NewInt(60801),
@@ -71,14 +69,16 @@ func makeGenesis(vals []common.Address) *core.Genesis {
 		Mixhash:          common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		ParentHash:       common.HexToHash("0x0000000000000000000000000000000000000000000000000000000000000000"),
 		Timestamp:        0,
+		Alloc:            make(map[common.Address]core.GenesisAccount, len(vals)),
 	}
 
 	govAccs := make([]core.GovernanceAccount, len(vals))
 	for i := 0; i < len(vals); i++ {
 		govAccs[i] = core.GovernanceAccount{
 			Validator: vals[i],
-			Signer:    common.EmptyAddress,
+			Signer:    vals[i],
 		}
+		genesis.Alloc[vals[i]] = core.GenesisAccount{Balance: new(big.Int).Div(params.GenesisSupply, big.NewInt(int64(len(vals))))}
 	}
 	genesis.Governance = govAccs
 
