@@ -30,7 +30,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	"github.com/ethereum/go-ethereum/params"
 )
 
 type miner struct {
@@ -133,16 +132,15 @@ func (m *miner) newWork() {
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
 		Time:       uint64(timestamp),
+		GasLimit:   parent.GasLimit,
 	}
 	// Set baseFee and GasLimit if we are on an EIP-1559 chain
 	if m.chain.Config().IsLondon(header.Number) {
 		header.BaseFee = misc.CalcBaseFee(m.chain.Config(), parent)
-		parentGasLimit := parent.GasLimit
 		if !m.chain.Config().IsLondon(num) {
-			// Bump by 2x
-			parentGasLimit = parent.GasLimit * params.ElasticityMultiplier
+			parentGasLimit := parent.GasLimit * m.chain.Config().ElasticityMultiplier()
+			header.GasLimit = core.CalcGasLimit(parentGasLimit, parentGasLimit)
 		}
-		header.GasLimit = core.CalcGasLimit1559(parentGasLimit, 300000000)
 	}
 	m.makeCurrent(header)
 

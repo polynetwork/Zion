@@ -66,6 +66,8 @@ func TestSequentialAnnouncementsLes2(t *testing.T) { testSequentialAnnouncements
 func TestSequentialAnnouncementsLes3(t *testing.T) { testSequentialAnnouncements(t, 3) }
 
 func testSequentialAnnouncements(t *testing.T, protocol int) {
+	core.CheckAllocWithTotalSupply = false
+	
 	netconfig := testnetConfig{
 		blocks:    4,
 		protocol:  protocol,

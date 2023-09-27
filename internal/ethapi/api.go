@@ -1366,6 +1366,17 @@ func newRPCTransaction(tx *types.Transaction, blockHash common.Hash, blockNumber
 	return result
 }
 
+// NewRPCPendingTransaction returns a pending transaction that will serialize to the RPC representation
+func NewRPCPendingTransaction(tx *types.Transaction, current *types.Header, config *params.ChainConfig) *RPCTransaction {
+	var baseFee *big.Int
+	blockNumber := uint64(0)
+	if current != nil {
+		baseFee = misc.CalcBaseFee(config, current)
+		blockNumber = current.Number.Uint64()
+	}
+	return newRPCTransaction(tx, common.Hash{}, blockNumber, 0, baseFee)
+}
+
 // newRPCPendingTransaction returns a pending transaction that will serialize to the RPC representation
 func newRPCPendingTransaction(tx *types.Transaction, current *types.Header, config *params.ChainConfig) *RPCTransaction {
 	var baseFee *big.Int
