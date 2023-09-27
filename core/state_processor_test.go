@@ -116,11 +116,10 @@ func GenerateBadBlock(parent *types.Block, engine consensus.Engine, txs types.Tr
 	}
 	if config.IsLondon(header.Number) {
 		header.BaseFee = misc.CalcBaseFee(config, parent.Header())
-		parentGasLimit := parent.GasLimit()
 		if !config.IsLondon(parent.Number()) {
-			parentGasLimit = parent.GasLimit() * params.ElasticityMultiplier
+			parentGasLimit := parent.GasLimit() * config.ElasticityMultiplier()
+			header.GasLimit = CalcGasLimit(parentGasLimit, parentGasLimit)
 		}
-		header.GasLimit = CalcGasLimit1559(parentGasLimit, parentGasLimit)
 	}
 	var receipts []*types.Receipt
 

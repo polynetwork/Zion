@@ -19,7 +19,7 @@ package params
 import "math/big"
 
 const (
-	GasLimitBoundDivisor uint64 = 1024 //fuk:16    // The bound divisor of the gas limit, used in update calculations.
+	GasLimitBoundDivisor uint64 = 16      // The bound divisor of the gas limit, used in update calculations.
 	// TODO(fuk): `MinGasLimit` settled as 40000000 for high throughput
 	MinGasLimit          uint64 = 5000    // Minimum the gas limit may ever be.
 	GenesisGasLimit      uint64 = 4712388 //4712388 // Gas limit of the Genesis block.

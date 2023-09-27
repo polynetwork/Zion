@@ -2097,6 +2097,7 @@ func TestGolangBindings(t *testing.T) {
 
 			func init() {
 				core.RegGenesis = nil
+				core.CheckAllocWithTotalSupply = false
 			}
 
 			func Test%s(t *testing.T) {

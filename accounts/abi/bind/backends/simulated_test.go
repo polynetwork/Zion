@@ -37,6 +37,8 @@ import (
 )
 
 func TestSimulatedBackend(t *testing.T) {
+	core.CheckAllocWithTotalSupply = false
+
 	var gasLimit uint64 = 8000029
 	key, _ := crypto.GenerateKey() // nolint: gosec
 	auth, _ := bind.NewKeyedTransactorWithChainID(key, big.NewInt(1337))
@@ -111,6 +113,7 @@ const deployedCode = `60806040526004361061003b576000357c010000000000000000000000
 var expectedReturn = []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 32, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 11, 104, 101, 108, 108, 111, 32, 119, 111, 114, 108, 100, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 
 func simTestBackend(testAddr common.Address) *SimulatedBackend {
+	core.CheckAllocWithTotalSupply = false
 	return NewSimulatedBackend(
 		core.GenesisAlloc{
 			testAddr: {Balance: big.NewInt(10000000000000000)},
@@ -140,6 +143,8 @@ func TestNewSimulatedBackend(t *testing.T) {
 }
 
 func TestSimulatedBackend_AdjustTime(t *testing.T) {
+	core.CheckAllocWithTotalSupply = false
+
 	sim := NewSimulatedBackend(
 		core.GenesisAlloc{}, 10000000,
 	)
@@ -359,6 +364,8 @@ func TestSimulatedBackend_SendTransaction(t *testing.T) {
 }
 
 func TestSimulatedBackend_TransactionByHash(t *testing.T) {
+	core.CheckAllocWithTotalSupply = false
+
 	testAddr := crypto.PubkeyToAddress(testKey.PublicKey)
 
 	sim := NewSimulatedBackend(
@@ -413,6 +420,8 @@ func TestSimulatedBackend_TransactionByHash(t *testing.T) {
 }
 
 func TestSimulatedBackend_EstimateGas(t *testing.T) {
+	core.CheckAllocWithTotalSupply = false
+
 	/*
 		pragma solidity ^0.6.4;
 		contract GasEstimation {
@@ -531,6 +540,8 @@ func TestSimulatedBackend_EstimateGas(t *testing.T) {
 }
 
 func TestSimulatedBackend_EstimateGasWithPrice(t *testing.T) {
+	core.CheckAllocWithTotalSupply = false
+
 	key, _ := crypto.GenerateKey()
 	addr := crypto.PubkeyToAddress(key.PublicKey)
 
