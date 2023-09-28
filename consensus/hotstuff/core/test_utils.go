@@ -38,7 +38,6 @@ import (
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/event"
 	"github.com/ethereum/go-ethereum/log"
-	elog "github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/trie"
 )
 
@@ -109,7 +108,7 @@ func makeBlockWithParentHash(number int, parentHash common.Hash) *types.Block {
 //
 // ==============================================
 
-var testLogger = elog.New()
+var testLogger = log.New()
 
 type testSystemBackend struct {
 	id  int
@@ -117,7 +116,7 @@ type testSystemBackend struct {
 
 	engine *core
 	peers  hotstuff.ValidatorSet
-	events *event.TypeMux
+	requestFeed, messageFeed, commitFeed    event.Feed    // message sender for engine
 
 	committedMsgs []testCommittedMsgs
 	sentMsgs      [][]byte // store the message when Send is called by core
@@ -135,13 +134,36 @@ func (ts *testSystemBackend) Address() common.Address {
 	return ts.address
 }
 
+func (ts *testSystemBackend) SubscribeEvent(ch interface{}) event.Subscription {
+	switch c := ch.(type) {
+	case chan hotstuff.RequestEvent:
+		return ts.requestFeed.Subscribe(c)
+	case chan hotstuff.MessageEvent:
+		return ts.messageFeed.Subscribe(c)
+	case chan hotstuff.FinalCommittedEvent:
+		return ts.commitFeed.Subscribe(c)
+	default:
+		panic(fmt.Sprintf("unexpected subscriber type %t", ch))
+	}
+}
+
+func (ts *testSystemBackend) Send(ev interface{}) {
+	switch event := ev.(type) {
+	case hotstuff.RequestEvent:
+		ts.requestFeed.Send(event)
+	case hotstuff.MessageEvent:
+		ts.messageFeed.Send(event)
+	case hotstuff.FinalCommittedEvent:
+		ts.commitFeed.Send(event)
+	default:
+		panic(fmt.Sprintf("unexpected event type %t", ev))
+	}
+}
+
+
 // Peers returns all connected peers
 func (ts *testSystemBackend) Validators(height uint64, mining bool) (hotstuff.ValidatorSet, error) {
 	return ts.peers, nil
-}
-
-func (ts *testSystemBackend) EventMux() *event.TypeMux {
-	return ts.events
 }
 
 func (ts *testSystemBackend) Broadcast(valSet hotstuff.ValidatorSet, message []byte) error {
@@ -183,7 +205,7 @@ func (ts *testSystemBackend) Commit(executed *consensus.ExecutedBlock) error {
 	})
 
 	// fake new head events
-	go ts.events.Post(hotstuff.FinalCommittedEvent{})
+	go ts.Send(hotstuff.FinalCommittedEvent{})
 	return nil
 }
 
@@ -223,7 +245,7 @@ type testSystem struct {
 }
 
 func newTestSystem(n int) *testSystem {
-	testLogger.SetHandler(elog.StdoutHandler)
+	testLogger.SetHandler(log.StdoutHandler)
 	return &testSystem{
 		backends:      make([]*testSystemBackend, n),
 		queuedMessage: make(chan hotstuff.MessageEvent),
@@ -241,7 +263,7 @@ func generateValidators(n int) []common.Address {
 }
 
 func NewTestSystemWithBackend(n, h, r int) *testSystem {
-	testLogger.SetHandler(elog.StdoutHandler)
+	testLogger.SetHandler(log.StdoutHandler)
 
 	vset, keys := newTestValidatorSet(n)
 	sys := newTestSystem(n)
@@ -273,7 +295,7 @@ func (t *testSystem) listen() {
 		case queuedMessage := <-t.queuedMessage:
 			testLogger.Info("consuming a queue message...")
 			for _, backend := range t.backends {
-				go backend.EventMux().Post(queuedMessage)
+				go backend.Send(queuedMessage)
 			}
 		}
 	}
@@ -311,7 +333,6 @@ func (t *testSystem) NewBackend(id int) *testSystemBackend {
 	backend := &testSystemBackend{
 		id:     id,
 		sys:    t,
-		events: new(event.TypeMux),
 		db:     ethDB,
 	}
 

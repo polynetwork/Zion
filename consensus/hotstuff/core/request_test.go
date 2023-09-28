@@ -20,14 +20,12 @@ package core
 
 import (
 	"math/big"
-	"reflect"
 	"sync"
 	"testing"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common/prque"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
-	"github.com/ethereum/go-ethereum/event"
 )
 
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestCheckRequestMsg
@@ -68,11 +66,13 @@ func TestCheckRequestMsg(t *testing.T) {
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run  TestStoreRequestMsg
 func TestStoreRequestMsg(t *testing.T) {
 	c, _ := singerTestCore(t, 4, 0, 0)
-	c.backend = &testSystemBackend{events: new(event.TypeMux)}
+	c.backend = &testSystemBackend{}
 	c.pendingRequests = prque.New(nil)
 	c.pendingRequestsMu = new(sync.Mutex)
-	c.subscribeEvents()
-	defer c.unsubscribeEvents()
+
+	requestCh := make(chan hotstuff.RequestEvent)
+	requestSub := c.backend.SubscribeEvent(requestCh)
+	defer requestSub.Unsubscribe()
 
 	requests := []*Request{
 		{
@@ -99,13 +99,9 @@ func TestStoreRequestMsg(t *testing.T) {
 	const timeoutDura = 2 * time.Second
 	timeout := time.NewTimer(timeoutDura)
 	select {
-	case ev := <-c.events.Chan():
-		e, ok := ev.Data.(hotstuff.RequestEvent)
-		if !ok {
-			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
-		}
-		if e.Block.Number().Cmp(requests[2].block.Number()) != 0 {
-			t.Errorf("the number of proposal mismatch: have %v, want %v", e.Block.Number(), requests[2].block.Number())
+	case ev := <- requestCh:
+		if ev.Block.Number().Cmp(requests[2].block.Number()) != 0 {
+			t.Errorf("the number of proposal mismatch: have %v, want %v", ev.Block.Number(), requests[2].block.Number())
 		}
 	case <-timeout.C:
 		t.Error("unexpected timeout occurs")

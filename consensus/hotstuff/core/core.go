@@ -43,9 +43,8 @@ type core struct {
 	valSet   hotstuff.ValidatorSet
 	backlogs *backlog
 
-	events            *event.TypeMuxSubscription
-	timeoutSub        *event.TypeMuxSubscription
-	finalCommittedSub *event.TypeMuxSubscription
+	backlogFeed       event.Feed
+	timeoutFeed       event.Feed
 
 	roundChangeTimer *time.Timer
 
@@ -60,6 +59,7 @@ type core struct {
 	isRunning    bool
 
 	wg sync.WaitGroup
+	exit chan struct{}
 }
 
 // New creates an HotStuff consensus core
@@ -73,6 +73,7 @@ func New(backend hotstuff.Backend, config *hotstuff.Config, signer hotstuff.Sign
 		backlogs:          newBackLog(),
 		pendingRequests:   prque.New(nil),
 		pendingRequestsMu: new(sync.Mutex),
+		exit:              make(chan struct{}),
 	}
 	c.validateFn = c.checkValidatorSignature
 	c.checkPointFn = checkPointFn

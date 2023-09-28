@@ -19,6 +19,8 @@
 package core
 
 import (
+	"fmt"
+
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -55,6 +57,7 @@ func (c *core) handleRequest(request *Request) error {
 	default:
 		// store request for `changeView` if node is not the proposer at current round.
 		if c.current.PendingRequest() == nil {
+			fmt.Println(9)
 			c.current.SetPendingRequest(request)
 		}
 	}
@@ -113,7 +116,7 @@ func (c *core) processPendingRequests() {
 			continue
 		} else {
 			c.logger.Trace("Post pending request", "number", r.block.Number(), "hash", r.block.SealHash())
-			go c.sendEvent(hotstuff.RequestEvent{
+			go c.backend.Send(hotstuff.RequestEvent{
 				Block: r.block,
 			})
 		}

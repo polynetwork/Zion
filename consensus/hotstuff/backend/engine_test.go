@@ -21,7 +21,6 @@ package backend
 import (
 	"math/big"
 	"os"
-	"reflect"
 	"testing"
 	"time"
 
@@ -78,7 +77,8 @@ func TestSealOtherHash(t *testing.T) {
 
 	blockCh := make(chan consensus.ExecutedBlock)
 	blockSub := engine.SubscribeBlock(blockCh)
-	eventSub := engine.EventMux().Subscribe(hotstuff.RequestEvent{})
+	requestCh := make(chan hotstuff.RequestEvent)
+	eventSub := engine.SubscribeEvent(requestCh)
 	blockOutputChannel := make(chan *types.Block)
 	stopChannel := make(chan struct{})
 
@@ -91,11 +91,7 @@ func TestSealOtherHash(t *testing.T) {
 		}
 	}()
 
-	ev := <-eventSub.Chan()
-	evt, ok := ev.Data.(hotstuff.RequestEvent)
-	if !ok {
-		t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
-	}
+	evt := <- requestCh
 	assert.Equal(t, evt.Block.SealHash(), block.SealHash())
 
 	data := <-blockCh
@@ -132,13 +128,11 @@ func TestSealCommitted(t *testing.T) {
 		}
 	}()
 
-	eventSub := engine.EventMux().Subscribe(hotstuff.RequestEvent{})
-	ev := <-eventSub.Chan()
-	if _, ok := ev.Data.(hotstuff.RequestEvent); !ok {
-		t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
-	}
+	requestCh := make(chan hotstuff.RequestEvent)
+	eventSub := engine.SubscribeEvent(requestCh)
+	ev := <- requestCh
 	eventSub.Unsubscribe()
-	finalBlock := ev.Data.(hotstuff.RequestEvent).Block
+	finalBlock := ev.Block
 
 	if finalBlock.Hash() != expectedBlock.Hash() {
 		t.Errorf("hash mismatch: have %v, want %v", finalBlock.Hash(), expectedBlock.Hash())

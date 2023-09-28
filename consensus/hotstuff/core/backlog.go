@@ -78,7 +78,7 @@ func (c *core) processBacklog() {
 			}
 
 			logger.Trace("Replay the backlog", "msg", msg)
-			go c.sendEvent(backlogEvent{src: src, msg: msg})
+			go c.backlogFeed.Send(backlogEvent{src: src, msg: msg})
 		}
 	}
 }

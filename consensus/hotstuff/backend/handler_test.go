@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -72,8 +73,10 @@ func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
 	_, backend := singleNodeChain()
 	arbitraryAddress := common.HexToAddress("arbitrary")
 	arbitraryBlock, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, false)
+	time.Sleep(time.Millisecond * 10)
 	postAndWait(backend, arbitraryBlock, t)
 
+	time.Sleep(time.Millisecond * 1000)
 	handled, err := backend.HandleMsg(arbitraryAddress, arbitraryP2PMessage)
 	assert.NoError(t, err, "expected message being handled successfully but got", err)
 	t.Log("handled", handled)

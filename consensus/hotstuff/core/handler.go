@@ -19,6 +19,7 @@
 package core
 
 import (
+	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -31,19 +32,18 @@ func (c *core) Start(chain consensus.ChainReader) {
 	c.isRunning = true
 	c.current = nil
 
-	c.subscribeEvents()
-
 	// Start a new round from last sequence + 1
 	c.startNewRound(common.Big0)
 	c.wg.Add(1)
+	c.exit = make(chan struct{})
 	go c.handleEvents()
 }
 
 // Stop implements core.Engine.Stop
 func (c *core) Stop() {
 	c.stopTimer()
-	c.unsubscribeEvents()
 	c.isRunning = false
+	close(c.exit)
 	c.wg.Wait()
 }
 
@@ -58,6 +58,7 @@ func (c *core) IsProposer() bool {
 }
 
 func (c *core) IsCurrentProposal(sealhash common.Hash) bool {
+	fmt.Println(sealhash, c.current.Node(), c.current.PendingRequest())
 	if c.current == nil {
 		return false
 	}
@@ -75,78 +76,51 @@ func (c *core) CurrentSequence() (uint64, uint64) {
 	return view.HeightU64(), view.RoundU64()
 }
 
-// ----------------------------------------------------------------------------
-
-// Subscribe both internal and external events
-func (c *core) subscribeEvents() {
-	c.events = c.backend.EventMux().Subscribe(
-		// external events
-		hotstuff.RequestEvent{},
-		// internal events
-		hotstuff.MessageEvent{},
-		backlogEvent{},
-	)
-	c.timeoutSub = c.backend.EventMux().Subscribe(
-		timeoutEvent{},
-	)
-	c.finalCommittedSub = c.backend.EventMux().Subscribe(
-		hotstuff.FinalCommittedEvent{},
-	)
-}
-
-// Unsubscribe all events
-func (c *core) unsubscribeEvents() {
-	c.events.Unsubscribe()
-	c.timeoutSub.Unsubscribe()
-	c.finalCommittedSub.Unsubscribe()
-}
-
 func (c *core) handleEvents() {
+	fmt.Println("Handler loop start")
 	defer c.wg.Done()
 	logger := c.logger.New("handleEvents")
 
+	requestCh := make(chan hotstuff.RequestEvent)
+	requestSub := c.backend.SubscribeEvent(requestCh)
+	defer requestSub.Unsubscribe()
+
+	messageCh := make(chan hotstuff.MessageEvent)
+	messageSub := c.backend.SubscribeEvent(messageCh)
+	defer messageSub.Unsubscribe()
+
+	commitCh := make(chan hotstuff.FinalCommittedEvent)
+	commitSub := c.backend.SubscribeEvent(commitCh)
+	defer commitSub.Unsubscribe()
+
+	backlogCh := make(chan backlogEvent)
+	backlogSub := c.backlogFeed.Subscribe(backlogCh)
+	defer backlogSub.Unsubscribe()
+
+	timeoutCh := make(chan timeoutEvent)
+	timeoutSub := c.timeoutFeed.Subscribe(timeoutCh)
+	defer timeoutSub.Unsubscribe()
+
 	for {
 		select {
-		case event, ok := <-c.events.Chan():
-			if !ok {
-				logger.Error("Failed to receive msg Event", "err", "subscribe event chan out empty")
-				return
-			}
-			// A real Event arrived, process interesting content
-			switch ev := event.Data.(type) {
-			case hotstuff.RequestEvent:
-				c.handleRequest(&Request{block: ev.Block})
-
-			case hotstuff.MessageEvent:
-				c.handleMsg(ev.Src, ev.Payload)
-
-			case backlogEvent:
-				c.handleCheckedMsg(ev.msg)
-			}
-
-		case _, ok := <-c.timeoutSub.Chan():
-			if !ok {
-				logger.Error("Failed to receive timeout Event")
-				return
-			}
+		case ev := <- requestCh:
+			c.handleRequest(&Request{block: ev.Block})
+		case ev := <- messageCh:
+			c.handleMsg(ev.Src, ev.Payload)
+		case ev := <- backlogCh:
+			c.handleCheckedMsg(ev.msg)
+		case <- timeoutCh:
 			c.handleTimeoutMsg()
+		case ev := <- commitCh:
+			c.handleFinalCommitted(ev.Header)
 
-		case evt, ok := <-c.finalCommittedSub.Chan():
-			if !ok {
-				logger.Error("Failed to receive finalCommitted Event")
-				return
-			}
-			switch ev := evt.Data.(type) {
-			case hotstuff.FinalCommittedEvent:
-				c.handleFinalCommitted(ev.Header)
-			}
+		case <- c.exit:
+			fmt.Println("Handler loop start")
+
+			logger.Info("Hotstuff core is stopping...")
+			return
 		}
 	}
-}
-
-// sendEvent sends events to mux
-func (c *core) sendEvent(ev interface{}) {
-	c.backend.EventMux().Post(ev)
 }
 
 func (c *core) handleMsg(val common.Address, payload []byte) error {

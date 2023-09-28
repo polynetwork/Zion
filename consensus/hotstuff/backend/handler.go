@@ -77,7 +77,7 @@ func (s *backend) HandleMsg(addr common.Address, msg p2p.Msg) (bool, error) {
 		}
 		s.knownMessages.Add(hash, true)
 
-		go s.eventMux.Post(hotstuff.MessageEvent{
+		go s.messageFeed.Send(hotstuff.MessageEvent{
 			Src:     addr,
 			Payload: data,
 		})
@@ -127,7 +127,7 @@ func (s *backend) NewChainHead(header *types.Header) error {
 	if !s.coreStarted {
 		return ErrStoppedEngine
 	}
-	go s.eventMux.Post(hotstuff.FinalCommittedEvent{Header: header})
+	go s.commitFeed.Send(hotstuff.FinalCommittedEvent{Header: header})
 	return nil
 }
 

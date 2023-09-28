@@ -41,7 +41,7 @@ func (c *core) newRoundChangeTimer() {
 		timeout += time.Duration(math.Pow(2, float64(round))) * time.Second
 	}
 	c.roundChangeTimer = time.AfterFunc(timeout, func() {
-		c.sendEvent(timeoutEvent{})
+		c.timeoutFeed.Send(timeoutEvent{})
 	})
 }
 

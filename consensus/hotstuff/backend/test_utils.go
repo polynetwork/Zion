@@ -159,20 +159,20 @@ func makeMsg(msgcode uint64, data interface{}) p2p.Msg {
 }
 
 func postAndWait(backend *backend, block *types.Block, t *testing.T) {
-	eventSub := backend.EventMux().Subscribe(hotstuff.RequestEvent{})
+	requestCh := make(chan hotstuff.RequestEvent)
+	eventSub := backend.SubscribeEvent(requestCh)
 	defer eventSub.Unsubscribe()
 	stop := make(chan struct{}, 1)
 	eventLoop := func() {
-		<-eventSub.Chan()
+		<- requestCh
 		stop <- struct{}{}
 	}
 	go eventLoop()
-	if err := backend.EventMux().Post(hotstuff.RequestEvent{
+	backend.Send(hotstuff.RequestEvent{
 		Block: block,
-	}); err != nil {
-		t.Fatalf("%s", err)
-	}
+	})
 	<-stop
+	time.Sleep(time.Millisecond * 100)
 }
 
 func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Block, p2p.Msg) {
