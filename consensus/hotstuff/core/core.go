@@ -44,7 +44,7 @@ type core struct {
 	backlogs *backlog
 
 	backlogFeed       event.Feed
-	timeoutFeed       event.Feed
+	newRoundFeed      event.Feed
 
 	roundChangeTimer *time.Timer
 

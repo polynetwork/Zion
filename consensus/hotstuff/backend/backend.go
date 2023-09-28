@@ -116,14 +116,14 @@ func (s *backend) SubscribeEvent(ch interface{}) event.Subscription {
 	}
 }
 
-func (s *backend) Send(ev interface{}) {
+func (s *backend) Send(ev interface{}) int {
 	switch event := ev.(type) {
 	case hotstuff.RequestEvent:
-		fmt.Println(s.requestFeed.Send(event))
+		return s.requestFeed.Send(event)
 	case hotstuff.MessageEvent:
-		s.messageFeed.Send(event)
+		return s.messageFeed.Send(event)
 	case hotstuff.FinalCommittedEvent:
-		s.commitFeed.Send(event)
+		return s.commitFeed.Send(event)
 	default:
 		panic(fmt.Sprintf("unexpected event type %t", ev))
 	}

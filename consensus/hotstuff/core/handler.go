@@ -19,7 +19,6 @@
 package core
 
 import (
-	"fmt"
 	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -32,8 +31,6 @@ func (c *core) Start(chain consensus.ChainReader) {
 	c.isRunning = true
 	c.current = nil
 
-	// Start a new round from last sequence + 1
-	c.startNewRound(common.Big0)
 	c.wg.Add(1)
 	c.exit = make(chan struct{})
 	go c.handleEvents()
@@ -58,7 +55,6 @@ func (c *core) IsProposer() bool {
 }
 
 func (c *core) IsCurrentProposal(sealhash common.Hash) bool {
-	fmt.Println(sealhash, c.current.Node(), c.current.PendingRequest())
 	if c.current == nil {
 		return false
 	}
@@ -77,29 +73,30 @@ func (c *core) CurrentSequence() (uint64, uint64) {
 }
 
 func (c *core) handleEvents() {
-	fmt.Println("Handler loop start")
 	defer c.wg.Done()
 	logger := c.logger.New("handleEvents")
 
-	requestCh := make(chan hotstuff.RequestEvent)
+	requestCh := make(chan hotstuff.RequestEvent, 16)
 	requestSub := c.backend.SubscribeEvent(requestCh)
 	defer requestSub.Unsubscribe()
 
-	messageCh := make(chan hotstuff.MessageEvent)
+	messageCh := make(chan hotstuff.MessageEvent, 16)
 	messageSub := c.backend.SubscribeEvent(messageCh)
 	defer messageSub.Unsubscribe()
 
-	commitCh := make(chan hotstuff.FinalCommittedEvent)
+	commitCh := make(chan hotstuff.FinalCommittedEvent, 16)
 	commitSub := c.backend.SubscribeEvent(commitCh)
 	defer commitSub.Unsubscribe()
 
-	backlogCh := make(chan backlogEvent)
+	backlogCh := make(chan backlogEvent, 16)
 	backlogSub := c.backlogFeed.Subscribe(backlogCh)
 	defer backlogSub.Unsubscribe()
 
-	timeoutCh := make(chan timeoutEvent)
-	timeoutSub := c.timeoutFeed.Subscribe(timeoutCh)
-	defer timeoutSub.Unsubscribe()
+	newRoundCh := make(chan newRoundEvent, 16)
+	newRoundSub := c.newRoundFeed.Subscribe(newRoundCh)
+	defer newRoundSub.Unsubscribe()
+
+	c.startNewRound(common.Big0)
 
 	for {
 		select {
@@ -108,15 +105,14 @@ func (c *core) handleEvents() {
 		case ev := <- messageCh:
 			c.handleMsg(ev.Src, ev.Payload)
 		case ev := <- backlogCh:
+
 			c.handleCheckedMsg(ev.msg)
-		case <- timeoutCh:
-			c.handleTimeoutMsg()
+		case ev := <- newRoundCh:
+			c.handleNewRoundMsg(ev)
 		case ev := <- commitCh:
 			c.handleFinalCommitted(ev.Header)
 
 		case <- c.exit:
-			fmt.Println("Handler loop start")
-
 			logger.Info("Hotstuff core is stopping...")
 			return
 		}
@@ -178,9 +174,12 @@ func (c *core) handleCheckedMsg(msg *Message) (err error) {
 	return
 }
 
-func (c *core) handleTimeoutMsg() {
+func (c *core) handleNewRoundMsg(evt newRoundEvent) {
 	c.logger.Trace("handleTimeout", "state", c.currentState(), "view", c.currentView())
-	round := new(big.Int).Add(c.current.Round(), common.Big1)
+	round := common.Big0
+	if !evt.Initial {
+		round = new(big.Int).Add(c.current.Round(), common.Big1)
+	}
 	c.startNewRound(round)
 }
 

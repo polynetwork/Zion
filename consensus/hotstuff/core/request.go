@@ -19,8 +19,6 @@
 package core
 
 import (
-	"fmt"
-
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 )
 
@@ -57,7 +55,6 @@ func (c *core) handleRequest(request *Request) error {
 	default:
 		// store request for `changeView` if node is not the proposer at current round.
 		if c.current.PendingRequest() == nil {
-			fmt.Println(9)
 			c.current.SetPendingRequest(request)
 		}
 	}

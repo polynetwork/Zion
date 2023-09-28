@@ -147,14 +147,14 @@ func (ts *testSystemBackend) SubscribeEvent(ch interface{}) event.Subscription {
 	}
 }
 
-func (ts *testSystemBackend) Send(ev interface{}) {
+func (ts *testSystemBackend) Send(ev interface{}) int {
 	switch event := ev.(type) {
 	case hotstuff.RequestEvent:
-		ts.requestFeed.Send(event)
+		return ts.requestFeed.Send(event)
 	case hotstuff.MessageEvent:
-		ts.messageFeed.Send(event)
+		return ts.messageFeed.Send(event)
 	case hotstuff.FinalCommittedEvent:
-		ts.commitFeed.Send(event)
+		return ts.commitFeed.Send(event)
 	default:
 		panic(fmt.Sprintf("unexpected event type %t", ev))
 	}

@@ -69,7 +69,7 @@ type Backend interface {
 	
 	// Event pub/sub
 	SubscribeEvent(ch interface{}) event.Subscription
-	Send(ev interface{})
+	Send(ev interface{}) int
 
 	Reset()
 

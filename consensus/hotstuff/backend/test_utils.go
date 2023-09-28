@@ -20,6 +20,7 @@ package backend
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"io/ioutil"
 	"math/big"
@@ -159,20 +160,24 @@ func makeMsg(msgcode uint64, data interface{}) p2p.Msg {
 }
 
 func postAndWait(backend *backend, block *types.Block, t *testing.T) {
-	requestCh := make(chan hotstuff.RequestEvent)
+	requestCh := make(chan hotstuff.RequestEvent, 10)
 	eventSub := backend.SubscribeEvent(requestCh)
 	defer eventSub.Unsubscribe()
-	stop := make(chan struct{}, 1)
-	eventLoop := func() {
-		<- requestCh
-		stop <- struct{}{}
-	}
-	go eventLoop()
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		for {
+			_, ok := <- requestCh
+			cancel()
+			if !ok {
+				return
+			}
+		}
+	} ()
 	backend.Send(hotstuff.RequestEvent{
 		Block: block,
 	})
-	<-stop
-	time.Sleep(time.Millisecond * 100)
+
+	<-ctx.Done()
 }
 
 func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Block, p2p.Msg) {
