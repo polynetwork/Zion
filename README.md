@@ -1,5 +1,5 @@
 ## Go Ethereum
-TEST202310
+
 Official Golang implementation of the Ethereum protocol.
 TEST6
 
