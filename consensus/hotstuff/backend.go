@@ -33,7 +33,7 @@ type Backend interface {
 	Address() common.Address
 
 	// Validators returns current epoch participants
-	Validators(height uint64, inConsensus bool) ValidatorSet
+	Validators(height uint64, inConsensus bool) (ValidatorSet, error)
 
 	// EventMux returns the event mux in backend
 	EventMux() *event.TypeMux
@@ -70,7 +70,7 @@ type Backend interface {
 	// CheckPoint retrieve the flag of epoch change and new epoch start height
 	CheckPoint(height uint64) (uint64, bool)
 
-	ReStart()
+	Reset()
 
 	Close() error
 }

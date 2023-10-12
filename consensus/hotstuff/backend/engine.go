@@ -264,24 +264,27 @@ func (s *backend) Close() error {
 	return nil
 }
 
-func (s *backend) ReStart() {
+func (s *backend) Reset() {
+	if !s.coreStarted {
+		log.Errorf("Try to reset stopped core engine")
+		return
+	}
+	log.Debug("Reset consensus engine...")
+
 	next, err := s.newEpochValidators()
 	if err != nil {
-		panic(fmt.Errorf("Restart consensus engine failed, err: %v ", err))
+		panic(fmt.Errorf("Reset consensus engine failed, err: %v ", err))
 	}
-
 	if next.Equal(s.vals.Copy()) {
-		log.Trace("Restart Consensus engine, validators not changed.", "origin", s.vals.AddressList(), "current", next.AddressList())
+		log.Trace("Reset Consensus engine, validators not changed.", "origin", s.vals.AddressList(), "current", next.AddressList())
 		return
 	}
 
-	if s.coreStarted {
-		s.Stop()
-		// waiting for last engine instance free resource, e.g: unsubscribe...
-		time.Sleep(2 * time.Second)
-		log.Debug("Restart consensus engine...")
-		s.Start(s.chain, s.hasBadBlock)
-	}
+	// reset validator set
+	s.vals = next.Copy()
+
+	// p2p module connect nodes directly
+	s.nodesFeed.Send(consensus.StaticNodesEvent{Validators: s.vals.AddressList()})
 }
 
 // verifyHeader checks whether a header conforms to the consensus rules.The

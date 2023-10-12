@@ -58,6 +58,8 @@ type core struct {
 	validateFn   func(common.Hash, []byte) (common.Address, error)
 	checkPointFn func(uint64) (uint64, bool)
 	isRunning    bool
+
+	wg sync.WaitGroup
 }
 
 // New creates an HotStuff consensus core
@@ -125,16 +127,20 @@ func (c *core) startNewRound(round *big.Int) {
 		Height: new(big.Int).Add(lastProposal.Number(), common.Big1),
 		Round:  new(big.Int),
 	}
+	var changeEpoch bool
 	if changeView {
 		newView.Height = new(big.Int).Set(c.current.Height())
 		newView.Round = new(big.Int).Set(round)
-	} else if c.checkPoint(newView) {
-		logger.Trace("Stop engine after check point.")
-		return
+	} else {
+		changeEpoch = c.checkPoint(newView)
 	}
 
 	// calculate validator set
-	c.valSet = c.backend.Validators(newView.HeightU64(), true)
+	var err error
+	if c.valSet, err = c.backend.Validators(newView.HeightU64(), true); err != nil {
+		logger.Error("get validator set failed", "err", err)
+		return
+	}
 	c.valSet.CalcProposer(lastProposer, newView.Round.Uint64())
 
 	// update smr and try to unlock at the round0
@@ -142,13 +148,9 @@ func (c *core) startNewRound(round *big.Int) {
 		logger.Error("Update round state failed", "state", c.currentState(), "newView", newView, "err", err)
 		return
 	}
-	if !changeView {
-		if err := c.current.Unlock(); err != nil {
-			logger.Error("Unlock node failed", "newView", newView, "err", err)
-			return
-		}
+	if changeEpoch {
+		c.current.Unlock()
 	}
-
 	logger.Debug("New round", "state", c.currentState(), "newView", newView, "new_proposer", c.valSet.GetProposer(), "valSet", c.valSet.List(), "size", c.valSet.Size(), "IsProposer", c.IsProposer())
 
 	// stop last timer and regenerate new timer
@@ -170,9 +172,7 @@ func (c *core) checkPoint(view *View) bool {
 		c.point = epochStart
 		c.lastVals = c.valSet.Copy()
 		c.logger.Trace("CheckPoint done", "view", view, "point", c.point)
-		c.backend.ReStart()
-	}
-	if !c.isRunning {
+		c.backend.Reset()
 		return true
 	}
 	return false
