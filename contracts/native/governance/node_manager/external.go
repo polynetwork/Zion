@@ -34,16 +34,16 @@ var (
 	GenesisMaxCommissionChange, _        = new(big.Int).SetString("500", 10) // 5%
 	GenesisMinInitialStake               = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	GenesisMinProposalStake              = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
-	GenesisBlockPerEpoch                 = new(big.Int).SetUint64(40)
+	GenesisBlockPerEpoch                 = new(big.Int).SetUint64(400000)
 	GenesisConsensusValidatorNum  uint64 = 4
 	GenesisVoterValidatorNum      uint64 = 4
 
 	// const
-	MaxDescLength    int = 2000
-	MaxValidatorNum  int = 300
-	MaxUnlockingNum  int = 100
+	MaxDescLength    int       = 2000
+	MaxValidatorNum  int       = 300
+	MaxUnlockingNum  int       = 100
 	MaxStakeRate     utils.Dec = utils.NewDecFromBigInt(new(big.Int).SetUint64(6)) // user stake can not more than 5 times of self stake
-	MinBlockPerEpoch     = new(big.Int).SetUint64(10000)
+	MinBlockPerEpoch           = new(big.Int).SetUint64(10000)
 )
 
 func init() {
@@ -98,6 +98,44 @@ func StoreGenesisGlobalConfig(s *state.StateDB) error {
 		MinInitialStake:       GenesisMinInitialStake,
 		MinProposalStake:      GenesisMinProposalStake,
 		BlockPerEpoch:         GenesisBlockPerEpoch,
+		ConsensusValidatorNum: GenesisConsensusValidatorNum,
+		VoterValidatorNum:     GenesisVoterValidatorNum,
+	}
+
+	// store current epoch and epoch info
+	if err := setGenesisGlobalConfig(cache, globalConfig); err != nil {
+		return err
+	}
+	return nil
+}
+
+func StoreGenesisEpochForTest(s *state.StateDB, peers []common.Address, signers []common.Address,
+	blockPerEpoch *big.Int) (*EpochInfo, error) {
+	cache := (*state.CacheDB)(s)
+	epoch := &EpochInfo{
+		ID:          StartEpochID,
+		Validators:  peers,
+		Signers:     signers,
+		Voters:      signers,
+		Proposers:   signers,
+		StartHeight: new(big.Int),
+		EndHeight:   blockPerEpoch,
+	}
+
+	// store current epoch and epoch info
+	if err := setGenesisEpochInfo(cache, epoch); err != nil {
+		return nil, err
+	}
+	return epoch, nil
+}
+
+func StoreGenesisGlobalConfigForTest(s *state.StateDB, blockPerEpoch *big.Int) error {
+	cache := (*state.CacheDB)(s)
+	globalConfig := &GlobalConfig{
+		MaxCommissionChange:   GenesisMaxCommissionChange,
+		MinInitialStake:       GenesisMinInitialStake,
+		MinProposalStake:      GenesisMinProposalStake,
+		BlockPerEpoch:         blockPerEpoch,
 		ConsensusValidatorNum: GenesisConsensusValidatorNum,
 		VoterValidatorNum:     GenesisVoterValidatorNum,
 	}
