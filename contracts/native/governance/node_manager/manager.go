@@ -50,7 +50,7 @@ var (
 // the real gas usage of `createValidator`,`changeEpoch`,`endBlock` are 1291500, 5087250 and 343875.
 // in order to lower the total gas usage in an entire block, modify them to be 300000 and 200000, 150000.
 var (
-	gasTable = map[string]uint64{
+	GasTable = map[string]uint64{
 		MethodCreateValidator:                300000,
 		MethodUpdateValidator:                170625,
 		MethodUpdateCommission:               126000,
@@ -88,7 +88,7 @@ func InitNodeManager() {
 }
 
 func RegisterNodeManagerContract(s *native.NativeContract) {
-	s.Prepare(ABI, gasTable)
+	s.Prepare(ABI, GasTable)
 
 	s.Register(MethodCreateValidator, CreateValidator)
 	s.Register(MethodUpdateValidator, UpdateValidator)

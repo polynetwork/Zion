@@ -103,7 +103,7 @@ type headerMarshaling struct {
 // Hash returns the block hash of the header, which is simply the keccak256 hash of its
 // RLP encoding.
 func (h *Header) Hash() common.Hash {
-	return rlpHash(h)
+	return SealHash(h)
 }
 
 // SealHash returns the hash of a block prior to it being sealed.
@@ -412,12 +412,15 @@ func (b *Block) Copy() *Block {
 // Hash returns the keccak256 hash of b's header.
 // The hash is computed on the first call and cached thereafter.
 func (b *Block) Hash() common.Hash {
+	return b.SealHash()
+	/*
 	if hash := b.hash.Load(); hash != nil {
 		return hash.(common.Hash)
 	}
 	v := b.header.Hash()
 	b.hash.Store(v)
 	return v
+	*/
 }
 
 func (b *Block) SealHash() common.Hash {

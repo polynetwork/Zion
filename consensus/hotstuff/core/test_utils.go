@@ -136,8 +136,8 @@ func (ts *testSystemBackend) Address() common.Address {
 }
 
 // Peers returns all connected peers
-func (ts *testSystemBackend) Validators(height uint64, mining bool) hotstuff.ValidatorSet {
-	return ts.peers
+func (ts *testSystemBackend) Validators(height uint64, mining bool) (hotstuff.ValidatorSet, error) {
+	return ts.peers, nil
 }
 
 func (ts *testSystemBackend) EventMux() *event.TypeMux {
@@ -208,7 +208,7 @@ func (ts *testSystemBackend) HasPropsal(hash common.Hash, number *big.Int) bool 
 }
 
 func (ts *testSystemBackend) Close() error                            { return nil }
-func (ts *testSystemBackend) ReStart()                                {}
+func (ts *testSystemBackend) Reset()                                  {}
 func (ts *testSystemBackend) CheckPoint(height uint64) (uint64, bool) { return 0, false }
 
 // ==============================================
@@ -352,7 +352,9 @@ type testSigner struct {
 func (ts *testSigner) Address() common.Address                         { return ts.address }
 func (ts *testSigner) Sign(data []byte) ([]byte, error)                { return common.EmptyHash.Bytes(), nil }
 func (ts *testSigner) SigHash(header *types.Header) (hash common.Hash) { return common.EmptyHash }
-func (ts *testSigner) SignHash(hash common.Hash) ([]byte, error)       { return common.EmptyHash.Bytes(), nil }
+func (ts *testSigner) SignHash(hash common.Hash) ([]byte, error) {
+	return common.EmptyHash.Bytes(), nil
+}
 func (ts *testSigner) SignTx(tx *types.Transaction, signer types.Signer) (*types.Transaction, error) {
 	return tx, nil
 }

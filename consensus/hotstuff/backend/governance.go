@@ -95,20 +95,20 @@ func (s *backend) CheckPoint(height uint64) (uint64, bool) {
 }
 
 // Validators get validators from backend by `consensus core`, param of `mining` is false denote need last epoch validators.
-func (s *backend) Validators(height uint64, mining bool) hotstuff.ValidatorSet {
+func (s *backend) Validators(height uint64, mining bool) (hotstuff.ValidatorSet, error) {
 	if mining {
-		return s.vals.Copy()
+		return s.vals.Copy(), nil
 	}
 
 	header := s.chain.GetHeaderByNumber(height)
 	if header == nil {
-		return nil
+		return nil, fmt.Errorf("GetHeaderByNumber, header is nil")
 	}
 	_, vals, err := s.getValidatorsByHeader(header, nil, s.chain)
 	if err != nil {
-		return nil
+		return nil, err
 	}
-	return vals
+	return vals, nil
 }
 
 // getValidatorsByHeader check if current header height is an new epoch start and retrieve the validators.

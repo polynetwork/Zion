@@ -18,11 +18,12 @@ package governance
 
 import (
 	"fmt"
-	"math/big"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
 )
@@ -41,7 +42,13 @@ func AssembleSystemTransactions(state *state.StateDB, height uint64) (types.Tran
 		if err != nil {
 			return nil, err
 		}
-		txs = append(txs, types.NewTransaction(systemSenderNonce, utils.NodeManagerContractAddress, common.Big0, utils.SystemGas, big.NewInt(utils.SystemGasPrice), payload))
+
+		gas, err := core.IntrinsicGas(payload, nil, false, true, true)
+		if err != nil {
+			return nil, err
+		}
+		gas += nm.GasTable[node_manager_abi.MethodEndBlock]
+		txs = append(txs, types.NewTransaction(systemSenderNonce, utils.NodeManagerContractAddress, common.Big0, gas, common.Big0, payload))
 	}
 
 	// SystemTransaction: NodeManager.ChangeEpoch
@@ -60,7 +67,13 @@ func AssembleSystemTransactions(state *state.StateDB, height uint64) (types.Tran
 			if err != nil {
 				return nil, err
 			}
-			txs = append(txs, types.NewTransaction(systemSenderNonce + 1, utils.NodeManagerContractAddress, common.Big0, utils.SystemGas, big.NewInt(utils.SystemGasPrice), payload))
+
+			gas, err := core.IntrinsicGas(payload, nil, false, true, true)
+			if err != nil {
+				return nil, err
+			}
+			gas += nm.GasTable[node_manager_abi.MethodChangeEpoch]
+			txs = append(txs, types.NewTransaction(systemSenderNonce + 1, utils.NodeManagerContractAddress, common.Big0, gas, common.Big0, payload))
 		}
 	}
 	return txs, nil
