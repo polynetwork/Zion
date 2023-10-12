@@ -2,6 +2,9 @@
 # with Go source code. If you know what GOPATH is then you probably
 # don't need to bother with make.
 
+# Zion branch/commit_hash/tag to build with containers
+COMMIT ?= master
+
 .PHONY: geth android ios geth-cross evm all test clean
 .PHONY: geth-linux geth-linux-386 geth-linux-amd64 geth-linux-mips64 geth-linux-mips64le
 .PHONY: geth-linux-arm geth-linux-arm-5 geth-linux-arm-6 geth-linux-arm-7 geth-linux-arm64
@@ -16,6 +19,26 @@ geth:
 	$(GORUN) build/ci.go install ./cmd/geth
 	@echo "Done building."
 	@echo "Run \"$(GOBIN)/geth\" to launch geth."
+
+zion-clean:
+	@echo "Cleaning build artifacts"
+	rm -rf geth
+	docker container rm -f go-zion-temp
+	docker rmi -f go-zion-build
+
+zion: zion-clean
+	@echo "Building geth binary in container"
+	docker build --no-cache --build-arg commit=$(COMMIT) -t go-zion-build -f ./Dockerfile.build .
+	docker container create --name go-zion-temp go-zion-build
+	docker container cp go-zion-temp:/workspace/zion/build/bin/geth .
+	sha256sum geth
+
+zion-local: zion-clean
+	@echo "Building zion binary in container with local source files"
+	docker build --no-cache --build-arg commit=$(COMMIT) -t go-zion-build -f ./Dockerfile.build_local .
+	docker container create --name go-zion-temp go-zion-build
+	docker container cp go-zion-temp:/workspace/build/bin/geth .
+	sha256sum geth
 
 all:
 	$(GORUN) build/ci.go install
