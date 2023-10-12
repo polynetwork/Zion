@@ -454,7 +454,9 @@ func (m *Message) String() string {
 	return fmt.Sprintf("{MsgType: %v, view: %v, address: %v}", m.Code, m.View, m.address)
 }
 
-type timeoutEvent struct{}
+type newRoundEvent struct{
+	Initial bool
+}
 type backlogEvent struct {
 	src hotstuff.Validator
 	msg *Message

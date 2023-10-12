@@ -553,7 +553,7 @@ func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Ad
 	height := s.ContractRef().BlockHeight()
 	unlockingInfo, err := getUnlockingInfo(s, stakeAddress)
 	if err != nil {
-		return utils.Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, GetUnlockingInfo error: %v", err)
+		return utils.Dec{}, fmt.Errorf("filterExpiredUnlockingInfo, GetUnlockingInfo error: %v", err)
 	}
 	j := 0
 	expiredSum := utils.NewDecFromBigInt(new(big.Int))
@@ -564,7 +564,7 @@ func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Ad
 		} else {
 			expiredSum, err = expiredSum.Add(unlockingStake.Amount)
 			if err != nil {
-				return utils.Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, expiredSum.Add error: %v", err)
+				return utils.Dec{}, fmt.Errorf("filterExpiredUnlockingInfo, expiredSum.Add error: %v", err)
 			}
 		}
 	}
@@ -574,7 +574,7 @@ func filterExpiredUnlockingInfo(s *native.NativeContract, stakeAddress common.Ad
 	} else {
 		err = setUnlockingInfo(s, unlockingInfo)
 		if err != nil {
-			return utils.Dec{nil}, fmt.Errorf("filterExpiredUnlockingInfo, setUnlockingInfo error: %v", err)
+			return utils.Dec{}, fmt.Errorf("filterExpiredUnlockingInfo, setUnlockingInfo error: %v", err)
 		}
 	}
 	return expiredSum, nil

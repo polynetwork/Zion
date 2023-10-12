@@ -58,10 +58,10 @@ type Genesis struct {
 	Mixhash    common.Hash         `json:"mixHash"`
 	Coinbase   common.Address      `json:"coinbase"`
 	Alloc      GenesisAlloc        `json:"alloc"      gencodec:"required"`
-	Governance GenesisGovernance   `json:"governance" gencodec:"required"`
+	Governance GenesisGovernance   `json:"governance"`
 	// config of community pool
-	CommunityRate    *big.Int       `json:"community_rate" gencodec:"required"`
-	CommunityAddress common.Address `json:"community_address" gencodec:"required"`
+	CommunityRate    *big.Int       `json:"community_rate"`
+	CommunityAddress common.Address `json:"community_address"`
 
 	// These fields are used for consensus tests. Please don't use them
 	// in actual genesis blocks.
@@ -318,7 +318,7 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 		Coinbase:   g.Coinbase,
 		Root:       root,
 	}
-	if g.Config.HotStuff != nil {
+	if g.Config != nil && g.Config.HotStuff != nil {
 		head.MixDigest = types.HotstuffDigest
 	}
 	if g.GasLimit == 0 {
@@ -342,9 +342,10 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 
 // checkExtra validators should be sorted and do not allow dump validators.
 func (g *Genesis) checkExtra() {
+	if g.Config == nil || g.Config.HotStuff == nil { return }
 	extra, err := types.ExtractHotstuffExtraPayload(g.ExtraData)
 	if err != nil {
-		panic("extra invalid")
+		panic(err)
 	}
 
 	vs := extra.Validators
@@ -357,41 +358,44 @@ func (g *Genesis) checkExtra() {
 
 // checkGovernance governance address and signer address can't be repeated
 func (g *Genesis) checkGovernance() {
-	data := make(map[common.Address]int)
+	validator := make(map[common.Address]int)
+	signer := make(map[common.Address]int)
 
 	for _, v := range g.Governance {
-		data[v.Validator] += 1
-		data[v.Signer] += 1
+		validator[v.Validator] += 1
+		signer[v.Signer] += 1
 	}
 
-	for addr, cnt := range data {
+	for addr, cnt := range validator {
 		if cnt > 1 {
-			panic(fmt.Sprintf("address %s repeated %d", addr.String(), cnt))
+			panic(fmt.Sprintf("validator address %s repeated %d", addr.String(), cnt))
+		}
+	}
+	for addr, cnt := range signer {
+		if cnt > 1 {
+			panic(fmt.Sprintf("signer address %s repeated %d", addr.String(), cnt))
 		}
 	}
 }
 
 func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
-	if params.CheckZionChain(g.Config.ChainID.Uint64()) {
-		db.CreateAccount(addr)
-		db.SetCode(addr, addr[:])
-		initBlockNumber := big.NewInt(0)
-		if g.Config.IsEIP158(initBlockNumber) {
-			db.SetNonce(addr, 1)
-		}
+	db.CreateAccount(addr)
+	db.SetCode(addr, addr[:])
+	initBlockNumber := big.NewInt(0)
+	if g.Config.IsEIP158(initBlockNumber) {
+		db.SetNonce(addr, 1)
 	}
 }
 
+var CheckAllocWithTotalSupply bool = true
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
-	if params.CheckZionChain(g.Config.ChainID.Uint64()) {
-		// check total balance
-		total := new(big.Int)
-		for _, account := range g.Alloc {
-			total = new(big.Int).Add(total, account.Balance)
-		}
-		if total.Cmp(params.GenesisSupply) != 0 {
-			panic("alloc amount should be equal to genesis supply")
-		}
+	// check total balance
+	total := new(big.Int)
+	for _, account := range g.Alloc {
+		total = new(big.Int).Add(total, account.Balance)
+	}
+	if CheckAllocWithTotalSupply && total.Cmp(params.GenesisSupply) != 0 {
+		panic(fmt.Sprintf("alloc amount %s should be equal to genesis supply %s", total, params.GenesisSupply))
 	}
 
 	for addr, account := range g.Alloc {
@@ -441,6 +445,7 @@ func (g *Genesis) MustCommit(db ethdb.Database) *types.Block {
 
 // GenesisBlockForTesting creates and writes a block in which addr has the given wei balance.
 func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big.Int) *types.Block {
+	CheckAllocWithTotalSupply = false
 	RegGenesis = func(db *state.StateDB, genesis *Genesis) error {
 		return nil
 	}
@@ -452,6 +457,7 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 		ChainID:  new(big.Int).SetUint64(params.MainnetChainID),
 		HotStuff: &params.HotStuffConfig{},
 	}
+	g.ExtraData, _ = types.GenerateExtraWithSignature(0, 1, nil, []byte{}, [][]byte{})
 	return g.MustCommit(db)
 }
 
@@ -464,6 +470,8 @@ func DefaultGenesisBlock() *Genesis {
 		GasLimit:   5000,
 		Difficulty: big.NewInt(17179869184),
 		Alloc:      decodePrealloc(mainnetAllocData),
+		CommunityRate:    big.NewInt(2000),
+		CommunityAddress: common.HexToAddress("0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D"),
 	}
 }
 
@@ -489,6 +497,7 @@ func DefaultRopstenGenesisBlock() *Genesis {
 		GasLimit:   16777216,
 		Difficulty: big.NewInt(1048576),
 		Alloc:      decodePrealloc(ropstenAllocData),
+		CommunityRate: big.NewInt(10),
 	}
 }
 
@@ -541,6 +550,8 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 		GasLimit:   11500000,
 		BaseFee:    big.NewInt(params.InitialBaseFee),
 		Difficulty: big.NewInt(1),
+		CommunityRate: big.NewInt(20),
+		CommunityAddress: common.BytesToAddress([]byte{1}),
 		Alloc: map[common.Address]GenesisAccount{
 			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // Recover
 			common.BytesToAddress([]byte{2}): {Balance: big.NewInt(1)}, // SHA256

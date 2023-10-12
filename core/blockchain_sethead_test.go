@@ -1968,8 +1968,11 @@ func testSetHead(t *testing.T, tt *rewindTest, snapshots bool) {
 	defer db.Close()
 
 	// Initialize a fresh chain
+	gspec := &Genesis{
+		Config: params.TestChainConfig,
+	}
 	var (
-		genesis = new(Genesis).MustCommit(db)
+		genesis = gspec.MustCommit(db)
 		engine  = ethash.NewFullFaker()
 		config  = &CacheConfig{
 			TrieCleanLimit: 256,

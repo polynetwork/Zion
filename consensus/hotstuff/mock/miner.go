@@ -23,8 +23,8 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus"
+	"github.com/ethereum/go-ethereum/consensus/misc"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -131,8 +131,16 @@ func (m *miner) newWork() {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     num.Add(num, common.Big1),
-		GasLimit:   math.MaxUint64,
 		Time:       uint64(timestamp),
+		GasLimit:   parent.GasLimit,
+	}
+	// Set baseFee and GasLimit if we are on an EIP-1559 chain
+	if m.chain.Config().IsLondon(header.Number) {
+		header.BaseFee = misc.CalcBaseFee(m.chain.Config(), parent)
+		if !m.chain.Config().IsLondon(num) {
+			parentGasLimit := parent.GasLimit * m.chain.Config().ElasticityMultiplier()
+			header.GasLimit = core.CalcGasLimit(parentGasLimit, parentGasLimit)
+		}
 	}
 	m.makeCurrent(header)
 

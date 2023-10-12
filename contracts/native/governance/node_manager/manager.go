@@ -143,13 +143,13 @@ func CreateValidator(s *native.NativeContract) ([]byte, error) {
 
 	// check consensus address
 	if params.ConsensusAddress == common.EmptyAddress {
-		return nil, fmt.Errorf("CreateValidator， invalid consensus address")
+		return nil, fmt.Errorf("CreateValidator, invalid consensus address")
 	}
 	if params.SignerAddress == common.EmptyAddress {
-		return nil, fmt.Errorf("CreateValidator， invalid signer address")
+		return nil, fmt.Errorf("CreateValidator, invalid signer address")
 	}
 	if params.ProposalAddress == common.EmptyAddress {
-		return nil, fmt.Errorf("CreateValidator， invalid proposalAddress")
+		return nil, fmt.Errorf("CreateValidator, invalid proposalAddress")
 	}
 
 	// check commission
@@ -643,8 +643,8 @@ func ChangeEpoch(s *native.NativeContract) ([]byte, error) {
 
 	// anyone can call this if height reaches
 	if startHeight.Cmp(currentEpochInfo.EndHeight) != 0 {
-		return nil, fmt.Errorf("ChangeEpoch, block height does not reach, current epoch end at %s",
-			currentEpochInfo.EndHeight.String())
+		return nil, fmt.Errorf("ChangeEpoch, block height does not reach, current epoch end at %s, pending block %s",
+			currentEpochInfo.EndHeight.String(), startHeight.String())
 	}
 
 	epochInfo := &EpochInfo{

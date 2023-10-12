@@ -20,6 +20,7 @@ package backend
 
 import (
 	"bytes"
+	"context"
 	"crypto/ecdsa"
 	"io/ioutil"
 	"math/big"
@@ -54,7 +55,23 @@ func singleNodeChain() (*core.BlockChain, *backend) {
 	genesis, nodeKeys, _ := tu.GenesisAndKeys(1)
 	memDB := rawdb.NewMemoryDatabase()
 	config := hotstuff.DefaultBasicConfig
-	chainConfig := &params.ChainConfig{ChainID: big.NewInt(60801)}
+	chainConfig := &params.ChainConfig{
+		ChainID:             big.NewInt(60801),
+		HomesteadBlock:      new(big.Int),
+		DAOForkBlock:        new(big.Int),
+		DAOForkSupport:      false,
+		EIP150Block:         new(big.Int),
+		EIP150Hash:          common.Hash{},
+		EIP155Block:         new(big.Int),
+		EIP158Block:         new(big.Int),
+		ByzantiumBlock:      new(big.Int),
+		ConstantinopleBlock: new(big.Int),
+		PetersburgBlock:     new(big.Int),
+		IstanbulBlock:       new(big.Int),
+		MuirGlacierBlock:    new(big.Int),
+		BerlinBlock:         new(big.Int),
+		LondonBlock:         nil,
+	}
 	// Use the first key as private key
 	backend := New(chainConfig, config, nodeKeys[0], memDB, true)
 	genesis.MustCommit(memDB)
@@ -86,7 +103,7 @@ func makeHeader(parent *types.Block) *types.Header {
 	header := &types.Header{
 		ParentHash: parent.Hash(),
 		Number:     blockNumber,
-		GasLimit:   core.CalcGasLimit(parent.GasUsed(), parent.GasLimit(), GasFloor, GasCeil),
+		GasLimit:   core.CalcGasLimit(parent.GasLimit(), GasCeil),
 		GasUsed:    0,
 		Time:       parent.Time() + hotstuff.DefaultBasicConfig.BlockPeriod,
 		Difficulty: defaultDifficulty,
@@ -143,20 +160,24 @@ func makeMsg(msgcode uint64, data interface{}) p2p.Msg {
 }
 
 func postAndWait(backend *backend, block *types.Block, t *testing.T) {
-	eventSub := backend.EventMux().Subscribe(hotstuff.RequestEvent{})
+	requestCh := make(chan hotstuff.RequestEvent, 10)
+	eventSub := backend.SubscribeEvent(requestCh)
 	defer eventSub.Unsubscribe()
-	stop := make(chan struct{}, 1)
-	eventLoop := func() {
-		<-eventSub.Chan()
-		stop <- struct{}{}
-	}
-	go eventLoop()
-	if err := backend.EventMux().Post(hotstuff.RequestEvent{
+	ctx, cancel := context.WithCancel(context.Background())
+	go func() {
+		for {
+			_, ok := <- requestCh
+			cancel()
+			if !ok {
+				return
+			}
+		}
+	} ()
+	backend.Send(hotstuff.RequestEvent{
 		Block: block,
-	}); err != nil {
-		t.Fatalf("%s", err)
-	}
-	<-stop
+	})
+
+	<-ctx.Done()
 }
 
 func buildArbitraryP2PNewBlockMessage(t *testing.T, invalidMsg bool) (*types.Block, p2p.Msg) {

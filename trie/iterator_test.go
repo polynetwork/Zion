@@ -471,7 +471,6 @@ func (l *loggingDb) NewBatch() ethdb.Batch {
 }
 
 func (l *loggingDb) NewIterator(prefix []byte, start []byte) ethdb.Iterator {
-	fmt.Printf("NewIterator\n")
 	return l.backend.NewIterator(prefix, start)
 }
 func (l *loggingDb) Stat(property string) (string, error) {

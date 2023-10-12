@@ -28,7 +28,7 @@ import (
 )
 
 func makeChain(db ethdb.Database, engine consensus.Engine, validators []common.Address) *core.BlockChain {
-	genesis := makeGenesis(validators)
+	genesis := MakeGenesis(validators)
 	block := genesis.MustCommit(db)
 	log.Info("Make chain with genesis block", "hash", block.Hash())
 

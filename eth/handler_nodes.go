@@ -101,7 +101,10 @@ func newNodeBroadcaster(miner common.Address, manager staticNodeServer, handler 
 
 // only used for hotstuff miner
 func (h *nodeFetcher) Start() {
-	handler := h.handler.engine.(consensus.Handler)
+	handler, ok := h.handler.engine.(consensus.Handler)
+	if !ok {
+		return
+	}
 	h.notifySub = handler.SubscribeNodes(h.notifyCh)
 	h.local = h.server.Self()
 	for _, v := range h.server.SeedNodes() {
@@ -116,6 +119,10 @@ func (h *nodeFetcher) Start() {
 }
 
 func (h *nodeFetcher) Stop() {
+	_, ok := h.handler.engine.(consensus.Handler)
+	if !ok {
+		return
+	}
 	if h.isSeed() {
 		atomic.StoreInt32(&h.seed, 0)
 	}

@@ -22,6 +22,7 @@ import (
 	"io/ioutil"
 	"math/big"
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
@@ -70,6 +71,8 @@ func TestHotstuffMessage(t *testing.T) {
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestHandleNewBlockMessage_whenTypical
 func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
 	_, backend := singleNodeChain()
+	 // Ensure new view is handled
+	 time.Sleep(time.Millisecond * 100)
 	arbitraryAddress := common.HexToAddress("arbitrary")
 	arbitraryBlock, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, false)
 	postAndWait(backend, arbitraryBlock, t)
@@ -77,7 +80,7 @@ func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
 	handled, err := backend.HandleMsg(arbitraryAddress, arbitraryP2PMessage)
 	assert.NoError(t, err, "expected message being handled successfully but got", err)
 	t.Log("handled", handled)
-	assert.False(t, handled, "expected message not being handled")
+	assert.True(t, handled, "expected message not being handled")
 
 	_, err = ioutil.ReadAll(arbitraryP2PMessage.Payload)
 	assert.NoError(t, err, "expected p2p message payload is restored")
@@ -86,10 +89,12 @@ func TestHandleNewBlockMessage_whenTypical(t *testing.T) {
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestHandleNewBlockMessage_whenNotAProposedBlock
 func TestHandleNewBlockMessage_whenNotAProposedBlock(t *testing.T) {
 	_, backend := singleNodeChain()
+	// Ensure new view is handled
+	time.Sleep(time.Millisecond * 100)
 	arbitraryAddress := common.HexToAddress("arbitrary")
 	_, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, false)
 	postAndWait(backend, types.NewBlock(&types.Header{
-		Number:    big.NewInt(1),
+		Number:    big.NewInt(2),
 		Root:      common.HexToHash("someroot"),
 		GasLimit:  1,
 		MixDigest: types.HotstuffDigest,
@@ -106,6 +111,8 @@ func TestHandleNewBlockMessage_whenNotAProposedBlock(t *testing.T) {
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/backend -run TestHandleNewBlockMessage_whenFailToDecode
 func TestHandleNewBlockMessage_whenFailToDecode(t *testing.T) {
 	_, backend := singleNodeChain()
+	// Ensure new view is handled
+	time.Sleep(time.Millisecond * 100)
 	arbitraryAddress := common.HexToAddress("arbitrary")
 	_, arbitraryP2PMessage := buildArbitraryP2PNewBlockMessage(t, true)
 	postAndWait(backend, types.NewBlock(&types.Header{

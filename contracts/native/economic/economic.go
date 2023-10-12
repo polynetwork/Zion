@@ -38,11 +38,6 @@ var (
 	}
 )
 
-var (
-	RewardPerBlock = params.ZNT1
-	GenesisSupply  = params.GenesisSupply
-)
-
 func InitEconomic() {
 	InitABI()
 	native.Contracts[this] = RegisterEconomicContract
@@ -63,9 +58,9 @@ func Name(s *native.NativeContract) ([]byte, error) {
 func TotalSupply(s *native.NativeContract) ([]byte, error) {
 	height := s.ContractRef().BlockHeight()
 
-	supply := GenesisSupply
+	supply := params.GenesisSupply
 	if height.Uint64() > 0 {
-		reward := new(big.Int).Mul(height, RewardPerBlock)
+		reward := new(big.Int).Mul(height, params.RewardPerBlock)
 		supply = new(big.Int).Add(supply, reward)
 	}
 	return utils.PackOutputs(ABI, MethodTotalSupply, supply)
@@ -79,7 +74,7 @@ func getBlockRewardList(s *native.NativeContract) ([]*RewardAmount, error) {
 
 	// allow empty address as reward pool
 	poolAddr := community.CommunityAddress
-	rewardPerBlock := utils.NewDecFromBigInt(RewardPerBlock)
+	rewardPerBlock := utils.NewDecFromBigInt(params.RewardPerBlock)
 	rewardFactor := utils.NewDecFromBigInt(community.CommunityRate)
 	poolRwdAmt, err := rewardPerBlock.MulWithPercentDecimal(rewardFactor)
 	if err != nil {

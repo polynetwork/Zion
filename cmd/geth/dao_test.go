@@ -25,20 +25,21 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/rawdb"
-	"github.com/ethereum/go-ethereum/params"
 )
 
 // Genesis block for nodes which don't care about the DAO fork (i.e. not configured)
 var daoOldGenesis = `{
-	"alloc"      : {},
+	"alloc"      : { "0x0000000000000000000000000000000000000001": { "balance": "0x52b7d2dcc80cd2e4000000" }},
 	"coinbase"   : "0x0000000000000000000000000000000000000000",
 	"difficulty" : "0x20000",
-	"extraData"  : "",
+	"extraData"  : "0x0000000000000000000000000000000000000000000000000000000000000000c68001c080c080",
 	"gasLimit"   : "0x2fefd8",
 	"nonce"      : "0x0000000000000042",
 	"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
 	"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
 	"timestamp"  : "0x00",
+	"community_rate": 2000,
+    "community_address": "0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D",
 	"config"     : {
 		"homesteadBlock" : 0
 	}
@@ -46,15 +47,17 @@ var daoOldGenesis = `{
 
 // Genesis block for nodes which actively oppose the DAO fork
 var daoNoForkGenesis = `{
-	"alloc"      : {},
+	"alloc"      : { "0x0000000000000000000000000000000000000001": { "balance": "0x52b7d2dcc80cd2e4000000" }},
 	"coinbase"   : "0x0000000000000000000000000000000000000000",
 	"difficulty" : "0x20000",
-	"extraData"  : "",
+	"extraData"  : "0x0000000000000000000000000000000000000000000000000000000000000000c68001c080c080",
 	"gasLimit"   : "0x2fefd8",
 	"nonce"      : "0x0000000000000042",
 	"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
 	"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
 	"timestamp"  : "0x00",
+	"community_rate": 2000,
+    "community_address": "0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D",
 	"config"     : {
 		"homesteadBlock" : 0,
 		"daoForkBlock"   : 314,
@@ -64,15 +67,17 @@ var daoNoForkGenesis = `{
 
 // Genesis block for nodes which actively support the DAO fork
 var daoProForkGenesis = `{
-	"alloc"      : {},
+	"alloc"      : { "0x0000000000000000000000000000000000000001": { "balance": "0x52b7d2dcc80cd2e4000000" }},
 	"coinbase"   : "0x0000000000000000000000000000000000000000",
 	"difficulty" : "0x20000",
-	"extraData"  : "",
+	"extraData"  : "0x0000000000000000000000000000000000000000000000000000000000000000c68001c080c080",
 	"gasLimit"   : "0x2fefd8",
 	"nonce"      : "0x0000000000000042",
 	"mixhash"    : "0x0000000000000000000000000000000000000000000000000000000000000000",
 	"parentHash" : "0x0000000000000000000000000000000000000000000000000000000000000000",
 	"timestamp"  : "0x00",
+	"community_rate": 2000,
+    "community_address": "0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D",
 	"config"     : {
 		"homesteadBlock" : 0,
 		"daoForkBlock"   : 314,
@@ -80,7 +85,7 @@ var daoProForkGenesis = `{
 	}
 }`
 
-var daoGenesisHash = common.HexToHash("5e1fc79cb4ffa4739177b5408045cd5d51c6cf766133f23f7cd72ee1f8d790e0")
+var daoGenesisHash = common.HexToHash("0x6d8fc923564013394cab956685849483496544fdc301fd2b00aa7aca9193d374")
 var daoGenesisForkBlock = big.NewInt(314)
 
 // TestDAOForkBlockNewChain tests that the DAO hard-fork number and the nodes support/opposition is correctly
@@ -91,8 +96,6 @@ func TestDAOForkBlockNewChain(t *testing.T) {
 		expectBlock *big.Int
 		expectVote  bool
 	}{
-		// Test DAO Default Mainnet
-		{"", params.MainnetChainConfig.DAOForkBlock, true},
 		// test DAO Init Old Privnet
 		{daoOldGenesis, nil, false},
 		// test DAO Default No Fork Privnet

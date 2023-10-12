@@ -29,6 +29,7 @@ import (
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/backend"
 	hcore "github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/signer"
+	_ "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/rawdb"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -54,6 +55,7 @@ func MakeGeth(privateKey *ecdsa.PrivateKey, vals []common.Address) *Geth {
 	db := rawdb.NewMemoryDatabase()
 	engine := makeEngine(privateKey, db)
 	chain := makeChain(db, engine, vals)
+
 	hotstuffEngine := engine.(consensus.HotStuff)
 	broadcaster := engine.(consensus.Handler).GetBroadcaster().(*broadcaster)
 	api := engine.APIs(chain)[0].Service.(*backend.API)
@@ -159,7 +161,7 @@ type System struct {
 }
 
 func makeSystem(n int) *System {
-	pks, addrs := newAccountLists(n)
+	pks, addrs := NewAccountLists(n)
 	nodes := make([]*Geth, n)
 
 	for i := 0; i < n; i++ {
@@ -218,7 +220,7 @@ func (s *System) Leader() *Geth {
 	return nil
 }
 
-func newAccountLists(n int) ([]*ecdsa.PrivateKey, []common.Address) {
+func NewAccountLists(n int) ([]*ecdsa.PrivateKey, []common.Address) {
 	pks := make([]*ecdsa.PrivateKey, n)
 	addrs := make([]common.Address, n)
 	for i := 0; i < n; i++ {

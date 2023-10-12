@@ -135,11 +135,6 @@ func abigen(c *cli.Context) error {
 	switch c.GlobalString(langFlag.Name) {
 	case "go":
 		lang = bind.LangGo
-	case "java":
-		lang = bind.LangJava
-	case "objc":
-		lang = bind.LangObjC
-		utils.Fatalf("Objc binding generation is uncompleted")
 	default:
 		utils.Fatalf("Unsupported destination language \"%s\" (--lang)", c.GlobalString(langFlag.Name))
 	}

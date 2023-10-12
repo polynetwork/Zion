@@ -414,12 +414,12 @@ func (b *Block) Copy() *Block {
 func (b *Block) Hash() common.Hash {
 	return b.SealHash()
 	/*
-	if hash := b.hash.Load(); hash != nil {
-		return hash.(common.Hash)
-	}
-	v := b.header.Hash()
-	b.hash.Store(v)
-	return v
+		if hash := b.hash.Load(); hash != nil {
+			return hash.(common.Hash)
+		}
+		v := b.header.Hash()
+		b.hash.Store(v)
+		return v
 	*/
 }
 

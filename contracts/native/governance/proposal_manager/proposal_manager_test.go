@@ -76,7 +76,7 @@ func TestProposalManager(t *testing.T) {
 	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(2000))
 	assert.Equal(t, communityInfo.CommunityAddress, common.EmptyAddress)
 
-	sdb.SetBalance(common.EmptyAddress, new(big.Int).Mul(big.NewInt(100000), params.ZNT1))
+	sdb.SetBalance(common.EmptyAddress, new(big.Int).Mul(big.NewInt(10000000), params.ZNT1))
 	value := new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
 	// Propose
 	for i := 0; i < ProposalListLen; i++ {
@@ -93,6 +93,7 @@ func TestProposalManager(t *testing.T) {
 	// Propose config
 	param2 := new(ProposeConfigParam)
 	globalConfig.VoterValidatorNum = 2
+	globalConfig.BlockPerEpoch = big.NewInt(10000)
 	param2.Content, err = rlp.EncodeToBytes(globalConfig)
 	assert.Nil(t, err)
 	input, err := param2.Encode()
@@ -262,6 +263,6 @@ func TestProposalManager(t *testing.T) {
 	communityInfo, err = community.GetCommunityInfoImpl(c)
 	assert.Nil(t, err)
 	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(1000))
-	assert.Equal(t, sdb.GetBalance(common.EmptyAddress), new(big.Int).Mul(big.NewInt(81000), params.ZNT1))
-	assert.Equal(t, sdb.GetBalance(communityInfo.CommunityAddress), new(big.Int).Mul(big.NewInt(81000), params.ZNT1))
+	assert.Equal(t, sdb.GetBalance(common.EmptyAddress), new(big.Int).Mul(big.NewInt(9981000), params.ZNT1))
+	assert.Equal(t, sdb.GetBalance(communityInfo.CommunityAddress), new(big.Int).Mul(big.NewInt(9981000), params.ZNT1))
 }

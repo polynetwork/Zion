@@ -60,20 +60,12 @@ var (
 	DevnetChainID  uint64 = 60803
 
 	// zion token alias, decimal is 18
-	ZNT1, _        = new(big.Int).SetString("1000000000000000000", 10)
+	ZNT1, _ = new(big.Int).SetString("1000000000000000000", 10)
 
 	uGenesisSupply = new(big.Int).SetUint64(1e8)
 	GenesisSupply  = new(big.Int).Mul(ZNT1, uGenesisSupply)
+	RewardPerBlock = new(big.Int).Set(ZNT1)
 )
-
-func CheckZionChain(chainID uint64) bool {
-	switch chainID {
-	case MainnetChainID, TestnetChainID, DevnetChainID:
-		return true
-	default:
-		return false
-	}
-}
 
 var (
 	// MainnetChainConfig is the chain parameters to run a node on the main network.
@@ -613,6 +605,16 @@ func (c *ChainConfig) checkCompatible(newcfg *ChainConfig, head *big.Int) *Confi
 		return newCompatError("ewasm fork block", c.EWASMBlock, newcfg.EWASMBlock)
 	}
 	return nil
+}
+
+// BaseFeeChangeDenominator bounds the amount the base fee can change between blocks.
+func (c *ChainConfig) BaseFeeChangeDenominator() uint64 {
+	return DefaultBaseFeeChangeDenominator
+}
+
+// ElasticityMultiplier bounds the maximum gas limit an EIP-1559 block may have.
+func (c *ChainConfig) ElasticityMultiplier() uint64 {
+	return DefaultElasticityMultiplier
 }
 
 // isForkIncompatible returns true if a fork scheduled at s1 cannot be rescheduled to

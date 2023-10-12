@@ -61,7 +61,7 @@ type backend struct {
 	broadcaster consensus.Broadcaster // event subscription for ChainHeadEvent event
 	nodesFeed   event.Feed            // event subscription for static nodes listen
 	executeFeed event.Feed            // event subscription for executed state
-	eventMux    *event.TypeMux        // message sender for engine
+	requestFeed, messageFeed, commitFeed    event.Feed        // message sender for engine
 
 	epochMu int32 // check point mutex
 
@@ -83,7 +83,6 @@ func New(chainConfig *params.ChainConfig, config *hotstuff.Config, privateKey *e
 		db:             db,
 		logger:         log.New(),
 		coreStarted:    false,
-		eventMux:       new(event.TypeMux),
 		signer:         signer,
 		recentMessages: recentMessages,
 		knownMessages:  knownMessages,
@@ -104,9 +103,30 @@ func (s *backend) Address() common.Address {
 	return s.signer.Address()
 }
 
-// EventMux implements hotstuff.Backend.EventMux
-func (s *backend) EventMux() *event.TypeMux {
-	return s.eventMux
+func (s *backend) SubscribeEvent(ch interface{}) event.Subscription {
+	switch c := ch.(type) {
+	case chan hotstuff.RequestEvent:
+		return s.requestFeed.Subscribe(c)
+	case chan hotstuff.MessageEvent:
+		return s.messageFeed.Subscribe(c)
+	case chan hotstuff.FinalCommittedEvent:
+		return s.commitFeed.Subscribe(c)
+	default:
+		panic(fmt.Sprintf("unexpected subscriber type %t", ch))
+	}
+}
+
+func (s *backend) Send(ev interface{}) int {
+	switch event := ev.(type) {
+	case hotstuff.RequestEvent:
+		return s.requestFeed.Send(event)
+	case hotstuff.MessageEvent:
+		return s.messageFeed.Send(event)
+	case hotstuff.FinalCommittedEvent:
+		return s.commitFeed.Send(event)
+	default:
+		panic(fmt.Sprintf("unexpected event type %t", ev))
+	}
 }
 
 // Broadcast implements hotstuff.Backend.Broadcast
@@ -120,7 +140,7 @@ func (s *backend) Broadcast(valSet hotstuff.ValidatorSet, payload []byte) error 
 		Src:     s.Address(),
 		Payload: payload,
 	}
-	go s.EventMux().Post(msg)
+	go s.messageFeed.Send(msg)
 	return nil
 }
 
@@ -168,7 +188,7 @@ func (s *backend) Unicast(valSet hotstuff.ValidatorSet, payload []byte) error {
 
 	// send to self
 	if s.Address() == target {
-		go s.EventMux().Post(msg)
+		go s.messageFeed.Send(msg)
 		return nil
 	}
 

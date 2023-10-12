@@ -286,6 +286,47 @@ func TestStreamRaw(t *testing.T) {
 	}
 }
 
+func TestStreamReadBytes(t *testing.T) {
+	tests := []struct {
+		input string
+		size  int
+		err   string
+	}{
+		// kind List
+		{input: "C0", size: 1, err: "rlp: expected String or Byte"},
+		// kind Byte
+		{input: "04", size: 0, err: "input value has wrong size 1, want 0"},
+		{input: "04", size: 1},
+		{input: "04", size: 2, err: "input value has wrong size 1, want 2"},
+		// kind String
+		{input: "820102", size: 0, err: "input value has wrong size 2, want 0"},
+		{input: "820102", size: 1, err: "input value has wrong size 2, want 1"},
+		{input: "820102", size: 2},
+		{input: "820102", size: 3, err: "input value has wrong size 2, want 3"},
+	}
+
+	for _, test := range tests {
+		test := test
+		name := fmt.Sprintf("input_%s/size_%d", test.input, test.size)
+		t.Run(name, func(t *testing.T) {
+			s := NewStream(bytes.NewReader(unhex(test.input)), 0)
+			b := make([]byte, test.size)
+			err := s.ReadBytes(b)
+			if test.err == "" {
+				if err != nil {
+					t.Errorf("unexpected error %q", err)
+				}
+			} else {
+				if err == nil {
+					t.Errorf("expected error, got nil")
+				} else if err.Error() != test.err {
+					t.Errorf("wrong error %q", err)
+				}
+			}
+		})
+	}
+}
+
 func TestDecodeErrors(t *testing.T) {
 	r := bytes.NewReader(nil)
 
@@ -398,6 +439,16 @@ type optionalPtrField struct {
 	B *[3]byte `rlp:"optional"`
 }
 
+type nonOptionalPtrField struct {
+	A uint
+	B *[3]byte
+}
+
+type multipleOptionalFields struct {
+	A *[3]byte `rlp:"optional"`
+	B *[3]byte `rlp:"optional"`
+}
+
 type optionalPtrFieldNil struct {
 	A uint
 	B *[3]byte `rlp:"optional,nil"`
@@ -411,7 +462,7 @@ type ignoredField struct {
 
 var (
 	veryBigInt = new(big.Int).Add(
-		big.NewInt(0).Lsh(big.NewInt(0xFFFFFFFFFFFFFF), 16),
+		new(big.Int).Lsh(big.NewInt(0xFFFFFFFFFFFFFF), 16),
 		big.NewInt(0xFFFF),
 	)
 	veryVeryBigInt = new(big.Int).Exp(veryBigInt, big.NewInt(8), nil)
@@ -704,6 +755,30 @@ var decodeTests = []decodeTest{
 		value: optionalPtrField{A: 1, B: &[3]byte{1, 2, 3}},
 	},
 	{
+		// all optional fields nil
+		input: "C0",
+		ptr:   new(multipleOptionalFields),
+		value: multipleOptionalFields{A: nil, B: nil},
+	},
+	{
+		// all optional fields set
+		input: "C88301020383010203",
+		ptr:   new(multipleOptionalFields),
+		value: multipleOptionalFields{A: &[3]byte{1, 2, 3}, B: &[3]byte{1, 2, 3}},
+	},
+	{
+		// nil optional field appears before a non-nil one
+		input: "C58083010203",
+		ptr:   new(multipleOptionalFields),
+		error: "rlp: input string too short for [3]uint8, decoding into (rlp.multipleOptionalFields).A",
+	},
+	{
+		// decode a nil ptr into a ptr that is not nil or not optional
+		input: "C20180",
+		ptr:   new(nonOptionalPtrField),
+		error: "rlp: input string too short for [3]uint8, decoding into (rlp.nonOptionalPtrField).B",
+	},
+	{
 		input: "C101",
 		ptr:   new(optionalPtrFieldNil),
 		value: optionalPtrFieldNil{A: 1},
@@ -990,7 +1065,7 @@ func TestInvalidOptionalField(t *testing.T) {
 		v   interface{}
 		err string
 	}{
-		{v: new(invalid1), err: `rlp: struct field rlp.invalid1.B needs "optional" tag`},
+		{v: new(invalid1), err: `rlp: invalid struct tag "" for rlp.invalid1.B (must be optional because preceding field "A" is optional)`},
 		{v: new(invalid2), err: `rlp: invalid struct tag "optional" for rlp.invalid2.T (also has "tail" tag)`},
 		{v: new(invalid3), err: `rlp: invalid struct tag "tail" for rlp.invalid3.T (also has "optional" tag)`},
 	}
@@ -1002,7 +1077,6 @@ func TestInvalidOptionalField(t *testing.T) {
 			t.Errorf("wrong error for %T: %v", test.v, err.Error())
 		}
 	}
-
 }
 
 func ExampleDecode() {
@@ -1162,7 +1236,7 @@ func encodeTestSlice(n uint) []byte {
 }
 
 func unhex(str string) []byte {
-	b, err := hex.DecodeString(strings.Replace(str, " ", "", -1))
+	b, err := hex.DecodeString(strings.ReplaceAll(str, " ", ""))
 	if err != nil {
 		panic(fmt.Sprintf("invalid hex string: %q", str))
 	}

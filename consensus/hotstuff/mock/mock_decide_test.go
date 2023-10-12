@@ -23,6 +23,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/contracts/native/boot"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff/core"
 	"github.com/ethereum/go-ethereum/log"
@@ -32,6 +35,8 @@ import (
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockDecideCase1
 // net scale is 4, leader send fake message of decide with wrong height, repos change view.
 func TestMockDecideCase1(t *testing.T) {
+	node_manager.InitABI()
+	boot.InitNativeContracts()
 	H, R, fH := uint64(4), uint64(0), uint64(5)
 
 	sys := makeSystem(4)
@@ -78,6 +83,8 @@ func TestMockDecideCase1(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockDecideCase2
 // net scale is 4, leader send fake message of decide with wrong round, repos change view.
 func TestMockDecideCase2(t *testing.T) {
+	node_manager.InitABI()
+	boot.InitNativeContracts()
 	H, R, fR := uint64(4), uint64(0), uint64(1)
 
 	sys := makeSystem(4)
@@ -124,6 +131,8 @@ func TestMockDecideCase2(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockDecideCase3
 // net scale is 4, leader send fake message of decide with wrong block hash, repos change view.
 func TestMockDecideCase3(t *testing.T) {
+	node_manager.InitABI()
+	boot.InitNativeContracts()
 	H, R := uint64(4), uint64(0)
 
 	sys := makeSystem(4)
@@ -184,6 +193,8 @@ func TestMockDecideCase3(t *testing.T) {
 // go test -v -count=1 github.com/ethereum/go-ethereum/consensus/hotstuff/mock -run TestMockDecideCase4
 // net scale is 4, leader send fake message of decide with wrong qc.node, repos change view.
 func TestMockDecideCase4(t *testing.T) {
+	node_manager.InitABI()
+	boot.InitNativeContracts()
 	H, R := uint64(4), uint64(0)
 
 	sys := makeSystem(4)

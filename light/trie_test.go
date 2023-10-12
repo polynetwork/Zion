@@ -20,6 +20,7 @@ import (
 	"bytes"
 	"context"
 	"fmt"
+	"math/big"
 	"testing"
 
 	"github.com/davecgh/go-spew/spew"
@@ -33,10 +34,11 @@ import (
 )
 
 func TestNodeIterator(t *testing.T) {
+	core.CheckAllocWithTotalSupply = false
 	var (
 		fulldb  = rawdb.NewMemoryDatabase()
 		lightdb = rawdb.NewMemoryDatabase()
-		gspec   = core.Genesis{Alloc: core.GenesisAlloc{testBankAddress: {Balance: testBankFunds}}}
+		gspec   = core.Genesis{Alloc: core.GenesisAlloc{testBankAddress: {Balance: testBankFunds}}, CommunityRate: big.NewInt(20), BaseFee: big.NewInt(params.InitialBaseFee)}
 		genesis = gspec.MustCommit(fulldb)
 	)
 	gspec.MustCommit(lightdb)

@@ -105,6 +105,7 @@ func (f *fakeChain) Genesis() *types.Block {
 func (f *fakeChain) CurrentHeader() *types.Header { return &types.Header{Number: big.NewInt(10000000)} }
 
 func TestHandshake(t *testing.T) {
+	core.CheckAllocWithTotalSupply = false
 	// Create a message pipe to communicate through
 	app, net := p2p.MsgPipe()
 

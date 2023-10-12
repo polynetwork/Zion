@@ -38,12 +38,10 @@ func getBlock(transactions int, uncles int, dataSize int) *types.Block {
 		engine = ethash.NewFaker()
 		db     = rawdb.NewMemoryDatabase()
 		// A sender who makes transactions, has some funds
-		key, _  = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
-		address = crypto.PubkeyToAddress(key.PublicKey)
-		funds   = big.NewInt(1000000000)
-		gspec   = &Genesis{
+		key, _ = crypto.HexToECDSA("b71c71a67e1177ad4e901695e1b4b9ee17ae16c6668d313eac2f96dbcda3f291")
+		gspec  = &Genesis{
 			Config: params.TestChainConfig,
-			Alloc:  GenesisAlloc{address: {Balance: funds}},
+			Alloc:  GenesisAlloc{benchRootAddr: {Balance: benchRootFunds}},
 		}
 		genesis = gspec.MustCommit(db)
 	)
@@ -54,8 +52,12 @@ func getBlock(transactions int, uncles int, dataSize int) *types.Block {
 			if n == uncles {
 				// Add transactions and stuff on the last block
 				for i := 0; i < transactions; i++ {
+					gasPrice := big.NewInt(0)
+					if b.header.BaseFee != nil {
+						gasPrice = b.header.BaseFee
+					}
 					tx, _ := types.SignTx(types.NewTransaction(uint64(i), aa,
-						big.NewInt(0), 50000, big.NewInt(1), make([]byte, dataSize)), types.HomesteadSigner{}, key)
+						big.NewInt(0), 50000, gasPrice, make([]byte, dataSize)), types.HomesteadSigner{}, key)
 					b.AddTx(tx)
 				}
 				for i := 0; i < uncles; i++ {

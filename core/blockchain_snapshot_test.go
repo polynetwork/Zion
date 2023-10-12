@@ -69,8 +69,11 @@ func (basic *snapshotTestBasic) prepare(t *testing.T) (*BlockChain, []*types.Blo
 		t.Fatalf("Failed to create persistent database: %v", err)
 	}
 	// Initialize a fresh chain
+	gspec := &Genesis{
+		Config: params.TestChainConfig,
+	}
 	var (
-		genesis = new(Genesis).MustCommit(db)
+		genesis = gspec.MustCommit(db)
 		engine  = ethash.NewFullFaker()
 		gendb   = rawdb.NewMemoryDatabase()
 

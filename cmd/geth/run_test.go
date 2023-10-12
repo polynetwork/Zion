@@ -25,6 +25,7 @@ import (
 	"time"
 
 	"github.com/docker/docker/pkg/reexec"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/internal/cmdtest"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -46,6 +47,7 @@ type testgeth struct {
 }
 
 func init() {
+	core.CheckAllocWithTotalSupply = false
 	// Run the app if we've been exec'd as "geth-test" in runGeth.
 	reexec.Register("geth-test", func() {
 		if err := app.Run(os.Args); err != nil {

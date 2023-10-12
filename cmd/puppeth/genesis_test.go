@@ -19,6 +19,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"io/ioutil"
 	"reflect"
 	"strings"
@@ -90,6 +91,7 @@ func TestParitySturebyConverter(t *testing.T) {
 		t.Fatalf("could not read file: %v", err)
 	}
 	if !bytes.Equal(expBlob, enc) {
+		fmt.Println(string(enc))
 		t.Fatalf("chainspec mismatch")
 	}
 }

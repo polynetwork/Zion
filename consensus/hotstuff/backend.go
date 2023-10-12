@@ -35,9 +35,6 @@ type Backend interface {
 	// Validators returns current epoch participants
 	Validators(height uint64, inConsensus bool) (ValidatorSet, error)
 
-	// EventMux returns the event mux in backend
-	EventMux() *event.TypeMux
-
 	// Broadcast sends a message to all validators (include self)
 	Broadcast(valSet ValidatorSet, payload []byte) error
 
@@ -69,6 +66,10 @@ type Backend interface {
 
 	// CheckPoint retrieve the flag of epoch change and new epoch start height
 	CheckPoint(height uint64) (uint64, bool)
+	
+	// Event pub/sub
+	SubscribeEvent(ch interface{}) event.Subscription
+	Send(ev interface{}) int
 
 	Reset()
 
@@ -76,8 +77,10 @@ type Backend interface {
 }
 
 type CoreEngine interface {
+	// Start a new round
 	Start(chain consensus.ChainReader)
 
+	// Stop current round
 	Stop()
 
 	// IsProposer return true if self address equal leader/proposer address in current round/height

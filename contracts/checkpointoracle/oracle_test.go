@@ -165,6 +165,7 @@ func (a Accounts) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 func (a Accounts) Less(i, j int) bool { return bytes.Compare(a[i].addr.Bytes(), a[j].addr.Bytes()) < 0 }
 
 func TestCheckpointRegister(t *testing.T) {
+	core.CheckAllocWithTotalSupply = false
 	// Initialize test accounts
 	var accounts Accounts
 	for i := 0; i < 3; i++ {
@@ -175,10 +176,11 @@ func TestCheckpointRegister(t *testing.T) {
 	sort.Sort(accounts)
 
 	// Deploy registrar contract
-	contractBackend := backends.NewSimulatedBackend(core.GenesisAlloc{accounts[0].addr: {Balance: big.NewInt(1000000000)}, accounts[1].addr: {Balance: big.NewInt(1000000000)}, accounts[2].addr: {Balance: big.NewInt(1000000000)}}, 10000000)
+	contractBackend := backends.NewSimulatedBackend(core.GenesisAlloc{accounts[0].addr: {Balance: big.NewInt(1000000000000000000)}, accounts[1].addr: {Balance: big.NewInt(1000000000000000000)}, accounts[2].addr: {Balance: big.NewInt(1000000000)}}, 10000000)
 	defer contractBackend.Close()
 
 	transactOpts, _ := bind.NewKeyedTransactorWithChainID(accounts[0].key, big.NewInt(1337))
+	transactOpts.GasLimit = 10000000
 
 	// 3 trusted signers, threshold 2
 	contractAddr, _, c, err := contract.DeployCheckpointOracle(transactOpts, contractBackend, []common.Address{accounts[0].addr, accounts[1].addr, accounts[2].addr}, sectionSize, processConfirms, big.NewInt(2))

@@ -113,7 +113,7 @@ func (c *core) processPendingRequests() {
 			continue
 		} else {
 			c.logger.Trace("Post pending request", "number", r.block.Number(), "hash", r.block.SealHash())
-			go c.sendEvent(hotstuff.RequestEvent{
+			go c.backend.Send(hotstuff.RequestEvent{
 				Block: r.block,
 			})
 		}

@@ -474,7 +474,11 @@ func (dlp *downloadTesterPeer) RequestNodeData(hashes []common.Hash) error {
 
 	results := make([][]byte, 0, len(hashes))
 	for _, hash := range hashes {
-		if data, err := dlp.dl.peerDb.Get(hash.Bytes()); err == nil {
+		data, err := dlp.dl.peerDb.Get(hash.Bytes())
+		if err != nil {
+			data, err = dlp.dl.peerDb.Get(append([]byte("c"), hash.Bytes()...))
+		}
+		if err == nil {
 			if !dlp.missingStates[hash] {
 				results = append(results, data)
 			}

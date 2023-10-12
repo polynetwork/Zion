@@ -24,7 +24,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/event"
 )
 
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestStoreBacklog
@@ -93,10 +92,11 @@ func TestStoreBacklog(t *testing.T) {
 // go test -v github.com/ethereum/go-ethereum/consensus/hotstuff/core -run TestProcessFutureBacklog
 func TestProcessFutureBacklog(t *testing.T) {
 	c, vals := singerTestCore(t, 2, 0, 1)
-	c.backend = &testSystemBackend{events: new(event.TypeMux)}
+	c.backend = &testSystemBackend{}
 	sender := vals.GetByIndex(1)
-	c.subscribeEvents()
-	defer c.unsubscribeEvents()
+	backlogCh := make(chan backlogEvent)
+	backlogSub := c.backlogFeed.Subscribe(backlogCh)
+	defer backlogSub.Unsubscribe()
 
 	// push a future msg
 	subject := []byte{'c', 'm', 't', 'p', 'l', 'd'}
@@ -113,7 +113,7 @@ func TestProcessFutureBacklog(t *testing.T) {
 	const timeoutDura = 2 * time.Second
 	timeout := time.NewTimer(timeoutDura)
 	select {
-	case e, ok := <-c.events.Chan():
+	case e, ok := <-backlogCh:
 		if !ok {
 			return
 		}
@@ -158,9 +158,10 @@ func TestProcessBacklog(t *testing.T) {
 
 func testProcessBacklog(t *testing.T, msg *Message) {
 	c, vals := singerTestCore(t, 2, 1, 0)
-	c.backend = &testSystemBackend{events: new(event.TypeMux)}
-	c.subscribeEvents()
-	defer c.unsubscribeEvents()
+	c.backend = &testSystemBackend{}
+	backlogCh := make(chan backlogEvent)
+	backlogSub := c.backlogFeed.Subscribe(backlogCh)
+	defer backlogSub.Unsubscribe()
 
 	sender := vals.GetByIndex(1)
 	msg.address = sender.Address()
@@ -171,13 +172,9 @@ func testProcessBacklog(t *testing.T, msg *Message) {
 	const timeoutDura = 2 * time.Second
 	timeout := time.NewTimer(timeoutDura)
 	select {
-	case ev := <-c.events.Chan():
-		e, ok := ev.Data.(backlogEvent)
-		if !ok {
-			t.Errorf("unexpected event comes: %v", reflect.TypeOf(ev.Data))
-		}
-		if e.msg.Code != msg.Code {
-			t.Errorf("message code mismatch: have %v, want %v", e.msg.Code, msg.Code)
+	case ev := <- backlogCh:
+		if ev.msg.Code != msg.Code {
+			t.Errorf("message code mismatch: have %v, want %v", ev.msg.Code, msg.Code)
 		}
 		// success
 	case <-timeout.C:
