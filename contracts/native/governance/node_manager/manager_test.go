@@ -29,7 +29,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -72,7 +74,7 @@ func TestCheckGenesis(t *testing.T) {
 
 	globalConfig, err := GetGlobalConfigImpl(contract)
 	assert.Nil(t, err)
-	assert.Equal(t, globalConfig.BlockPerEpoch, GenesisBlockPerEpoch)
+	assert.Equal(t, globalConfig.BlockPerEpoch, big.NewInt(400000))
 	assert.Equal(t, globalConfig.MaxCommissionChange, GenesisMaxCommissionChange)
 	assert.Equal(t, globalConfig.MinInitialStake, GenesisMinInitialStake)
 	assert.Equal(t, globalConfig.VoterValidatorNum, GenesisVoterValidatorNum)
@@ -96,7 +98,7 @@ func TestCheckGenesis(t *testing.T) {
 	globalConfig2 := new(GlobalConfig)
 	err = globalConfig2.Decode(ret)
 	assert.Nil(t, err)
-	assert.Equal(t, globalConfig2.BlockPerEpoch, GenesisBlockPerEpoch)
+	assert.Equal(t, globalConfig2.BlockPerEpoch, big.NewInt(400000))
 	assert.Equal(t, globalConfig2.MaxCommissionChange, GenesisMaxCommissionChange)
 	assert.Equal(t, globalConfig2.MinInitialStake, GenesisMinInitialStake)
 	assert.Equal(t, globalConfig2.VoterValidatorNum, GenesisVoterValidatorNum)
@@ -132,7 +134,7 @@ func TestCheckGenesis(t *testing.T) {
 
 	globalConfig, err = GetGlobalConfigFromDB(sdb)
 	assert.Nil(t, err)
-	assert.Equal(t, globalConfig.BlockPerEpoch, GenesisBlockPerEpoch)
+	assert.Equal(t, globalConfig.BlockPerEpoch, big.NewInt(400000))
 }
 
 func TestStake(t *testing.T) {
@@ -602,6 +604,7 @@ func TestDistribute(t *testing.T) {
 	// first add 1000 balance of node_manager contract to distribute
 	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
 	// call endblock
+	sdb.SubBalance(utils.NodeManagerContractAddress, big.NewInt(800000000000000000))
 	param3 := new(EndBlockParam)
 	input, err = param3.Encode()
 	assert.Nil(t, err)
@@ -892,6 +895,7 @@ func TestDistribute(t *testing.T) {
 	// add 2000 balance of node_manager contract to distribute
 	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
 	// call endblock
+	sdb.SubBalance(utils.NodeManagerContractAddress, big.NewInt(800000000000000000))
 	param9 := new(EndBlockParam)
 	input, err = param9.Encode()
 	assert.Nil(t, err)
@@ -901,6 +905,7 @@ func TestDistribute(t *testing.T) {
 
 	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(1000), params.ZNT1))
 	// call endblock
+	sdb.SubBalance(utils.NodeManagerContractAddress, big.NewInt(800000000000000000))
 	param10 := new(EndBlockParam)
 	input, err = param10.Encode()
 	assert.Nil(t, err)
@@ -962,7 +967,7 @@ func TestDistribute(t *testing.T) {
 	b7, _ := new(big.Int).SetString("1000092307692307692280000", 10)
 	assert.Equal(t, sdb.GetBalance(stakeAddress), b6)
 	assert.Equal(t, sdb.GetBalance(stakeAddress2), b7)
-	assert.Equal(t, sdb.GetBalance(common.EmptyAddress), new(big.Int).SetUint64(180000))
+	assert.Equal(t, sdb.GetBalance(common.EmptyAddress), new(big.Int).SetUint64(600000000000180000))
 	_, found, err := getValidator(contractQuery, validatorsKey[0].ConsensusAddr)
 	assert.Nil(t, err)
 	assert.Equal(t, found, false)
@@ -1028,6 +1033,7 @@ func TestPerformance(t *testing.T) {
 	assert.Nil(t, err)
 
 	// call endblock
+	sdb.SubBalance(utils.NodeManagerContractAddress, big.NewInt(800000000000000000))
 	sdb.AddBalance(utils.NodeManagerContractAddress, new(big.Int).Mul(big.NewInt(10000000), params.ZNT1))
 	param := new(EndBlockParam)
 	input, err = param.Encode()

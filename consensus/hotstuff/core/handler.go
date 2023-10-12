@@ -41,6 +41,7 @@ func (c *core) Stop() {
 	c.stopTimer()
 	c.isRunning = false
 	close(c.exit)
+
 	c.wg.Wait()
 }
 

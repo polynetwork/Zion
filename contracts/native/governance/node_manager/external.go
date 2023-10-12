@@ -108,3 +108,41 @@ func StoreGenesisGlobalConfig(s *state.StateDB) error {
 	}
 	return nil
 }
+
+func StoreGenesisEpochForTest(s *state.StateDB, peers []common.Address, signers []common.Address,
+	blockPerEpoch *big.Int) (*EpochInfo, error) {
+	cache := (*state.CacheDB)(s)
+	epoch := &EpochInfo{
+		ID:          StartEpochID,
+		Validators:  peers,
+		Signers:     signers,
+		Voters:      signers,
+		Proposers:   signers,
+		StartHeight: new(big.Int),
+		EndHeight:   blockPerEpoch,
+	}
+
+	// store current epoch and epoch info
+	if err := setGenesisEpochInfo(cache, epoch); err != nil {
+		return nil, err
+	}
+	return epoch, nil
+}
+
+func StoreGenesisGlobalConfigForTest(s *state.StateDB, blockPerEpoch *big.Int) error {
+	cache := (*state.CacheDB)(s)
+	globalConfig := &GlobalConfig{
+		MaxCommissionChange:   GenesisMaxCommissionChange,
+		MinInitialStake:       GenesisMinInitialStake,
+		MinProposalStake:      GenesisMinProposalStake,
+		BlockPerEpoch:         blockPerEpoch,
+		ConsensusValidatorNum: GenesisConsensusValidatorNum,
+		VoterValidatorNum:     GenesisVoterValidatorNum,
+	}
+
+	// store current epoch and epoch info
+	if err := setGenesisGlobalConfig(cache, globalConfig); err != nil {
+		return err
+	}
+	return nil
+}

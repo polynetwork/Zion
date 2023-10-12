@@ -707,6 +707,7 @@ func sendTransaction(ec *Client) error {
 		Gas:      22000,
 		GasPrice: big.NewInt(params.InitialBaseFee),
 	})
+
 	if err != nil {
 		return err
 	}
