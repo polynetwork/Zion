@@ -149,9 +149,7 @@ func (s *roundState) LastChainedBlock() *types.Block {
 
 // accept pending request from miner only for once.
 func (s *roundState) SetPendingRequest(req *Request) {
-	if s.pendingRequest == nil {
-		s.pendingRequest = req
-	}
+	s.pendingRequest = req
 }
 
 func (s *roundState) PendingRequest() *Request {
@@ -207,13 +205,12 @@ func (s *roundState) LockQC() *QuorumCert {
 }
 
 // Unlock it's happened at the start of new round, new state is `StateAcceptRequest`, and `lockQC` keep to judge safety rule
-func (s *roundState) Unlock() error {
+func (s *roundState) Unlock() {
 	s.pendingRequest = nil
 	s.proposalLocked = false
 	s.lockedBlock = nil
 	s.node.temp = nil
 	s.executed = nil
-	return nil
 }
 
 func (s *roundState) LockedBlock() *types.Block {

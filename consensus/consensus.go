@@ -169,12 +169,6 @@ type HotStuff interface {
 
 	// FillHeader fulfill the header with extra which contains epoch change info
 	FillHeader(state *state.StateDB, header *types.Header) error
-
-	// IsSystemCall return method id and true if the tx is an system transaction
-	IsSystemTransaction(tx *types.Transaction, header *types.Header) (string, bool)
-
-	// HasSystemTxHook return true if systemTxHook is not nil
-	HasSystemTxHook() bool
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message

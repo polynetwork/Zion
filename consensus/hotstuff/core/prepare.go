@@ -53,6 +53,10 @@ func (c *core) sendPrepare() {
 		request := c.current.PendingRequest()
 		if request == nil || request.block == nil || request.block.NumberU64() != c.HeightU64() {
 			logger.Trace("Pending request invalid", "msg", code)
+			if request != nil && request.block != nil {
+				logger.Trace("Pending request invalid", "msg", code, "request.block.Number", request.block.NumberU64(),
+					"c.Height", c.HeightU64(), "request.block.hash", request.block.SealHash())
+			}
 			return
 		} else {
 			block = c.current.PendingRequest().block
@@ -91,10 +95,12 @@ func (c *core) sendPrepare() {
 
 // handlePrepare implement description as follow:
 // ```
-//  repo wait for message m : matchingMsg(m, prepare, curView) from leader(curView)
-//	if m.node extends from m.justify.node ∧
-//	safeNode(m.node, m.justify) then
-//	send voteMsg(prepare, m.node, ⊥) to leader(curView)
+//
+//	 repo wait for message m : matchingMsg(m, prepare, curView) from leader(curView)
+//		if m.node extends from m.justify.node ∧
+//		safeNode(m.node, m.justify) then
+//		send voteMsg(prepare, m.node, ⊥) to leader(curView)
+//
 // ```
 func (c *core) handlePrepare(data *Message) error {
 	var (
@@ -127,17 +133,19 @@ func (c *core) handlePrepare(data *Message) error {
 
 	// ensure remote block is legal.
 	block := node.Block
-	if err := c.checkBlock(block); err != nil {
-		logger.Trace("Failed to check block", "msg", code, "src", src, "err", err)
-		return err
-	}
-	if duration, err := c.backend.Verify(block, false); err != nil {
-		logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err, "duration", duration)
-		return errVerifyUnsealedProposal
-	}
-	if err := c.executeBlock(block); err != nil {
-		logger.Trace("Failed to execute block", "msg", code, "src", src, "err", err)
-		return err
+	if c.current.executed == nil || c.current.executed.Block != nil || c.current.executed.Block.SealHash() != block.SealHash() {
+		if err := c.checkBlock(block); err != nil {
+			logger.Trace("Failed to check block", "msg", code, "src", src, "err", err)
+			return err
+		}
+		if duration, err := c.backend.Verify(block, false); err != nil {
+			logger.Trace("Failed to verify unsealed proposal", "msg", code, "src", src, "err", err, "duration", duration)
+			return errVerifyUnsealedProposal
+		}
+		if err := c.executeBlock(block); err != nil {
+			logger.Trace("Failed to execute block", "msg", code, "src", src, "err", err)
+			return err
+		}
 	}
 
 	// safety and liveness rules judgement.

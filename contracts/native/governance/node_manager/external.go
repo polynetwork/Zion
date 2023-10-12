@@ -34,7 +34,7 @@ var (
 	GenesisMaxCommissionChange, _        = new(big.Int).SetString("500", 10) // 5%
 	GenesisMinInitialStake               = new(big.Int).Mul(big.NewInt(100000), params.ZNT1)
 	GenesisMinProposalStake              = new(big.Int).Mul(big.NewInt(1000), params.ZNT1)
-	GenesisBlockPerEpoch                 = new(big.Int).SetUint64(400000)
+	GenesisBlockPerEpoch                 = new(big.Int).SetUint64(40)
 	GenesisConsensusValidatorNum  uint64 = 4
 	GenesisVoterValidatorNum      uint64 = 4
 

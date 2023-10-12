@@ -32,10 +32,11 @@ func (c *core) Start(chain consensus.ChainReader) {
 	c.current = nil
 
 	c.subscribeEvents()
-	go c.handleEvents()
 
 	// Start a new round from last sequence + 1
 	c.startNewRound(common.Big0)
+	c.wg.Add(1)
+	go c.handleEvents()
 }
 
 // Stop implements core.Engine.Stop
@@ -43,6 +44,7 @@ func (c *core) Stop() {
 	c.stopTimer()
 	c.unsubscribeEvents()
 	c.isRunning = false
+	c.wg.Wait()
 }
 
 // Address implement core.Engine.Address
@@ -100,6 +102,7 @@ func (c *core) unsubscribeEvents() {
 }
 
 func (c *core) handleEvents() {
+	defer c.wg.Done()
 	logger := c.logger.New("handleEvents")
 
 	for {
