@@ -60,8 +60,8 @@ type Validator struct {
 	Status           LockStatus
 	Jailed           bool
 	UnlockHeight     *big.Int
-	TotalStake       Dec
-	SelfStake        Dec
+	TotalStake       utils.Dec
+	SelfStake        utils.Dec
 	Desc             string
 }
 
@@ -101,7 +101,7 @@ func (m Validator) IsRemoving(height *big.Int) bool {
 }
 
 type Commission struct {
-	Rate         Dec
+	Rate         utils.Dec
 	UpdateHeight *big.Int
 }
 
@@ -127,7 +127,7 @@ func (m *GlobalConfig) Decode(payload []byte) error {
 type StakeInfo struct {
 	StakeAddress  common.Address
 	ConsensusAddr common.Address
-	Amount        Dec
+	Amount        utils.Dec
 }
 
 func (m *StakeInfo) Decode(payload []byte) error {
@@ -159,7 +159,7 @@ type UnlockingStake struct {
 	Height           *big.Int
 	CompleteHeight   *big.Int
 	ConsensusAddress common.Address
-	Amount           Dec
+	Amount           utils.Dec
 }
 
 type EpochInfo struct {
@@ -218,7 +218,7 @@ func (m *EpochInfo) MemberList() []common.Address {
 }
 
 type AccumulatedCommission struct {
-	Amount Dec
+	Amount utils.Dec
 }
 
 func (m *AccumulatedCommission) Decode(payload []byte) error {
@@ -232,7 +232,7 @@ func (m *AccumulatedCommission) Decode(payload []byte) error {
 }
 
 type ValidatorAccumulatedRewards struct {
-	Rewards Dec
+	Rewards utils.Dec
 	Period  uint64
 }
 
@@ -247,7 +247,7 @@ func (m *ValidatorAccumulatedRewards) Decode(payload []byte) error {
 }
 
 type ValidatorOutstandingRewards struct {
-	Rewards Dec
+	Rewards utils.Dec
 }
 
 func (m *ValidatorOutstandingRewards) Decode(payload []byte) error {
@@ -261,7 +261,7 @@ func (m *ValidatorOutstandingRewards) Decode(payload []byte) error {
 }
 
 type OutstandingRewards struct {
-	Rewards Dec
+	Rewards utils.Dec
 }
 
 func (m *OutstandingRewards) Decode(payload []byte) error {
@@ -275,7 +275,7 @@ func (m *OutstandingRewards) Decode(payload []byte) error {
 }
 
 type StakeRewards struct {
-	Rewards Dec
+	Rewards utils.Dec
 }
 
 func (m *StakeRewards) Decode(payload []byte) error {
@@ -289,7 +289,7 @@ func (m *StakeRewards) Decode(payload []byte) error {
 }
 
 type ValidatorSnapshotRewards struct {
-	AccumulatedRewardsRatio Dec // ratio already mul decimal
+	AccumulatedRewardsRatio utils.Dec // ratio already mul decimal
 	ReferenceCount          uint64
 }
 
@@ -305,7 +305,7 @@ func (m *ValidatorSnapshotRewards) Decode(payload []byte) error {
 
 type StakeStartingInfo struct {
 	StartPeriod uint64
-	Stake       Dec
+	Stake       utils.Dec
 	Height      *big.Int
 }
 
@@ -345,23 +345,8 @@ func (m *ConsensusSign) Hash() common.Hash {
 	return v
 }
 
-type CommunityInfo struct {
-	CommunityRate    *big.Int
-	CommunityAddress common.Address
-}
-
-func (m *CommunityInfo) Decode(payload []byte) error {
-	var data struct {
-		CommunityInfo []byte
-	}
-	if err := utils.UnpackOutputs(ABI, MethodGetCommunityInfo, &data, payload); err != nil {
-		return err
-	}
-	return rlp.DecodeBytes(data.CommunityInfo, m)
-}
-
 type TotalPool struct {
-	TotalPool Dec
+	TotalPool utils.Dec
 }
 
 func (m *TotalPool) Decode(payload []byte) error {

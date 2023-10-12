@@ -20,15 +20,17 @@ package proposal_manager
 
 import (
 	"crypto/ecdsa"
+	"math/big"
+	"testing"
+
 	"github.com/ethereum/go-ethereum/contracts/native/contract"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/params"
 	"github.com/ethereum/go-ethereum/rlp"
-	"math/big"
-	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
 	"github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -50,7 +52,7 @@ func init() {
 	InitProposalManager()
 	sdb = native.NewTestStateDB()
 	testGenesisPeers, _ = native.GenerateTestPeers(testGenesisNum)
-	node_manager.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
+	community.StoreCommunityInfo(sdb, big.NewInt(2000), common.EmptyAddress)
 	node_manager.StoreGenesisEpoch(sdb, testGenesisPeers, testGenesisPeers)
 	node_manager.StoreGenesisGlobalConfig(sdb)
 }
@@ -69,7 +71,7 @@ func TestProposalManager(t *testing.T) {
 	assert.Equal(t, globalConfig.ConsensusValidatorNum, node_manager.GenesisConsensusValidatorNum)
 	assert.Equal(t, globalConfig.MinProposalStake, node_manager.GenesisMinProposalStake)
 
-	communityInfo, err := node_manager.GetCommunityInfoImpl(c)
+	communityInfo, err := community.GetCommunityInfoImpl(c)
 	assert.Nil(t, err)
 	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(2000))
 	assert.Equal(t, communityInfo.CommunityAddress, common.EmptyAddress)
@@ -257,7 +259,7 @@ func TestProposalManager(t *testing.T) {
 	globalConfig, err = node_manager.GetGlobalConfigImpl(c)
 	assert.Nil(t, err)
 	assert.Equal(t, globalConfig.VoterValidatorNum, uint64(2))
-	communityInfo, err = node_manager.GetCommunityInfoImpl(c)
+	communityInfo, err = community.GetCommunityInfoImpl(c)
 	assert.Nil(t, err)
 	assert.Equal(t, communityInfo.CommunityRate, big.NewInt(1000))
 	assert.Equal(t, sdb.GetBalance(common.EmptyAddress), new(big.Int).Mul(big.NewInt(81000), params.ZNT1))

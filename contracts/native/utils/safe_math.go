@@ -16,11 +16,21 @@
  * along with The Zion.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-package node_manager
+package utils
 
 import (
 	"errors"
 	"math/big"
+)
+
+const (
+	TokenPrecision   = 18
+	PercentPrecision = 4
+)
+
+var (
+	TokenDecimal   = new(big.Int).Exp(big.NewInt(10), big.NewInt(TokenPrecision), nil)
+	PercentDecimal = new(big.Int).Exp(big.NewInt(10), big.NewInt(PercentPrecision), nil)
 )
 
 type Dec struct {

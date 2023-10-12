@@ -69,7 +69,6 @@ type backend struct {
 	currentBlock   func() *types.Block
 	getBlockByHash func(hash common.Hash) *types.Block
 	hasBadBlock    func(db ethdb.Reader, hash common.Hash) bool
-	systemTxHook   SystemTxFn
 }
 
 func New(chainConfig *params.ChainConfig, config *hotstuff.Config, privateKey *ecdsa.PrivateKey, db ethdb.Database, mock bool) *backend {
@@ -92,10 +91,8 @@ func New(chainConfig *params.ChainConfig, config *hotstuff.Config, privateKey *e
 	}
 
 	if mock {
-		backend.systemTxHook = nil
 		backend.core = core.New(backend, config, signer, db, nil)
 	} else {
-		backend.systemTxHook = backend.executeSystemTxs
 		backend.core = core.New(backend, config, signer, db, backend.CheckPoint)
 	}
 

@@ -24,11 +24,16 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/math"
 	"github.com/ethereum/go-ethereum/consensus"
 	"github.com/ethereum/go-ethereum/consensus/hotstuff"
 	"github.com/ethereum/go-ethereum/consensus/misc"
+	"github.com/ethereum/go-ethereum/contracts/native/governance"
+	"github.com/ethereum/go-ethereum/contracts/native/utils"
+	"github.com/ethereum/go-ethereum/core"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/core/vm"
 	"github.com/ethereum/go-ethereum/ethdb"
 	"github.com/ethereum/go-ethereum/log"
 	"github.com/ethereum/go-ethereum/rpc"
@@ -109,15 +114,48 @@ func (s *backend) Prepare(chain consensus.ChainHeaderReader, header *types.Heade
 	return nil
 }
 
-func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
-	uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error {
-
-	if s.HasSystemTxHook() {
-		if err := s.executeSystemTxs(chain, header, state, txs, receipts, systemTxs, usedGas, false); err != nil {
-			return err
-		}
+// Filter out system transactions from common transactions
+// returns common transactions, system transactions and system transaction message provider
+func (s *backend) BlockTransactions(block *types.Block, state *state.StateDB) (types.Transactions, types.Transactions,
+	func(*types.Transaction, *big.Int) types.Message, error) {
+	systemTransactions, err := governance.AssembleSystemTransactions(state, block.NumberU64())
+	if err != nil {
+		return nil, nil, nil, err
+	}
+	allTransactions := block.Transactions()
+	commonTransactionCount := len(allTransactions) - len(systemTransactions)
+	if commonTransactionCount < 0 {
+		return nil, nil, nil, fmt.Errorf("missing required system transactions, count %v", len(systemTransactions))
 	}
 
+	signer := types.MakeSigner(s.chainConfig, block.Number())
+	for i, tx := range systemTransactions {
+		includedTx := allTransactions[commonTransactionCount + i]
+		if includedTx.Hash() != tx.Hash() {
+			return nil, nil, nil, fmt.Errorf("unexpected system tx hash detected, tx index %v, hash %s, expected: %s", commonTransactionCount + i, includedTx.Hash(), tx.Hash())
+		}
+		from, err := signer.Sender(includedTx)
+		if err != nil {
+			return nil, nil, nil, fmt.Errorf("check system tx signature failed, %w", err)
+		}
+		if from != block.Coinbase() {
+			return nil, nil, nil, fmt.Errorf("check system tx signature failed, wrong signer %s", from)
+		}
+	}
+	return allTransactions[:commonTransactionCount], systemTransactions, s.asSystemMessage, nil
+}
+
+// Change message from as valid system transaction sender
+func(s *backend) asSystemMessage(tx *types.Transaction, baseFee *big.Int) types.Message {
+	gasPrice := new(big.Int).Set(tx.GasPrice())
+	if baseFee != nil {
+		gasPrice = math.BigMin(gasPrice.Add(tx.GasTipCap(), baseFee), tx.GasFeeCap())
+	}
+	return types.NewMessage(utils.SystemTxSender, tx.To(), tx.Nonce(), tx.Value(), tx.Gas(), gasPrice,
+		new(big.Int).Set(tx.GasFeeCap()), new(big.Int).Set(tx.GasTipCap()), tx.Data(), tx.AccessList(), true)
+}
+
+func (s *backend) Finalize(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, uncles []*types.Header) error {
 	header.Root = state.IntermediateRoot(chain.Config().IsEIP158(header.Number))
 	header.UncleHash = nilUncleHash
 	return nil
@@ -134,51 +172,37 @@ func (s *backend) FinalizeAndAssemble(chain consensus.ChainHeaderReader, header 
 		receipts = make([]*types.Receipt, 0)
 	}
 
-	if s.HasSystemTxHook() {
-		if err := s.executeSystemTxs(chain, header, state, &txs, &receipts, nil, &header.GasUsed, true); err != nil {
+	systemTransantions, err := governance.AssembleSystemTransactions(state, header.Number.Uint64())
+	if err != nil {
+		return nil, nil, err
+	}
+
+	for _, tx := range systemTransantions {
+		chainContext := chainContext{Chain: chain, engine: s}
+		gp := new(core.GasPool).AddGas(header.GasLimit)
+		if err := gp.SubGas(header.GasUsed); err != nil { 
 			return nil, nil, err
 		}
+		state.Prepare(tx.Hash(), common.Hash{}, len(txs))
+		receipt, err := core.ApplyTransactionWithCustomMessageProvider(s.asSystemMessage, s.chainConfig, chainContext, nil, gp, state, header, tx, &header.GasUsed, vm.Config{})
+		if err != nil {
+			return nil, nil, err
+		}
+		if receipt.Status != types.ReceiptStatusSuccessful {
+			return nil, nil, fmt.Errorf("unexpected reverted system transactions tx %d [%s], status %v", len(txs), tx.Hash(), receipt.Status)
+		}
+		signer := types.MakeSigner(s.chainConfig, header.Number)
+		tx, err = s.signer.SignTx(tx, signer)
+		if err != nil {
+			return nil, nil, err
+		}
+		txs = append(txs, tx)
+		receipts = append(receipts, receipt)
 	}
 
 	// Assemble and return the final block for sealing
 	block := packBlock(state, chain, header, txs, receipts)
 	return block, receipts, nil
-}
-
-type SystemTxFn func(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64, mining bool) error
-
-func (s *backend) HasSystemTxHook() bool {
-	return s.systemTxHook != nil
-}
-
-// executeSystemTxs governance tx execution do not allow failure, the consensus will halt if tx failed and return error.
-func (s *backend) executeSystemTxs(chain consensus.ChainHeaderReader, header *types.Header, state *state.StateDB,
-	txs *[]*types.Transaction, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64, mining bool) error {
-
-	// genesis block DONT need to execute system transaction
-	if header.Number.Uint64() == 0 {
-		return nil
-	}
-
-	if err := s.reward(state, header.Number); err != nil {
-		return err
-	}
-
-	ctx := &systemTxContext{
-		chain:    chain,
-		state:    state,
-		header:   header,
-		chainCtx: chainContext{Chain: chain, engine: s},
-		txs:      txs,
-		sysTxs:   systemTxs,
-		receipts: receipts,
-		usedGas:  usedGas,
-		mining:   mining,
-	}
-	if err := s.execEndBlock(ctx); err != nil {
-		return err
-	}
-	return s.execEpochChange(state, header, ctx)
 }
 
 func (s *backend) Seal(chain consensus.ChainHeaderReader, block *types.Block, results chan<- *types.Block, stop <-chan struct{}) (err error) {

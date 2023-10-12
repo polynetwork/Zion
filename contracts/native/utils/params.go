@@ -17,7 +17,9 @@
  */
 package utils
 
-import "github.com/ethereum/go-ethereum/common"
+import (
+	"github.com/ethereum/go-ethereum/common"
+)
 
 var (
 	BYTE_FALSE = []byte{0}

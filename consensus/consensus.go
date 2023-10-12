@@ -96,13 +96,17 @@ type Engine interface {
 	// rules of a particular engine. The changes are executed inline.
 	Prepare(chain ChainHeaderReader, header *types.Header) error
 
+	// Filter out system transactions from common transactions
+	// returns common transactions, system transactions and system transaction message provider
+	BlockTransactions(block *types.Block, state *state.StateDB) (types.Transactions, types.Transactions,
+		func(*types.Transaction, *big.Int) types.Message, error)
+
 	// Finalize runs any post-transaction state modifications (e.g. block rewards)
 	// but does not assemble the block.
 	//
 	// Note: The block header and state database might be updated to reflect any
 	// consensus rules that happen at finalization (e.g. block rewards).
-	Finalize(chain ChainHeaderReader, header *types.Header, state *state.StateDB, txs *[]*types.Transaction,
-		uncles []*types.Header, receipts *[]*types.Receipt, systemTxs *[]*types.Transaction, usedGas *uint64) error
+	Finalize(chain ChainHeaderReader, header *types.Header, state *state.StateDB, uncles []*types.Header) error
 
 	// FinalizeAndAssemble runs any post-transaction state modifications (e.g. block
 	// rewards) and assembles the final block.
@@ -165,12 +169,6 @@ type HotStuff interface {
 
 	// FillHeader fulfill the header with extra which contains epoch change info
 	FillHeader(state *state.StateDB, header *types.Header) error
-
-	// IsSystemCall return method id and true if the tx is an system transaction
-	IsSystemTransaction(tx *types.Transaction, header *types.Header) (string, bool)
-
-	// HasSystemTxHook return true if systemTxHook is not nil
-	HasSystemTxHook() bool
 }
 
 // Handler should be implemented is the consensus needs to handle and send peer's message

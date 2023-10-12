@@ -28,7 +28,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native"
 	. "github.com/ethereum/go-ethereum/contracts/native/go_abi/economic_abi"
-	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
+	"github.com/ethereum/go-ethereum/contracts/native/governance/community"
 	"github.com/ethereum/go-ethereum/contracts/native/utils"
 	"github.com/ethereum/go-ethereum/core/state"
 	"github.com/ethereum/go-ethereum/params"
@@ -37,7 +37,6 @@ import (
 
 func TestMain(m *testing.M) {
 	InitABI()
-	nm.InitNodeManager()
 	InitEconomic()
 	os.Exit(m.Run())
 }
@@ -120,7 +119,7 @@ func TestReward(t *testing.T) {
 
 		payload, _ := new(MethodRewardInput).Encode()
 		raw, err := native.TestNativeCall(t, this, name, payload, tc.height, func(state *state.StateDB) {
-			nm.StoreCommunityInfo(state, big.NewInt(int64(tc.rate)), tc.pool)
+			community.StoreCommunityInfo(state, big.NewInt(int64(tc.rate)), tc.pool)
 		})
 		if tc.err == nil {
 			assert.NoError(t, err)
