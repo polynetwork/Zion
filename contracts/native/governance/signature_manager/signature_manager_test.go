@@ -121,6 +121,6 @@ func TestAddSignature(t *testing.T) {
 		_, err = native.TestNativeCall(t, this, name, payload, common.Big0, sender, supplyGas, func(state *state.StateDB) {
 			nm.StoreGenesisEpoch(state, peers, peers)
 		})
-		t.Error(err)
+		assert.Nil(t, err)
 	}
 }

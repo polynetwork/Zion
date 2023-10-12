@@ -78,12 +78,16 @@ func New(eth Backend, config *Config, chainConfig *params.ChainConfig, mux *even
 	}
 
 	// hotstuff: disable pre-sealing, and waiting for p2p server connections
-	protocol := hotstuff.HotstuffProtocol(chainConfig.HotStuff.Protocol)
-	switch protocol {
-	case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
-		miner.worker = newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true)
-		miner.EnablePreseal()
-	default:
+	if chainConfig.HotStuff != nil {
+		protocol := hotstuff.HotstuffProtocol(chainConfig.HotStuff.Protocol)
+		switch protocol {
+		case hotstuff.HOTSTUFF_PROTOCOL_BASIC:
+			miner.worker = newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true)
+			miner.EnablePreseal()
+		default:
+			log.Crit("Unknown hotstuff protocal", "protocal", protocol)
+		}
+	} else {
 		miner.worker = newWorker(config, chainConfig, engine, eth, mux, isLocalBlock, true)
 	}
 

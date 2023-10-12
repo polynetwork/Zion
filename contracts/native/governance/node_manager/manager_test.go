@@ -453,7 +453,7 @@ func TestChangeEpoch(t *testing.T) {
 		param := new(CreateValidatorParam)
 		param.ConsensusAddress = consensusAddr
 		param.SignerAddress = consensusAddr
-		param.ProposalAddress = caller
+		param.ProposalAddress = consensusAddr
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
 		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
@@ -537,7 +537,7 @@ func TestDistribute(t *testing.T) {
 		param := new(CreateValidatorParam)
 		param.ConsensusAddress = consensusAddr
 		param.SignerAddress = consensusAddr
-		param.ProposalAddress = caller
+		param.ProposalAddress = consensusAddr
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
 		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})
@@ -985,7 +985,7 @@ func TestPerformance(t *testing.T) {
 		param := new(CreateValidatorParam)
 		param.ConsensusAddress = consensusAddr
 		param.SignerAddress = consensusAddr
-		param.ProposalAddress = caller
+		param.ProposalAddress = consensusAddr
 		param.Commission = new(big.Int).SetUint64(2000)
 		param.Desc = "test"
 		validatorsKey = append(validatorsKey, &ValidatorKey{param.ConsensusAddress, caller})

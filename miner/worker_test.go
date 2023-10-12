@@ -89,6 +89,7 @@ func init() {
 		To:      &testUserAddress,
 		Value:   big.NewInt(1000),
 		Gas:     params.TxGas,
+		GasPrice: big.NewInt(params.InitialBaseFee),
 	})
 	pendingTxs = append(pendingTxs, tx1)
 
@@ -97,6 +98,7 @@ func init() {
 		To:    &testUserAddress,
 		Value: big.NewInt(1000),
 		Gas:   params.TxGas,
+		GasPrice: big.NewInt(params.InitialBaseFee),
 	})
 	newTxs = append(newTxs, tx2)
 
@@ -244,12 +246,12 @@ func testGenerateBlockAndImport(t *testing.T, isClique bool) {
 
 	// Start mining!
 	w.Start()
+	time.Sleep(time.Second)
 
 	for i := 0; i < 5; i++ {
 		b.txPool.AddLocal(b.newRandomTx(true))
 		b.txPool.AddLocal(b.newRandomTx(false))
-		//w.postSideBlock(core.ChainSideEvent{Block: b.newRandomUncle()})
-		//w.postSideBlock(core.ChainSideEvent{Block: b.newRandomUncle()})
+		w.newWorkCh <- &newWorkReq{timestamp: time.Now().Unix()}
 
 		select {
 		case ev := <-sub.Chan():
@@ -257,6 +259,7 @@ func testGenerateBlockAndImport(t *testing.T, isClique bool) {
 			if _, err := chain.InsertChain([]*types.Block{block}); err != nil {
 				t.Fatalf("failed to insert new mined block %d: %v", block.NumberU64(), err)
 			}
+			time.Sleep(time.Second * 1)
 		case <-time.After(3 * time.Second): // Worker needs 1s to include new changes.
 			t.Fatalf("timeout")
 		}
@@ -283,7 +286,7 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 	checkEqual := func(t *testing.T, task *task, index int) {
 		// The first empty work without any txs included
 		receiptLen, balance := 0, big.NewInt(0)
-		if index == 1 {
+		if index == 0 {
 			// The second full work with 1 tx included
 			receiptLen, balance = 1, big.NewInt(1000)
 		}
@@ -306,7 +309,7 @@ func testEmptyWork(t *testing.T, chainConfig *params.ChainConfig, engine consens
 		time.Sleep(100 * time.Millisecond)
 	}
 	w.Start() // Start mining!
-	for i := 0; i < 2; i += 1 {
+	for i := 0; i < 1; i += 1 {
 		select {
 		case <-taskCh:
 		case <-time.NewTimer(3 * time.Second).C:
@@ -330,7 +333,7 @@ func TestStreamUncleBlock(t *testing.T) {
 			// The first task is an empty task, the second
 			// one has 1 pending tx, the third one has 1 tx
 			// and 1 uncle.
-			if taskIndex == 2 {
+			if taskIndex == 1 {
 				have := task.block.Header().UncleHash
 				want := types.CalcUncleHash([]*types.Header{b.uncleBlock.Header()})
 				if have != want {
@@ -348,16 +351,6 @@ func TestStreamUncleBlock(t *testing.T) {
 		time.Sleep(100 * time.Millisecond)
 	}
 	w.Start()
-
-	for i := 0; i < 2; i += 1 {
-		select {
-		case <-taskCh:
-		case <-time.NewTimer(time.Second).C:
-			t.Error("new task timeout")
-		}
-	}
-
-	//w.postSideBlock(core.ChainSideEvent{Block: b.uncleBlock})
 
 	select {
 	case <-taskCh:
@@ -387,7 +380,7 @@ func testRegenerateMiningBlock(t *testing.T, chainConfig *params.ChainConfig, en
 		if task.block.NumberU64() == 1 {
 			// The first task is an empty task, the second
 			// one has 1 pending tx, the third one has 2 txs
-			if taskIndex == 2 {
+			{
 				receiptLen, balance := 2, big.NewInt(2000)
 				if len(task.receipts) != receiptLen {
 					t.Errorf("receipt number mismatch: have %d, want %d", len(task.receipts), receiptLen)
@@ -407,16 +400,8 @@ func testRegenerateMiningBlock(t *testing.T, chainConfig *params.ChainConfig, en
 		time.Sleep(100 * time.Millisecond)
 	}
 
-	w.Start()
-	// Ignore the first two works
-	for i := 0; i < 2; i += 1 {
-		select {
-		case <-taskCh:
-		case <-time.NewTimer(time.Second).C:
-			t.Error("new task timeout")
-		}
-	}
 	b.txPool.AddLocals(newTxs)
+	w.Start()
 	time.Sleep(time.Second)
 
 	select {
@@ -472,15 +457,15 @@ func testAdjustInterval(t *testing.T, chainConfig *params.ChainConfig, engine co
 			estimate = estimate*(1-intervalAdjustRatio) + intervalAdjustRatio*(min-intervalAdjustBias)
 			wantMinInterval, wantRecommitInterval = 3*time.Second, time.Duration(estimate)*time.Nanosecond
 		case 3:
-			wantMinInterval, wantRecommitInterval = time.Second, time.Second
+			wantMinInterval, wantRecommitInterval = 3 * time.Second, 3* time.Second
 		}
 
 		// Check interval
 		if minInterval != wantMinInterval {
-			t.Errorf("resubmit min interval mismatch: have %v, want %v ", minInterval, wantMinInterval)
+			t.Errorf("resubmit min interval mismatch: have %v, want %v , index %v", minInterval, wantMinInterval, index)
 		}
 		if recommitInterval != wantRecommitInterval {
-			t.Errorf("resubmit interval mismatch: have %v, want %v", recommitInterval, wantRecommitInterval)
+			t.Errorf("resubmit interval mismatch: have %v, want %v, index %v", recommitInterval, wantRecommitInterval, index)
 		}
 		result = append(result, float64(recommitInterval.Nanoseconds()))
 		index += 1

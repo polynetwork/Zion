@@ -114,25 +114,7 @@ func SealHash(header *Header) (hash common.Hash) {
 	}
 
 	hasher := sha3.NewLegacyKeccak256()
-	enc := []interface{}{
-		header.ParentHash,
-		header.UncleHash,
-		header.Coinbase,
-		header.Root,
-		header.TxHash,
-		header.ReceiptHash,
-		header.Bloom,
-		header.Difficulty,
-		header.Number,
-		header.GasLimit,
-		header.GasUsed,
-		header.Time,
-		header.Extra,
-	}
-	if header.BaseFee != nil {
-		enc = append(enc, header.BaseFee)
-	}
-	rlp.Encode(hasher, enc)
+	rlp.Encode(hasher, header)
 	hasher.Sum(hash[:0])
 	return hash
 }
