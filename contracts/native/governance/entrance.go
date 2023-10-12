@@ -19,6 +19,7 @@ package governance
 import (
 	"fmt"
 
+
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/contracts/native/go_abi/node_manager_abi"
 	nm "github.com/ethereum/go-ethereum/contracts/native/governance/node_manager"
@@ -66,6 +67,7 @@ func AssembleSystemTransactions(state *state.StateDB, height uint64) (types.Tran
 			if err != nil {
 				return nil, err
 			}
+
 			gas, err := core.IntrinsicGas(payload, nil, false, true, true)
 			if err != nil {
 				return nil, err
