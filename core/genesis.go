@@ -342,7 +342,9 @@ func (g *Genesis) ToBlock(db ethdb.Database) *types.Block {
 
 // checkExtra validators should be sorted and do not allow dump validators.
 func (g *Genesis) checkExtra() {
-	if g.Config == nil || g.Config.HotStuff == nil { return }
+	if g.Config == nil || g.Config.HotStuff == nil {
+		return
+	}
 	extra, err := types.ExtractHotstuffExtraPayload(g.ExtraData)
 	if err != nil {
 		panic(err)
@@ -388,6 +390,7 @@ func (g *Genesis) createNativeContract(db *state.StateDB, addr common.Address) {
 }
 
 var CheckAllocWithTotalSupply bool = true
+
 func (g *Genesis) mintNativeToken(statedb *state.StateDB) {
 	// check total balance
 	total := new(big.Int)
@@ -464,12 +467,12 @@ func GenesisBlockForTesting(db ethdb.Database, addr common.Address, balance *big
 // DefaultGenesisBlock returns the Ethereum main net genesis block.
 func DefaultGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.MainnetChainConfig,
-		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
-		GasLimit:   5000,
-		Difficulty: big.NewInt(17179869184),
-		Alloc:      decodePrealloc(mainnetAllocData),
+		Config:           params.MainnetChainConfig,
+		Nonce:            66,
+		ExtraData:        hexutil.MustDecode("0x11bbe8db4e347b4e8c937c1c8370e4b5ed33adb3db69cbdb7a38e1e50b1b82fa"),
+		GasLimit:         5000,
+		Difficulty:       big.NewInt(17179869184),
+		Alloc:            decodePrealloc(mainnetAllocData),
 		CommunityRate:    big.NewInt(2000),
 		CommunityAddress: common.HexToAddress("0x79ad3ca3faa0F30f4A0A2839D2DaEb4Eb6B6820D"),
 	}
@@ -491,12 +494,12 @@ func TestGenesisBlock() *Genesis {
 // DefaultRopstenGenesisBlock returns the Ropsten network genesis block.
 func DefaultRopstenGenesisBlock() *Genesis {
 	return &Genesis{
-		Config:     params.RopstenChainConfig,
-		Nonce:      66,
-		ExtraData:  hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
-		GasLimit:   16777216,
-		Difficulty: big.NewInt(1048576),
-		Alloc:      decodePrealloc(ropstenAllocData),
+		Config:        params.RopstenChainConfig,
+		Nonce:         66,
+		ExtraData:     hexutil.MustDecode("0x3535353535353535353535353535353535353535353535353535353535353535"),
+		GasLimit:      16777216,
+		Difficulty:    big.NewInt(1048576),
+		Alloc:         decodePrealloc(ropstenAllocData),
 		CommunityRate: big.NewInt(10),
 	}
 }
@@ -545,12 +548,12 @@ func DeveloperGenesisBlock(period uint64, faucet common.Address) *Genesis {
 
 	// Assemble and return the genesis with the precompiles and faucet pre-funded
 	return &Genesis{
-		Config:     &config,
-		ExtraData:  append(append(make([]byte, 32), faucet[:]...), make([]byte, crypto.SignatureLength)...),
-		GasLimit:   11500000,
-		BaseFee:    big.NewInt(params.InitialBaseFee),
-		Difficulty: big.NewInt(1),
-		CommunityRate: big.NewInt(20),
+		Config:           &config,
+		ExtraData:        append(append(make([]byte, 32), faucet[:]...), make([]byte, crypto.SignatureLength)...),
+		GasLimit:         11500000,
+		BaseFee:          big.NewInt(params.InitialBaseFee),
+		Difficulty:       big.NewInt(1),
+		CommunityRate:    big.NewInt(20),
 		CommunityAddress: common.BytesToAddress([]byte{1}),
 		Alloc: map[common.Address]GenesisAccount{
 			common.BytesToAddress([]byte{1}): {Balance: big.NewInt(1)}, // Recover
